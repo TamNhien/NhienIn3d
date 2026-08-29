@@ -185,3 +185,98 @@ test('v2.6.0 web dung cookie HttpOnly qua credentials include va refresh session
   assert.match(auth, /\/xac-thuc\/lam-moi/);
   assert.match(auth, /SU_KIEN_XAC_THUC/);
 });
+
+
+test("v2.7.0 web co quen mat khau va trang dat lai tu link email", () => {
+  for (const tep of ["app/quen-mat-khau/page.tsx", "app/dat-lai-mat-khau/page.tsx"]) assert.equal(existsSync(tep), true, `Thieu ${tep}`);
+  const login = readFileSync("app/dang-nhap/page.tsx", "utf8");
+  const auth = readFileSync("lib/xac-thuc.ts", "utf8");
+  const reset = readFileSync("app/dat-lai-mat-khau/page.tsx", "utf8");
+  assert.match(login, /Quên mật khẩu\?/u);
+  assert.match(auth, /\/xac-thuc\/quen-mat-khau/);
+  assert.match(auth, /\/xac-thuc\/dat-lai-mat-khau/);
+  assert.match(reset, /search\.get\("ma"\)/);
+  assert.match(reset, /Mật khẩu mới/u);
+  assert.match(reset, /dat_lai=thanh_cong/);
+});
+
+
+test("v2.8.2 chon mau lam anh preview doi mau", () => {
+  const detail = readFileSync("app/san-pham/[duong_dan]/page.tsx", "utf8");
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.match(detail, /mau_xem_truoc/);
+  assert.match(detail, /product-color-tint/);
+  assert.match(detail, /color-preview-badge/);
+  assert.match(css, /\.product-color-tint/);
+});
+
+test("v2.8.2 nut tai khoan hien thong tin va dang xuat", () => {
+  const nav = readFileSync("components/thanh-dieu-huong.tsx", "utf8");
+  const page = readFileSync("app/tai-khoan/page.tsx", "utf8");
+  const auth = readFileSync("lib/xac-thuc.ts", "utf8");
+  assert.match(nav, /account-popover/);
+  assert.match(nav, /Thông tin tài khoản/u);
+  assert.match(nav, /Đăng xuất/u);
+  assert.match(page, /Lưu thay đổi/u);
+  assert.match(page, /Phiên đăng nhập/u);
+  assert.match(auth, /finally/);
+});
+
+test("v2.8.2 co giao dien admin tao nhan vien va xep ca", () => {
+  const page = readFileSync("app/quan-tri/page.tsx", "utf8");
+  const lib = readFileSync("lib/quan-tri.ts", "utf8");
+  assert.match(page, /Tạo tài khoản nhân viên/u);
+  assert.match(page, /XẾP CA/u);
+  assert.match(page, /Quản trị hệ thống/ui);
+  assert.match(page, /Hồ sơ nhân sự/u);
+  assert.match(lib, /capNhatNhanVien/);
+  assert.match(lib, /\/quan-tri\/nhan-vien/);
+  assert.match(lib, /\/quan-tri\/phan-ca/);
+});
+
+test("v2.8.2 dang ky va dat lai mat khau co do manh checklist va an hien", () => {
+  const comp = readFileSync("components/truong-mat-khau.tsx", "utf8");
+  const register = readFileSync("app/dang-ky/page.tsx", "utf8");
+  const reset = readFileSync("app/dat-lai-mat-khau/page.tsx", "utf8");
+  assert.match(comp, /danhGiaMatKhau/);
+  assert.match(comp, /Tối thiểu 12 ký tự/u);
+  assert.match(comp, /Có chữ hoa A–Z/u);
+  assert.match(comp, /Có chữ thường a–z/u);
+  assert.match(comp, /Có chữ số 0–9/u);
+  assert.match(comp, /Có ký tự đặc biệt/u);
+  assert.match(comp, /hien \? "text" : "password"/);
+  assert.match(register, /hien_do_manh/);
+  assert.match(reset, /hien_do_manh/);
+});
+
+test("v2.8.2 dang nhap co ghi nho tai khoan chi luu email", () => {
+  const login = readFileSync("app/dang-nhap/page.tsx", "utf8");
+  assert.match(login, /nhienin3d_ghi_nho_email/);
+  assert.match(login, /localStorage\.setItem/);
+  assert.match(login, /localStorage\.removeItem/);
+  assert.match(login, /Ghi nhớ tài khoản/u);
+  assert.doesNotMatch(login, /localStorage\.setItem\([^,]+,\s*mat_khau/);
+});
+
+test("v2.8.2 quen mat khau noi ro gui vao email dang ky", () => {
+  const forgot = readFileSync("app/quen-mat-khau/page.tsx", "utf8");
+  assert.match(forgot, /email đã dùng để đăng ký/u);
+  assert.match(forgot, /gửi liên kết đặt lại mật khẩu vào chính địa chỉ email đó/u);
+  assert.match(forgot, /Xác nhận và gửi email đặt lại/u);
+});
+
+
+test("v2.8.4 login bo dong mo ta, quen mat khau ngang hang ghi nho va nut dang nhap gon", () => {
+  const login = readFileSync("app/dang-nhap/page.tsx", "utf8");
+  const register = readFileSync("app/dang-ky/page.tsx", "utf8");
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.doesNotMatch(login, /Phiên đăng nhập dùng cookie HttpOnly/u);
+  assert.match(login, /auth-options-row/);
+  assert.match(login, /remember-account/);
+  assert.match(login, /forgot-inline/);
+  assert.match(login, /auth-login-button/);
+  assert.match(login, /href="\/dang-ky">Đăng kí<\/Link>/u);
+  assert.match(register, />Đăng kí<\/h1>/u);
+  assert.match(register, /"Đăng kí"/u);
+  assert.match(css, /min-width:132px/);
+});

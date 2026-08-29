@@ -9,8 +9,10 @@ import { GioHangModule } from "./gio-hang/gio-hang.module.js";
 import { ThanhToanModule } from "./thanh-toan/thanh-toan.module.js";
 import { YeuThichModule } from "./yeu-thich/yeu-thich.module.js";
 import { DanhGiaModule } from "./danh-gia/danh-gia.module.js";
+import { TaiKhoanModule } from "./tai-khoan/tai-khoan.module.js";
+import { QuanTriModule } from "./quan-tri/quan-tri.module.js";
 
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true }), CoSoDuLieuModule, SucKhoeModule, DanhMucModule, SanPhamModule, XacThucModule, GioHangModule, ThanhToanModule, YeuThichModule, DanhGiaModule]
+  imports: [ConfigModule.forRoot({ isGlobal: true }), CoSoDuLieuModule, SucKhoeModule, DanhMucModule, SanPhamModule, XacThucModule, GioHangModule, ThanhToanModule, YeuThichModule, DanhGiaModule, TaiKhoanModule, QuanTriModule]
 })
 export class AppModule {}

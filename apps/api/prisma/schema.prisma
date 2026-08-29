@@ -17,6 +17,20 @@ enum VaiTro {
   SIEU_QUAN_TRI
 }
 
+enum TrangThaiNhanVien {
+  DANG_LAM
+  TAM_NGHI
+  NGHI_VIEC
+}
+
+enum TrangThaiPhanCa {
+  DA_XEP
+  DA_XAC_NHAN
+  DA_HOAN_THANH
+  VANG_MAT
+  DA_HUY
+}
+
 enum TrangThaiSanPham {
   NHAP
   DANG_BAN
@@ -43,6 +57,7 @@ model NguoiDung {
   thu_dien_tu     String   @unique @db.VarChar(255)
   mat_khau_bam    String   @db.VarChar(500)
   ho_ten          String   @db.VarChar(150)
+  so_dien_thoai   String?  @db.VarChar(30)
   vai_tro         VaiTro   @default(KHACH_HANG)
   da_kich_hoat    Boolean  @default(true)
   so_lan_dang_nhap_that_bai Int @default(0)
@@ -55,6 +70,8 @@ model NguoiDung {
   phien_dang_nhap PhienDangNhap[]
   gio_hang        GioHang[]
   dia_chi         DiaChiNguoiDung[]
+  dat_lai_mat_khau DatLaiMatKhau[]
+  nhan_vien       NhanVien?
 
   @@map("nguoi_dung")
 }
@@ -205,6 +222,77 @@ model PhienDangNhap {
 
   @@index([nguoi_dung_id])
   @@map("phien_dang_nhap")
+}
+
+model DatLaiMatKhau {
+  id             String    @id @default(uuid()) @db.Uuid
+  nguoi_dung_id  String    @db.Uuid
+  ma_bi_mat_bam  String    @unique @db.VarChar(64)
+  het_han_luc    DateTime  @db.Timestamptz(6)
+  da_su_dung     Boolean   @default(false)
+  dia_chi_ip     String?   @db.VarChar(64)
+  ngay_tao       DateTime  @default(now()) @db.Timestamptz(6)
+  ngay_su_dung   DateTime? @db.Timestamptz(6)
+  nguoi_dung     NguoiDung @relation(fields: [nguoi_dung_id], references: [id], onDelete: Cascade)
+
+  @@index([nguoi_dung_id, da_su_dung])
+  @@index([het_han_luc])
+  @@index([ngay_tao])
+  @@map("dat_lai_mat_khau")
+}
+
+
+model NhanVien {
+  id             String              @id @default(uuid()) @db.Uuid
+  nguoi_dung_id  String              @unique @db.Uuid
+  ma_nhan_vien   String              @unique @db.VarChar(40)
+  chuc_danh      String              @db.VarChar(120)
+  bo_phan        String              @db.VarChar(120)
+  ngay_vao_lam   DateTime            @db.Date
+  trang_thai     TrangThaiNhanVien   @default(DANG_LAM)
+  ghi_chu        String?             @db.Text
+  ngay_tao       DateTime            @default(now()) @db.Timestamptz(6)
+  ngay_cap_nhat  DateTime            @updatedAt @db.Timestamptz(6)
+  nguoi_dung     NguoiDung           @relation(fields: [nguoi_dung_id], references: [id], onDelete: Cascade)
+  phan_ca        PhanCa[]
+
+  @@index([trang_thai])
+  @@index([bo_phan])
+  @@map("nhan_vien")
+}
+
+model CaLamViec {
+  id              String    @id @default(uuid()) @db.Uuid
+  ma_ca           String    @unique @db.VarChar(40)
+  ten_ca          String    @db.VarChar(120)
+  gio_bat_dau     String    @db.VarChar(5)
+  gio_ket_thuc    String    @db.VarChar(5)
+  mau_hien_thi    String?   @db.VarChar(9)
+  dang_hoat_dong  Boolean   @default(true)
+  ngay_tao        DateTime  @default(now()) @db.Timestamptz(6)
+  ngay_cap_nhat   DateTime  @updatedAt @db.Timestamptz(6)
+  phan_ca         PhanCa[]
+
+  @@index([dang_hoat_dong])
+  @@map("ca_lam_viec")
+}
+
+model PhanCa {
+  id              String            @id @default(uuid()) @db.Uuid
+  nhan_vien_id    String            @db.Uuid
+  ca_lam_viec_id  String            @db.Uuid
+  ngay_lam        DateTime          @db.Date
+  trang_thai      TrangThaiPhanCa   @default(DA_XEP)
+  ghi_chu         String?           @db.Text
+  ngay_tao        DateTime          @default(now()) @db.Timestamptz(6)
+  ngay_cap_nhat   DateTime          @updatedAt @db.Timestamptz(6)
+  nhan_vien       NhanVien          @relation(fields: [nhan_vien_id], references: [id], onDelete: Cascade)
+  ca_lam_viec     CaLamViec         @relation(fields: [ca_lam_viec_id], references: [id], onDelete: Restrict)
+
+  @@unique([nhan_vien_id, ca_lam_viec_id, ngay_lam])
+  @@index([ngay_lam])
+  @@index([trang_thai])
+  @@map("phan_ca")
 }
 
 model NhatKyBaoMat {

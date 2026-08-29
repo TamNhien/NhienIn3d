@@ -46,27 +46,27 @@ test("Swagger Fastify co @fastify/static tuong thich Fastify 5", () => {
   assert.equal(pkg.dependencies['@fastify/static'], '10.1.3');
 });
 
-test("seed v2.5.0 dam bao 19 bang nghiep vu toi thieu 10 dong", () => {
+test("seed v2.8.0 dam bao 23 bang nghiep vu toi thieu 10 dong", () => {
   const seed = readFileSync('prisma/seed.ts', 'utf8');
   for (const bang of [
     'nguoi_dung', 'danh_muc', 'san_pham', 'hinh_anh_san_pham',
     'vat_lieu', 'mau_sac', 'bien_the_san_pham', 'don_hang',
     'chi_tiet_don_hang', 'phien_dang_nhap', 'nhat_ky_bao_mat', 'phien_ban_seed',
-    'gio_hang', 'chi_tiet_gio_hang', 'phuong_thuc_thanh_toan', 'thanh_toan', 'dia_chi_nguoi_dung', 'yeu_thich', 'danh_gia_san_pham'
+    'gio_hang', 'chi_tiet_gio_hang', 'phuong_thuc_thanh_toan', 'thanh_toan', 'dia_chi_nguoi_dung', 'yeu_thich', 'danh_gia_san_pham', 'dat_lai_mat_khau', 'nhan_vien', 'ca_lam_viec', 'phan_ca'
   ]) {
     assert.match(seed, new RegExp(`${bang}: await db\\.`));
   }
   assert.match(seed, /so_luong < 10/);
-  assert.match(seed, /PHIEN_BAN_HIEN_TAI = "SEED_V261_CHON_MAU_SAN_PHAM"/);
+  assert.match(seed, /PHIEN_BAN_HIEN_TAI = "SEED_V284_DANG_NHAP_DANG_KI_GON"/);
   assert.match(seed, /\/images\/khoi-lap-phuong-banh-rang\.jpg/);
 });
 
 
-test("API hien thi dung version v2.6.1 o health va OpenAPI", () => {
+test("API hien thi dung version v2.8.4 o health va OpenAPI", () => {
   const health = readFileSync("src/suc-khoe/suc-khoe.controller.ts", "utf8");
   const main = readFileSync("src/main.ts", "utf8");
-  assert.match(health, /phien_ban: "v2\.6\.1"/);
-  assert.match(main, /setVersion\("2\.6\.1"\)/);
+  assert.match(health, /phien_ban: "v2\.8\.4"/);
+  assert.match(main, /setVersion\("2\.8\.4"\)/);
 });
 
 test("V2 co migration gio hang, thanh toan va dia chi", () => {
@@ -174,4 +174,86 @@ test("v2.6.1 seed tao 3 mau cho moi san pham va giu BT01 tuong thich", () => {
   assert.match(seed, /j < bo_mau_san_pham\[i\]\.length/);
   assert.match(seed, /BT\$\{String\(j \+ 1\)\.padStart\(2, "0"\)\}/);
   assert.match(seed, /if \(j === 0\) bien_the_map\.set/);
+});
+
+
+test("v2.7.0 backend quen mat khau dung token hash mot lan va Argon2id", () => {
+  const controller = readFileSync("src/xac-thuc/xac-thuc.controller.ts", "utf8");
+  const service = readFileSync("src/xac-thuc/xac-thuc.service.ts", "utf8");
+  const schema = readFileSync("prisma/schema.prisma", "utf8");
+  const mail = readFileSync("src/thu-dien-tu/thu-dien-tu.service.ts", "utf8");
+  for (const route of ["quen-mat-khau", "dat-lai-mat-khau"]) assert.match(controller, new RegExp(route));
+  assert.match(schema, /model\s+DatLaiMatKhau\b/);
+  assert.match(service, /randomBytes\(32\)\.toString\("base64url"\)/);
+  assert.match(service, /ma_bi_mat_bam/);
+  assert.match(service, /da_su_dung/);
+  assert.match(service, /RESET_PASSWORD_EXPIRES_MINUTES/);
+  assert.match(service, /phienDangNhap\.updateMany/);
+  assert.match(service, /phien_ban_mat_khau: \{ increment: 1 \}/);
+  assert.match(service, /argon2\.argon2id/);
+  assert.match(mail, /sendMail/);
+});
+
+test("v2.7.0 Nodemailer va Mailpit duoc pin", () => {
+  const pkg = docJson("package.json");
+  assert.equal(pkg.dependencies.nodemailer, "9.0.6");
+  assert.equal(pkg.devDependencies["@types/nodemailer"], "8.0.1");
+});
+
+
+test("v2.8.0 API ho so, session, don hang va lich lam viec", () => {
+  const controller = readFileSync("src/tai-khoan/tai-khoan.controller.ts", "utf8");
+  const service = readFileSync("src/tai-khoan/tai-khoan.service.ts", "utf8");
+  for (const route of ["ho-so", "phien", "don-hang", "lich-lam-viec"]) assert.match(controller, new RegExp(route));
+  assert.match(service, /cap_nhat_ho_so/);
+  assert.match(service, /phienDangNhap/);
+  assert.match(service, /nhanVien/);
+});
+
+test("v2.8.0 API admin quan ly nguoi dung nhan vien ca lam va phan ca", () => {
+  const controller = readFileSync("src/quan-tri/quan-tri.controller.ts", "utf8");
+  const service = readFileSync("src/quan-tri/quan-tri.service.ts", "utf8");
+  const schema = readFileSync("prisma/schema.prisma", "utf8");
+  for (const route of ["nguoi-dung", "nhan-vien", "ca-lam", "phan-ca"]) assert.match(controller, new RegExp(route));
+  assert.match(service, /argon2\.argon2id/);
+  assert.match(service, /SIEU_QUAN_TRI/);
+  assert.match(controller, /Patch\("nhan-vien\/:id"\)/);
+  assert.match(service, /cap_nhat_nhan_vien/);
+  for (const model of ["NhanVien", "CaLamViec", "PhanCa"]) assert.match(schema, new RegExp(`model\\s+${model}\\b`));
+});
+
+test("v2.8.0 VaiTroGuard cho SIEU_QUAN_TRI bypass", () => {
+  const role = readFileSync("src/xac-thuc/vai-tro.guard.ts", "utf8");
+  assert.match(role, /vai_tro === VaiTro\.SIEU_QUAN_TRI/);
+});
+
+
+test("v2.8.2 cau hinh Gmail SMTP co STARTTLS va verify script", () => {
+  const cfg = readFileSync("src/thu-dien-tu/cau-hinh-smtp.ts", "utf8");
+  const service = readFileSync("src/thu-dien-tu/thu-dien-tu.service.ts", "utf8");
+  const verify = readFileSync("scripts/kiem-tra-smtp.ts", "utf8");
+  for (const ten of ["MAIL_ENABLED", "MAIL_USERNAME", "MAIL_SMTP_AUTH", "MAIL_STARTTLS", "MAIL_STARTTLS_REQUIRED", "MAIL_CONNECTION_TIMEOUT", "MAIL_TIMEOUT", "MAIL_WRITE_TIMEOUT"]) assert.match(cfg, new RegExp(ten));
+  assert.match(cfg, /requireTLS/);
+  assert.match(cfg, /ignoreTLS/);
+  assert.match(service, /docCauHinhSmtp/);
+  assert.match(verify, /truyen\.verify\(\)/);
+});
+
+test("v2.8.2 backend gui reset den dung email dang ky va van ho tro MAIL_USER legacy", () => {
+  const auth = readFileSync("src/xac-thuc/xac-thuc.service.ts", "utf8");
+  const smtp = readFileSync("src/thu-dien-tu/cau-hinh-smtp.ts", "utf8");
+  assert.match(auth, /thu_dien_tu:\s*nguoi_dung\.thu_dien_tu/);
+  assert.match(auth, /\/dat-lai-mat-khau\?ma=/);
+  assert.match(smtp, /MAIL_USERNAME/);
+  assert.match(smtp, /MAIL_USER/);
+});
+
+test("v2.8.3 XacThucModule re-export JwtModule cho JwtGuard o module tai khoan va quan tri", () => {
+  const authModule = readFileSync("src/xac-thuc/xac-thuc.module.ts", "utf8");
+  const taiKhoanModule = readFileSync("src/tai-khoan/tai-khoan.module.ts", "utf8");
+  const quanTriModule = readFileSync("src/quan-tri/quan-tri.module.ts", "utf8");
+  assert.match(authModule, /imports:\s*\[JwtModule\.register\(\{\}\),\s*ThuDienTuModule\]/);
+  assert.match(authModule, /exports:\s*\[JwtModule,\s*XacThucService,\s*JwtGuard,\s*VaiTroGuard\]/);
+  assert.match(taiKhoanModule, /imports:\s*\[XacThucModule\]/);
+  assert.match(quanTriModule, /imports:\s*\[XacThucModule\]/);
 });

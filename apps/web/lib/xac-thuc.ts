@@ -6,10 +6,13 @@ export type TaiKhoan = {
   id: string;
   thu_dien_tu: string;
   ho_ten: string;
+  so_dien_thoai?: string | null;
   vai_tro: "KHACH_HANG" | "NHAN_VIEN" | "QUAN_LY" | "QUAN_TRI" | "SIEU_QUAN_TRI";
   da_kich_hoat?: boolean;
   ngay_tao?: string;
   lan_dang_nhap_cuoi?: string | null;
+  ngay_cap_nhat?: string;
+  nhan_vien?: { id: string; ma_nhan_vien: string; chuc_danh: string; bo_phan: string; trang_thai: string } | null;
 };
 
 async function docLoi(res: Response) {
@@ -61,8 +64,11 @@ export async function layTaiKhoan(): Promise<TaiKhoan | null> {
 }
 
 export async function dangXuat() {
-  await goi("/xac-thuc/dang-xuat", { method: "POST" });
-  window.dispatchEvent(new Event(SU_KIEN_XAC_THUC));
+  try {
+    await goi("/xac-thuc/dang-xuat", { method: "POST" });
+  } finally {
+    window.dispatchEvent(new Event(SU_KIEN_XAC_THUC));
+  }
 }
 
 export function tenVaiTro(vai_tro: TaiKhoan["vai_tro"]) {
@@ -73,4 +79,15 @@ export function tenVaiTro(vai_tro: TaiKhoan["vai_tro"]) {
     QUAN_TRI: "Quản trị",
     SIEU_QUAN_TRI: "Siêu quản trị"
   } as const)[vai_tro] || vai_tro;
+}
+export async function quenMatKhau(thu_dien_tu: string) {
+  const res = await goi("/xac-thuc/quen-mat-khau", { method: "POST", body: JSON.stringify({ thu_dien_tu }) });
+  if (!res.ok) throw new Error(await docLoi(res));
+  return res.json() as Promise<{ thong_bao: string }>;
+}
+
+export async function datLaiMatKhau(payload: { ma: string; mat_khau_moi: string }) {
+  const res = await goi("/xac-thuc/dat-lai-mat-khau", { method: "POST", body: JSON.stringify(payload) });
+  if (!res.ok) throw new Error(await docLoi(res));
+  return res.json() as Promise<{ thong_bao: string }>;
 }

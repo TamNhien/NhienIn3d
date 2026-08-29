@@ -1,232 +1,285 @@
 # NhienIn3d
 
-> Cửa hàng sản phẩm in 3D hiện đại — Next.js + Three.js + NestJS + PostgreSQL + Docker  
-> Phiên bản hiện tại: **v2.6.1** — 29/08/2026
+> Phiên bản hiện tại: **v2.8.4** — 29/08/2026
 
-## Mới trong v2.6.1
+NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **frontend Next.js** và **backend NestJS/Fastify** kết nối **PostgreSQL qua Prisma**.
 
-- Bỏ hoàn toàn chế độ **xem 3D sản phẩm** vì mesh procedural không phải model gốc và có thể gây hiểu nhầm so với ảnh sản phẩm thật.
-- Trang chi tiết chỉ hiển thị ảnh tham khảo của sản phẩm.
-- Bổ sung **3 màu có thể chọn cho mỗi sản phẩm mẫu**; màu được lưu bằng `bien_the_san_pham` hiện có, không cần đổi schema.
-- Khi chọn màu, web cập nhật đúng biến thể, tồn kho, mã biến thể và giá trước khi thêm vào giỏ.
-- Nút trên card đổi thành **Chọn màu**, không thêm thẳng biến thể mặc định vào giỏ nữa.
-- Giỏ hàng tiếp tục lưu và hiển thị đúng màu + vật liệu đã chọn.
-- Seed `SEED_V261_CHON_MAU_SAN_PHAM` bổ sung BT02/BT03 nhưng giữ BT01 để tương thích dữ liệu/giỏ hàng cũ.
-- Không có migration mới; roadmap giữ nguyên: **v2.7.0 quên mật khẩu qua email** là bước kế tiếp.
+## Kiến trúc hiện tại
 
-## Công nghệ
-
-- Web: Next.js 16.3.3, React 19.2.8, TypeScript 7.0.2.
-- 3D trang trí giao diện: Three.js, React Three Fiber, Drei (không dùng để giả lập model sản phẩm).
-- Animation: Motion.
-- API: NestJS 12 + Fastify 5.
+- Frontend: Next.js 16.3.3 + React 19.2.8.
+- Backend: NestJS 12 + Fastify 5.
 - Database: PostgreSQL 18.6.
-- ORM / migration / seed: Prisma 7.10.0.
-- Password: Argon2id.
-- Hạ tầng local: Docker Compose.
-- PostgreSQL từ Windows/pgAdmin: `127.0.0.1:5434`.
-- PostgreSQL nội bộ Docker: `postgres:5432`.
+- ORM: Prisma 7.10.0.
+- Xác thực: JWT access token + refresh token HttpOnly cookie.
+- Mật khẩu: Argon2id.
+- Email: Nodemailer 9.0.6; hỗ trợ Gmail/Google Workspace SMTP qua STARTTLS, Mailpit giữ làm profile test tùy chọn.
+- Container: Docker Compose.
+- CI/Release: GitHub Actions + GitHub CLI.
 
-> Prisma 8 RC/preview không được dùng cho production. NhienIn3d vẫn giữ Prisma 7.10 stable.
+## Mới trong v2.8.4
 
----
+V2.8.4 là hotfix giao diện xác thực, không thay đổi backend API hay database schema.
 
-# v2.0.0 — Commerce nền tảng
+- Bỏ dòng mô tả dài về cookie HttpOnly/ghi nhớ tài khoản khỏi trang Đăng nhập.
+- Đặt **Quên mật khẩu?** ngang hàng với **Ghi nhớ tài khoản** trong cùng một hàng tùy chọn.
+- Đổi nhãn người dùng **Tạo tài khoản** thành **Đăng kí** ở heading, nút submit và liên kết từ trang đăng nhập.
+- Thu nhỏ nút **Đăng nhập** trên desktop; mobile vẫn tự giãn toàn chiều rộng để dễ thao tác.
+- Ghi nhớ tài khoản vẫn chỉ lưu email trong `localStorage`; không thay đổi cơ chế cookie HttpOnly/session phía backend.
+- Không có migration mới.
 
-v2.0.0 biến storefront V1 thành luồng commerce có thể thao tác thật:
+## Mới trong v2.8.3
 
-- Giỏ hàng lưu trong PostgreSQL.
-- Mã phiên giỏ hàng ngẫu nhiên, lưu phía browser bằng `localStorage`.
-- Thêm/xóa sản phẩm khỏi giỏ.
-- Lưu đúng biến thể, vật liệu, màu, đơn giá và số lượng.
-- Kiểm tra tồn kho ở server.
-- Checkout tạo đơn hàng bằng database transaction.
-- Trừ tồn kho chỉ khi transaction đặt hàng thành công.
-- Tạo bản ghi thanh toán cho mỗi đơn.
-- Hai phương thức hoạt động mặc định: COD và chuyển khoản.
-- 8 phương thức thanh toán khác được seed ở trạng thái chưa bật để sẵn sàng tích hợp.
-- Thêm bảng địa chỉ người dùng.
-- Mỗi bảng nghiệp vụ mới của V2 cũng có tối thiểu 10 dòng dữ liệu mẫu.
-- Web có giỏ hàng dạng drawer, form nhận hàng và checkout.
-- Swagger có endpoint giỏ hàng + thanh toán.
+V2.8.3 là bản vá runtime cho backend NestJS sau khi Docker build thành công nhưng API dừng ở lúc khởi tạo `TaiKhoanModule`/`QuanTriModule`.
 
-
----
-
-# v2.1.0 — Giao diện tinh gọn + thanh toán giả lập local
-
-- Thu gọn typography hero và kích thước chữ toàn storefront để cân đối hơn trên desktop/mobile.
-- Dùng font stack hiện đại dựa trên Segoe UI Variable/System UI, không phụ thuộc tải font ngoài khi build Docker.
-- Bỏ dòng quảng bá `NHIENIN3D V2 • COMMERCE READY` khỏi hero.
-- Bỏ đoạn `V2 bổ sung giỏ hàng thật...` khỏi hero.
-- Loại bỏ nhãn phiên bản khỏi các nội dung marketing/giỏ hàng; version chỉ còn ở khu vực lịch sử và footer kỹ thuật.
-- Thêm mục **Lịch sử phát triển** ngay trên web, liệt kê `v1.0.0 -> v2.1.1` theo thứ tự tăng dần.
-- Khi `NODE_ENV=development`, API trả thêm các gateway online chưa tích hợp dưới trạng thái `la_gia_lap=true`.
-- Thanh toán giả lập local tạo giao dịch `N3D-MOCK-*`, đánh dấu `DA_THANH_TOAN` và ghi `ngay_thanh_toan`.
-- Không gọi VNPay/MoMo/ZaloPay/... thật và không phát sinh tiền thật.
-- Khi `NODE_ENV=production`, gateway chưa tích hợp vẫn bị khóa; chỉ phương thức `dang_hoat_dong=true` được sử dụng.
-- Không đổi schema database; seed chỉ cập nhật mô tả phương thức và thêm lịch sử seed v2.1.0.
-
----
-
-# v2.1.1 — Chi tiết sản phẩm + tách giỏ hàng và checkout
-
-- Nhấp vào bất kỳ thẻ sản phẩm nào sẽ mở trang `/san-pham/[duong_dan]`.
-- Trang chi tiết hiển thị ảnh, kích thước, khối lượng, thời gian in, giá, biến thể, vật liệu, màu sắc và tồn kho.
-- Cho phép chọn biến thể và số lượng trước khi thêm vào giỏ.
-- `Thêm vào giỏ` không còn tự mở form thanh toán.
-- Tạo trang `/gio-hang` riêng để xem toàn bộ sản phẩm, tăng/giảm số lượng và xóa dòng giỏ hàng.
-- Chỉ khi bấm **Tiến hành thanh toán** từ giỏ mới chuyển sang `/thanh-toan`.
-- Trang `/thanh-toan` chứa riêng thông tin nhận hàng và phương thức thanh toán.
-- Thanh toán giả lập local từ v2.1.0 được giữ nguyên.
+- Sửa `UnknownDependenciesException`: `JwtGuard` cần `JwtService` nhưng `JwtModule` trước đó chỉ được import nội bộ trong `XacThucModule` và chưa re-export cho các module dùng guard.
+- `XacThucModule` giờ re-export `JwtModule` cùng `JwtGuard` và `VaiTroGuard`, để `TaiKhoanModule` và `QuanTriModule` resolve dependency đúng khi `@UseGuards(JwtGuard)` được áp dụng.
+- Sửa nguyên nhân frontend hiện `Failed to fetch` ở Đăng ký/Tài khoản khi API container crash.
 - Không đổi schema PostgreSQL và không cần migration mới.
+- Gmail SMTP, quên mật khẩu, độ mạnh mật khẩu, ghi nhớ email đăng nhập và các tính năng v2.8.2 được giữ nguyên.
+- Thêm regression test kiểm tra `JwtModule` được export để tránh lỗi DI tái diễn.
 
----
-
-# v2.2.0 — Storefront tinh gọn + xem ảnh 3D tương tác
-
-- Bỏ toàn bộ các khối **Thương mại điện tử**, **Công nghệ**, **Lịch sử phát triển** và **Security by default** khỏi trang chủ để storefront tập trung vào sản phẩm.
-- Lịch sử phiên bản vẫn được giữ đầy đủ trong duy nhất `README.md`, theo thứ tự tăng dần.
-- Thanh điều hướng chỉ giữ các mục thực sự phục vụ mua hàng: **Sản phẩm** và **Giỏ hàng**.
-- Trang chi tiết sản phẩm có hai chế độ **Ảnh** / **Xem 3D**.
-- Chế độ 3D cho phép kéo chuột/cảm ứng để xoay, lăn chuột để zoom và nhấp đúp để đặt lại góc nhìn.
-- Chế độ 3D hiện tại mô phỏng chiều sâu từ ảnh sản phẩm, không giả mạo đây là model GLB/GLTF thật.
-- Đóng gói ảnh local cho sản phẩm **Khối lập phương bánh răng** để không phụ thuộc thumbnail bên ngoài.
-- Seed cập nhật ảnh sản phẩm theo kiểu idempotent; không đổi schema PostgreSQL và không cần migration mới.
-- Giữ nguyên giỏ hàng, checkout transaction và thanh toán giả lập local từ các bản trước.
-
-# v2.2.1 — Sửa nâng cấp chép đè + dọn storefront legacy
-
-- Sửa regression `npm test` khi thư mục làm việc còn sót `apps/web/lib/lich-su-phien-ban.ts` từ v2.1.x.
-- `npm test` tự chạy cleanup legacy trước khi kiểm tra, phù hợp cách cập nhật source bằng cách chép đè vào `D:\LienThongDH\DoAn\NhienIn3d`.
-- Bỏ nhãn version kỹ thuật khỏi footer storefront; lịch sử phiên bản chỉ còn trong README.
-- API health và OpenAPI đồng bộ version `2.2.1`.
-- Không đổi dependency, schema PostgreSQL hay dữ liệu nghiệp vụ; không cần migration mới.
-
-# v2.4.0 — Viewer WebGL 3D thật + bỏ dải trang trí
-
-- Loại bỏ dải chữ `PLA / PETG / ABS / TPU / Chi tiết sản phẩm / Giỏ hàng / Checkout / PostgreSQL` khỏi trang chủ vì đây chỉ là thành phần trang trí.
-- Thay toàn bộ cơ chế `rotateX/rotateY` trên nhiều lớp ảnh 2D bằng `Canvas` WebGL thật từ React Three Fiber.
-- Dùng `OrbitControls` để xoay 360°, zoom và điều khiển góc nhìn trực tiếp trong khung ảnh sản phẩm.
-- Dùng ánh sáng, bóng đổ và `ContactShadows` để mô hình có chiều sâu thực trong scene 3D.
-- Cung cấp mesh procedural riêng cho 10 sản phẩm mẫu; đây là mô hình đại diện để trải nghiệm 3D, không tuyên bố là CAD chính xác của thiết kế gốc.
-- Viewer có cấu trúc sẵn sàng để gắn GLB/GLTF thật ở phiên bản sau khi có file model hợp lệ.
-- Không đổi schema PostgreSQL và không cần migration mới.
-
-
-## Endpoint commerce
+### Dấu hiệu lỗi đã sửa
 
 ```text
-GET    /api/v1/san-pham
-GET    /api/v1/san-pham/:duong_dan
-
-POST   /api/v1/gio-hang
-GET    /api/v1/gio-hang/:ma_phien
-POST   /api/v1/gio-hang/:ma_phien/them
-PATCH  /api/v1/gio-hang/:ma_phien/chi-tiet/:id
-DELETE /api/v1/gio-hang/:ma_phien/chi-tiet/:id
-
-GET    /api/v1/thanh-toan/phuong-thuc
-POST   /api/v1/thanh-toan/dat-hang
-
-POST   /api/v1/xac-thuc/dang-ky
-POST   /api/v1/xac-thuc/dang-nhap
-POST   /api/v1/xac-thuc/lam-moi
-POST   /api/v1/xac-thuc/dang-xuat
-GET    /api/v1/xac-thuc/toi
-GET    /api/v1/xac-thuc/quan-tri/kiem-tra
-GET    /api/v1/suc-khoe
+Nest can't resolve dependencies of the JwtGuard (?, CoSoDuLieuService)
+JwtService at index [0] is not available in the TaiKhoanModule module
 ```
 
-### Tìm kiếm / lọc / yêu thích v2.3.0
+Sau v2.8.3, `docker compose logs api` phải đi tới trạng thái NestJS lắng nghe cổng `3001` thay vì dừng tại `UnknownDependenciesException`.
+
+## Mới trong v2.8.2
+
+V2.8.2 hoàn thiện luồng mật khẩu và SMTP theo đúng hành vi người dùng thực tế:
+
+- `MAIL_USERNAME` là biến tài khoản SMTP chính trong `.env` và Docker. Không cần khai báo `MAIL_USER`; backend chỉ còn giữ `MAIL_USER` như fallback legacy nếu một máy cũ chưa chuyển cấu hình.
+- Quên mật khẩu nhận **email đã đăng ký**; backend tra đúng tài khoản và gửi email reset tới `nguoi_dung.thu_dien_tu` của tài khoản đó.
+- Email chứa link một lần `/dat-lai-mat-khau?ma=...`; click link sẽ mở trực tiếp trang đặt lại mật khẩu.
+- Đăng ký, đặt lại mật khẩu và tạo mật khẩu ban đầu cho nhân viên có cùng checklist: tối thiểu 12 ký tự, chữ hoa, chữ thường, số và ký tự đặc biệt.
+- Giao diện hiển thị **độ mạnh mật khẩu** theo thời gian thực và trạng thái từng yêu cầu.
+- Tất cả ô mật khẩu quan trọng có nút **Hiện/Ẩn**.
+- Đăng nhập có **Ghi nhớ tài khoản**; chỉ lưu email trong `localStorage`, tuyệt đối không lưu mật khẩu plaintext.
+- Backend tiếp tục bắt buộc cùng chính sách mật khẩu bằng `class-validator` và lưu mật khẩu bằng Argon2id.
+
+### Luồng quên mật khẩu
 
 ```text
-GET /api/v1/san-pham?tim_kiem=den&danh_muc=den-qua-tang&con_hang=true&sap_xep=gia_tang
-GET /api/v1/yeu-thich/:ma_phien
-POST /api/v1/yeu-thich/:ma_phien/:ma_san_pham
-DELETE /api/v1/yeu-thich/:ma_phien/:ma_san_pham
+Nhập email đã đăng ký
+        ↓
+POST /api/v1/xac-thuc/quen-mat-khau
+        ↓
+Backend tìm nguoi_dung theo email
+        ↓
+Token 256-bit → email người dùng
+SHA-256(token) → PostgreSQL
+        ↓
+Click nút Đặt lại mật khẩu trong email
+        ↓
+/dat-lai-mat-khau?ma=...
+        ↓
+Mật khẩu mới đạt đủ 5 yêu cầu
+        ↓
+Argon2id → PostgreSQL
+        ↓
+Thu hồi toàn bộ phiên đăng nhập cũ
 ```
 
-## Database commerce
+### Gmail SMTP v2.8.2
 
-Tên bảng/cột vẫn theo quy ước **tiếng Việt không dấu**. Dữ liệu hiển thị dùng **tiếng Việt có dấu UTF-8**.
+Chỉ cần bộ biến chính dưới đây; **không cần `MAIL_USER`**:
 
-Các bảng nghiệp vụ hiện có:
-
-```text
-nguoi_dung
-danh_muc
-san_pham
-hinh_anh_san_pham
-vat_lieu
-mau_sac
-bien_the_san_pham
-don_hang
-chi_tiet_don_hang
-phien_dang_nhap
-nhat_ky_bao_mat
-phien_ban_seed
-
-gio_hang                    <-- V2
-chi_tiet_gio_hang           <-- V2
-phuong_thuc_thanh_toan      <-- V2
-thanh_toan                  <-- V2
-dia_chi_nguoi_dung          <-- V2
-yeu_thich                   <-- v2.3.0
-danh_gia_san_pham           <-- v2.5.0
+```env
+MAIL_ENABLED=true
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=your-account@gmail.com
+MAIL_PASSWORD=YOUR_GOOGLE_APP_PASSWORD
+MAIL_SMTP_AUTH=true
+MAIL_STARTTLS=true
+MAIL_STARTTLS_REQUIRED=true
+MAIL_FROM="NhienIn3d <your-account@gmail.com>"
+MAIL_CONNECTION_TIMEOUT=5000
+MAIL_TIMEOUT=5000
+MAIL_WRITE_TIMEOUT=5000
+MAIL_TLS_REJECT_UNAUTHORIZED=true
+WEB_PUBLIC_URL=http://localhost:3000
+RESET_PASSWORD_EXPIRES_MINUTES=15
 ```
 
-Bảng `_prisma_migrations` là bảng hệ thống của Prisma và không được chèn dữ liệu giả để đạt 10 dòng.
+## Mới trong v2.8.1
 
----
+V2.8.1 chuẩn hóa cấu hình SMTP theo bộ biến `MAIL_*` để có thể gửi email khôi phục mật khẩu trực tiếp bằng Gmail/Google Workspace hoặc SMTP tương thích:
 
-# Thư mục chạy mặc định
+- Thêm `MAIL_ENABLED` để bật/tắt gửi mail rõ ràng.
+- Dùng `MAIL_USERNAME` làm biến cấu hình chính; `MAIL_USER` chỉ còn là fallback legacy nội bộ và không cần khai báo trong `.env` mới.
+- Hỗ trợ `MAIL_SMTP_AUTH`, `MAIL_STARTTLS`, `MAIL_STARTTLS_REQUIRED`.
+- Hỗ trợ timeout `MAIL_CONNECTION_TIMEOUT`, `MAIL_TIMEOUT`, `MAIL_WRITE_TIMEOUT`.
+- Docker API nhận trực tiếp cấu hình Gmail SMTP; không còn phụ thuộc Mailpit để khởi động.
+- Mailpit chuyển thành Docker profile `mailpit`, chỉ chạy khi cần test hộp thư local.
+- Thêm lệnh `npm run mail:kiem-tra` để kiểm tra kết nối SMTP trước khi thử quên mật khẩu.
+- Không chứa địa chỉ Gmail hay App Password thật trong source/repository.
 
-Tất cả lệnh test/build/update/release được hướng dẫn từ:
+### Gmail SMTP mẫu
+
+Gmail dùng cổng `587` với STARTTLS. Với xác thực bằng mật khẩu SMTP, hãy bật xác minh 2 bước trên tài khoản Google và dùng **App Password**, không dùng mật khẩu Gmail thông thường.
+
+```env
+MAIL_ENABLED=true
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=your-account@gmail.com
+MAIL_PASSWORD=YOUR_GOOGLE_APP_PASSWORD
+MAIL_SMTP_AUTH=true
+MAIL_STARTTLS=true
+MAIL_STARTTLS_REQUIRED=true
+MAIL_FROM="NhienIn3d <your-account@gmail.com>"
+MAIL_CONNECTION_TIMEOUT=5000
+MAIL_TIMEOUT=5000
+MAIL_WRITE_TIMEOUT=5000
+MAIL_TLS_REJECT_UNAUTHORIZED=true
+WEB_PUBLIC_URL=http://localhost:3000
+RESET_PASSWORD_EXPIRES_MINUTES=15
+```
+
+Kiểm tra SMTP từ thư mục root:
 
 ```powershell
 cd D:\LienThongDH\DoAn\NhienIn3d
+npm run mail:kiem-tra
 ```
 
----
+> `.env` thật bị `.gitignore`; tuyệt đối không đưa App Password vào README, source, commit hoặc GitHub Actions log.
 
-# Cấu hình `.env`
+## Mới trong v2.8.0
 
-Tạo từ mẫu:
+V2.8.0 hoàn thiện khu vực tài khoản và quản trị nhân sự:
 
-```powershell
-Copy-Item .env.example .env
-notepad .env
+- Chọn màu sản phẩm sẽ cập nhật **preview màu trên ảnh sản phẩm ngay lập tức**. Đây là preview màu trên ảnh tham khảo, không giả làm ảnh chụp riêng của từng màu.
+- Nút **Tài khoản** trên thanh điều hướng hiển thị họ tên, email, vai trò, liên kết hồ sơ và nút đăng xuất.
+- Người dùng, nhân viên, quản lý và admin đều có thể sửa họ tên/số điện thoại trong `/tai-khoan`.
+- `/tai-khoan` hiển thị phiên đăng nhập, cho thu hồi từng phiên, lịch sử đơn hàng và lịch làm việc nếu tài khoản là nhân viên.
+- Thêm tài khoản nhân viên, hồ sơ nhân viên, mẫu ca làm và phân ca.
+- Thêm `/quan-tri` cho `QUAN_TRI` và `SIEU_QUAN_TRI`: quản lý người dùng, vai trò, trạng thái tài khoản, tạo/sửa hồ sơ nhân viên, tạo ca và xếp ca.
+- `SIEU_QUAN_TRI` bypass mọi `VaiTroGuard`; `QUAN_TRI` có toàn quyền trên các module quản trị hiện có nhưng không được tự cấp/đụng tài khoản `SIEU_QUAN_TRI`.
+- Mỗi bảng nghiệp vụ mới tiếp tục có tối thiểu 10 dòng seed.
+
+### Backend v2.8.0
+
+Backend **đã có và đang dùng thật** trong project, không phải mock frontend.
+
+```text
+apps/api
+NestJS 12
+  -> Fastify 5
+  -> Prisma 7.10
+  -> PostgreSQL 18.6
 ```
 
-Ví dụ:
+Endpoint tài khoản:
+
+```text
+GET    /api/v1/tai-khoan/ho-so
+PATCH  /api/v1/tai-khoan/ho-so
+GET    /api/v1/tai-khoan/phien
+DELETE /api/v1/tai-khoan/phien/:id
+GET    /api/v1/tai-khoan/don-hang
+GET    /api/v1/tai-khoan/lich-lam-viec
+```
+
+Endpoint quản trị:
+
+```text
+GET    /api/v1/quan-tri/tong-quan
+GET    /api/v1/quan-tri/nguoi-dung
+PATCH  /api/v1/quan-tri/nguoi-dung/:id
+GET    /api/v1/quan-tri/nhan-vien
+POST   /api/v1/quan-tri/nhan-vien
+PATCH  /api/v1/quan-tri/nhan-vien/:id
+GET    /api/v1/quan-tri/ca-lam
+POST   /api/v1/quan-tri/ca-lam
+GET    /api/v1/quan-tri/phan-ca
+POST   /api/v1/quan-tri/phan-ca
+PATCH  /api/v1/quan-tri/phan-ca/:id
+DELETE /api/v1/quan-tri/phan-ca/:id
+```
+
+## Database v2.8.0
+
+Migration mới:
+
+```text
+apps/api/prisma/migrations/202608290007_v280_tai_khoan_nhan_vien_phan_ca
+```
+
+Bổ sung cột:
+
+```text
+nguoi_dung.so_dien_thoai
+```
+
+Bảng mới:
+
+```text
+nhan_vien
+ca_lam_viec
+phan_ca
+```
+
+Tổng số bảng nghiệp vụ được script kiểm tra seed: **23 bảng**.
+
+Quy ước database vẫn giữ nguyên:
+
+- Tên bảng/cột: tiếng Việt không dấu.
+- Dữ liệu: tiếng Việt có dấu UTF-8.
+- Migration chạy tăng dần, không ghi đè migration cũ.
+- Seed idempotent.
+- Mỗi bảng nghiệp vụ có tối thiểu 10 dòng dữ liệu mẫu/historical an toàn.
+
+## Phân quyền
+
+```text
+KHACH_HANG      mua hàng + tài khoản cá nhân
+NHAN_VIEN       tài khoản cá nhân + lịch làm việc
+QUAN_LY         nền tảng quản lý theo module được mở
+QUAN_TRI        toàn quyền quản trị nghiệp vụ hiện có
+SIEU_QUAN_TRI   bypass toàn bộ VaiTroGuard + bảo vệ cấp cao nhất
+```
+
+Tài khoản khai báo bằng `ADMIN_EMAIL`/`ADMIN_PASSWORD` trong `.env` được seed thành `SIEU_QUAN_TRI`.
+
+## Cấu hình `.env`
+
+Giữ các biến PostgreSQL/JWT hiện tại và thêm SMTP thật trong `.env` local. Ví dụ Gmail:
 
 ```env
 POSTGRES_DB=nhienin3d
 POSTGRES_USER=nhienin3d_app
-POSTGRES_PASSWORD=DOI_MAT_KHAU_DB
 POSTGRES_PORT=5434
-
 API_PORT=3001
 WEB_PORT=3000
-
-JWT_SECRET=DOI_CHUOI_NGAU_NHIEN_IT_NHAT_32_KY_TU
-COOKIE_SECRET=DOI_CHUOI_NGAU_NHIEN_IT_NHAT_32_KY_TU
-
-ADMIN_EMAIL=admin@nhienin3d.local
-ADMIN_PASSWORD=DOI_MAT_KHAU_ADMIN
-ADMIN_NAME="System Admin"
-
 NEXT_PUBLIC_API_URL=http://localhost:3001/api/v1
 CORS_ORIGIN=http://localhost:3000
 NODE_ENV=development
+
+MAIL_ENABLED=true
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=your-account@gmail.com
+MAIL_PASSWORD=YOUR_GOOGLE_APP_PASSWORD
+MAIL_SMTP_AUTH=true
+MAIL_STARTTLS=true
+MAIL_STARTTLS_REQUIRED=true
+MAIL_FROM="NhienIn3d <your-account@gmail.com>"
+MAIL_CONNECTION_TIMEOUT=5000
+MAIL_TIMEOUT=5000
+MAIL_WRITE_TIMEOUT=5000
+MAIL_TLS_REJECT_UNAUTHORIZED=true
+WEB_PUBLIC_URL=http://localhost:3000
+RESET_PASSWORD_EXPIRES_MINUTES=15
 ```
 
-Không commit `.env`.
+Không commit `.env` lên GitHub. Nếu muốn dùng Mailpit thay Gmail để test offline, đặt cấu hình SMTP về Mailpit và khởi động profile `mailpit`.
 
----
-
-# Test và build
+## Chạy mặc định từ thư mục dự án
 
 ```powershell
 cd D:\LienThongDH\DoAn\NhienIn3d
@@ -239,15 +292,15 @@ npm run build
 npm run audit:security
 ```
 
-Lệnh kiểm tra gọn:
+Hoặc:
 
 ```powershell
 .\scripts\kiem-tra.ps1
 ```
 
----
+## Cập nhật database và Docker
 
-# Chạy Docker
+Không xóa volume khi nâng từ version trước:
 
 ```powershell
 cd D:\LienThongDH\DoAn\NhienIn3d
@@ -256,384 +309,93 @@ docker compose up -d --build
 docker compose ps
 ```
 
-Truy cập:
-
-```text
-Web:        http://localhost:3000
-API:        http://localhost:3001/api/v1
-Health:     http://localhost:3001/api/v1/suc-khoe
-Swagger:    http://localhost:3001/tai-lieu
-PostgreSQL: 127.0.0.1:5434
-```
-
-## pgAdmin
-
-```text
-Host:                 127.0.0.1
-Port:                 5434
-Maintenance database: nhienin3d
-Username:             nhienin3d_app
-Password:             POSTGRES_PASSWORD trong .env
-```
-
-Docker nội bộ vẫn dùng `postgres:5432`; không đổi API/migrate sang 5434.
-
----
-
-# Nâng cấp V1.0.7 -> V2.0.0
-
-**Không dùng `docker compose down -v` khi muốn giữ dữ liệu hiện tại.**
-
-Giữ nguyên `.env`, chép source V2 đè vào:
-
-```text
-D:\LienThongDH\DoAn\NhienIn3d
-```
-
-Sau đó:
-
-```powershell
-cd D:\LienThongDH\DoAn\NhienIn3d
-
-npm install
-npm test
-npm run typecheck
-npm run build
-
-docker compose up -d --build
-```
-
-Container `migrate` sẽ tự chạy:
-
-```text
-202608290001_v001_khoi_tao          đã có -> bỏ qua
-202608290002_v002_gio_hang_thanh_toan       -> chạy
-
-seed V1                              -> upsert / giữ dữ liệu
-seed V2                              -> thêm dữ liệu mới
-```
-
-Hoặc dùng script:
-
-```powershell
-.\scripts\cap-nhat.ps1
-```
-
-## Kiểm tra dữ liệu
-
-```powershell
-docker compose run --rm migrate npm run db:kiem-tra-du-lieu
-```
-
-Kết quả hợp lệ:
-
-```text
-17 bảng nghiệp vụ đều có tối thiểu 10 dòng dữ liệu.
-```
-
-## Nâng cấp v2.1.0 -> v2.1.1
-
-Không có migration schema mới. Giữ nguyên `.env` và volume PostgreSQL hiện tại, sau đó chạy:
-
-```powershell
-cd D:\LienThongDH\DoAn\NhienIn3d
-
-npm install
-npm audit
-npm test
-npm run typecheck
-npm run build
-
-docker compose up -d --build
-```
-
-V2.1.1 không thêm migration database. Container `migrate` vẫn chạy migration/seed idempotent hiện có. **Không chạy `docker compose down -v`** nếu muốn giữ dữ liệu.
-
-## Nâng cấp v2.2.0 -> v2.2.1
-
-V2.2.1 không thêm migration schema. Giữ nguyên `.env` và volume PostgreSQL hiện tại. Khi chạy `npm test`, script cleanup sẽ tự xóa tệp storefront legacy còn sót từ bản cũ nếu có.
-
-```powershell
-cd D:\LienThongDH\DoAn\NhienIn3d
-
-npm install
-npm audit
-npm test
-npm run typecheck
-npm run build
-npm run audit:security
-
-docker compose up -d --build
-docker compose ps
-```
-
-Kiểm tra nhanh trình xem 3D:
-
-```text
-http://localhost:3000/san-pham/khoi-lap-phuong-banh-rang
-```
-
-Không dùng `docker compose down -v` nếu muốn giữ dữ liệu hiện tại.
-
----
-
-# Luồng checkout
-
-```text
-Danh sách sản phẩm
-   | nhấp sản phẩm
-   v
-/san-pham/[duong_dan]
-   | chọn biến thể + số lượng
-   v
-Thêm vào giỏ
-   |
-   v
-/gio-hang
-   | xem / tăng / giảm / xóa
-   | bấm Tiến hành thanh toán
-   v
-/thanh-toan
-   | nhập thông tin nhận hàng
-   | chọn phương thức thanh toán
-   v
-PostgreSQL transaction
-   +--> kiểm tra tồn kho
-   +--> tạo đơn + chi tiết đơn
-   +--> tạo thanh toán / giả lập local nếu được chọn
-```
-
-Giá và tồn kho không được tin từ browser. Server đọc lại dữ liệu database trước khi tạo đơn.
-
-## Thanh toán
-
-Đang bật:
-
-```text
-COD
-CHUYEN_KHOAN
-```
-
-Có dữ liệu mẫu nhưng mặc định tắt:
-
-```text
-VNPAY
-MOMO
-ZALOPAY
-SHOPEEPAY
-NAPAS
-THE_QUOC_TE
-APPLE_PAY
-GOOGLE_PAY
-```
-
-### Giả lập thanh toán khi chạy local
-
-Với `.env`:
-
-```env
-NODE_ENV=development
-```
-
-API `/api/v1/thanh-toan/phuong-thuc` trả cả 10 phương thức. COD và chuyển khoản là phương thức nội bộ đang bật; 8 gateway online sẽ có `la_gia_lap=true`. Trên web chúng được ghi rõ **Giả lập local**.
-
-Khi chọn VNPay/MoMo/ZaloPay/ShopeePay/NAPAS/Visa-Mastercard/Apple Pay/Google Pay trong local:
-
-```text
-Không gọi gateway thật
-      |
-      v
-Tạo don_hang trong transaction
-      |
-      v
-Tạo thanh_toan N3D-MOCK-*
-      |
-      v
-trang_thai = DA_THANH_TOAN
-ngay_thanh_toan = thời điểm hiện tại
-```
-
-Khi chạy production:
-
-```env
-NODE_ENV=production
-```
-
-các gateway chưa tích hợp thật không được trả về danh sách checkout và API từ chối sử dụng chúng. Việc tích hợp production vẫn cần API key/merchant credentials chính thức của từng nhà cung cấp.
-
----
-
-# Dữ liệu mẫu
-
-V2 giữ 10 sản phẩm thật đã dùng ở V1, gồm:
-
-1. Xe RC Dragon R1 in 3D
-2. Giá đỡ điện thoại bánh răng
-3. Chậu cây xoắn ốc hiện đại
-4. Hộp cuộn cáp di động
-5. Giá treo tai nghe đôi
-6. Chụp đèn Radiant
-7. Khối lập phương bánh răng
-8. Khay Gridfinity đa năng
-9. Đèn Lithophane theo ảnh
-10. Vỏ Raspberry Pi 5 thoáng khí
-
-Nguồn model/ảnh vẫn được lưu dưới dạng tham khảo. Trạng thái mặc định không tự coi mọi model là được phép kinh doanh.
-
-V2 bổ sung thêm:
-
-- 10 giỏ hàng mẫu.
-- 10 chi tiết giỏ hàng.
-- 10 phương thức thanh toán.
-- 10 giao dịch thanh toán.
-- 10 địa chỉ người dùng.
-
-Seed là idempotent: chạy lại không tạo trùng dữ liệu có khóa tự nhiên.
-
----
-
-## Nâng cấp v2.3.0 -> v2.4.0
-
-Giữ nguyên `.env` và PostgreSQL volume hiện tại. **Không chạy `docker compose down -v`**.
-
-```powershell
-cd D:\LienThongDH\DoAn\NhienIn3d
-npm install
-npm audit
-npm test
-npm run typecheck
-npm run build
-npm run audit:security
-docker compose up -d --build
-docker compose ps
-```
-
-v2.4.0 không có migration schema mới. Container `migrate` chỉ kiểm tra các migration hiện có và chạy seed idempotent `SEED_V240_3D_WEBGL_THAT`.
-
-Kiểm tra dữ liệu:
+Kiểm tra:
 
 ```powershell
 docker compose logs migrate --tail 150
-npm run db:kiem-tra-du-lieu
-```
-
-# GitHub / Release
-
-Repository mục tiêu:
-
-```text
-TamNhien/NhienIn3d
-```
-
-Lần đầu:
-
-```powershell
-gh auth login
-.\scripts\khoi-tao-github.ps1
-```
-
-Release phiên bản hiện tại:
-
-```powershell
-.\scripts\release.ps1 v2.4.0
-```
-
-Script release kiểm tra tag phải trùng với `VERSION` của source, chạy toàn bộ test/typecheck/build/audit, yêu cầu `package-lock.json` đã được `npm install` tạo/cập nhật, rồi mới commit + push tag.
-
-GitHub Actions sẽ build/test/audit và tạo GitHub Release theo tag.
-
----
-
-# Lệnh chẩn đoán
-
-```powershell
-docker compose ps
-docker compose logs postgres --tail 100
-docker compose logs migrate --tail 150
-docker compose logs api --tail 150
+docker compose logs api --tail 100
 docker compose logs web --tail 100
 ```
 
-Kiểm tra PostgreSQL:
+Không dùng `docker compose down -v` khi chỉ nâng version vì lệnh đó xóa PostgreSQL volume.
+
+## URL local
+
+```text
+Web:             http://localhost:3000
+Sản phẩm:        http://localhost:3000/san-pham
+Tài khoản:       http://localhost:3000/tai-khoan
+Quản trị:        http://localhost:3000/quan-tri
+Đăng nhập:       http://localhost:3000/dang-nhap
+Quên mật khẩu:   http://localhost:3000/quen-mat-khau
+API:             http://localhost:3001/api/v1
+Swagger:         http://localhost:3001/tai-lieu
+Mailpit profile: http://localhost:8025 (chỉ khi chạy --profile mailpit)
+PostgreSQL:      127.0.0.1:5434
+```
+
+## Test v2.8.4
+
+1. Chạy `npm run mail:kiem-tra` và xác nhận Gmail SMTP kết nối thành công.
+2. Tạo tài khoản mới tại `/dang-ky`: thử mật khẩu yếu rồi tăng dần để kiểm tra thanh độ mạnh và 5 điều kiện.
+3. Dùng nút **Hiện/Ẩn** ở cả mật khẩu và xác nhận mật khẩu.
+4. Đăng xuất rồi mở `/dang-nhap`; bật **Ghi nhớ tài khoản**, đăng nhập và đăng xuất lại. Email phải tự điền nhưng mật khẩu không được lưu bởi code NhienIn3d.
+5. Mở `/quen-mat-khau`, nhập đúng email vừa đăng ký và bấm **Xác nhận và gửi email đặt lại**.
+6. Kiểm tra Inbox/Spam của chính email đăng ký; mở email **Đặt lại mật khẩu NhienIn3d**.
+7. Click nút trong email. Browser phải mở `/dat-lai-mat-khau?ma=...`.
+8. Tại trang reset, thử mật khẩu yếu/mạnh, kiểm tra checklist, Hiện/Ẩn và xác nhận mật khẩu.
+9. Reset thành công rồi đăng nhập lại bằng mật khẩu mới; session cũ phải bị thu hồi.
+10. Đăng nhập tài khoản khách hàng và kiểm tra `/tai-khoan`, sửa họ tên/số điện thoại rồi lưu.
+11. Đăng nhập Admin/Super Admin, mở `/quan-tri`, tạo nhân viên với password strength/checklist rồi xếp ca.
+12. Đăng nhập tài khoản nhân viên để xem lịch tại `/tai-khoan`.
+13. Mở chi tiết sản phẩm, đổi màu và xác nhận ảnh preview đổi tông màu theo lựa chọn.
+
+## Release GitHub
+
+Sau khi test/build/Docker PASS:
 
 ```powershell
-Test-NetConnection 127.0.0.1 -Port 5434
-docker exec nhienin3d-postgres pg_isready -U nhienin3d_app -d nhienin3d
+cd D:\LienThongDH\DoAn\NhienIn3d
+.\scripts\release.ps1 v2.8.4
 ```
 
 ---
 
-# Lộ trình phát triển đã chốt
-
-| Phiên bản | Phạm vi | Trạng thái |
-|---|---|---|
-| **v2.6.0** | Đăng ký, đăng nhập, đăng xuất, refresh session, Argon2id, khóa brute-force, RBAC 5 vai trò | **Đã làm** |
-| **v2.7.0** | Quên mật khẩu qua email: gửi link một lần, token chỉ lưu hash, hết hạn, trang đặt lại mật khẩu, đổi mật khẩu Argon2id và thu hồi phiên cũ | Kế tiếp |
-| **v2.8.0** | Khu vực tài khoản: hồ sơ, địa chỉ, lịch sử đơn hàng, đổi mật khẩu, quản lý các phiên đăng nhập | Sau v2.7.0 |
-| **v2.9.0** | Dashboard quản trị: doanh thu, đơn hàng, người dùng, sản phẩm, tồn kho, thanh toán, đánh giá, lọc khoảng ngày và kiểm soát bằng RBAC | Sau v2.8.0 |
-| **v3.0.0** | CRUD quản trị hoàn chỉnh, MFA/TOTP cho quản trị, audit nâng cao, backup/restore, E2E security hardening | Mốc ổn định tiếp theo |
-
-## Luồng quên mật khẩu dự kiến ở v2.7.0
-
-```text
-Email đăng ký
-   ↓
-POST /quen-mat-khau
-   ↓
-Sinh token ngẫu nhiên 256-bit
-   ├─ gửi token gốc trong link email
-   └─ chỉ lưu HASH(token) + thời hạn trong PostgreSQL
-   ↓
-Người dùng nhấp link /dat-lai-mat-khau?token=...
-   ↓
-Nhập mật khẩu mới
-   ↓
-Argon2id hash
-   ↓
-Lưu mat_khau_bam + tăng phien_ban_mat_khau
-   ↓
-Thu hồi toàn bộ phiên cũ
-```
-
-> Không lưu token reset hoặc mật khẩu mới ở dạng thuần trong database. SMTP/API email thật sẽ được cấu hình qua biến môi trường ở v2.7.0; local có chế độ mail catcher để kiểm thử.
-
 # Lịch sử phiên bản
+
+Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng dần**.
 
 ## v1.0.0 — 29/08/2026
 
 - Khởi tạo NhienIn3d.
-- Next.js + Three.js.
-- NestJS + PostgreSQL + Prisma.
-- Docker Compose.
-- 10 sản phẩm mẫu.
-- Migration + seed.
+- Next.js, NestJS, PostgreSQL, Prisma và Docker Compose.
+- Seed 10 sản phẩm mẫu.
 
 ## v1.0.1 — 29/08/2026
 
 - Sửa TypeScript build.
 - Bổ sung OpenSSL cho Prisma trong Docker.
-- Cải thiện kiểm tra dependency.
+- Bổ sung kiểm tra dependency bảo mật.
 
 ## v1.0.2 — 29/08/2026
 
 - Thêm npm workspaces.
-- Cho phép test/typecheck/build từ thư mục root.
+- Chuẩn hóa test/typecheck/build từ thư mục root.
 
 ## v1.0.3 — 29/08/2026
 
-- Vá dependency `deepmerge-ts`.
-- Root security overrides.
+- Vá `deepmerge-ts` qua root security overrides.
 - `npm audit` sạch mức High.
 
 ## v1.0.4 — 29/08/2026
 
 - Prisma tự dựng `DATABASE_URL` từ `POSTGRES_*`.
-- Local dùng PostgreSQL port 5434.
+- Chuẩn hóa kết nối PostgreSQL local.
 
 ## v1.0.5 — 29/08/2026
 
-- Chuyển API sang ESM/NodeNext cho NestJS 12.
-- Sửa relative import `.js`.
+- Chuyển backend NestJS sang ESM/NodeNext.
+- Chuẩn hóa relative import `.js`.
 
 ## v1.0.6 — 29/08/2026
 
@@ -644,163 +406,135 @@ Thu hồi toàn bộ phiên cũ
 ## v1.0.7 — 29/08/2026
 
 - Bổ sung `@fastify/static` cho Swagger.
-- Chuẩn hóa seed mỗi bảng nghiệp vụ có tối thiểu 10 dòng.
+- Chuẩn hóa mỗi bảng nghiệp vụ có tối thiểu 10 dòng seed.
 - Thêm script kiểm tra dữ liệu.
 
 ## v2.0.0 — 29/08/2026
 
-- Thêm `gio_hang`.
-- Thêm `chi_tiet_gio_hang`.
-- Thêm `phuong_thuc_thanh_toan`.
-- Thêm `thanh_toan`.
-- Thêm `dia_chi_nguoi_dung`.
-- Migration V2 chạy nối tiếp migration V1, không phá dữ liệu cũ.
-- 5 bảng mới đều có tối thiểu 10 dòng seed.
-- Thêm API giỏ hàng.
-- Thêm checkout transaction.
-- Kiểm tra/trừ tồn kho ở server.
-- COD + chuyển khoản hoạt động mặc định.
-- Thêm giao diện giỏ hàng dạng drawer.
-- Thêm form checkout ngay trên storefront.
-- Cập nhật Swagger/API/health/version lên V2.
-
+- Thêm giỏ hàng và chi tiết giỏ hàng PostgreSQL.
+- Checkout transaction, kiểm tra tồn kho và trừ tồn ở server.
+- Thêm thanh toán và địa chỉ người dùng.
 
 ## v2.1.0 — 29/08/2026
 
-- Tinh chỉnh font và kích thước chữ storefront.
-- Bỏ các dòng quảng bá V2 khỏi hero/giỏ hàng.
-- Thêm lịch sử phát triển trên giao diện theo thứ tự tăng dần.
-- Cho phép giả lập 8 gateway online khi chạy local.
-- Thanh toán giả lập được ghi `DA_THANH_TOAN` với mã `N3D-MOCK-*`; không phát sinh tiền thật.
-- Production vẫn khóa phương thức chưa tích hợp thật.
+- Tinh chỉnh typography storefront.
+- Bỏ nội dung quảng bá version khỏi giao diện.
+- Thêm thanh toán giả lập local.
 
 ## v2.1.1 — 29/08/2026
 
-- Thêm trang chi tiết sản phẩm theo `duong_dan`.
-- Cho phép chọn biến thể và số lượng trước khi thêm vào giỏ.
-- Tách trang giỏ hàng khỏi checkout; giỏ hàng hỗ trợ tăng/giảm số lượng và xóa sản phẩm.
-- Tạo trang thanh toán riêng, chỉ truy cập từ bước xác nhận giỏ hàng.
-- Giữ nguyên thanh toán giả lập local và schema PostgreSQL.
+- Tách route chi tiết sản phẩm, giỏ hàng và thanh toán.
+- Sửa luồng click sản phẩm và xem giỏ hàng trước checkout.
 
 ## v2.2.0 — 29/08/2026
 
-- Bỏ các khối giới thiệu dài khỏi storefront: Thương mại điện tử, Công nghệ, Lịch sử phát triển và Security by default.
-- Lịch sử phát triển chỉ còn trong README, giữ đúng thứ tự tăng dần.
-- Thêm trình xem ảnh 3D tương tác ở trang chi tiết sản phẩm với kéo xoay, zoom và đặt lại góc nhìn.
-- Đóng gói ảnh local cho Khối lập phương bánh răng và cập nhật seed idempotent.
-- Không đổi schema PostgreSQL; giữ nguyên giỏ hàng, checkout và thanh toán giả lập local.
+- Tinh gọn trang chủ.
+- Thử nghiệm viewer 3D/ảnh tương tác.
+- Chuyển lịch sử phát triển về README.
 
 ## v2.2.1 — 29/08/2026
 
-- Sửa regression test khi nâng cấp bằng cách chép source đè còn sót `apps/web/lib/lich-su-phien-ban.ts` từ phiên bản cũ.
-- Thêm cleanup tự động trước `npm test` để loại bỏ tệp storefront legacy đã ngừng sử dụng.
-- Bỏ nhãn version khỏi footer storefront; lịch sử phiên bản chỉ còn trong README.
-- Giữ nguyên route chi tiết sản phẩm, giỏ hàng, thanh toán và trình xem 3D của v2.2.0.
-- Không đổi schema PostgreSQL và không cần migration mới.
-
+- Dọn file storefront legacy khi chép source đè.
+- Sửa regression test lịch sử phiên bản.
 
 ## v2.3.0 — 29/08/2026
 
-- Thêm trang danh sách sản phẩm riêng với tìm kiếm, lọc danh mục, lọc tồn kho và sắp xếp.
-- Mở rộng API sản phẩm với query an toàn và giới hạn tối đa 50 kết quả.
-- Thêm bảng `yeu_thich`, API yêu thích và trang yêu thích cho khách chưa đăng nhập bằng mã phiên ngẫu nhiên.
-- Thêm nút trái tim ở card/trang chi tiết; navbar hiển thị số sản phẩm đã lưu.
-- Migration v2.3.0 chạy nối tiếp V1/V2, không xóa dữ liệu cũ.
-- Seed thêm 10 dòng `yeu_thich`; tổng cộng 18 bảng nghiệp vụ đều có tối thiểu 10 dòng.
-- Giữ nguyên PostgreSQL host `5434`, Docker nội bộ `5432`, giỏ hàng, checkout, thanh toán giả lập local và trình xem 3D.
-- Release script bắt buộc `package-lock.json` tồn tại trước commit; GitHub CI/Release dùng `npm ci` để build có thể tái lập.
-
+- Thêm trang danh sách sản phẩm.
+- Tìm kiếm, lọc, sắp xếp.
+- Thêm yêu thích lưu PostgreSQL.
 
 ## v2.4.0 — 29/08/2026
 
-- Bỏ dải chữ trang trí PLA/PETG/ABS/TPU và các nhãn kỹ thuật khỏi trang chủ.
-- Thay trình xem ảnh 3D giả lập bằng viewer WebGL/Three.js render mesh 3D thật trong khung chi tiết sản phẩm.
-- Thêm mô hình procedural riêng cho 10 sản phẩm mẫu, gồm khối lập phương bánh răng có các bánh răng 3D.
-- Hỗ trợ xoay 360°, zoom, auto-rotate, ánh sáng và bóng đổ bằng React Three Fiber + Drei.
-- Giữ tab Ảnh/3D thật và chuẩn bị kiến trúc để gắn GLB/GLTF chính xác khi có model gốc.
-- Không đổi schema PostgreSQL; thêm seed history `SEED_V240_3D_WEBGL_THAT`.
-
+- Thử nghiệm viewer WebGL/Three.js cho sản phẩm.
+- Bỏ dải chữ trang trí không có chức năng.
 
 ## v2.4.1 — 29/08/2026
 
-- Chuẩn hóa thứ tự sản phẩm mặc định theo số thứ tự trong mã sản phẩm, từ `001` đến `010`.
-- Áp dụng trên trang chủ, danh sách sản phẩm, yêu thích và API.
-- Giữ nguyên các tùy chọn sắp xếp theo giá, tên và mới nhất.
-- Không đổi schema PostgreSQL; seed history: `SEED_V241_SAP_XEP_SAN_PHAM_TANG_DAN`.
+- Chuẩn hóa thứ tự sản phẩm mặc định theo mã `001 -> 010`.
 
 ## v2.5.0 — 29/08/2026
 
-- Thêm đánh giá sản phẩm lưu PostgreSQL với điểm 1-5 sao, nội dung, người đánh giá và trạng thái duyệt.
-- Local tự duyệt đánh giá mới để thuận tiện kiểm thử; production mặc định chờ duyệt.
-- API danh sách/chi tiết sản phẩm bổ sung điểm sao trung bình và số lượng đánh giá đã duyệt.
-- Thêm sản phẩm liên quan theo danh mục và lịch sử sản phẩm đã xem gần đây trên browser.
-- Migration `202608290004_v250_danh_gia_san_pham` chạy nối tiếp migration cũ, không xóa dữ liệu.
-- Seed thêm 10 đánh giá mẫu; tổng cộng 19 bảng nghiệp vụ đều có tối thiểu 10 dòng.
-- Giữ nguyên thứ tự mã sản phẩm tăng dần `001 → 010`, WebGL 3D, yêu thích, giỏ hàng và checkout.
-
+- Thêm đánh giá 1–5 sao lưu PostgreSQL.
+- Thêm sản phẩm liên quan và đã xem gần đây.
 
 ## v2.6.0 — 29/08/2026
 
-- Thêm đăng ký/đăng nhập/đăng xuất và làm mới phiên bằng cookie HttpOnly.
-- Mật khẩu đăng ký được băm Argon2id; refresh token chỉ lưu SHA-256 hash trong database.
-- Thêm khóa tài khoản tạm thời khi sai mật khẩu nhiều lần và ghi audit security events.
-- Thêm RBAC 5 vai trò, gồm `SIEU_QUAN_TRI`; admin seed từ `.env` được nâng thành siêu quản trị.
-- Thêm trang `/dang-ky`, `/dang-nhap`, `/tai-khoan` và trạng thái đăng nhập trên navbar.
-- Migration `202608290005_v260_tai_khoan_phan_quyen` chạy nối tiếp các migration cũ, không reset dữ liệu.
-- Chốt roadmap: v2.7 reset mật khẩu qua email, v2.8 khu vực tài khoản, v2.9 dashboard, v3.0 quản trị/MFA/hardening.
-
+- Thêm đăng ký, đăng nhập, đăng xuất và refresh session.
+- Mật khẩu Argon2id.
+- RBAC 5 vai trò.
+- Khóa tạm tài khoản sau nhiều lần đăng nhập sai.
 
 ## v2.6.1 — 29/08/2026
 
-- Bỏ viewer 3D sản phẩm procedural vì không khớp hình/model gốc.
-- Trang chi tiết chuyển về ảnh sản phẩm thật/tham khảo.
-- Mỗi sản phẩm mẫu có 3 lựa chọn màu trong `bien_the_san_pham`; lựa chọn được lưu đúng vào giỏ hàng.
-- Card sản phẩm không thêm thẳng màu mặc định; người dùng phải vào chi tiết để chọn màu trước.
-- Không đổi schema PostgreSQL, không có migration mới; chỉ chạy seed idempotent `SEED_V261_CHON_MAU_SAN_PHAM`.
-- Giữ nguyên tài khoản/RBAC v2.6.0 và roadmap v2.7 reset mật khẩu qua email.
+- Bỏ viewer 3D sản phẩm vì model dựng không khớp ảnh thật.
+- Thêm lựa chọn màu theo biến thể PostgreSQL.
+- Giỏ hàng lưu đúng biến thể/màu đã chọn.
 
+## v2.7.0 — 29/08/2026
 
-## Nâng cấp v2.5.0 -> v2.6.0
+- Thêm quên mật khẩu qua email.
+- Token reset 256-bit, database chỉ lưu SHA-256.
+- Mật khẩu mới Argon2id.
+- Thu hồi toàn bộ session cũ sau reset.
+- Thêm Mailpit local và bảng `dat_lai_mat_khau`.
 
-Từ thư mục mặc định:
+## v2.8.0 — 29/08/2026
 
-```powershell
-cd D:\LienThongDH\DoAn\NhienIn3d
-npm install
-npm audit
-npm test
-npm run typecheck
-npm run build
-npm run audit:security
-docker compose up -d --build
-docker compose ps
-```
+- Ảnh sản phẩm đổi preview màu khi chọn biến thể màu.
+- Hoàn thiện menu Tài khoản và sửa luồng đăng xuất.
+- Cho phép sửa hồ sơ cá nhân cho mọi tài khoản đã đăng nhập.
+- Thêm lịch sử đơn hàng, quản lý phiên và lịch làm việc trong tài khoản.
+- Thêm `nhan_vien`, `ca_lam_viec`, `phan_ca` và seed tối thiểu 10 dòng mỗi bảng.
+- Thêm khu quản trị người dùng, tạo/sửa nhân viên, ca làm và xếp ca.
+- `SIEU_QUAN_TRI` bypass mọi role guard; `QUAN_TRI` toàn quyền trên module quản trị hiện có.
 
-Không chạy `docker compose down -v`. Sau khi kiểm tra PASS, phát hành:
+## v2.8.1 — 29/08/2026
 
-```powershell
-.\scripts\release.ps1 v2.6.0
-```
+- Chuẩn hóa gửi email bằng Gmail/SMTP với `MAIL_ENABLED`, `MAIL_USERNAME`, SMTP AUTH và STARTTLS.
+- Thêm timeout SMTP và lệnh `npm run mail:kiem-tra`.
+- Docker API không còn phụ thuộc Mailpit; Mailpit chuyển thành profile test tùy chọn.
+- Giữ App Password ngoài source/Git và tiếp tục dùng link đặt lại mật khẩu một lần.
 
+## v2.8.2 — 29/08/2026
 
-## Nâng cấp v2.6.0 -> v2.6.1
+- Chuẩn hóa `MAIL_USERNAME` là cấu hình SMTP chính; bỏ `MAIL_USER` khỏi `.env.example` và Docker Compose mới.
+- Xác nhận backend gửi reset tới đúng email đã đăng ký và link email mở trang đặt lại mật khẩu.
+- Thêm độ mạnh mật khẩu, checklist chữ hoa/chữ thường/số/ký tự đặc biệt và nút Hiện/Ẩn.
+- Áp dụng UX mật khẩu cho đăng ký, reset mật khẩu và tạo tài khoản nhân viên.
+- Thêm Ghi nhớ tài khoản khi đăng nhập, chỉ lưu email và không lưu mật khẩu plaintext.
 
-Từ thư mục mặc định:
+## v2.8.3 — 29/08/2026
 
-```powershell
-cd D:\LienThongDH\DoAn\NhienIn3d
-npm install
-npm audit
-npm test
-npm run typecheck
-npm run build
-npm run audit:security
-docker compose up -d --build
-docker compose ps
-```
+- Sửa runtime DI `JwtGuard -> JwtService` làm API NestJS crash trong `TaiKhoanModule` và `QuanTriModule`.
+- Re-export `JwtModule` từ `XacThucModule` để các module sử dụng guard nhận đúng `JwtService`.
+- Sửa lỗi giao diện `Failed to fetch` do backend không khởi động.
+- Thêm regression test cho dependency injection của guard.
+- Không đổi database schema; giữ toàn bộ Gmail SMTP và password UX của v2.8.2.
 
-Không chạy `docker compose down -v`. Container `migrate` không có migration mới nhưng sẽ chạy seed idempotent để bổ sung màu. Sau khi PASS:
+## v2.8.4 — 29/08/2026
 
-```powershell
-.\scripts\release.ps1 v2.6.1
-```
+- Bỏ mô tả dài trên form đăng nhập.
+- Đặt Quên mật khẩu ngang hàng với Ghi nhớ tài khoản.
+- Đổi Tạo tài khoản thành Đăng kí.
+- Thu nhỏ nút Đăng nhập trên desktop.
+- Không đổi backend/database.
+
+---
+
+# Lộ trình tiếp theo
+
+## v2.9.0
+
+- Dashboard thống kê quản trị.
+- Doanh thu theo ngày/7 ngày/30 ngày.
+- Số đơn, trạng thái đơn, giá trị đơn trung bình.
+- Top sản phẩm, tồn kho thấp, khách hàng mới.
+- Phân quyền dashboard theo vai trò.
+
+## v3.0.0
+
+- CRUD quản trị mở rộng cho sản phẩm/danh mục/tồn kho/đơn hàng.
+- MFA/TOTP cho quản trị.
+- Audit nâng cao.
+- Backup/restore.
+- Security hardening và E2E regression.

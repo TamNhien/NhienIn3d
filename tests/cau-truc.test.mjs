@@ -63,16 +63,16 @@ test("V2 co migration nang cap khong ghi de migration V1", () => {
   assert.equal(existsSync("apps/api/prisma/migrations/202608290002_v002_gio_hang_thanh_toan/migration.sql"), true);
 });
 
-test("version v2.6.1 dong bo root API va Web", () => {
-  assert.equal(readFileSync("VERSION", "utf8").trim(), "2.6.1");
-  assert.equal(docJson("package.json").version, "2.6.1");
-  assert.equal(docJson("apps/api/package.json").version, "2.6.1");
-  assert.equal(docJson("apps/web/package.json").version, "2.6.1");
+test("version v2.8.4 dong bo root API va Web", () => {
+  assert.equal(readFileSync("VERSION", "utf8").trim(), "2.8.4");
+  assert.equal(docJson("package.json").version, "2.8.4");
+  assert.equal(docJson("apps/api/package.json").version, "2.8.4");
+  assert.equal(docJson("apps/web/package.json").version, "2.8.4");
 });
 
-test("README co lich su phien ban tang dan den v2.6.1", () => {
+test("README co lich su phien ban tang dan den v2.8.4", () => {
   const readme = readFileSync("README.md", "utf8");
-  const viTri = ["## v1.0.0", "## v1.0.1", "## v1.0.2", "## v1.0.3", "## v1.0.4", "## v1.0.5", "## v1.0.6", "## v1.0.7", "## v2.0.0", "## v2.1.0", "## v2.1.1", "## v2.2.0", "## v2.2.1", "## v2.3.0", "## v2.4.0", "## v2.4.1", "## v2.5.0", "## v2.6.0", "## v2.6.1"].map(x => readme.indexOf(x));
+  const viTri = ["## v1.0.0", "## v1.0.1", "## v1.0.2", "## v1.0.3", "## v1.0.4", "## v1.0.5", "## v1.0.6", "## v1.0.7", "## v2.0.0", "## v2.1.0", "## v2.1.1", "## v2.2.0", "## v2.2.1", "## v2.3.0", "## v2.4.0", "## v2.4.1", "## v2.5.0", "## v2.6.0", "## v2.6.1", "## v2.7.0", "## v2.8.0", "## v2.8.1", "## v2.8.2", "## v2.8.3", "## v2.8.4"].map(x => readme.indexOf(x));
   assert.ok(viTri.every(x => x >= 0));
   assert.deepEqual([...viTri].sort((a,b)=>a-b), viTri);
 });
@@ -165,14 +165,14 @@ test("v2.5.0 co migration danh_gia_san_pham va giu migration cu", () => {
   assert.match(schema, /@@map\("danh_gia_san_pham"\)/);
 });
 
-test("v2.5.0 co API danh gia, san pham lien quan va 19 bang seed", () => {
+test("v2.8.0 co API danh gia, san pham lien quan va 23 bang seed", () => {
   assert.equal(existsSync("apps/api/src/danh-gia/danh-gia.controller.ts"), true);
   const sanPham = readFileSync("apps/api/src/san-pham/san-pham.controller.ts", "utf8");
   const seed = readFileSync("apps/api/prisma/seed.ts", "utf8");
   const check = readFileSync("apps/api/prisma/kiem-tra-du-lieu.ts", "utf8");
   assert.match(sanPham, /lien_quan/);
   assert.match(seed, /SEED_V250_DANH_GIA_SAN_PHAM/);
-  assert.match(check, /19 bảng nghiệp vụ/u);
+  assert.match(check, /23 bảng nghiệp vụ/u);
 });
 
 test("v2.6.0 co migration tai khoan va phan quyen 5 vai tro", () => {
@@ -201,4 +201,121 @@ test("v2.6.1 seed bo sung 3 mau moi san pham va khong can migration moi", () => 
   assert.match(seed, /bo_mau_san_pham/);
   assert.match(seed, /String\(j \+ 1\)\.padStart\(2, "0"\)/);
   assert.equal(existsSync("apps/api/prisma/migrations/202608290006_v261_chon_mau/migration.sql"), false);
+});
+
+
+test("v2.7.0 co migration va backend quen mat khau qua email", () => {
+  assert.equal(existsSync("apps/api/prisma/migrations/202608290006_v270_quen_mat_khau_email/migration.sql"), true);
+  const schema = readFileSync("apps/api/prisma/schema.prisma", "utf8");
+  const controller = readFileSync("apps/api/src/xac-thuc/xac-thuc.controller.ts", "utf8");
+  const service = readFileSync("apps/api/src/xac-thuc/xac-thuc.service.ts", "utf8");
+  const mail = readFileSync("apps/api/src/thu-dien-tu/thu-dien-tu.service.ts", "utf8");
+  assert.match(schema, /model\s+DatLaiMatKhau\b/);
+  assert.match(schema, /@@map\("dat_lai_mat_khau"\)/);
+  assert.match(controller, /quen-mat-khau/);
+  assert.match(controller, /dat-lai-mat-khau/);
+  assert.match(service, /randomBytes\(32\)/);
+  assert.match(service, /createHash\("sha256"\)/);
+  assert.match(service, /argon2\.hash/);
+  assert.match(service, /phien_ban_mat_khau: \{ increment: 1 \}/);
+  assert.match(service, /phienDangNhap\.updateMany/);
+  assert.match(mail, /nodemailer\.createTransport/);
+});
+
+test("v2.7.0 Docker co Mailpit local va README lich su tang dan", () => {
+  const compose = readFileSync("docker-compose.yml", "utf8");
+  const readme = readFileSync("README.md", "utf8");
+  assert.match(compose, /axllent\/mailpit:v1\.30\.6/);
+  assert.match(compose, /profiles: \["mailpit"\]/);
+  assert.match(compose, /MAILPIT_UI_PORT:-8025/);
+  assert.match(readme, /v1\.0\.0[\s\S]*v2\.7\.0/u);
+});
+
+
+test("v2.8.0 co migration nhan vien ca lam phan ca", () => {
+  assert.equal(existsSync("apps/api/prisma/migrations/202608290007_v280_tai_khoan_nhan_vien_phan_ca/migration.sql"), true);
+  const schema = readFileSync("apps/api/prisma/schema.prisma", "utf8");
+  for (const model of ["NhanVien", "CaLamViec", "PhanCa"]) assert.match(schema, new RegExp(`model\\s+${model}\\b`));
+  assert.match(schema, /so_dien_thoai/);
+});
+
+test("v2.8.0 co backend ho so quan tri nhan vien va xep ca", () => {
+  for (const tep of [
+    "apps/api/src/tai-khoan/tai-khoan.controller.ts",
+    "apps/api/src/quan-tri/quan-tri.controller.ts",
+    "apps/api/src/quan-tri/quan-tri.service.ts",
+    "apps/web/app/quan-tri/page.tsx",
+    "apps/web/lib/tai-khoan.ts",
+    "apps/web/lib/quan-tri.ts"
+  ]) assert.equal(existsSync(tep), true, `Thieu ${tep}`);
+  const guard = readFileSync("apps/api/src/xac-thuc/vai-tro.guard.ts", "utf8");
+  assert.match(guard, /vai_tro === VaiTro\.SIEU_QUAN_TRI/);
+});
+
+test("v2.8.0 chon mau doi preview anh va account menu co dang xuat", () => {
+  const detail = readFileSync("apps/web/app/san-pham/[duong_dan]/page.tsx", "utf8");
+  const nav = readFileSync("apps/web/components/thanh-dieu-huong.tsx", "utf8");
+  assert.match(detail, /product-color-tint/);
+  assert.match(detail, /mau_xem_truoc/);
+  assert.match(nav, /account-popover/);
+  assert.match(nav, /Đăng xuất/u);
+});
+
+
+test("v2.8.2 ho tro Gmail SMTP bang bo bien MAIL_*", () => {
+  const env = readFileSync(".env.example", "utf8");
+  const compose = readFileSync("docker-compose.yml", "utf8");
+  const mail = readFileSync("apps/api/src/thu-dien-tu/cau-hinh-smtp.ts", "utf8");
+  const apiPkg = docJson("apps/api/package.json");
+  for (const ten of ["MAIL_ENABLED", "MAIL_HOST", "MAIL_PORT", "MAIL_USERNAME", "MAIL_PASSWORD", "MAIL_SMTP_AUTH", "MAIL_STARTTLS", "MAIL_STARTTLS_REQUIRED", "MAIL_FROM", "MAIL_CONNECTION_TIMEOUT", "MAIL_TIMEOUT", "MAIL_WRITE_TIMEOUT"]) {
+    assert.match(env, new RegExp(`${ten}=`));
+    assert.match(compose, new RegExp(`${ten}:`));
+  }
+  assert.match(mail, /requireTLS/);
+  assert.match(mail, /ignoreTLS/);
+  assert.match(mail, /connectionTimeout/);
+  assert.equal(typeof apiPkg.scripts?.["mail:kiem-tra"], "string");
+  assert.match(docJson("package.json").scripts["mail:kiem-tra"], /workspace=@nhienin3d\/api/);
+});
+
+test("v2.8.2 dung MAIL_USERNAME lam cau hinh chinh va khong con MAIL_USER trong env mau Docker", () => {
+  const env = readFileSync(".env.example", "utf8");
+  const compose = readFileSync("docker-compose.yml", "utf8");
+  assert.match(env, /MAIL_USERNAME=/);
+  assert.doesNotMatch(env, /^MAIL_USER=/m);
+  assert.match(compose, /MAIL_USERNAME:/);
+  assert.doesNotMatch(compose, /^\s*MAIL_USER:/m);
+});
+
+test("v2.8.2 README lich su tang dan va co password UX ghi nho tai khoan", () => {
+  const readme = readFileSync("README.md", "utf8");
+  const lich_su = readme.slice(readme.indexOf("# Lịch sử phiên bản"));
+  const vi_tri_281 = lich_su.indexOf("## v2.8.1");
+  const vi_tri_282 = lich_su.indexOf("## v2.8.2");
+  assert.ok(vi_tri_281 >= 0 && vi_tri_282 > vi_tri_281);
+  assert.match(readme, /độ mạnh mật khẩu/ui);
+  assert.match(readme, /Ghi nhớ tài khoản/u);
+});
+
+test("v2.8.3 JwtGuard co JwtService trong TaiKhoanModule va QuanTriModule", () => {
+  const authModule = readFileSync("apps/api/src/xac-thuc/xac-thuc.module.ts", "utf8");
+  const taiKhoanModule = readFileSync("apps/api/src/tai-khoan/tai-khoan.module.ts", "utf8");
+  const quanTriModule = readFileSync("apps/api/src/quan-tri/quan-tri.module.ts", "utf8");
+  assert.match(authModule, /exports:\s*\[JwtModule,\s*XacThucService,\s*JwtGuard,\s*VaiTroGuard\]/);
+  assert.match(taiKhoanModule, /imports:\s*\[XacThucModule\]/);
+  assert.match(quanTriModule, /imports:\s*\[XacThucModule\]/);
+});
+
+
+test("v2.8.4 giao dien dang nhap dang ki duoc tinh gon", () => {
+  const login = readFileSync("apps/web/app/dang-nhap/page.tsx", "utf8");
+  const register = readFileSync("apps/web/app/dang-ky/page.tsx", "utf8");
+  const css = readFileSync("apps/web/app/globals.css", "utf8");
+  assert.doesNotMatch(login, /Phiên đăng nhập dùng cookie HttpOnly/u);
+  assert.match(login, /auth-options-row/);
+  assert.match(login, /Ghi nhớ tài khoản/u);
+  assert.match(login, /Quên mật khẩu\?/u);
+  assert.match(login, /auth-login-button/);
+  assert.match(register, /<h1>Đăng kí<\/h1>/u);
+  assert.match(css, /auth-login-button/);
 });

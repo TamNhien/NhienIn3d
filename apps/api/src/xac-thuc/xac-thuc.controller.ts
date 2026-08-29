@@ -1,9 +1,11 @@
-import { Body, Controller, Get, Post, Req, Res, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, HttpCode, Post, Req, Res, UseGuards } from "@nestjs/common";
 import { ApiCookieAuth, ApiTags } from "@nestjs/swagger";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { VaiTro } from "../generated/prisma/client.js";
 import { DangKyDto } from "./dto/dang-ky.dto.js";
 import { DangNhapDto } from "./dto/dang-nhap.dto.js";
+import { DatLaiMatKhauDto } from "./dto/dat-lai-mat-khau.dto.js";
+import { QuenMatKhauDto } from "./dto/quen-mat-khau.dto.js";
 import { JwtGuard, type YeuCauCoNguoiDung } from "./jwt.guard.js";
 import { VaiTroChoPhep } from "./vai-tro.decorator.js";
 import { VaiTroGuard } from "./vai-tro.guard.js";
@@ -44,11 +46,25 @@ export class XacThucController {
     return { nguoi_dung: kq.nguoi_dung };
   }
 
+  @Post("quen-mat-khau")
+  @HttpCode(200)
+  quen_mat_khau(@Body() dto: QuenMatKhauDto, @Req() req: FastifyRequest) {
+    return this.service.quen_mat_khau(dto, req.ip);
+  }
+
+  @Post("dat-lai-mat-khau")
+  @HttpCode(200)
+  dat_lai_mat_khau(@Body() dto: DatLaiMatKhauDto, @Req() req: FastifyRequest) {
+    return this.service.dat_lai_mat_khau(dto, req.ip);
+  }
+
   @Post("dang-xuat")
+  @HttpCode(200)
   async dang_xuat(@Req() req: YeuCauCoNguoiDung, @Res({ passthrough: true }) reply: FastifyReply) {
     await this.service.dang_xuat(req.cookies?.nhienin3d_lam_moi, req.nguoi_dung_xac_thuc?.id, req.ip);
     reply.clearCookie("nhienin3d_phien", { path: "/" });
     reply.clearCookie("nhienin3d_lam_moi", { path: "/api/v1/xac-thuc" });
+    reply.clearCookie("nhienin3d_lam_moi", { path: "/" });
     return { thong_bao: "Đã đăng xuất" };
   }
 

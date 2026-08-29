@@ -19,6 +19,16 @@ services:
       retries: 20
     networks: [nhienin3d-noi-bo]
 
+  mailpit:
+    profiles: ["mailpit"]
+    image: axllent/mailpit:v1.30.6
+    container_name: nhienin3d-mailpit
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${MAILPIT_SMTP_PORT:-1025}:1025"
+      - "127.0.0.1:${MAILPIT_UI_PORT:-8025}:8025"
+    networks: [nhienin3d-noi-bo]
+
   migrate:
     build:
       context: .
@@ -53,6 +63,21 @@ services:
       ADMIN_NAME: ${ADMIN_NAME:-System Admin}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
       NODE_ENV: ${NODE_ENV:-development}
+      MAIL_ENABLED: ${MAIL_ENABLED:-false}
+      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_SMTP_AUTH: ${MAIL_SMTP_AUTH:-true}
+      MAIL_STARTTLS: ${MAIL_STARTTLS:-true}
+      MAIL_STARTTLS_REQUIRED: ${MAIL_STARTTLS_REQUIRED:-true}
+      MAIL_FROM: ${MAIL_FROM:-}
+      MAIL_CONNECTION_TIMEOUT: ${MAIL_CONNECTION_TIMEOUT:-5000}
+      MAIL_TIMEOUT: ${MAIL_TIMEOUT:-5000}
+      MAIL_WRITE_TIMEOUT: ${MAIL_WRITE_TIMEOUT:-5000}
+      MAIL_TLS_REJECT_UNAUTHORIZED: ${MAIL_TLS_REJECT_UNAUTHORIZED:-true}
+      WEB_PUBLIC_URL: ${WEB_PUBLIC_URL:-http://localhost:3000}
+      RESET_PASSWORD_EXPIRES_MINUTES: ${RESET_PASSWORD_EXPIRES_MINUTES:-15}
     ports:
       - "${API_PORT:-3001}:3001"
     depends_on:

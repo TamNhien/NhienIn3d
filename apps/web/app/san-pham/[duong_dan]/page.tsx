@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { ThanhDieuHuong } from "../../../components/thanh-dieu-huong";
 import { DanhGiaSanPham } from "../../../components/danh-gia-san-pham";
 import { GoiYSanPham } from "../../../components/goi-y-san-pham";
@@ -38,6 +38,10 @@ export default function ChiTietSanPhamPage() {
   const bien_the = useMemo(() => san_pham?.bien_the?.find(x => x.ma_bien_the === ma_bien_the) ?? san_pham?.bien_the?.[0], [san_pham, ma_bien_the]);
   const gia = Number(san_pham?.gia_ban ?? 0) + Number(bien_the?.gia_chenh_lech ?? 0);
   const ton = bien_the?.so_luong_ton ?? 0;
+  const mau_xem_truoc = bien_the?.mau_sac?.ma_hex || "#FFFFFF";
+  const ma_mau = mau_xem_truoc.toUpperCase();
+  const che_do_hoa_mau: CSSProperties["mixBlendMode"] = ma_mau === "#111827" ? "multiply" : ma_mau === "#F8FAFC" ? "screen" : "color";
+  const do_mo_mau = ma_mau === "#111827" ? 0.64 : ma_mau === "#F8FAFC" ? 0.28 : 0.58;
 
   async function themVaoGio() {
     if (!bien_the) return;
@@ -71,8 +75,12 @@ export default function ChiTietSanPhamPage() {
       <div className="breadcrumb"><Link href="/">Trang chủ</Link><span>/</span><Link href="/san-pham">Sản phẩm</Link><span>/</span><b>{san_pham.ten_san_pham}</b></div>
       <div className="product-detail-grid">
         <div className="product-gallery">
-          <div className="product-main-image product-detail-photo">
-            {san_pham.hinh_anh?.[0]?.duong_dan_anh ? <img src={san_pham.hinh_anh[0].duong_dan_anh} alt={san_pham.ten_san_pham} referrerPolicy="no-referrer"/> : <div className="product-image-empty">Chưa có ảnh sản phẩm</div>}
+          <div className="product-main-image product-detail-photo colorized-product-preview">
+            {san_pham.hinh_anh?.[0]?.duong_dan_anh ? <>
+              <img src={san_pham.hinh_anh[0].duong_dan_anh} alt={`${san_pham.ten_san_pham} - ${bien_the?.mau_sac?.ten_mau || "màu tiêu chuẩn"}`} referrerPolicy="no-referrer"/>
+              {bien_the?.mau_sac && <span className="product-color-tint" aria-hidden="true" style={{ backgroundColor: mau_xem_truoc, mixBlendMode: che_do_hoa_mau, opacity: do_mo_mau }}/>}
+              {bien_the?.mau_sac && <span className="color-preview-badge"><i style={{ background: mau_xem_truoc }}/>{bien_the.mau_sac.ten_mau} · xem trước màu</span>}
+            </> : <div className="product-image-empty">Chưa có ảnh sản phẩm</div>}
           </div>
           <div className="product-spec-strip">
             <div><span>Kích thước</span><b>{san_pham.kich_thuoc}</b></div>

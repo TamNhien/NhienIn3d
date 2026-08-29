@@ -10,7 +10,9 @@ import {
   TrangThaiNguon,
   TrangThaiDonHang,
   TrangThaiGioHang,
-  TrangThaiThanhToan
+  TrangThaiThanhToan,
+  TrangThaiNhanVien,
+  TrangThaiPhanCa
 } from "../src/generated/prisma/client.js";
 
 // Chạy được cả từ root workspace lẫn apps/api.
@@ -34,7 +36,7 @@ function taoDatabaseUrl(): string {
 const adapter = new PrismaPg({ connectionString: taoDatabaseUrl() });
 const db = new PrismaClient({ adapter });
 
-const PHIEN_BAN_HIEN_TAI = "SEED_V261_CHON_MAU_SAN_PHAM";
+const PHIEN_BAN_HIEN_TAI = "SEED_V284_DANG_NHAP_DANG_KI_GON";
 
 const danh_muc = [
   ["HOBBY_RC", "Mô hình & RC", "mo-hinh-rc", "Mô hình cơ khí, xe điều khiển và sản phẩm lắp ráp."],
@@ -190,6 +192,32 @@ const dia_chi_mau = [
   ["Quản trị NhienIn3d", "0912001010", "Khánh Hòa", "Nha Trang", "Lộc Thọ", "52 Trần Hưng Đạo"]
 ] as const;
 
+const nhan_vien_mau = [
+  ["N3D-NV-001", "Nguyễn Thành Công", "Kỹ thuật in 3D", "Sản xuất"],
+  ["N3D-NV-002", "Trần Minh Khoa", "Kỹ thuật hậu kỳ", "Sản xuất"],
+  ["N3D-NV-003", "Lê Thảo Nguyên", "Tư vấn bán hàng", "Kinh doanh"],
+  ["N3D-NV-004", "Phạm Quốc Việt", "Đóng gói", "Kho vận"],
+  ["N3D-NV-005", "Võ Hoàng Yến", "Chăm sóc khách hàng", "Kinh doanh"],
+  ["N3D-NV-006", "Đặng Minh Tâm", "Thiết kế 3D", "Thiết kế"],
+  ["N3D-NV-007", "Bùi Gia Hân", "Kiểm soát chất lượng", "Sản xuất"],
+  ["N3D-NV-008", "Hoàng Tuấn Kiệt", "Quản lý kho", "Kho vận"],
+  ["N3D-NV-009", "Đỗ Ngọc Mai", "Điều phối đơn hàng", "Vận hành"],
+  ["N3D-NV-010", "Nguyễn Hải Đăng", "Kỹ thuật máy in", "Bảo trì"]
+] as const;
+
+const ca_lam_mau = [
+  ["CA01", "Ca sáng", "06:00", "10:00", "#38BDF8"],
+  ["CA02", "Ca hành chính sáng", "07:30", "11:30", "#22C55E"],
+  ["CA03", "Ca hành chính", "08:00", "17:00", "#14B8A6"],
+  ["CA04", "Ca trưa", "10:00", "14:00", "#F59E0B"],
+  ["CA05", "Ca chiều", "12:00", "16:00", "#F97316"],
+  ["CA06", "Ca chiều muộn", "14:00", "18:00", "#A855F7"],
+  ["CA07", "Ca tối", "16:00", "20:00", "#EC4899"],
+  ["CA08", "Ca tối muộn", "18:00", "22:00", "#6366F1"],
+  ["CA09", "Ca linh hoạt A", "09:00", "13:00", "#84CC16"],
+  ["CA10", "Ca linh hoạt B", "13:00", "17:00", "#06B6D4"]
+] as const;
+
 const phien_ban_seed = [
   ["SEED_V001_DU_LIEU_MAU", "Dữ liệu mẫu nền của NhienIn3d V1."],
   ["SEED_V002_DANH_MUC_10", "Bổ sung đủ 10 danh mục."],
@@ -211,7 +239,11 @@ const phien_ban_seed = [
   ["SEED_V241_SAP_XEP_SAN_PHAM_TANG_DAN", "NhienIn3d v2.4.1 chuẩn hóa thứ tự hiển thị sản phẩm tăng dần theo số thứ tự trong mã sản phẩm trên API và storefront."],
   ["SEED_V250_DANH_GIA_SAN_PHAM", "NhienIn3d v2.5.0 bổ sung đánh giá sản phẩm có duyệt, điểm sao, sản phẩm liên quan và lịch sử xem gần đây."],
   ["SEED_V260_TAI_KHOAN_PHAN_QUYEN", "NhienIn3d v2.6.0 bổ sung đăng ký, đăng nhập, refresh session, khóa đăng nhập và RBAC 5 vai trò."],
-  [PHIEN_BAN_HIEN_TAI, "NhienIn3d v2.6.1 bỏ xem 3D sản phẩm không chính xác và bổ sung 3 lựa chọn màu cho mỗi sản phẩm mẫu."]
+  ["SEED_V261_CHON_MAU_SAN_PHAM", "NhienIn3d v2.6.1 bỏ xem 3D sản phẩm không chính xác và bổ sung 3 lựa chọn màu cho mỗi sản phẩm mẫu."],
+  ["SEED_V270_QUEN_MAT_KHAU_EMAIL", "NhienIn3d v2.7.0 bổ sung quên mật khẩu qua email, token dùng một lần và thu hồi toàn bộ phiên cũ sau khi đặt lại."],
+  ["SEED_V281_GMAIL_SMTP", "NhienIn3d v2.8.1 bổ sung cấu hình Gmail/SMTP bằng biến MAIL_*, STARTTLS bắt buộc và công cụ kiểm tra SMTP."],
+  ["SEED_V283_FIX_JWT_GUARD_DI", "NhienIn3d v2.8.3 sửa dependency injection JwtGuard/JwtService để API tài khoản và quản trị khởi động ổn định."],
+  [PHIEN_BAN_HIEN_TAI, "NhienIn3d v2.8.4 tinh gọn giao diện đăng nhập/đăng kí, đặt Quên mật khẩu ngang hàng với Ghi nhớ tài khoản."]
 ] as const;
 
 async function main() {
@@ -553,6 +585,71 @@ async function main() {
     });
   }
 
+  // v2.7.0: 10 bản ghi đặt lại mật khẩu lịch sử đã hết hạn/đã sử dụng.
+  // Chỉ lưu SHA-256 của mã giả lập, tuyệt đối không seed token còn hiệu lực.
+  for (let i = 0; i < 10; i++) {
+    const ma_bi_mat_bam = createHash("sha256").update(`nhienin3d-reset-lich-su-${i + 1}`).digest("hex");
+    const het_han_luc = new Date(Date.now() - (i + 2) * 24 * 60 * 60 * 1000);
+    const ngay_su_dung = new Date(Date.now() - (i + 1) * 24 * 60 * 60 * 1000);
+    await db.datLaiMatKhau.upsert({
+      where: { ma_bi_mat_bam },
+      update: { nguoi_dung_id: nguoi_dung[i].id, het_han_luc, da_su_dung: true, ngay_su_dung },
+      create: {
+        nguoi_dung_id: nguoi_dung[i].id,
+        ma_bi_mat_bam,
+        het_han_luc,
+        da_su_dung: true,
+        ngay_su_dung,
+        dia_chi_ip: `203.0.113.${30 + i}`
+      }
+    });
+  }
+
+  // v2.8.0: 10 tài khoản nhân viên mẫu + hồ sơ nhân viên. Các tài khoản mẫu bị vô hiệu hóa và dùng mật khẩu ngẫu nhiên.
+  const nhan_vien_ids: string[] = [];
+  for (let i = 0; i < nhan_vien_mau.length; i++) {
+    const [ma_nhan_vien, ho_ten, chuc_danh, bo_phan] = nhan_vien_mau[i];
+    const thu_dien_tu = `nhanvien${String(i + 1).padStart(2, "0")}.demo@nhienin3d.local`;
+    const so_dien_thoai = `0908${String(100000 + i).slice(-6)}`;
+    const user = await db.nguoiDung.upsert({
+      where: { thu_dien_tu },
+      update: { ho_ten, so_dien_thoai, vai_tro: VaiTro.NHAN_VIEN, da_kich_hoat: false },
+      create: { thu_dien_tu, ho_ten, so_dien_thoai, vai_tro: VaiTro.NHAN_VIEN, mat_khau_bam: mat_khau_mau_bam, da_kich_hoat: false }
+    });
+    const nhan_vien = await db.nhanVien.upsert({
+      where: { ma_nhan_vien },
+      update: { nguoi_dung_id: user.id, chuc_danh, bo_phan, trang_thai: TrangThaiNhanVien.DANG_LAM },
+      create: {
+        nguoi_dung_id: user.id, ma_nhan_vien, chuc_danh, bo_phan,
+        ngay_vao_lam: new Date(Date.UTC(2026, 0, 2 + i)), trang_thai: TrangThaiNhanVien.DANG_LAM,
+        ghi_chu: "Tài khoản nhân viên mẫu phục vụ kiểm thử phân ca."
+      }
+    });
+    nhan_vien_ids.push(nhan_vien.id);
+  }
+
+  // v2.8.0: 10 mẫu ca làm việc.
+  const ca_ids: string[] = [];
+  for (const [ma_ca, ten_ca, gio_bat_dau, gio_ket_thuc, mau_hien_thi] of ca_lam_mau) {
+    const ca = await db.caLamViec.upsert({
+      where: { ma_ca },
+      update: { ten_ca, gio_bat_dau, gio_ket_thuc, mau_hien_thi, dang_hoat_dong: true },
+      create: { ma_ca, ten_ca, gio_bat_dau, gio_ket_thuc, mau_hien_thi, dang_hoat_dong: true }
+    });
+    ca_ids.push(ca.id);
+  }
+
+  // v2.8.0: 10 phân ca mẫu, mỗi nhân viên một dòng.
+  for (let i = 0; i < 10; i++) {
+    const ngay_lam = new Date(Date.UTC(2026, 7, 30 + i));
+    const da_co = await db.phanCa.findFirst({ where: { nhan_vien_id: nhan_vien_ids[i], ca_lam_viec_id: ca_ids[i], ngay_lam } });
+    if (da_co) {
+      await db.phanCa.update({ where: { id: da_co.id }, data: { trang_thai: TrangThaiPhanCa.DA_XEP, ghi_chu: `Phân ca mẫu số ${i + 1}` } });
+    } else {
+      await db.phanCa.create({ data: { nhan_vien_id: nhan_vien_ids[i], ca_lam_viec_id: ca_ids[i], ngay_lam, trang_thai: TrangThaiPhanCa.DA_XEP, ghi_chu: `Phân ca mẫu số ${i + 1}` } });
+    }
+  }
+
   // 10 nhật ký bảo mật mẫu, tách biệt bằng tiền tố DU_LIEU_MAU_.
   await db.nhatKyBaoMat.deleteMany({ where: { loai_su_kien: { startsWith: "DU_LIEU_MAU_" } } });
   await db.nhatKyBaoMat.createMany({
@@ -592,7 +689,11 @@ async function main() {
     thanh_toan: await db.thanhToan.count(),
     dia_chi_nguoi_dung: await db.diaChiNguoiDung.count(),
     yeu_thich: await db.yeuThich.count(),
-    danh_gia_san_pham: await db.danhGiaSanPham.count()
+    danh_gia_san_pham: await db.danhGiaSanPham.count(),
+    dat_lai_mat_khau: await db.datLaiMatKhau.count(),
+    nhan_vien: await db.nhanVien.count(),
+    ca_lam_viec: await db.caLamViec.count(),
+    phan_ca: await db.phanCa.count()
   };
 
   const thieu = Object.entries(dem).filter(([, so_luong]) => so_luong < 10);

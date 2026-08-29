@@ -1,4 +1,5 @@
 $ErrorActionPreference = "Stop"
+$version = (Get-Content "VERSION" -Raw).Trim()
 if (-not (Get-Command gh -ErrorAction SilentlyContinue)) { throw "Chua cai GitHub CLI (gh)" }
 gh auth status
 if ($LASTEXITCODE -ne 0) { gh auth login }
@@ -14,6 +15,6 @@ if ($remote -notcontains "origin") {
 }
 git add .
 $coThayDoi = git status --porcelain
-if ($coThayDoi) { git commit -m "feat: khoi tao NhienIn3d v1.0.0" }
+if ($coThayDoi) { git commit -m "feat: khoi tao NhienIn3d v$version" }
 git push -u origin main
 Write-Host "Da ket noi TamNhien/NhienIn3d." -ForegroundColor Green

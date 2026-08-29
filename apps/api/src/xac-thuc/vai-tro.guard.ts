@@ -13,6 +13,7 @@ export class VaiTroGuard implements CanActivate {
     if (!cho_phep?.length) return true;
     const req = context.switchToHttp().getRequest<YeuCauCoNguoiDung>();
     const vai_tro = req.nguoi_dung_xac_thuc?.vai_tro as VaiTro | undefined;
+    if (vai_tro === VaiTro.SIEU_QUAN_TRI) return true;
     if (!vai_tro || !cho_phep.includes(vai_tro)) throw new ForbiddenException("Bạn không có quyền thực hiện thao tác này");
     return true;
   }
