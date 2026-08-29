@@ -40,7 +40,7 @@ jobs:
           package-manager-cache: false
 
       - name: Cài dependencies
-        run: npm install
+        run: npm ci
 
       - name: Test root + workspaces
         run: npm test
@@ -48,7 +48,7 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Migration + seed V2
+      - name: Migration + seed v2.3.0
         run: |
           npm run db:generate
           npm run db:migrate

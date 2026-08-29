@@ -7,6 +7,7 @@ import { ThanhDieuHuong } from "../../../components/thanh-dieu-huong";
 import { TrinhXemAnh3D } from "../../../components/trinh-xem-anh-3d";
 import { API_URL, themBienTheVaoGio } from "../../../lib/gio-hang";
 import { DU_LIEU_MAU, type SanPham } from "../../../lib/du-lieu-mau";
+import { layDanhSachYeuThich, themYeuThich, xoaYeuThich } from "../../../lib/yeu-thich";
 
 const vnd = new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" });
 
@@ -19,8 +20,10 @@ export default function ChiTietSanPhamPage() {
   const [so_luong, setSoLuong] = useState(1);
   const [dang_them, setDangThem] = useState(false);
   const [thong_bao, setThongBao] = useState("");
+  const [da_yeu_thich, setDaYeuThich] = useState(false);
 
   useEffect(() => {
+    layDanhSachYeuThich().then(ds => setDaYeuThich(ds.some(x => x.san_pham.duong_dan === duong_dan))).catch(() => {});
     fetch(`${API_URL}/san-pham/${encodeURIComponent(duong_dan)}`)
       .then(r => r.ok ? r.json() : Promise.reject())
       .then((du_lieu: SanPham) => {
@@ -48,12 +51,22 @@ export default function ChiTietSanPhamPage() {
     }
   }
 
+  async function doiYeuThich() {
+    if (!san_pham) return;
+    try {
+      if (da_yeu_thich) await xoaYeuThich(san_pham.ma_san_pham); else await themYeuThich(san_pham.ma_san_pham);
+      setDaYeuThich(x => !x);
+    } catch (loi) {
+      setThongBao(loi instanceof Error ? loi.message : "Không thể cập nhật yêu thích");
+    }
+  }
+
   if (!san_pham) return <main><ThanhDieuHuong/><section className="page-shell"><div className="empty-state"><h1>Không tìm thấy sản phẩm</h1><Link className="primary" href="/#san-pham">Quay lại sản phẩm</Link></div></section></main>;
 
   return <main>
     <ThanhDieuHuong/>
     <section className="page-shell product-detail-page">
-      <div className="breadcrumb"><Link href="/">Trang chủ</Link><span>/</span><Link href="/#san-pham">Sản phẩm</Link><span>/</span><b>{san_pham.ten_san_pham}</b></div>
+      <div className="breadcrumb"><Link href="/">Trang chủ</Link><span>/</span><Link href="/san-pham">Sản phẩm</Link><span>/</span><b>{san_pham.ten_san_pham}</b></div>
       <div className="product-detail-grid">
         <div className="product-gallery">
           <TrinhXemAnh3D duong_dan_anh={san_pham.hinh_anh?.[0]?.duong_dan_anh} ten_san_pham={san_pham.ten_san_pham}/>
@@ -87,9 +100,10 @@ export default function ChiTietSanPhamPage() {
           </div>
 
           {thong_bao && <div className="inline-message">{thong_bao}</div>}
-          <div className="detail-actions">
+          <div className="detail-actions detail-actions-v230">
             <button className="checkout-button" onClick={themVaoGio} disabled={dang_them || !bien_the || ton <= 0}>{dang_them ? "Đang thêm…" : `Thêm ${so_luong} vào giỏ`}</button>
             <Link className="secondary detail-cart-link" href="/gio-hang">Xem giỏ hàng</Link>
+            <button className={da_yeu_thich ? "secondary favorite-detail active" : "secondary favorite-detail"} onClick={doiYeuThich}>{da_yeu_thich ? "♥ Đã yêu thích" : "♡ Yêu thích"}</button>
           </div>
           <div className="detail-assurances"><span>✓ Kiểm tra tồn kho tại server</span><span>✓ Dữ liệu giỏ lưu PostgreSQL</span><span>✓ Thanh toán giả lập chỉ dành cho local</span></div>
         </div>

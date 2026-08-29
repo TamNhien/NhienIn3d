@@ -34,7 +34,7 @@ function taoDatabaseUrl(): string {
 const adapter = new PrismaPg({ connectionString: taoDatabaseUrl() });
 const db = new PrismaClient({ adapter });
 
-const PHIEN_BAN_HIEN_TAI = "SEED_V220_GIAO_DIEN_3D_TINH_GON";
+const PHIEN_BAN_HIEN_TAI = "SEED_V230_YEU_THICH_TIM_KIEM";
 
 const danh_muc = [
   ["HOBBY_RC", "Mô hình & RC", "mo-hinh-rc", "Mô hình cơ khí, xe điều khiển và sản phẩm lắp ráp."],
@@ -206,7 +206,8 @@ const phien_ban_seed = [
   ["SEED_V200_DIA_CHI_10", "V2 tạo 10 địa chỉ người dùng mẫu."],
   ["SEED_V200_GIO_HANG_THANH_TOAN", "NhienIn3d V2 bổ sung giỏ hàng, checkout và nền tảng thanh toán."],
   ["SEED_V210_THANH_TOAN_GIA_LAP_LOCAL", "NhienIn3d v2.1.0 cho phép giả lập cổng thanh toán online khi chạy local; production vẫn khóa phương thức chưa tích hợp thật."],
-  [PHIEN_BAN_HIEN_TAI, "NhienIn3d v2.2.0 tinh gọn storefront, bổ sung trình xem ảnh 3D tương tác và ảnh local cho sản phẩm khối lập phương bánh răng."]
+  ["SEED_V220_GIAO_DIEN_3D_TINH_GON", "NhienIn3d v2.2.0 tinh gọn storefront, bổ sung trình xem ảnh 3D tương tác và ảnh local cho sản phẩm khối lập phương bánh răng."],
+  [PHIEN_BAN_HIEN_TAI, "NhienIn3d v2.3.0 bổ sung yêu thích lưu PostgreSQL, trang danh sách sản phẩm và bộ lọc/tìm kiếm nâng cao."]
 ] as const;
 
 async function main() {
@@ -335,6 +336,17 @@ async function main() {
       }
     });
     bien_the_map.set(sp.ma_san_pham, bien_the);
+  }
+
+  // v2.3.0: 10 dòng yêu thích mẫu, mỗi phiên gắn với một sản phẩm khác nhau.
+  for (let i = 0; i < 10; i++) {
+    const sp = san_pham[i];
+    const ma_phien = `N3D-YT-MAU-${String(i + 1).padStart(2, "0")}-PHIEN`;
+    await db.yeuThich.upsert({
+      where: { ma_phien_san_pham_id: { ma_phien, san_pham_id: san_pham_map.get(sp.ma_san_pham)!.id } },
+      update: {},
+      create: { ma_phien, san_pham_id: san_pham_map.get(sp.ma_san_pham)!.id }
+    });
   }
 
   // V2: 10 địa chỉ mẫu.
@@ -531,7 +543,8 @@ async function main() {
     chi_tiet_gio_hang: await db.chiTietGioHang.count(),
     phuong_thuc_thanh_toan: await db.phuongThucThanhToan.count(),
     thanh_toan: await db.thanhToan.count(),
-    dia_chi_nguoi_dung: await db.diaChiNguoiDung.count()
+    dia_chi_nguoi_dung: await db.diaChiNguoiDung.count(),
+    yeu_thich: await db.yeuThich.count()
   };
 
   const thieu = Object.entries(dem).filter(([, so_luong]) => so_luong < 10);

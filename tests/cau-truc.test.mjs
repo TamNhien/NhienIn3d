@@ -63,16 +63,16 @@ test("V2 co migration nang cap khong ghi de migration V1", () => {
   assert.equal(existsSync("apps/api/prisma/migrations/202608290002_v002_gio_hang_thanh_toan/migration.sql"), true);
 });
 
-test("version v2.2.1 dong bo root API va Web", () => {
-  assert.equal(readFileSync("VERSION", "utf8").trim(), "2.2.1");
-  assert.equal(docJson("package.json").version, "2.2.1");
-  assert.equal(docJson("apps/api/package.json").version, "2.2.1");
-  assert.equal(docJson("apps/web/package.json").version, "2.2.1");
+test("version v2.3.0 dong bo root API va Web", () => {
+  assert.equal(readFileSync("VERSION", "utf8").trim(), "2.3.0");
+  assert.equal(docJson("package.json").version, "2.3.0");
+  assert.equal(docJson("apps/api/package.json").version, "2.3.0");
+  assert.equal(docJson("apps/web/package.json").version, "2.3.0");
 });
 
-test("README co lich su phien ban tang dan den v2.2.1", () => {
+test("README co lich su phien ban tang dan den v2.3.0", () => {
   const readme = readFileSync("README.md", "utf8");
-  const viTri = ["## v1.0.0", "## v1.0.1", "## v1.0.2", "## v1.0.3", "## v1.0.4", "## v1.0.5", "## v1.0.6", "## v1.0.7", "## v2.0.0", "## v2.1.0", "## v2.1.1", "## v2.2.0", "## v2.2.1"].map(x => readme.indexOf(x));
+  const viTri = ["## v1.0.0", "## v1.0.1", "## v1.0.2", "## v1.0.3", "## v1.0.4", "## v1.0.5", "## v1.0.6", "## v1.0.7", "## v2.0.0", "## v2.1.0", "## v2.1.1", "## v2.2.0", "## v2.2.1", "## v2.3.0"].map(x => readme.indexOf(x));
   assert.ok(viTri.every(x => x >= 0));
   assert.deepEqual([...viTri].sort((a,b)=>a-b), viTri);
 });
@@ -101,4 +101,26 @@ test("v2.2.1 co ba route commerce tach biet", () => {
 test("v2.2.1 co trinh xem anh 3D va anh local mau", () => {
   assert.equal(existsSync("apps/web/components/trinh-xem-anh-3d.tsx"), true);
   assert.equal(existsSync("apps/web/public/images/khoi-lap-phuong-banh-rang.jpg"), true);
+});
+
+
+test("v2.3.0 co migration yeu_thich va khong ghi de migration cu", () => {
+  assert.equal(existsSync("apps/api/prisma/migrations/202608290003_v230_yeu_thich_tim_kiem/migration.sql"), true);
+  const schema = readFileSync("apps/api/prisma/schema.prisma", "utf8");
+  assert.match(schema, /model\s+YeuThich\b/);
+  assert.match(schema, /@@map\("yeu_thich"\)/);
+});
+
+test("v2.3.0 co route danh sach san pham va yeu thich", () => {
+  assert.equal(existsSync("apps/web/app/san-pham/page.tsx"), true);
+  assert.equal(existsSync("apps/web/app/yeu-thich/page.tsx"), true);
+  assert.equal(existsSync("apps/web/lib/yeu-thich.ts"), true);
+});
+
+
+test("v2.3.0 release chi cho phep dung version cua source va bat buoc lockfile", () => {
+  const release = readFileSync("scripts/release.ps1", "utf8");
+  assert.match(release, /sourceVersion/);
+  assert.match(release, /package-lock\.json/);
+  assert.match(release, /git push origin \$Version/);
 });

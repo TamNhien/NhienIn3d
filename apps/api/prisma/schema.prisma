@@ -88,6 +88,7 @@ model SanPham {
   danh_muc            DanhMuc           @relation(fields: [danh_muc_id], references: [id], onDelete: Restrict)
   hinh_anh            HinhAnhSanPham[]
   bien_the            BienTheSanPham[]
+  yeu_thich           YeuThich[]
   ngay_tao            DateTime          @default(now()) @db.Timestamptz(6)
   ngay_cap_nhat       DateTime          @updatedAt @db.Timestamptz(6)
 
@@ -317,4 +318,18 @@ model DiaChiNguoiDung {
 
   @@index([nguoi_dung_id])
   @@map("dia_chi_nguoi_dung")
+}
+
+
+model YeuThich {
+  id          String   @id @default(uuid()) @db.Uuid
+  ma_phien    String   @db.VarChar(120)
+  san_pham_id String   @db.Uuid
+  ngay_tao    DateTime @default(now()) @db.Timestamptz(6)
+  san_pham    SanPham  @relation(fields: [san_pham_id], references: [id], onDelete: Cascade)
+
+  @@unique([ma_phien, san_pham_id])
+  @@index([ma_phien])
+  @@index([san_pham_id])
+  @@map("yeu_thich")
 }

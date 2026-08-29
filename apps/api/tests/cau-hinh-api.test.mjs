@@ -46,27 +46,27 @@ test("Swagger Fastify co @fastify/static tuong thich Fastify 5", () => {
   assert.equal(pkg.dependencies['@fastify/static'], '10.1.3');
 });
 
-test("seed v2.2.0 dam bao 17 bang nghiep vu toi thieu 10 dong", () => {
+test("seed v2.3.0 dam bao 18 bang nghiep vu toi thieu 10 dong", () => {
   const seed = readFileSync('prisma/seed.ts', 'utf8');
   for (const bang of [
     'nguoi_dung', 'danh_muc', 'san_pham', 'hinh_anh_san_pham',
     'vat_lieu', 'mau_sac', 'bien_the_san_pham', 'don_hang',
     'chi_tiet_don_hang', 'phien_dang_nhap', 'nhat_ky_bao_mat', 'phien_ban_seed',
-    'gio_hang', 'chi_tiet_gio_hang', 'phuong_thuc_thanh_toan', 'thanh_toan', 'dia_chi_nguoi_dung'
+    'gio_hang', 'chi_tiet_gio_hang', 'phuong_thuc_thanh_toan', 'thanh_toan', 'dia_chi_nguoi_dung', 'yeu_thich'
   ]) {
     assert.match(seed, new RegExp(`${bang}: await db\\.`));
   }
   assert.match(seed, /so_luong < 10/);
-  assert.match(seed, /PHIEN_BAN_HIEN_TAI = "SEED_V220_GIAO_DIEN_3D_TINH_GON"/);
+  assert.match(seed, /PHIEN_BAN_HIEN_TAI = "SEED_V230_YEU_THICH_TIM_KIEM"/);
   assert.match(seed, /\/images\/khoi-lap-phuong-banh-rang\.jpg/);
 });
 
 
-test("API hien thi dung version v2.2.1 o health va OpenAPI", () => {
+test("API hien thi dung version v2.3.0 o health va OpenAPI", () => {
   const health = readFileSync("src/suc-khoe/suc-khoe.controller.ts", "utf8");
   const main = readFileSync("src/main.ts", "utf8");
-  assert.match(health, /phien_ban: "v2\.2\.1"/);
-  assert.match(main, /setVersion\("2\.2\.1"\)/);
+  assert.match(health, /phien_ban: "v2\.3\.0"/);
+  assert.match(main, /setVersion\("2\.3\.0"\)/);
 });
 
 test("V2 co migration gio hang, thanh toan va dia chi", () => {
@@ -94,4 +94,23 @@ test("local cho phep gia lap gateway online nhung production van khoa", () => {
   assert.match(service, /TrangThaiThanhToan\.DA_THANH_TOAN/);
   assert.match(service, /N3D-MOCK/);
   assert.match(service, /!phuong_thuc\.dang_hoat_dong && !la_gia_lap/);
+});
+
+
+test("v2.3.0 API san pham co tim kiem loc va sap xep", () => {
+  const controller = readFileSync("src/san-pham/san-pham.controller.ts", "utf8");
+  for (const tu of ["tim_kiem", "danh_muc", "con_hang", "gia_tu", "gia_den", "sap_xep"]) assert.match(controller, new RegExp(tu));
+  assert.match(controller, /gia_tang/);
+  assert.match(controller, /gia_giam/);
+  assert.match(controller, /ten_az/);
+});
+
+test("v2.3.0 co API yeu thich luu PostgreSQL", () => {
+  const app = readFileSync("src/app.module.ts", "utf8");
+  const controller = readFileSync("src/yeu-thich/yeu-thich.controller.ts", "utf8");
+  const service = readFileSync("src/yeu-thich/yeu-thich.service.ts", "utf8");
+  assert.match(app, /YeuThichModule/);
+  assert.match(controller, /Controller\("yeu-thich"\)/);
+  assert.match(service, /db\.yeuThich/);
+  assert.match(service, /ma_phien_san_pham_id/);
 });

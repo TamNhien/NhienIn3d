@@ -52,7 +52,7 @@ export default function TrangChu() {
       <div className="hero-copy">
         <motion.h1 initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{delay:.08}}>Thiết kế khác biệt.<br/><span>Đặt hàng thật nhanh.</span></motion.h1>
         <div className="hero-actions">
-          <a className="primary" href="#san-pham">Mua sản phẩm</a>
+          <Link className="primary" href="/san-pham">Mua sản phẩm</Link>
           <Link className="secondary" href="/gio-hang">Mở giỏ hàng</Link>
         </div>
         <div className="stats">
@@ -78,7 +78,7 @@ export default function TrangChu() {
           <h2>Sản phẩm nổi bật</h2>
           <p>Nhấp vào sản phẩm để xem đầy đủ thông tin, chọn biến thể và số lượng trước khi thêm vào giỏ hàng.</p>
         </div>
-        <input value={tim} onChange={e=>setTim(e.target.value)} placeholder="Tìm sản phẩm…" />
+        <div className="home-product-actions"><input value={tim} onChange={e=>setTim(e.target.value)} placeholder="Tìm sản phẩm…" /><Link className="secondary" href="/san-pham">Xem tất cả</Link></div>
       </div>
       <div className="grid">
         {hien_thi.map((sp,i)=><TheSanPham key={sp.ma_san_pham} sp={sp} i={i} onThem={themVaoGio} dangThem={dang_them===sp.ma_san_pham}/>)}

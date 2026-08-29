@@ -21,7 +21,7 @@ test('du lieu mau hien thi tieng Viet co dau', () => {
   assert.match(src, /sản phẩm|Sản phẩm|Đèn|Chậu|Giá/u);
 });
 
-test('v2.2.1 storefront co gio hang va route checkout rieng', () => {
+test('v2.3.0 storefront co gio hang va route checkout rieng', () => {
   const page = readFileSync('app/page.tsx', 'utf8');
   assert.match(page, /themBienTheVaoGio/);
   assert.match(page, /Thêm vào giỏ|themVaoGio/u);
@@ -102,4 +102,29 @@ test('v2.2.1 dong goi anh local cho khoi lap phuong banh rang', () => {
   const data = readFileSync('lib/du-lieu-mau.ts', 'utf8');
   assert.match(data, /\/images\/khoi-lap-phuong-banh-rang\.jpg/);
   assert.equal(existsSync('public/images/khoi-lap-phuong-banh-rang.jpg'), true);
+});
+
+
+test('v2.3.0 co trang danh sach voi tim kiem loc va sap xep', () => {
+  const page = readFileSync('app/san-pham/page.tsx', 'utf8');
+  assert.match(page, /Tất cả danh mục/u);
+  assert.match(page, /Chỉ còn hàng/u);
+  assert.match(page, /gia_tang/);
+  assert.match(page, /gia_giam/);
+  assert.match(page, /ten_az/);
+  assert.match(page, /tim_kiem/);
+  assert.match(page, /gia_tu/);
+  assert.match(page, /gia_den/);
+});
+
+test('v2.3.0 co wishlist PostgreSQL tren web', () => {
+  const lib = readFileSync('lib/yeu-thich.ts', 'utf8');
+  const nav = readFileSync('components/thanh-dieu-huong.tsx', 'utf8');
+  const fav = readFileSync('app/yeu-thich/page.tsx', 'utf8');
+  const card = readFileSync('components/the-san-pham.tsx', 'utf8');
+  assert.match(lib, /yeu-thich/);
+  assert.match(lib, /crypto\.randomUUID/);
+  assert.match(nav, /Yêu thích/u);
+  assert.match(fav, /Sản phẩm đã lưu/u);
+  assert.match(card, /favorite-button/);
 });

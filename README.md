@@ -1,7 +1,17 @@
 # NhienIn3d
 
 > Cửa hàng sản phẩm in 3D hiện đại — Next.js + Three.js + NestJS + PostgreSQL + Docker  
-> Phiên bản hiện tại: **v2.2.1** — 29/08/2026
+> Phiên bản hiện tại: **v2.3.0** — 29/08/2026
+
+## Mới trong v2.3.0
+
+- Thêm trang `/san-pham` với tìm kiếm theo tên/mã/mô tả, lọc danh mục, lọc còn hàng và sắp xếp giá/tên.
+- Thêm bảng `yeu_thich` lưu PostgreSQL bằng mã phiên ngẫu nhiên cho khách chưa đăng nhập.
+- Thêm trang `/yeu-thich`, số lượng yêu thích trên navbar và nút trái tim ở card/trang chi tiết.
+- API sản phẩm hỗ trợ `tim_kiem`, `danh_muc`, `con_hang`, `gia_tu`, `gia_den`, `sap_xep`, `gioi_han`.
+- Migration `202608290003_v230_yeu_thich_tim_kiem` chạy nối tiếp V1/V2, không phá dữ liệu cũ.
+- Seed bảo đảm **18 bảng nghiệp vụ** đều có tối thiểu 10 dòng dữ liệu.
+- `npm install` tại root tạo/cập nhật `package-lock.json`; script release bắt buộc lockfile tồn tại và GitHub CI dùng `npm ci` để tái lập dependency tree.
 
 ## Công nghệ
 
@@ -110,6 +120,15 @@ POST   /api/v1/thanh-toan/dat-hang
 POST   /api/v1/xac-thuc/dang-nhap
 POST   /api/v1/xac-thuc/dang-xuat
 GET    /api/v1/suc-khoe
+```
+
+### Tìm kiếm / lọc / yêu thích v2.3.0
+
+```text
+GET /api/v1/san-pham?tim_kiem=den&danh_muc=den-qua-tang&con_hang=true&sap_xep=gia_tang
+GET /api/v1/yeu-thich/:ma_phien
+POST /api/v1/yeu-thich/:ma_phien/:ma_san_pham
+DELETE /api/v1/yeu-thich/:ma_phien/:ma_san_pham
 ```
 
 ## Database commerce
@@ -455,6 +474,31 @@ Seed là idempotent: chạy lại không tạo trùng dữ liệu có khóa tự
 
 ---
 
+## Nâng cấp v2.2.1 -> v2.3.0
+
+Giữ nguyên `.env` và PostgreSQL volume hiện tại. **Không chạy `docker compose down -v`**.
+
+```powershell
+cd D:\LienThongDH\DoAn\NhienIn3d
+npm install
+npm audit
+npm test
+npm run typecheck
+npm run build
+npm run audit:security
+docker compose up -d --build
+docker compose ps
+```
+
+Migration `202608290003_v230_yeu_thich_tim_kiem` và seed mới sẽ tự chạy trong container `migrate`.
+
+Kiểm tra dữ liệu:
+
+```powershell
+docker compose logs migrate --tail 150
+npm run db:kiem-tra-du-lieu
+```
+
 # GitHub / Release
 
 Repository mục tiêu:
@@ -473,8 +517,10 @@ gh auth login
 Release phiên bản hiện tại:
 
 ```powershell
-.\scripts\release.ps1 v2.2.1
+.\scripts\release.ps1 v2.3.0
 ```
+
+Script release kiểm tra tag phải trùng với `VERSION` của source, chạy toàn bộ test/typecheck/build/audit, yêu cầu `package-lock.json` đã được `npm install` tạo/cập nhật, rồi mới commit + push tag.
 
 GitHub Actions sẽ build/test/audit và tạo GitHub Release theo tag.
 
@@ -599,3 +645,15 @@ docker exec nhienin3d-postgres pg_isready -U nhienin3d_app -d nhienin3d
 - Bỏ nhãn version khỏi footer storefront; lịch sử phiên bản chỉ còn trong README.
 - Giữ nguyên route chi tiết sản phẩm, giỏ hàng, thanh toán và trình xem 3D của v2.2.0.
 - Không đổi schema PostgreSQL và không cần migration mới.
+
+
+## v2.3.0 — 29/08/2026
+
+- Thêm trang danh sách sản phẩm riêng với tìm kiếm, lọc danh mục, lọc tồn kho và sắp xếp.
+- Mở rộng API sản phẩm với query an toàn và giới hạn tối đa 50 kết quả.
+- Thêm bảng `yeu_thich`, API yêu thích và trang yêu thích cho khách chưa đăng nhập bằng mã phiên ngẫu nhiên.
+- Thêm nút trái tim ở card/trang chi tiết; navbar hiển thị số sản phẩm đã lưu.
+- Migration v2.3.0 chạy nối tiếp V1/V2, không xóa dữ liệu cũ.
+- Seed thêm 10 dòng `yeu_thich`; tổng cộng 18 bảng nghiệp vụ đều có tối thiểu 10 dòng.
+- Giữ nguyên PostgreSQL host `5434`, Docker nội bộ `5432`, giỏ hàng, checkout, thanh toán giả lập local và trình xem 3D.
+- Release script bắt buộc `package-lock.json` tồn tại trước commit; GitHub CI/Release dùng `npm ci` để build có thể tái lập.
