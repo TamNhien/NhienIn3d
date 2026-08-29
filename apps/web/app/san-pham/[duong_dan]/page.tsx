@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { ThanhDieuHuong } from "../../../components/thanh-dieu-huong";
+import { TrinhXemAnh3D } from "../../../components/trinh-xem-anh-3d";
 import { API_URL, themBienTheVaoGio } from "../../../lib/gio-hang";
 import { DU_LIEU_MAU, type SanPham } from "../../../lib/du-lieu-mau";
 
@@ -55,7 +56,7 @@ export default function ChiTietSanPhamPage() {
       <div className="breadcrumb"><Link href="/">Trang chủ</Link><span>/</span><Link href="/#san-pham">Sản phẩm</Link><span>/</span><b>{san_pham.ten_san_pham}</b></div>
       <div className="product-detail-grid">
         <div className="product-gallery">
-          <div className="product-main-image"><img src={san_pham.hinh_anh?.[0]?.duong_dan_anh} alt={san_pham.ten_san_pham} referrerPolicy="no-referrer"/></div>
+          <TrinhXemAnh3D duong_dan_anh={san_pham.hinh_anh?.[0]?.duong_dan_anh} ten_san_pham={san_pham.ten_san_pham}/>
           <div className="product-spec-strip">
             <div><span>Kích thước</span><b>{san_pham.kich_thuoc}</b></div>
             <div><span>Khối lượng</span><b>{san_pham.khoi_luong_gam} g</b></div>

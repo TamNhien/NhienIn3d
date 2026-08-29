@@ -1,7 +1,7 @@
 # NhienIn3d
 
 > Cửa hàng sản phẩm in 3D hiện đại — Next.js + Three.js + NestJS + PostgreSQL + Docker  
-> Phiên bản hiện tại: **v2.1.1** — 29/08/2026
+> Phiên bản hiện tại: **v2.2.1** — 29/08/2026
 
 ## Công nghệ
 
@@ -69,6 +69,28 @@ v2.0.0 biến storefront V1 thành luồng commerce có thể thao tác thật:
 - Trang `/thanh-toan` chứa riêng thông tin nhận hàng và phương thức thanh toán.
 - Thanh toán giả lập local từ v2.1.0 được giữ nguyên.
 - Không đổi schema PostgreSQL và không cần migration mới.
+
+---
+
+# v2.2.0 — Storefront tinh gọn + xem ảnh 3D tương tác
+
+- Bỏ toàn bộ các khối **Thương mại điện tử**, **Công nghệ**, **Lịch sử phát triển** và **Security by default** khỏi trang chủ để storefront tập trung vào sản phẩm.
+- Lịch sử phiên bản vẫn được giữ đầy đủ trong duy nhất `README.md`, theo thứ tự tăng dần.
+- Thanh điều hướng chỉ giữ các mục thực sự phục vụ mua hàng: **Sản phẩm** và **Giỏ hàng**.
+- Trang chi tiết sản phẩm có hai chế độ **Ảnh** / **Xem 3D**.
+- Chế độ 3D cho phép kéo chuột/cảm ứng để xoay, lăn chuột để zoom và nhấp đúp để đặt lại góc nhìn.
+- Chế độ 3D hiện tại mô phỏng chiều sâu từ ảnh sản phẩm, không giả mạo đây là model GLB/GLTF thật.
+- Đóng gói ảnh local cho sản phẩm **Khối lập phương bánh răng** để không phụ thuộc thumbnail bên ngoài.
+- Seed cập nhật ảnh sản phẩm theo kiểu idempotent; không đổi schema PostgreSQL và không cần migration mới.
+- Giữ nguyên giỏ hàng, checkout transaction và thanh toán giả lập local từ các bản trước.
+
+# v2.2.1 — Sửa nâng cấp chép đè + dọn storefront legacy
+
+- Sửa regression `npm test` khi thư mục làm việc còn sót `apps/web/lib/lich-su-phien-ban.ts` từ v2.1.x.
+- `npm test` tự chạy cleanup legacy trước khi kiểm tra, phù hợp cách cập nhật source bằng cách chép đè vào `D:\LienThongDH\DoAn\NhienIn3d`.
+- Bỏ nhãn version kỹ thuật khỏi footer storefront; lịch sử phiên bản chỉ còn trong README.
+- API health và OpenAPI đồng bộ version `2.2.1`.
+- Không đổi dependency, schema PostgreSQL hay dữ liệu nghiệp vụ; không cần migration mới.
 
 ## Endpoint commerce
 
@@ -290,6 +312,32 @@ docker compose up -d --build
 
 V2.1.1 không thêm migration database. Container `migrate` vẫn chạy migration/seed idempotent hiện có. **Không chạy `docker compose down -v`** nếu muốn giữ dữ liệu.
 
+## Nâng cấp v2.2.0 -> v2.2.1
+
+V2.2.1 không thêm migration schema. Giữ nguyên `.env` và volume PostgreSQL hiện tại. Khi chạy `npm test`, script cleanup sẽ tự xóa tệp storefront legacy còn sót từ bản cũ nếu có.
+
+```powershell
+cd D:\LienThongDH\DoAn\NhienIn3d
+
+npm install
+npm audit
+npm test
+npm run typecheck
+npm run build
+npm run audit:security
+
+docker compose up -d --build
+docker compose ps
+```
+
+Kiểm tra nhanh trình xem 3D:
+
+```text
+http://localhost:3000/san-pham/khoi-lap-phuong-banh-rang
+```
+
+Không dùng `docker compose down -v` nếu muốn giữ dữ liệu hiện tại.
+
 ---
 
 # Luồng checkout
@@ -425,7 +473,7 @@ gh auth login
 Release phiên bản hiện tại:
 
 ```powershell
-.\scripts\release.ps1 v2.1.1
+.\scripts\release.ps1 v2.2.1
 ```
 
 GitHub Actions sẽ build/test/audit và tạo GitHub Release theo tag.
@@ -536,3 +584,18 @@ docker exec nhienin3d-postgres pg_isready -U nhienin3d_app -d nhienin3d
 - Tạo trang thanh toán riêng, chỉ truy cập từ bước xác nhận giỏ hàng.
 - Giữ nguyên thanh toán giả lập local và schema PostgreSQL.
 
+## v2.2.0 — 29/08/2026
+
+- Bỏ các khối giới thiệu dài khỏi storefront: Thương mại điện tử, Công nghệ, Lịch sử phát triển và Security by default.
+- Lịch sử phát triển chỉ còn trong README, giữ đúng thứ tự tăng dần.
+- Thêm trình xem ảnh 3D tương tác ở trang chi tiết sản phẩm với kéo xoay, zoom và đặt lại góc nhìn.
+- Đóng gói ảnh local cho Khối lập phương bánh răng và cập nhật seed idempotent.
+- Không đổi schema PostgreSQL; giữ nguyên giỏ hàng, checkout và thanh toán giả lập local.
+
+## v2.2.1 — 29/08/2026
+
+- Sửa regression test khi nâng cấp bằng cách chép source đè còn sót `apps/web/lib/lich-su-phien-ban.ts` từ phiên bản cũ.
+- Thêm cleanup tự động trước `npm test` để loại bỏ tệp storefront legacy đã ngừng sử dụng.
+- Bỏ nhãn version khỏi footer storefront; lịch sử phiên bản chỉ còn trong README.
+- Giữ nguyên route chi tiết sản phẩm, giỏ hàng, thanh toán và trình xem 3D của v2.2.0.
+- Không đổi schema PostgreSQL và không cần migration mới.

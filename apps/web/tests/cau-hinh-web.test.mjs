@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 
 const docJson = (duongDan) => JSON.parse(readFileSync(duongDan, 'utf8'));
 
@@ -21,15 +21,15 @@ test('du lieu mau hien thi tieng Viet co dau', () => {
   assert.match(src, /sản phẩm|Sản phẩm|Đèn|Chậu|Giá/u);
 });
 
-test('v2.1.1 storefront co gio hang va route checkout rieng', () => {
+test('v2.2.1 storefront co gio hang va route checkout rieng', () => {
   const page = readFileSync('app/page.tsx', 'utf8');
   assert.match(page, /themBienTheVaoGio/);
   assert.match(page, /Thêm vào giỏ|themVaoGio/u);
   assert.match(page, /gio-hang/);
-  assert.match(page, /v2\.1\.1/);
+  assert.doesNotMatch(page, />v2\.2\.1</);
 });
 
-test('hero bo noi dung quang ba V2 va typography da duoc thu gon', () => {
+test('hero bo noi dung quang ba phien ban va typography da duoc thu gon', () => {
   const page = readFileSync('app/page.tsx', 'utf8');
   const css = readFileSync('app/globals.css', 'utf8');
   assert.doesNotMatch(page, /NHIENIN3D V2 • COMMERCE READY/);
@@ -38,10 +38,25 @@ test('hero bo noi dung quang ba V2 va typography da duoc thu gon', () => {
   assert.match(css, /Segoe UI Variable/);
 });
 
-test('web hien thi lich su phien ban theo thu tu tang dan', () => {
-  const history = readFileSync('lib/lich-su-phien-ban.ts', 'utf8');
-  const versions = [...history.matchAll(/phien_ban: "(v\d+\.\d+\.\d+)"/g)].map(x => x[1]);
-  assert.deepEqual(versions, ['v1.0.0','v1.0.1','v1.0.2','v1.0.3','v1.0.4','v1.0.5','v1.0.6','v1.0.7','v2.0.0','v2.1.0','v2.1.1']);
+test('v2.2.1 bo cac khoi gioi thieu dai khoi storefront', () => {
+  const page = readFileSync('app/page.tsx', 'utf8');
+  for (const noi_dung of [
+    'THƯƠNG MẠI ĐIỆN TỬ',
+    'CÔNG NGHỆ',
+    'LỊCH SỬ PHÁT TRIỂN',
+    'SECURITY BY DEFAULT',
+    'Hiện đại từ giao diện đến transaction',
+    'Checkout không tin dữ liệu từ trình duyệt'
+  ]) assert.doesNotMatch(page, new RegExp(noi_dung, 'u'));
+  assert.doesNotMatch(page, /LICH_SU_PHIEN_BAN/);
+});
+
+test('thanh dieu huong khong con lien ket toi cong nghe va lich su storefront', () => {
+  const nav = readFileSync('components/thanh-dieu-huong.tsx', 'utf8');
+  assert.doesNotMatch(nav, /#cong-nghe/);
+  assert.doesNotMatch(nav, /#lich-su/);
+  assert.match(nav, /Sản phẩm/u);
+  assert.match(nav, /Giỏ hàng/u);
 });
 
 test('web gan nhan phuong thuc thanh toan gia lap local', () => {
@@ -51,7 +66,7 @@ test('web gan nhan phuong thuc thanh toan gia lap local', () => {
   assert.match(page, /Không gọi cổng thanh toán thật/u);
 });
 
-test('v2.1.1 co trang chi tiet san pham va click the san pham de mo chi tiet', () => {
+test('v2.2.1 co trang chi tiet san pham va click the san pham de mo chi tiet', () => {
   const card = readFileSync('components/the-san-pham.tsx', 'utf8');
   const detail = readFileSync('app/san-pham/[duong_dan]/page.tsx', 'utf8');
   assert.match(card, /router\.push\(`\/san-pham\//);
@@ -60,7 +75,7 @@ test('v2.1.1 co trang chi tiet san pham va click the san pham de mo chi tiet', (
   assert.match(detail, /Thêm \$\{so_luong\} vào giỏ/u);
 });
 
-test('v2.1.1 tach gio hang va thanh toan thanh hai route rieng', () => {
+test('v2.2.1 tach gio hang va thanh toan thanh hai route rieng', () => {
   const home = readFileSync('app/page.tsx', 'utf8');
   const cart = readFileSync('app/gio-hang/page.tsx', 'utf8');
   const checkout = readFileSync('app/thanh-toan/page.tsx', 'utf8');
@@ -70,4 +85,21 @@ test('v2.1.1 tach gio hang va thanh toan thanh hai route rieng', () => {
   assert.match(cart, /xoaKhoiGio/);
   assert.match(checkout, /thanh-toan\/dat-hang/);
   assert.match(checkout, /Thông tin nhận hàng/u);
+});
+
+test('v2.2.1 co trinh xem anh 3D tuong tac tren trang chi tiet', () => {
+  const viewer = readFileSync('components/trinh-xem-anh-3d.tsx', 'utf8');
+  const detail = readFileSync('app/san-pham/[duong_dan]/page.tsx', 'utf8');
+  assert.match(viewer, /Xem 3D/u);
+  assert.match(viewer, /onPointerMove/);
+  assert.match(viewer, /onWheel/);
+  assert.match(viewer, /rotateX/);
+  assert.match(viewer, /rotateY/);
+  assert.match(detail, /TrinhXemAnh3D/);
+});
+
+test('v2.2.1 dong goi anh local cho khoi lap phuong banh rang', () => {
+  const data = readFileSync('lib/du-lieu-mau.ts', 'utf8');
+  assert.match(data, /\/images\/khoi-lap-phuong-banh-rang\.jpg/);
+  assert.equal(existsSync('public/images/khoi-lap-phuong-banh-rang.jpg'), true);
 });

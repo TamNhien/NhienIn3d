@@ -34,7 +34,7 @@ function taoDatabaseUrl(): string {
 const adapter = new PrismaPg({ connectionString: taoDatabaseUrl() });
 const db = new PrismaClient({ adapter });
 
-const PHIEN_BAN_HIEN_TAI = "SEED_V210_THANH_TOAN_GIA_LAP_LOCAL";
+const PHIEN_BAN_HIEN_TAI = "SEED_V220_GIAO_DIEN_3D_TINH_GON";
 
 const danh_muc = [
   ["HOBBY_RC", "Mô hình & RC", "mo-hinh-rc", "Mô hình cơ khí, xe điều khiển và sản phẩm lắp ráp."],
@@ -115,7 +115,7 @@ const san_pham = [
   {
     ma_san_pham: "N3D-TOY-007", ten_san_pham: "Khối lập phương bánh răng", duong_dan: "khoi-lap-phuong-banh-rang",
     mo_ta_ngan: "Mô hình cơ khí cầm tay với nhiều bánh răng chuyển động liên kết.", gia_ban: 199000, gia_von: 89000, khoi_luong_gam: 135, thoi_gian_in_gio: 6.4, kich_thuoc: "82 × 82 × 82 mm", ma_danh_muc: "HOBBY_RC",
-    anh: "https://media.sketchfab.com/models/7f98240fd6d7462e9f57028b54e33bae/thumbnails/f9e86e9ff3204de59780f5fccc4ad401/b5f05db381004883a9a3b37d1437fcdd.jpeg",
+    anh: "/images/khoi-lap-phuong-banh-rang.jpg",
     nguon: "https://sketchfab.com/", thong_so: { vat_lieu_goi_y: "PLA", can_lap_rap: true }
   },
   {
@@ -205,7 +205,8 @@ const phien_ban_seed = [
   ["SEED_V200_THANH_TOAN_10", "V2 tạo 10 giao dịch thanh toán mẫu liên kết đơn hàng."],
   ["SEED_V200_DIA_CHI_10", "V2 tạo 10 địa chỉ người dùng mẫu."],
   ["SEED_V200_GIO_HANG_THANH_TOAN", "NhienIn3d V2 bổ sung giỏ hàng, checkout và nền tảng thanh toán."],
-  [PHIEN_BAN_HIEN_TAI, "NhienIn3d v2.1.0 cho phép giả lập cổng thanh toán online khi chạy local; production vẫn khóa phương thức chưa tích hợp thật."]
+  ["SEED_V210_THANH_TOAN_GIA_LAP_LOCAL", "NhienIn3d v2.1.0 cho phép giả lập cổng thanh toán online khi chạy local; production vẫn khóa phương thức chưa tích hợp thật."],
+  [PHIEN_BAN_HIEN_TAI, "NhienIn3d v2.2.0 tinh gọn storefront, bổ sung trình xem ảnh 3D tương tác và ảnh local cho sản phẩm khối lập phương bánh răng."]
 ] as const;
 
 async function main() {

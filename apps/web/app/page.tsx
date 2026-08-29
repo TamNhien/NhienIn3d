@@ -8,7 +8,6 @@ import { ThanhDieuHuong } from "../components/thanh-dieu-huong";
 import { TheSanPham } from "../components/the-san-pham";
 import { DU_LIEU_MAU, type SanPham } from "../lib/du-lieu-mau";
 import { API_URL, themBienTheVaoGio } from "../lib/gio-hang";
-import { LICH_SU_PHIEN_BAN } from "../lib/lich-su-phien-ban";
 
 export default function TrangChu() {
   const [san_pham, setSanPham] = useState<SanPham[]>(DU_LIEU_MAU);
@@ -86,61 +85,9 @@ export default function TrangChu() {
       </div>
     </section>
 
-    <section id="thuong-mai" className="section commerce">
-      <div>
-        <div className="eyebrow">THƯƠNG MẠI ĐIỆN TỬ</div>
-        <h2>Mỗi bước mua hàng có một màn hình riêng.</h2>
-        <p>Chi tiết sản phẩm, giỏ hàng và thanh toán được tách riêng để khách luôn biết mình đang ở bước nào và có thể quay lại chỉnh giỏ trước khi đặt hàng.</p>
-      </div>
-      <div className="commerce-steps">
-        <div><b>01</b><strong>Xem chi tiết</strong><span>Kiểm tra thông số, vật liệu, màu và tồn kho.</span></div>
-        <div><b>02</b><strong>Thêm vào giỏ</strong><span>Giỏ lưu biến thể, số lượng và đơn giá hiện tại.</span></div>
-        <div><b>03</b><strong>Kiểm tra giỏ</strong><span>Tăng giảm số lượng hoặc xóa sản phẩm trước checkout.</span></div>
-        <div><b>04</b><strong>Thanh toán</strong><span>Chỉ nhập thông tin nhận hàng sau khi bấm Tiến hành thanh toán.</span></div>
-      </div>
-    </section>
-
-    <section id="cong-nghe" className="section tech">
-      <div>
-        <div className="eyebrow">CÔNG NGHỆ</div>
-        <h2>Hiện đại từ giao diện đến transaction.</h2>
-        <p>Next.js + Three.js cho storefront, NestJS + Fastify cho API, Prisma + PostgreSQL quản lý giỏ hàng, tồn kho và thanh toán.</p>
-      </div>
-      <div className="tech-grid">
-        <div><b>Next.js 16</b><span>Storefront tốc độ cao</span></div>
-        <div><b>Three.js</b><span>Trải nghiệm 3D tương tác</span></div>
-        <div><b>NestJS 12</b><span>API ESM + Fastify</span></div>
-        <div><b>PostgreSQL 18</b><span>Transaction & UTF-8</span></div>
-      </div>
-    </section>
-
-    <section id="lich-su" className="section history">
-      <div className="history-head">
-        <div className="eyebrow">LỊCH SỬ PHÁT TRIỂN</div>
-        <h2>Thay đổi qua từng phiên bản.</h2>
-        <p>Các phiên bản được liệt kê theo thứ tự tăng dần để dễ theo dõi quá trình phát triển và nâng cấp hệ thống.</p>
-      </div>
-      <div className="history-list">
-        {LICH_SU_PHIEN_BAN.map((item) => <article className="history-item" key={item.phien_ban}>
-          <div className="history-version"><strong>{item.phien_ban}</strong><span>{item.ngay}</span></div>
-          <ul>{item.thay_doi.map((thay_doi) => <li key={thay_doi}>{thay_doi}</li>)}</ul>
-        </article>)}
-      </div>
-    </section>
-
-    <section id="bao-mat" className="security section">
-      <div className="lock">⌾</div>
-      <div>
-        <div className="eyebrow">SECURITY BY DEFAULT</div>
-        <h2>Checkout không tin dữ liệu từ trình duyệt.</h2>
-        <p>Đơn giá được đọc lại từ server, tồn kho được xác minh trong transaction và DTO được validate. Production chỉ cho dùng phương thức đã tích hợp; local có chế độ giả lập tách biệt.</p>
-      </div>
-    </section>
-
     <footer>
       <Link className="brand" href="/">Nhien<span>In3d</span></Link>
       <p>© 2026 NhienIn3d • Sản phẩm in 3D theo yêu cầu.</p>
-      <span>v2.1.1</span>
     </footer>
   </main>;
 }

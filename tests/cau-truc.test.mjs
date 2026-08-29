@@ -23,9 +23,7 @@ test("cac tep cot loi cua du an ton tai", () => {
     "apps/api/prisma/schema.prisma",
     "apps/api/src/main.ts",
     "apps/web/app/page.tsx"
-  ]) {
-    assert.equal(existsSync(tep), true, `Thieu ${tep}`);
-  }
+  ]) assert.equal(existsSync(tep), true, `Thieu ${tep}`);
 });
 
 test("root khoa deepmerge-ts da va lo hong CVE-2026-40345", () => {
@@ -60,33 +58,47 @@ test("root co lenh kiem tra so dong du lieu database", () => {
   assert.equal(typeof pkg.scripts?.["db:kiem-tra-du-lieu"], "string");
 });
 
-
 test("V2 co migration nang cap khong ghi de migration V1", () => {
   assert.equal(existsSync("apps/api/prisma/migrations/202608290001_v001_khoi_tao/migration.sql"), true);
   assert.equal(existsSync("apps/api/prisma/migrations/202608290002_v002_gio_hang_thanh_toan/migration.sql"), true);
 });
 
-test("version v2.1.1 dong bo root API va Web", () => {
-  assert.equal(readFileSync("VERSION", "utf8").trim(), "2.1.1");
-  assert.equal(docJson("package.json").version, "2.1.1");
-  assert.equal(docJson("apps/api/package.json").version, "2.1.1");
-  assert.equal(docJson("apps/web/package.json").version, "2.1.1");
+test("version v2.2.1 dong bo root API va Web", () => {
+  assert.equal(readFileSync("VERSION", "utf8").trim(), "2.2.1");
+  assert.equal(docJson("package.json").version, "2.2.1");
+  assert.equal(docJson("apps/api/package.json").version, "2.2.1");
+  assert.equal(docJson("apps/web/package.json").version, "2.2.1");
 });
 
-
-test("README va web co lich su phien ban tang dan den v2.1.1", () => {
+test("README co lich su phien ban tang dan den v2.2.1", () => {
   const readme = readFileSync("README.md", "utf8");
-  const viTri = ["## v1.0.0", "## v1.0.1", "## v1.0.2", "## v1.0.3", "## v1.0.4", "## v1.0.5", "## v1.0.6", "## v1.0.7", "## v2.0.0", "## v2.1.0", "## v2.1.1"].map(x => readme.indexOf(x));
+  const viTri = ["## v1.0.0", "## v1.0.1", "## v1.0.2", "## v1.0.3", "## v1.0.4", "## v1.0.5", "## v1.0.6", "## v1.0.7", "## v2.0.0", "## v2.1.0", "## v2.1.1", "## v2.2.0", "## v2.2.1"].map(x => readme.indexOf(x));
   assert.ok(viTri.every(x => x >= 0));
   assert.deepEqual([...viTri].sort((a,b)=>a-b), viTri);
-  assert.equal(existsSync("apps/web/lib/lich-su-phien-ban.ts"), true);
 });
 
+test("v2.2.1 bo lich su va nhan version khoi storefront", () => {
+  const home = readFileSync("apps/web/app/page.tsx", "utf8");
+  assert.doesNotMatch(home, /LỊCH SỬ PHÁT TRIỂN/u);
+  assert.doesNotMatch(home, /lich-su-phien-ban/);
+  assert.doesNotMatch(home, />v2\.2\.1</);
+});
 
-test("v2.1.1 co ba route commerce tach biet", () => {
+test("v2.2.1 co cleanup cho tep lich su storefront con sot khi chep source de", () => {
+  const cleanup = readFileSync("scripts/don-dep-legacy.mjs", "utf8");
+  assert.match(cleanup, /apps\/web\/lib\/lich-su-phien-ban\.ts/);
+  assert.match(docJson("package.json").scripts.test, /don-dep-legacy\.mjs/);
+});
+
+test("v2.2.1 co ba route commerce tach biet", () => {
   for (const tep of [
     "apps/web/app/san-pham/[duong_dan]/page.tsx",
     "apps/web/app/gio-hang/page.tsx",
     "apps/web/app/thanh-toan/page.tsx"
   ]) assert.equal(existsSync(tep), true, `Thieu ${tep}`);
+});
+
+test("v2.2.1 co trinh xem anh 3D va anh local mau", () => {
+  assert.equal(existsSync("apps/web/components/trinh-xem-anh-3d.tsx"), true);
+  assert.equal(existsSync("apps/web/public/images/khoi-lap-phuong-banh-rang.jpg"), true);
 });

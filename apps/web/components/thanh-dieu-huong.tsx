@@ -26,8 +26,6 @@ export function ThanhDieuHuong() {
     <div className="navlinks">
       <Link href="/#san-pham">Sản phẩm</Link>
       <Link href="/gio-hang">Giỏ hàng</Link>
-      <Link href="/#cong-nghe">Công nghệ</Link>
-      <Link href="/#lich-su">Phiên bản</Link>
     </div>
     <Link className="cart-button" href="/gio-hang">Giỏ hàng <b>{so_luong}</b></Link>
   </nav>;
