@@ -1,0 +1,29 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  kiem-tra:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24.19.0'
+          package-manager-cache: false
+      - name: Cài dependencies
+        run: npm install
+      - name: Test root + workspaces
+        run: npm run check --if-present
+        env:
+          DATABASE_URL: postgresql://user:pass@localhost:5432/nhienin3d
+      - name: Build API + Web
+        run: npm run build
+        env:
+          DATABASE_URL: postgresql://user:pass@localhost:5432/nhienin3d
+      - name: Kiểm tra lỗ hổng dependency nghiêm trọng
+        run: npm audit --workspaces --audit-level=high

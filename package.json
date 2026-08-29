@@ -1,0 +1,36 @@
+{
+  "name": "nhienin3d",
+  "private": true,
+  "version": "1.0.7",
+  "description": "NhienIn3d - cửa hàng sản phẩm in 3D hiện đại",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "test": "npm run test:root && npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "build": "npm run build --workspace=@nhienin3d/api && npm run build --workspace=@nhienin3d/web",
+    "check": "npm test && npm run typecheck",
+    "ci": "npm install && npm run check && npm run build && npm run audit:security",
+    "cai-dat": "npm install",
+    "kiem-tra": "npm run check",
+    "dev:api": "npm run dev --workspace=@nhienin3d/api",
+    "dev:web": "npm run dev --workspace=@nhienin3d/web",
+    "db:generate": "npm run db:generate --workspace=@nhienin3d/api",
+    "db:migrate": "npm run db:migrate --workspace=@nhienin3d/api",
+    "db:seed": "npm run db:seed --workspace=@nhienin3d/api",
+    "test:root": "node --test tests/*.test.mjs",
+    "audit:security": "npm audit --audit-level=high",
+    "db:kiem-tra-du-lieu": "npm run db:kiem-tra-du-lieu --workspace=@nhienin3d/api"
+  },
+  "workspaces": [
+    "apps/api",
+    "apps/web"
+  ],
+  "overrides": {
+    "deepmerge-ts": "8.0.1",
+    "fast-uri": "3.1.6",
+    "lodash": "4.18.1",
+    "js-yaml": "4.3.2"
+  }
+}

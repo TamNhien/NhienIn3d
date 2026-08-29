@@ -1,0 +1,63 @@
+name: Release
+on:
+  push:
+    tags: ['v*.*.*']
+permissions:
+  contents: write
+  packages: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24.19.0'
+          package-manager-cache: false
+      - name: Cài dependencies
+        run: npm install
+      - name: Test + typecheck
+        run: npm run check
+        env:
+          DATABASE_URL: postgresql://user:pass@localhost:5432/nhienin3d
+      - name: Build API + Web
+        run: npm run build
+        env:
+          DATABASE_URL: postgresql://user:pass@localhost:5432/nhienin3d
+      - name: Security audit
+        run: npm audit --workspaces --audit-level=high
+      - name: Đóng gói source
+        run: |
+          mkdir -p release
+          git archive --format=zip --output="release/NhienIn3d-${GITHUB_REF_NAME}-source.zip" HEAD
+          sha256sum release/*.zip > release/SHA256SUMS.txt
+      - name: Đăng nhập GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build và push API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./apps/api/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/tamnhien/nhienin3d-api:${{ github.ref_name }}
+            ghcr.io/tamnhien/nhienin3d-api:latest
+      - name: Build và push Web image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./apps/web
+          push: true
+          tags: |
+            ghcr.io/tamnhien/nhienin3d-web:${{ github.ref_name }}
+            ghcr.io/tamnhien/nhienin3d-web:latest
+      - name: Tạo GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          generate_release_notes: true
+          files: |
+            release/NhienIn3d-${{ github.ref_name }}-source.zip
+            release/SHA256SUMS.txt

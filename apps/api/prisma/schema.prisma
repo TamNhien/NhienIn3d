@@ -1,0 +1,219 @@
+generator client {
+  provider               = "prisma-client"
+  output                 = "../src/generated/prisma"
+  moduleFormat           = "cjs"
+  generatedFileExtension = "ts"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum VaiTro {
+  KHACH_HANG
+  NHAN_VIEN
+  QUAN_LY
+  QUAN_TRI
+}
+
+enum TrangThaiSanPham {
+  NHAP
+  DANG_BAN
+  TAM_AN
+  NGUNG_BAN
+}
+
+enum TrangThaiDonHang {
+  CHO_XAC_NHAN
+  DA_XAC_NHAN
+  DANG_SAN_XUAT
+  DANG_GIAO
+  HOAN_TAT
+  DA_HUY
+}
+
+enum TrangThaiNguon {
+  MAU_THAM_KHAO
+  DUOC_PHEP_KINH_DOANH
+}
+
+model NguoiDung {
+  id              String   @id @default(uuid()) @db.Uuid
+  thu_dien_tu     String   @unique @db.VarChar(255)
+  mat_khau_bam    String   @db.VarChar(500)
+  ho_ten          String   @db.VarChar(150)
+  vai_tro         VaiTro   @default(KHACH_HANG)
+  da_kich_hoat    Boolean  @default(true)
+  ngay_tao        DateTime @default(now()) @db.Timestamptz(6)
+  ngay_cap_nhat   DateTime @updatedAt @db.Timestamptz(6)
+  don_hang        DonHang[]
+  phien_dang_nhap PhienDangNhap[]
+
+  @@map("nguoi_dung")
+}
+
+model DanhMuc {
+  id            String    @id @default(uuid()) @db.Uuid
+  ma_danh_muc   String    @unique @db.VarChar(50)
+  ten_danh_muc  String    @db.VarChar(150)
+  duong_dan     String    @unique @db.VarChar(160)
+  mo_ta         String?   @db.Text
+  thu_tu        Int       @default(0)
+  dang_hien_thi Boolean   @default(true)
+  san_pham      SanPham[]
+
+  @@map("danh_muc")
+}
+
+model SanPham {
+  id                  String            @id @default(uuid()) @db.Uuid
+  ma_san_pham         String            @unique @db.VarChar(50)
+  ten_san_pham        String            @db.VarChar(200)
+  duong_dan           String            @unique @db.VarChar(220)
+  mo_ta_ngan          String?           @db.VarChar(700)
+  mo_ta               String?           @db.Text
+  gia_ban             Decimal           @db.Decimal(14, 2)
+  gia_von             Decimal?          @db.Decimal(14, 2)
+  don_vi_tien_te      String            @default("VND") @db.Char(3)
+  khoi_luong_gam      Decimal?          @db.Decimal(10, 2)
+  thoi_gian_in_gio    Decimal?          @db.Decimal(10, 2)
+  kich_thuoc          String?           @db.VarChar(120)
+  thong_so            Json              @default("{}") @db.JsonB
+  trang_thai          TrangThaiSanPham  @default(DANG_BAN)
+  trang_thai_nguon    TrangThaiNguon    @default(MAU_THAM_KHAO)
+  nguon_tham_khao     String?           @db.Text
+  danh_muc_id         String            @db.Uuid
+  danh_muc            DanhMuc           @relation(fields: [danh_muc_id], references: [id], onDelete: Restrict)
+  hinh_anh            HinhAnhSanPham[]
+  bien_the            BienTheSanPham[]
+  ngay_tao            DateTime          @default(now()) @db.Timestamptz(6)
+  ngay_cap_nhat       DateTime          @updatedAt @db.Timestamptz(6)
+
+  @@index([danh_muc_id])
+  @@index([trang_thai])
+  @@map("san_pham")
+}
+
+model HinhAnhSanPham {
+  id            String   @id @default(uuid()) @db.Uuid
+  san_pham_id   String   @db.Uuid
+  duong_dan_anh String   @db.Text
+  mo_ta_anh     String?  @db.VarChar(250)
+  la_anh_chinh  Boolean  @default(false)
+  thu_tu        Int      @default(0)
+  san_pham      SanPham  @relation(fields: [san_pham_id], references: [id], onDelete: Cascade)
+
+  @@index([san_pham_id])
+  @@map("hinh_anh_san_pham")
+}
+
+model VatLieu {
+  id             String          @id @default(uuid()) @db.Uuid
+  ma_vat_lieu    String          @unique @db.VarChar(40)
+  ten_vat_lieu   String          @db.VarChar(120)
+  mo_ta          String?         @db.Text
+  he_so_gia      Decimal         @default(1) @db.Decimal(8, 3)
+  bien_the       BienTheSanPham[]
+
+  @@map("vat_lieu")
+}
+
+model MauSac {
+  id          String          @id @default(uuid()) @db.Uuid
+  ma_mau      String          @unique @db.VarChar(40)
+  ten_mau     String          @db.VarChar(120)
+  ma_hex      String          @db.VarChar(9)
+  bien_the    BienTheSanPham[]
+
+  @@map("mau_sac")
+}
+
+model BienTheSanPham {
+  id            String    @id @default(uuid()) @db.Uuid
+  san_pham_id   String    @db.Uuid
+  vat_lieu_id   String?   @db.Uuid
+  mau_sac_id    String?   @db.Uuid
+  ma_bien_the   String    @unique @db.VarChar(80)
+  gia_chenh_lech Decimal  @default(0) @db.Decimal(14, 2)
+  so_luong_ton  Int       @default(0)
+  dang_hien_thi Boolean   @default(true)
+  san_pham      SanPham   @relation(fields: [san_pham_id], references: [id], onDelete: Cascade)
+  vat_lieu      VatLieu?  @relation(fields: [vat_lieu_id], references: [id], onDelete: SetNull)
+  mau_sac       MauSac?   @relation(fields: [mau_sac_id], references: [id], onDelete: SetNull)
+
+  @@index([san_pham_id])
+  @@map("bien_the_san_pham")
+}
+
+model DonHang {
+  id               String            @id @default(uuid()) @db.Uuid
+  ma_don_hang      String            @unique @db.VarChar(40)
+  nguoi_dung_id    String?           @db.Uuid
+  ho_ten_nguoi_nhan String           @db.VarChar(150)
+  so_dien_thoai    String            @db.VarChar(30)
+  dia_chi_giao_hang String           @db.Text
+  ghi_chu          String?           @db.Text
+  tong_tien        Decimal           @db.Decimal(14, 2)
+  trang_thai       TrangThaiDonHang  @default(CHO_XAC_NHAN)
+  nguoi_dung       NguoiDung?        @relation(fields: [nguoi_dung_id], references: [id], onDelete: SetNull)
+  chi_tiet         ChiTietDonHang[]
+  ngay_tao         DateTime          @default(now()) @db.Timestamptz(6)
+  ngay_cap_nhat    DateTime          @updatedAt @db.Timestamptz(6)
+
+  @@index([nguoi_dung_id])
+  @@index([trang_thai])
+  @@map("don_hang")
+}
+
+model ChiTietDonHang {
+  id              String   @id @default(uuid()) @db.Uuid
+  don_hang_id     String   @db.Uuid
+  san_pham_id     String?  @db.Uuid
+  ten_san_pham    String   @db.VarChar(200)
+  ma_san_pham    String   @db.VarChar(50)
+  so_luong        Int
+  don_gia         Decimal  @db.Decimal(14, 2)
+  thanh_tien      Decimal  @db.Decimal(14, 2)
+  tuy_chon        Json     @default("{}") @db.JsonB
+  don_hang        DonHang @relation(fields: [don_hang_id], references: [id], onDelete: Cascade)
+
+  @@index([don_hang_id])
+  @@map("chi_tiet_don_hang")
+}
+
+model PhienDangNhap {
+  id                    String    @id @default(uuid()) @db.Uuid
+  nguoi_dung_id          String    @db.Uuid
+  ma_lam_moi_bam         String    @unique @db.VarChar(500)
+  dia_chi_ip             String?   @db.VarChar(64)
+  trinh_duyet             String?   @db.VarChar(500)
+  het_han_luc             DateTime  @db.Timestamptz(6)
+  da_thu_hoi              Boolean   @default(false)
+  ngay_tao                DateTime  @default(now()) @db.Timestamptz(6)
+  nguoi_dung              NguoiDung @relation(fields: [nguoi_dung_id], references: [id], onDelete: Cascade)
+
+  @@index([nguoi_dung_id])
+  @@map("phien_dang_nhap")
+}
+
+model NhatKyBaoMat {
+  id            BigInt   @id @default(autoincrement())
+  loai_su_kien  String   @db.VarChar(100)
+  nguoi_dung_id String?  @db.Uuid
+  dia_chi_ip    String?  @db.VarChar(64)
+  chi_tiet      Json     @default("{}") @db.JsonB
+  ngay_tao      DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([loai_su_kien])
+  @@index([ngay_tao])
+  @@map("nhat_ky_bao_mat")
+}
+
+model PhienBanSeed {
+  id          BigInt   @id @default(autoincrement())
+  phien_ban   String   @unique @db.VarChar(60)
+  mo_ta       String   @db.VarChar(300)
+  ngay_ap_dung DateTime @default(now()) @db.Timestamptz(6)
+
+  @@map("phien_ban_seed")
+}
