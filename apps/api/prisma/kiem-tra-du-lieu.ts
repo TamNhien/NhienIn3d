@@ -31,7 +31,12 @@ const dem = {
   chi_tiet_don_hang: await db.chiTietDonHang.count(),
   phien_dang_nhap: await db.phienDangNhap.count(),
   nhat_ky_bao_mat: await db.nhatKyBaoMat.count(),
-  phien_ban_seed: await db.phienBanSeed.count()
+  phien_ban_seed: await db.phienBanSeed.count(),
+  gio_hang: await db.gioHang.count(),
+  chi_tiet_gio_hang: await db.chiTietGioHang.count(),
+  phuong_thuc_thanh_toan: await db.phuongThucThanhToan.count(),
+  thanh_toan: await db.thanhToan.count(),
+  dia_chi_nguoi_dung: await db.diaChiNguoiDung.count()
 };
 
 console.table(dem);
@@ -40,7 +45,7 @@ if (thieu.length) {
   console.error(`❌ Chưa đủ 10 dòng: ${thieu.map(([bang, so]) => `${bang}=${so}`).join(", ")}`);
   process.exitCode = 1;
 } else {
-  console.log("✅ Tất cả 12 bảng nghiệp vụ có tối thiểu 10 dòng dữ liệu.");
+  console.log("✅ Tất cả 17 bảng nghiệp vụ có tối thiểu 10 dòng dữ liệu.");
 }
 
 await db.$disconnect();

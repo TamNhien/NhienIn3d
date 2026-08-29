@@ -46,15 +46,44 @@ test("Swagger Fastify co @fastify/static tuong thich Fastify 5", () => {
   assert.equal(pkg.dependencies['@fastify/static'], '10.1.3');
 });
 
-test("seed V1.0.7 dam bao 12 bang nghiep vu toi thieu 10 dong", () => {
+test("seed v2.1.0 dam bao 17 bang nghiep vu toi thieu 10 dong", () => {
   const seed = readFileSync('prisma/seed.ts', 'utf8');
   for (const bang of [
     'nguoi_dung', 'danh_muc', 'san_pham', 'hinh_anh_san_pham',
     'vat_lieu', 'mau_sac', 'bien_the_san_pham', 'don_hang',
-    'chi_tiet_don_hang', 'phien_dang_nhap', 'nhat_ky_bao_mat', 'phien_ban_seed'
+    'chi_tiet_don_hang', 'phien_dang_nhap', 'nhat_ky_bao_mat', 'phien_ban_seed',
+    'gio_hang', 'chi_tiet_gio_hang', 'phuong_thuc_thanh_toan', 'thanh_toan', 'dia_chi_nguoi_dung'
   ]) {
     assert.match(seed, new RegExp(`${bang}: await db\\.`));
   }
   assert.match(seed, /so_luong < 10/);
-  assert.match(seed, /PHIEN_BAN_HIEN_TAI = "SEED_V002_MOI_BANG_TOI_THIEU_10_DONG"/);
+  assert.match(seed, /PHIEN_BAN_HIEN_TAI = "SEED_V210_THANH_TOAN_GIA_LAP_LOCAL"/);
+});
+
+
+test("V2 co migration gio hang, thanh toan va dia chi", () => {
+  const schema = readFileSync("prisma/schema.prisma", "utf8");
+  for (const model of ["GioHang", "ChiTietGioHang", "PhuongThucThanhToan", "ThanhToan", "DiaChiNguoiDung"]) {
+    assert.match(schema, new RegExp(`model\\s+${model}\\b`));
+  }
+});
+
+test("V2 co API gio hang va checkout", () => {
+  const app = readFileSync("src/app.module.ts", "utf8");
+  const gio = readFileSync("src/gio-hang/gio-hang.controller.ts", "utf8");
+  const thanhToan = readFileSync("src/thanh-toan/thanh-toan.controller.ts", "utf8");
+  assert.match(app, /GioHangModule/);
+  assert.match(app, /ThanhToanModule/);
+  assert.match(gio, /Controller\("gio-hang"\)/);
+  assert.match(thanhToan, /dat-hang/);
+});
+
+
+test("local cho phep gia lap gateway online nhung production van khoa", () => {
+  const service = readFileSync("src/thanh-toan/thanh-toan.service.ts", "utf8");
+  assert.match(service, /NODE_ENV/);
+  assert.match(service, /la_gia_lap/);
+  assert.match(service, /TrangThaiThanhToan\.DA_THANH_TOAN/);
+  assert.match(service, /N3D-MOCK/);
+  assert.match(service, /!phuong_thuc\.dang_hoat_dong && !la_gia_lap/);
 });

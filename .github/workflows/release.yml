@@ -2,41 +2,76 @@ name: Release
 on:
   push:
     tags: ['v*.*.*']
+
 permissions:
   contents: write
   packages: write
+
 jobs:
   release:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18.6-bookworm
+        env:
+          POSTGRES_DB: nhienin3d
+          POSTGRES_USER: nhienin3d_app
+          POSTGRES_PASSWORD: NhienIn3d_Release_CI_2026
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U nhienin3d_app -d nhienin3d"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      DATABASE_URL: postgresql://nhienin3d_app:NhienIn3d_Release_CI_2026@localhost:5432/nhienin3d?schema=public
+      ADMIN_EMAIL: release-ci@nhienin3d.local
+      ADMIN_PASSWORD: NhienIn3d_Release_Admin_2026
+      ADMIN_NAME: Release CI
+
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
           node-version: '24.19.0'
           package-manager-cache: false
+
       - name: Cài dependencies
         run: npm install
+
       - name: Test + typecheck
-        run: npm run check
-        env:
-          DATABASE_URL: postgresql://user:pass@localhost:5432/nhienin3d
+        run: |
+          npm test
+          npm run typecheck
+
+      - name: Migration + seed V2
+        run: |
+          npm run db:generate
+          npm run db:migrate
+          npm run db:seed
+          npm run db:kiem-tra-du-lieu
+
       - name: Build API + Web
         run: npm run build
-        env:
-          DATABASE_URL: postgresql://user:pass@localhost:5432/nhienin3d
+
       - name: Security audit
-        run: npm audit --workspaces --audit-level=high
+        run: npm run audit:security
+
       - name: Đóng gói source
         run: |
           mkdir -p release
           git archive --format=zip --output="release/NhienIn3d-${GITHUB_REF_NAME}-source.zip" HEAD
           sha256sum release/*.zip > release/SHA256SUMS.txt
+
       - name: Đăng nhập GHCR
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build và push API image
         uses: docker/build-push-action@v6
         with:
@@ -46,6 +81,7 @@ jobs:
           tags: |
             ghcr.io/tamnhien/nhienin3d-api:${{ github.ref_name }}
             ghcr.io/tamnhien/nhienin3d-api:latest
+
       - name: Build và push Web image
         uses: docker/build-push-action@v6
         with:
@@ -54,6 +90,7 @@ jobs:
           tags: |
             ghcr.io/tamnhien/nhienin3d-web:${{ github.ref_name }}
             ghcr.io/tamnhien/nhienin3d-web:latest
+
       - name: Tạo GitHub Release
         uses: softprops/action-gh-release@v3
         with:

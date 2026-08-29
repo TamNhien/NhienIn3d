@@ -7,7 +7,7 @@ gh auth status
 if ($LASTEXITCODE -ne 0) { throw "Hay chay: gh auth login" }
 & "$PSScriptRoot\kiem-tra.ps1"
 $clean = $Version.TrimStart('v')
-Set-Content -Path "VERSION" -Value $Version -Encoding utf8
+Set-Content -Path "VERSION" -Value $clean -Encoding utf8
 npm --prefix apps/api version $clean --no-git-tag-version
 npm --prefix apps/web version $clean --no-git-tag-version
 $rootPkg = Get-Content package.json -Raw | ConvertFrom-Json; $rootPkg.version=$clean; $rootPkg | ConvertTo-Json -Depth 20 | Set-Content package.json -Encoding utf8

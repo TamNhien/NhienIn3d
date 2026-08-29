@@ -8,7 +8,9 @@ import {
   VaiTro,
   TrangThaiSanPham,
   TrangThaiNguon,
-  TrangThaiDonHang
+  TrangThaiDonHang,
+  TrangThaiGioHang,
+  TrangThaiThanhToan
 } from "../src/generated/prisma/client.js";
 
 // Chạy được cả từ root workspace lẫn apps/api.
@@ -32,7 +34,7 @@ function taoDatabaseUrl(): string {
 const adapter = new PrismaPg({ connectionString: taoDatabaseUrl() });
 const db = new PrismaClient({ adapter });
 
-const PHIEN_BAN_HIEN_TAI = "SEED_V002_MOI_BANG_TOI_THIEU_10_DONG";
+const PHIEN_BAN_HIEN_TAI = "SEED_V210_THANH_TOAN_GIA_LAP_LOCAL";
 
 const danh_muc = [
   ["HOBBY_RC", "Mô hình & RC", "mo-hinh-rc", "Mô hình cơ khí, xe điều khiển và sản phẩm lắp ráp."],
@@ -161,6 +163,33 @@ const don_hang_mau = [
   ["N3D-DH-0010", 2, 9, 1, "0912000010", "Số 52 Trần Hưng Đạo, Nha Trang, Khánh Hòa", TrangThaiDonHang.HOAN_TAT]
 ] as const;
 
+
+const phuong_thuc_thanh_toan = [
+  ["COD", "Thanh toán khi nhận hàng", "Thanh toán tiền mặt khi đơn hàng được giao.", true],
+  ["CHUYEN_KHOAN", "Chuyển khoản ngân hàng", "Chuyển khoản theo nội dung đơn hàng do NhienIn3d cung cấp.", true],
+  ["VNPAY", "VNPay", "Cổng thanh toán VNPay - giả lập được khi chạy local, chưa bật tích hợp production.", false],
+  ["MOMO", "MoMo", "Ví điện tử MoMo - giả lập được khi chạy local, chưa bật tích hợp production.", false],
+  ["ZALOPAY", "ZaloPay", "Ví điện tử ZaloPay - giả lập được khi chạy local, chưa bật tích hợp production.", false],
+  ["SHOPEEPAY", "ShopeePay", "Ví điện tử ShopeePay - giả lập được khi chạy local, chưa bật tích hợp production.", false],
+  ["NAPAS", "Thẻ nội địa NAPAS", "Thanh toán thẻ nội địa - giả lập local, chưa bật production.", false],
+  ["THE_QUOC_TE", "Visa / Mastercard", "Thanh toán thẻ quốc tế - giả lập local, chưa bật production.", false],
+  ["APPLE_PAY", "Apple Pay", "Thanh toán Apple Pay - giả lập local, chưa bật production.", false],
+  ["GOOGLE_PAY", "Google Pay", "Thanh toán Google Pay - giả lập local, chưa bật production.", false]
+] as const;
+
+const dia_chi_mau = [
+  ["Nguyễn Minh Anh", "0912001001", "Đà Nẵng", "Hải Châu", "Hòa Cường Bắc", "12 Nguyễn Văn Linh"],
+  ["Trần Hoàng Nam", "0912001002", "TP. Hồ Chí Minh", "Quận 1", "Bến Nghé", "25 Lê Lợi"],
+  ["Lê Thu Hà", "0912001003", "Hà Nội", "Hà Đông", "Mộ Lao", "18 Trần Phú"],
+  ["Phạm Gia Huy", "0912001004", "Cần Thơ", "Ninh Kiều", "Tân An", "40 Hùng Vương"],
+  ["Võ Ngọc Linh", "0912001005", "Huế", "Thuận Hóa", "Phú Hội", "09 Nguyễn Huệ"],
+  ["Đặng Quốc Bảo", "0912001006", "Đồng Nai", "Biên Hòa", "Thống Nhất", "33 Võ Thị Sáu"],
+  ["Bùi Khánh Vy", "0912001007", "Quảng Ninh", "Hạ Long", "Bạch Đằng", "15 Quang Trung"],
+  ["Hoàng Đức Anh", "0912001008", "Đắk Lắk", "Buôn Ma Thuột", "Tân Lợi", "21 Phan Chu Trinh"],
+  ["Đỗ Mai Phương", "0912001009", "Gia Lai", "Quy Nhơn", "Lê Lợi", "08 Lý Thường Kiệt"],
+  ["Quản trị NhienIn3d", "0912001010", "Khánh Hòa", "Nha Trang", "Lộc Thọ", "52 Trần Hưng Đạo"]
+] as const;
+
 const phien_ban_seed = [
   ["SEED_V001_DU_LIEU_MAU", "Dữ liệu mẫu nền của NhienIn3d V1."],
   ["SEED_V002_DANH_MUC_10", "Bổ sung đủ 10 danh mục."],
@@ -171,7 +200,12 @@ const phien_ban_seed = [
   ["SEED_V002_BIEN_THE_10", "Tạo 10 biến thể sản phẩm."],
   ["SEED_V002_DON_HANG_10", "Tạo 10 đơn hàng và 10 chi tiết đơn hàng."],
   ["SEED_V002_NHAT_KY_10", "Tạo 10 phiên đăng nhập và 10 nhật ký bảo mật mẫu."],
-  [PHIEN_BAN_HIEN_TAI, "Đảm bảo mỗi bảng nghiệp vụ NhienIn3d có tối thiểu 10 dòng dữ liệu mẫu."]
+  ["SEED_V200_GIO_HANG_10", "V2 tạo 10 giỏ hàng và 10 chi tiết giỏ hàng mẫu."],
+  ["SEED_V200_PHUONG_THUC_THANH_TOAN_10", "V2 tạo 10 phương thức thanh toán mẫu, chỉ bật phương thức đã hỗ trợ."],
+  ["SEED_V200_THANH_TOAN_10", "V2 tạo 10 giao dịch thanh toán mẫu liên kết đơn hàng."],
+  ["SEED_V200_DIA_CHI_10", "V2 tạo 10 địa chỉ người dùng mẫu."],
+  ["SEED_V200_GIO_HANG_THANH_TOAN", "NhienIn3d V2 bổ sung giỏ hàng, checkout và nền tảng thanh toán."],
+  [PHIEN_BAN_HIEN_TAI, "NhienIn3d v2.1.0 cho phép giả lập cổng thanh toán online khi chạy local; production vẫn khóa phương thức chưa tích hợp thật."]
 ] as const;
 
 async function main() {
@@ -276,9 +310,10 @@ async function main() {
   // 10 biến thể: mỗi sản phẩm có một biến thể mẫu.
   const ma_vat_lieu = ["PETG", "PLA", "PETG", "PETG", "PLA", "PLA", "PLA", "PETG", "PLA", "PETG"];
   const ma_mau = ["DEN", "TRANG", "CAM", "XAM", "DO", "VANG", "TIM", "XANH_DUONG", "TRANG", "DEN"];
+  const bien_the_map = new Map<string, { id: string; ma_bien_the: string; so_luong_ton: number; gia_chenh_lech: unknown }>();
   for (let i = 0; i < san_pham.length; i++) {
     const sp = san_pham[i];
-    await db.bienTheSanPham.upsert({
+    const bien_the = await db.bienTheSanPham.upsert({
       where: { ma_bien_the: `${sp.ma_san_pham}-BT01` },
       update: {
         san_pham_id: san_pham_map.get(sp.ma_san_pham)!.id,
@@ -298,9 +333,67 @@ async function main() {
         dang_hien_thi: true
       }
     });
+    bien_the_map.set(sp.ma_san_pham, bien_the);
+  }
+
+  // V2: 10 địa chỉ mẫu.
+  for (let i = 0; i < 10; i++) {
+    const user = nguoi_dung[i];
+    const [ten_nguoi_nhan, so_dien_thoai, tinh_thanh, quan_huyen, phuong_xa, dia_chi_cu_the] = dia_chi_mau[i];
+    const da_co = await db.diaChiNguoiDung.findFirst({
+      where: { nguoi_dung_id: user.id, dia_chi_cu_the }
+    });
+    if (da_co) {
+      await db.diaChiNguoiDung.update({
+        where: { id: da_co.id },
+        data: { ten_nguoi_nhan, so_dien_thoai, tinh_thanh, quan_huyen, phuong_xa, la_mac_dinh: true }
+      });
+    } else {
+      await db.diaChiNguoiDung.create({
+        data: { nguoi_dung_id: user.id, ten_nguoi_nhan, so_dien_thoai, tinh_thanh, quan_huyen, phuong_xa, dia_chi_cu_the, la_mac_dinh: true }
+      });
+    }
+  }
+
+  // V2: 10 phương thức thanh toán. Chỉ COD và chuyển khoản được bật mặc định.
+  const phuong_thuc_map = new Map<string, string>();
+  for (let i = 0; i < phuong_thuc_thanh_toan.length; i++) {
+    const [ma_phuong_thuc, ten_phuong_thuc, mo_ta, dang_hoat_dong] = phuong_thuc_thanh_toan[i];
+    const item = await db.phuongThucThanhToan.upsert({
+      where: { ma_phuong_thuc },
+      update: { ten_phuong_thuc, mo_ta, dang_hoat_dong, thu_tu: i + 1 },
+      create: { ma_phuong_thuc, ten_phuong_thuc, mo_ta, dang_hoat_dong, thu_tu: i + 1 }
+    });
+    phuong_thuc_map.set(ma_phuong_thuc, item.id);
+  }
+
+  // V2: 10 giỏ hàng mẫu + 10 chi tiết, idempotent.
+  for (let i = 0; i < 10; i++) {
+    const sp = san_pham[i];
+    const bien_the = bien_the_map.get(sp.ma_san_pham)!;
+    const gio = await db.gioHang.upsert({
+      where: { ma_phien: `N3D-GIO-MAU-${String(i + 1).padStart(2, "0")}` },
+      update: {
+        nguoi_dung_id: nguoi_dung[i].id,
+        trang_thai: i < 8 ? TrangThaiGioHang.DANG_MO : TrangThaiGioHang.DA_DAT_HANG,
+        ngay_het_han: new Date(Date.now() + (14 + i) * 24 * 60 * 60 * 1000)
+      },
+      create: {
+        ma_phien: `N3D-GIO-MAU-${String(i + 1).padStart(2, "0")}`,
+        nguoi_dung_id: nguoi_dung[i].id,
+        trang_thai: i < 8 ? TrangThaiGioHang.DANG_MO : TrangThaiGioHang.DA_DAT_HANG,
+        ngay_het_han: new Date(Date.now() + (14 + i) * 24 * 60 * 60 * 1000)
+      }
+    });
+    await db.chiTietGioHang.upsert({
+      where: { gio_hang_id_bien_the_id: { gio_hang_id: gio.id, bien_the_id: bien_the.id } },
+      update: { so_luong: (i % 3) + 1, don_gia: Number(sp.gia_ban) + Number(bien_the.gia_chenh_lech) },
+      create: { gio_hang_id: gio.id, bien_the_id: bien_the.id, so_luong: (i % 3) + 1, don_gia: Number(sp.gia_ban) + Number(bien_the.gia_chenh_lech) }
+    });
   }
 
   // 10 đơn hàng + 10 chi tiết đơn hàng (mỗi đơn 1 dòng chi tiết để dữ liệu dễ quan sát).
+  const don_hang_map = new Map<string, { id: string; tong_tien: unknown }>();
   for (let i = 0; i < don_hang_mau.length; i++) {
     const [ma_don_hang, chi_so_user, chi_so_sp, so_luong, so_dien_thoai, dia_chi_giao_hang, trang_thai] = don_hang_mau[i];
     const sp = san_pham[chi_so_sp];
@@ -332,6 +425,7 @@ async function main() {
       }
     });
 
+    don_hang_map.set(ma_don_hang, don);
     await db.chiTietDonHang.deleteMany({ where: { don_hang_id: don.id } });
     await db.chiTietDonHang.create({
       data: {
@@ -343,6 +437,34 @@ async function main() {
         don_gia,
         thanh_tien,
         tuy_chon: { du_lieu_mau: true, ghi_chu: "Thông số tùy chọn minh họa" }
+      }
+    });
+  }
+
+  // V2: 10 giao dịch thanh toán mẫu, mỗi đơn hàng một giao dịch.
+  for (let i = 0; i < don_hang_mau.length; i++) {
+    const [ma_don_hang] = don_hang_mau[i];
+    const don = don_hang_map.get(ma_don_hang)!;
+    const ma_phuong_thuc = i % 2 === 0 ? "COD" : "CHUYEN_KHOAN";
+    const trang_thai = i % 4 === 0 ? TrangThaiThanhToan.DA_THANH_TOAN : TrangThaiThanhToan.CHO_THANH_TOAN;
+    await db.thanhToan.upsert({
+      where: { ma_giao_dich: `N3D-TT-MAU-${String(i + 1).padStart(4, "0")}` },
+      update: {
+        don_hang_id: don.id,
+        phuong_thuc_id: phuong_thuc_map.get(ma_phuong_thuc)!,
+        so_tien: Number(don.tong_tien),
+        trang_thai,
+        noi_dung: `Giao dịch mẫu V2 cho ${ma_don_hang}`,
+        ngay_thanh_toan: trang_thai === TrangThaiThanhToan.DA_THANH_TOAN ? new Date() : null
+      },
+      create: {
+        don_hang_id: don.id,
+        phuong_thuc_id: phuong_thuc_map.get(ma_phuong_thuc)!,
+        ma_giao_dich: `N3D-TT-MAU-${String(i + 1).padStart(4, "0")}`,
+        so_tien: Number(don.tong_tien),
+        trang_thai,
+        noi_dung: `Giao dịch mẫu V2 cho ${ma_don_hang}`,
+        ngay_thanh_toan: trang_thai === TrangThaiThanhToan.DA_THANH_TOAN ? new Date() : null
       }
     });
   }
@@ -403,7 +525,12 @@ async function main() {
     chi_tiet_don_hang: await db.chiTietDonHang.count(),
     phien_dang_nhap: await db.phienDangNhap.count(),
     nhat_ky_bao_mat: await db.nhatKyBaoMat.count(),
-    phien_ban_seed: await db.phienBanSeed.count()
+    phien_ban_seed: await db.phienBanSeed.count(),
+    gio_hang: await db.gioHang.count(),
+    chi_tiet_gio_hang: await db.chiTietGioHang.count(),
+    phuong_thuc_thanh_toan: await db.phuongThucThanhToan.count(),
+    thanh_toan: await db.thanhToan.count(),
+    dia_chi_nguoi_dung: await db.diaChiNguoiDung.count()
   };
 
   const thieu = Object.entries(dem).filter(([, so_luong]) => so_luong < 10);

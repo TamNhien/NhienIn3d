@@ -59,3 +59,34 @@ test("root co lenh kiem tra so dong du lieu database", () => {
   const pkg = docJson("package.json");
   assert.equal(typeof pkg.scripts?.["db:kiem-tra-du-lieu"], "string");
 });
+
+
+test("V2 co migration nang cap khong ghi de migration V1", () => {
+  assert.equal(existsSync("apps/api/prisma/migrations/202608290001_v001_khoi_tao/migration.sql"), true);
+  assert.equal(existsSync("apps/api/prisma/migrations/202608290002_v002_gio_hang_thanh_toan/migration.sql"), true);
+});
+
+test("version v2.1.1 dong bo root API va Web", () => {
+  assert.equal(readFileSync("VERSION", "utf8").trim(), "2.1.1");
+  assert.equal(docJson("package.json").version, "2.1.1");
+  assert.equal(docJson("apps/api/package.json").version, "2.1.1");
+  assert.equal(docJson("apps/web/package.json").version, "2.1.1");
+});
+
+
+test("README va web co lich su phien ban tang dan den v2.1.1", () => {
+  const readme = readFileSync("README.md", "utf8");
+  const viTri = ["## v1.0.0", "## v1.0.1", "## v1.0.2", "## v1.0.3", "## v1.0.4", "## v1.0.5", "## v1.0.6", "## v1.0.7", "## v2.0.0", "## v2.1.0", "## v2.1.1"].map(x => readme.indexOf(x));
+  assert.ok(viTri.every(x => x >= 0));
+  assert.deepEqual([...viTri].sort((a,b)=>a-b), viTri);
+  assert.equal(existsSync("apps/web/lib/lich-su-phien-ban.ts"), true);
+});
+
+
+test("v2.1.1 co ba route commerce tach biet", () => {
+  for (const tep of [
+    "apps/web/app/san-pham/[duong_dan]/page.tsx",
+    "apps/web/app/gio-hang/page.tsx",
+    "apps/web/app/thanh-toan/page.tsx"
+  ]) assert.equal(existsSync(tep), true, `Thieu ${tep}`);
+});
