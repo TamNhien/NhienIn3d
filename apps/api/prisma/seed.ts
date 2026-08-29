@@ -34,7 +34,7 @@ function taoDatabaseUrl(): string {
 const adapter = new PrismaPg({ connectionString: taoDatabaseUrl() });
 const db = new PrismaClient({ adapter });
 
-const PHIEN_BAN_HIEN_TAI = "SEED_V230_YEU_THICH_TIM_KIEM";
+const PHIEN_BAN_HIEN_TAI = "SEED_V240_3D_WEBGL_THAT";
 
 const danh_muc = [
   ["HOBBY_RC", "Mô hình & RC", "mo-hinh-rc", "Mô hình cơ khí, xe điều khiển và sản phẩm lắp ráp."],
@@ -207,7 +207,8 @@ const phien_ban_seed = [
   ["SEED_V200_GIO_HANG_THANH_TOAN", "NhienIn3d V2 bổ sung giỏ hàng, checkout và nền tảng thanh toán."],
   ["SEED_V210_THANH_TOAN_GIA_LAP_LOCAL", "NhienIn3d v2.1.0 cho phép giả lập cổng thanh toán online khi chạy local; production vẫn khóa phương thức chưa tích hợp thật."],
   ["SEED_V220_GIAO_DIEN_3D_TINH_GON", "NhienIn3d v2.2.0 tinh gọn storefront, bổ sung trình xem ảnh 3D tương tác và ảnh local cho sản phẩm khối lập phương bánh răng."],
-  [PHIEN_BAN_HIEN_TAI, "NhienIn3d v2.3.0 bổ sung yêu thích lưu PostgreSQL, trang danh sách sản phẩm và bộ lọc/tìm kiếm nâng cao."]
+  ["SEED_V230_YEU_THICH_TIM_KIEM", "NhienIn3d v2.3.0 bổ sung yêu thích lưu PostgreSQL, trang danh sách sản phẩm và bộ lọc/tìm kiếm nâng cao."],
+  [PHIEN_BAN_HIEN_TAI, "NhienIn3d v2.4.0 bỏ dải chữ trang trí trên storefront và thay trình xoay ảnh giả bằng viewer WebGL/Three.js có mesh 3D thật."]
 ] as const;
 
 async function main() {

@@ -1,17 +1,18 @@
 # NhienIn3d
 
 > Cửa hàng sản phẩm in 3D hiện đại — Next.js + Three.js + NestJS + PostgreSQL + Docker  
-> Phiên bản hiện tại: **v2.3.0** — 29/08/2026
+> Phiên bản hiện tại: **v2.4.0** — 29/08/2026
 
-## Mới trong v2.3.0
+## Mới trong v2.4.0
 
-- Thêm trang `/san-pham` với tìm kiếm theo tên/mã/mô tả, lọc danh mục, lọc còn hàng và sắp xếp giá/tên.
-- Thêm bảng `yeu_thich` lưu PostgreSQL bằng mã phiên ngẫu nhiên cho khách chưa đăng nhập.
-- Thêm trang `/yeu-thich`, số lượng yêu thích trên navbar và nút trái tim ở card/trang chi tiết.
-- API sản phẩm hỗ trợ `tim_kiem`, `danh_muc`, `con_hang`, `gia_tu`, `gia_den`, `sap_xep`, `gioi_han`.
-- Migration `202608290003_v230_yeu_thich_tim_kiem` chạy nối tiếp V1/V2, không phá dữ liệu cũ.
-- Seed bảo đảm **18 bảng nghiệp vụ** đều có tối thiểu 10 dòng dữ liệu.
-- `npm install` tại root tạo/cập nhật `package-lock.json`; script release bắt buộc lockfile tồn tại và GitHub CI dùng `npm ci` để tái lập dependency tree.
+- Bỏ dải chữ trang trí `PLA • PETG • ABS • TPU • CHI TIẾT SẢN PHẨM • GIỎ HÀNG • CHECKOUT • POSTGRESQL` khỏi trang chủ vì không có chức năng tương tác.
+- Thay trình "3D" cũ vốn chỉ xoay ảnh 2D bằng **viewer WebGL thật** dùng React Three Fiber + Three.js + Drei.
+- Viewer mới render mesh 3D thực bên trong đúng khung media của trang chi tiết sản phẩm; hỗ trợ kéo xoay 360°, zoom bằng con lăn và tự xoay nhẹ.
+- Có mô hình 3D procedural riêng cho cả 10 sản phẩm mẫu; **Khối lập phương bánh răng** dùng mô hình cube + nhiều bánh răng 3D thay vì ảnh phẳng.
+- Giữ tab **Ảnh / 3D thật** để người dùng chuyển nhanh giữa ảnh tham khảo và mô hình WebGL.
+- Kiến trúc viewer đã sẵn sàng để thay mô hình procedural bằng file `.glb/.gltf` chính xác của từng sản phẩm khi có model CAD/mesh gốc.
+- Không đổi schema PostgreSQL; chỉ ghi thêm seed history `SEED_V240_3D_WEBGL_THAT`, không cần migration mới và không xóa dữ liệu hiện tại.
+- Giữ nguyên tìm kiếm/lọc sản phẩm, yêu thích PostgreSQL, giỏ hàng, checkout và thanh toán giả lập local từ các bản trước.
 
 ## Công nghệ
 
@@ -102,6 +103,17 @@ v2.0.0 biến storefront V1 thành luồng commerce có thể thao tác thật:
 - API health và OpenAPI đồng bộ version `2.2.1`.
 - Không đổi dependency, schema PostgreSQL hay dữ liệu nghiệp vụ; không cần migration mới.
 
+# v2.4.0 — Viewer WebGL 3D thật + bỏ dải trang trí
+
+- Loại bỏ dải chữ `PLA / PETG / ABS / TPU / Chi tiết sản phẩm / Giỏ hàng / Checkout / PostgreSQL` khỏi trang chủ vì đây chỉ là thành phần trang trí.
+- Thay toàn bộ cơ chế `rotateX/rotateY` trên nhiều lớp ảnh 2D bằng `Canvas` WebGL thật từ React Three Fiber.
+- Dùng `OrbitControls` để xoay 360°, zoom và điều khiển góc nhìn trực tiếp trong khung ảnh sản phẩm.
+- Dùng ánh sáng, bóng đổ và `ContactShadows` để mô hình có chiều sâu thực trong scene 3D.
+- Cung cấp mesh procedural riêng cho 10 sản phẩm mẫu; đây là mô hình đại diện để trải nghiệm 3D, không tuyên bố là CAD chính xác của thiết kế gốc.
+- Viewer có cấu trúc sẵn sàng để gắn GLB/GLTF thật ở phiên bản sau khi có file model hợp lệ.
+- Không đổi schema PostgreSQL và không cần migration mới.
+
+
 ## Endpoint commerce
 
 ```text
@@ -156,6 +168,7 @@ chi_tiet_gio_hang           <-- V2
 phuong_thuc_thanh_toan      <-- V2
 thanh_toan                  <-- V2
 dia_chi_nguoi_dung          <-- V2
+yeu_thich                   <-- v2.3.0
 ```
 
 Bảng `_prisma_migrations` là bảng hệ thống của Prisma và không được chèn dữ liệu giả để đạt 10 dòng.
@@ -474,7 +487,7 @@ Seed là idempotent: chạy lại không tạo trùng dữ liệu có khóa tự
 
 ---
 
-## Nâng cấp v2.2.1 -> v2.3.0
+## Nâng cấp v2.3.0 -> v2.4.0
 
 Giữ nguyên `.env` và PostgreSQL volume hiện tại. **Không chạy `docker compose down -v`**.
 
@@ -490,7 +503,7 @@ docker compose up -d --build
 docker compose ps
 ```
 
-Migration `202608290003_v230_yeu_thich_tim_kiem` và seed mới sẽ tự chạy trong container `migrate`.
+v2.4.0 không có migration schema mới. Container `migrate` chỉ kiểm tra các migration hiện có và chạy seed idempotent `SEED_V240_3D_WEBGL_THAT`.
 
 Kiểm tra dữ liệu:
 
@@ -517,7 +530,7 @@ gh auth login
 Release phiên bản hiện tại:
 
 ```powershell
-.\scripts\release.ps1 v2.3.0
+.\scripts\release.ps1 v2.4.0
 ```
 
 Script release kiểm tra tag phải trùng với `VERSION` của source, chạy toàn bộ test/typecheck/build/audit, yêu cầu `package-lock.json` đã được `npm install` tạo/cập nhật, rồi mới commit + push tag.
@@ -657,3 +670,13 @@ docker exec nhienin3d-postgres pg_isready -U nhienin3d_app -d nhienin3d
 - Seed thêm 10 dòng `yeu_thich`; tổng cộng 18 bảng nghiệp vụ đều có tối thiểu 10 dòng.
 - Giữ nguyên PostgreSQL host `5434`, Docker nội bộ `5432`, giỏ hàng, checkout, thanh toán giả lập local và trình xem 3D.
 - Release script bắt buộc `package-lock.json` tồn tại trước commit; GitHub CI/Release dùng `npm ci` để build có thể tái lập.
+
+
+## v2.4.0 — 29/08/2026
+
+- Bỏ dải chữ trang trí PLA/PETG/ABS/TPU và các nhãn kỹ thuật khỏi trang chủ.
+- Thay trình xem ảnh 3D giả lập bằng viewer WebGL/Three.js render mesh 3D thật trong khung chi tiết sản phẩm.
+- Thêm mô hình procedural riêng cho 10 sản phẩm mẫu, gồm khối lập phương bánh răng có các bánh răng 3D.
+- Hỗ trợ xoay 360°, zoom, auto-rotate, ánh sáng và bóng đổ bằng React Three Fiber + Drei.
+- Giữ tab Ảnh/3D thật và chuẩn bị kiến trúc để gắn GLB/GLTF chính xác khi có model gốc.
+- Không đổi schema PostgreSQL; thêm seed history `SEED_V240_3D_WEBGL_THAT`.

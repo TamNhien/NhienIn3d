@@ -5,6 +5,7 @@
 .github/workflows/release.yml
 .gitignore
 .npmrc
+MANIFEST.txt
 README.md
 VERSION
 apps/api/.dockerignore

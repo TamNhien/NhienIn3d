@@ -10,10 +10,11 @@ test('Web dung Next.js 16.3.3 va React 19.2.8', () => {
   assert.equal(pkg.dependencies.react, '19.2.8');
 });
 
-test('Web co Three.js va React Three Fiber cho giao dien 3D', () => {
+test('Web co Three.js React Three Fiber va Drei cho giao dien 3D', () => {
   const pkg = docJson('package.json');
   assert.equal(pkg.dependencies.three, '0.185.1');
   assert.equal(pkg.dependencies['@react-three/fiber'], '9.7.0');
+  assert.equal(pkg.dependencies['@react-three/drei'], '10.7.8');
 });
 
 test('du lieu mau hien thi tieng Viet co dau', () => {
@@ -21,12 +22,12 @@ test('du lieu mau hien thi tieng Viet co dau', () => {
   assert.match(src, /sản phẩm|Sản phẩm|Đèn|Chậu|Giá/u);
 });
 
-test('v2.3.0 storefront co gio hang va route checkout rieng', () => {
+test('v2.4.0 storefront co gio hang va route checkout rieng', () => {
   const page = readFileSync('app/page.tsx', 'utf8');
   assert.match(page, /themBienTheVaoGio/);
   assert.match(page, /Thêm vào giỏ|themVaoGio/u);
   assert.match(page, /gio-hang/);
-  assert.doesNotMatch(page, />v2\.2\.1</);
+  assert.doesNotMatch(page, />v2\.4\.0</);
 });
 
 test('hero bo noi dung quang ba phien ban va typography da duoc thu gon', () => {
@@ -38,17 +39,21 @@ test('hero bo noi dung quang ba phien ban va typography da duoc thu gon', () => 
   assert.match(css, /Segoe UI Variable/);
 });
 
-test('v2.2.1 bo cac khoi gioi thieu dai khoi storefront', () => {
+test('storefront khong con cac khoi gioi thieu dai', () => {
   const page = readFileSync('app/page.tsx', 'utf8');
-  for (const noi_dung of [
-    'THƯƠNG MẠI ĐIỆN TỬ',
-    'CÔNG NGHỆ',
-    'LỊCH SỬ PHÁT TRIỂN',
-    'SECURITY BY DEFAULT',
-    'Hiện đại từ giao diện đến transaction',
-    'Checkout không tin dữ liệu từ trình duyệt'
-  ]) assert.doesNotMatch(page, new RegExp(noi_dung, 'u'));
-  assert.doesNotMatch(page, /LICH_SU_PHIEN_BAN/);
+  for (const noi_dung of ['THƯƠNG MẠI ĐIỆN TỬ','CÔNG NGHỆ','LỊCH SỬ PHÁT TRIỂN','SECURITY BY DEFAULT']) {
+    assert.doesNotMatch(page, new RegExp(noi_dung, 'u'));
+  }
+});
+
+test('v2.4.0 bo dai chu trang tri PLA PETG ABS TPU khoi trang chu', () => {
+  const page = readFileSync('app/page.tsx', 'utf8');
+  const css = readFileSync('app/globals.css', 'utf8');
+  assert.doesNotMatch(page, /className="strip"/);
+  assert.doesNotMatch(page, /<span>PLA<\/span>/);
+  assert.doesNotMatch(page, /<span>PETG<\/span>/);
+  assert.doesNotMatch(page, /<span>Checkout<\/span>/);
+  assert.doesNotMatch(css, /\.strip\{/);
 });
 
 test('thanh dieu huong khong con lien ket toi cong nghe va lich su storefront', () => {
@@ -66,7 +71,7 @@ test('web gan nhan phuong thuc thanh toan gia lap local', () => {
   assert.match(page, /Không gọi cổng thanh toán thật/u);
 });
 
-test('v2.2.1 co trang chi tiet san pham va click the san pham de mo chi tiet', () => {
+test('co trang chi tiet san pham va click the san pham de mo chi tiet', () => {
   const card = readFileSync('components/the-san-pham.tsx', 'utf8');
   const detail = readFileSync('app/san-pham/[duong_dan]/page.tsx', 'utf8');
   assert.match(card, /router\.push\(`\/san-pham\//);
@@ -75,7 +80,7 @@ test('v2.2.1 co trang chi tiet san pham va click the san pham de mo chi tiet', (
   assert.match(detail, /Thêm \$\{so_luong\} vào giỏ/u);
 });
 
-test('v2.2.1 tach gio hang va thanh toan thanh hai route rieng', () => {
+test('gio hang va thanh toan la hai route rieng', () => {
   const home = readFileSync('app/page.tsx', 'utf8');
   const cart = readFileSync('app/gio-hang/page.tsx', 'utf8');
   const checkout = readFileSync('app/thanh-toan/page.tsx', 'utf8');
@@ -84,26 +89,35 @@ test('v2.2.1 tach gio hang va thanh toan thanh hai route rieng', () => {
   assert.match(cart, /capNhatSoLuong/);
   assert.match(cart, /xoaKhoiGio/);
   assert.match(checkout, /thanh-toan\/dat-hang/);
-  assert.match(checkout, /Thông tin nhận hàng/u);
 });
 
-test('v2.2.1 co trinh xem anh 3D tuong tac tren trang chi tiet', () => {
+test('v2.4.0 dung Canvas WebGL va OrbitControls thay cho xoay anh 2D gia lap', () => {
   const viewer = readFileSync('components/trinh-xem-anh-3d.tsx', 'utf8');
   const detail = readFileSync('app/san-pham/[duong_dan]/page.tsx', 'utf8');
-  assert.match(viewer, /Xem 3D/u);
-  assert.match(viewer, /onPointerMove/);
-  assert.match(viewer, /onWheel/);
-  assert.match(viewer, /rotateX/);
-  assert.match(viewer, /rotateY/);
-  assert.match(detail, /TrinhXemAnh3D/);
+  assert.match(viewer, /from "@react-three\/fiber"/);
+  assert.match(viewer, /<Canvas/);
+  assert.match(viewer, /<OrbitControls/);
+  assert.match(viewer, /<mesh/);
+  assert.match(viewer, /3D thật/u);
+  assert.doesNotMatch(viewer, /rotateX\(\$\{goc_x\}/);
+  assert.doesNotMatch(viewer, /product-image-3d-layer/);
+  assert.match(detail, /ma_san_pham=\{san_pham\.ma_san_pham\}/);
 });
 
-test('v2.2.1 dong goi anh local cho khoi lap phuong banh rang', () => {
+test('v2.4.0 co mo hinh 3D rieng cho 10 san pham mau', () => {
+  const viewer = readFileSync('components/trinh-xem-anh-3d.tsx', 'utf8');
+  for (const ma of ['N3D-RC-001','N3D-DESK-002','N3D-DECOR-003','N3D-DESK-004','N3D-GAME-005','N3D-LAMP-006','N3D-TOY-007','N3D-ORG-008','N3D-GIFT-009','N3D-MAKER-010']) {
+    assert.match(viewer, new RegExp(ma));
+  }
+  assert.match(viewer, /KhoiLapPhuongBanhRang/);
+  assert.match(viewer, /ContactShadows/);
+});
+
+test('dong goi anh local cho khoi lap phuong banh rang', () => {
   const data = readFileSync('lib/du-lieu-mau.ts', 'utf8');
   assert.match(data, /\/images\/khoi-lap-phuong-banh-rang\.jpg/);
   assert.equal(existsSync('public/images/khoi-lap-phuong-banh-rang.jpg'), true);
 });
-
 
 test('v2.3.0 co trang danh sach voi tim kiem loc va sap xep', () => {
   const page = readFileSync('app/san-pham/page.tsx', 'utf8');

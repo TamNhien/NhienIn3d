@@ -64,10 +64,6 @@ export default function TrangChu() {
       <Hero3D/>
     </section>
 
-    <section className="strip">
-      <span>PLA</span><i>•</i><span>PETG</span><i>•</i><span>ABS</span><i>•</i><span>TPU</span><i>•</i>
-      <span>Chi tiết sản phẩm</span><i>•</i><span>Giỏ hàng</span><i>•</i><span>Checkout</span><i>•</i><span>PostgreSQL</span>
-    </section>
 
     {thong_bao && <div className="toast toast-with-action" role="status"><span>{thong_bao}</span><Link href="/gio-hang">Xem giỏ</Link></div>}
 

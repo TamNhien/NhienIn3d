@@ -63,16 +63,16 @@ test("V2 co migration nang cap khong ghi de migration V1", () => {
   assert.equal(existsSync("apps/api/prisma/migrations/202608290002_v002_gio_hang_thanh_toan/migration.sql"), true);
 });
 
-test("version v2.3.0 dong bo root API va Web", () => {
-  assert.equal(readFileSync("VERSION", "utf8").trim(), "2.3.0");
-  assert.equal(docJson("package.json").version, "2.3.0");
-  assert.equal(docJson("apps/api/package.json").version, "2.3.0");
-  assert.equal(docJson("apps/web/package.json").version, "2.3.0");
+test("version v2.4.0 dong bo root API va Web", () => {
+  assert.equal(readFileSync("VERSION", "utf8").trim(), "2.4.0");
+  assert.equal(docJson("package.json").version, "2.4.0");
+  assert.equal(docJson("apps/api/package.json").version, "2.4.0");
+  assert.equal(docJson("apps/web/package.json").version, "2.4.0");
 });
 
-test("README co lich su phien ban tang dan den v2.3.0", () => {
+test("README co lich su phien ban tang dan den v2.4.0", () => {
   const readme = readFileSync("README.md", "utf8");
-  const viTri = ["## v1.0.0", "## v1.0.1", "## v1.0.2", "## v1.0.3", "## v1.0.4", "## v1.0.5", "## v1.0.6", "## v1.0.7", "## v2.0.0", "## v2.1.0", "## v2.1.1", "## v2.2.0", "## v2.2.1", "## v2.3.0"].map(x => readme.indexOf(x));
+  const viTri = ["## v1.0.0", "## v1.0.1", "## v1.0.2", "## v1.0.3", "## v1.0.4", "## v1.0.5", "## v1.0.6", "## v1.0.7", "## v2.0.0", "## v2.1.0", "## v2.1.1", "## v2.2.0", "## v2.2.1", "## v2.3.0", "## v2.4.0"].map(x => readme.indexOf(x));
   assert.ok(viTri.every(x => x >= 0));
   assert.deepEqual([...viTri].sort((a,b)=>a-b), viTri);
 });
@@ -123,4 +123,22 @@ test("v2.3.0 release chi cho phep dung version cua source va bat buoc lockfile",
   assert.match(release, /sourceVersion/);
   assert.match(release, /package-lock\.json/);
   assert.match(release, /git push origin \$Version/);
+});
+
+
+test("v2.4.0 bo dai strip trang tri khoi trang chu", () => {
+  const home = readFileSync("apps/web/app/page.tsx", "utf8");
+  const css = readFileSync("apps/web/app/globals.css", "utf8");
+  assert.doesNotMatch(home, /className="strip"/);
+  assert.doesNotMatch(home, /<span>PLA<\/span>/);
+  assert.doesNotMatch(css, /\.strip\{/);
+});
+
+test("v2.4.0 viewer san pham dung WebGL mesh 3D that", () => {
+  const viewer = readFileSync("apps/web/components/trinh-xem-anh-3d.tsx", "utf8");
+  assert.match(viewer, /<Canvas/);
+  assert.match(viewer, /<OrbitControls/);
+  assert.match(viewer, /KhoiLapPhuongBanhRang/);
+  assert.match(viewer, /3D WebGL/u);
+  assert.doesNotMatch(viewer, /product-image-3d-layer/);
 });

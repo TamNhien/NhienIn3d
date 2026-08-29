@@ -46,7 +46,7 @@ test("Swagger Fastify co @fastify/static tuong thich Fastify 5", () => {
   assert.equal(pkg.dependencies['@fastify/static'], '10.1.3');
 });
 
-test("seed v2.3.0 dam bao 18 bang nghiep vu toi thieu 10 dong", () => {
+test("seed v2.4.0 dam bao 18 bang nghiep vu toi thieu 10 dong", () => {
   const seed = readFileSync('prisma/seed.ts', 'utf8');
   for (const bang of [
     'nguoi_dung', 'danh_muc', 'san_pham', 'hinh_anh_san_pham',
@@ -57,16 +57,16 @@ test("seed v2.3.0 dam bao 18 bang nghiep vu toi thieu 10 dong", () => {
     assert.match(seed, new RegExp(`${bang}: await db\\.`));
   }
   assert.match(seed, /so_luong < 10/);
-  assert.match(seed, /PHIEN_BAN_HIEN_TAI = "SEED_V230_YEU_THICH_TIM_KIEM"/);
+  assert.match(seed, /PHIEN_BAN_HIEN_TAI = "SEED_V240_3D_WEBGL_THAT"/);
   assert.match(seed, /\/images\/khoi-lap-phuong-banh-rang\.jpg/);
 });
 
 
-test("API hien thi dung version v2.3.0 o health va OpenAPI", () => {
+test("API hien thi dung version v2.4.0 o health va OpenAPI", () => {
   const health = readFileSync("src/suc-khoe/suc-khoe.controller.ts", "utf8");
   const main = readFileSync("src/main.ts", "utf8");
-  assert.match(health, /phien_ban: "v2\.3\.0"/);
-  assert.match(main, /setVersion\("2\.3\.0"\)/);
+  assert.match(health, /phien_ban: "v2\.4\.0"/);
+  assert.match(main, /setVersion\("2\.4\.0"\)/);
 });
 
 test("V2 co migration gio hang, thanh toan va dia chi", () => {

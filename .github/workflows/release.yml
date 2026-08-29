@@ -46,7 +46,7 @@ jobs:
           npm test
           npm run typecheck
 
-      - name: Migration + seed v2.3.0
+      - name: Migration + seed v2.4.0
         run: |
           npm run db:generate
           npm run db:migrate
