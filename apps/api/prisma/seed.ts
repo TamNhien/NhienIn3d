@@ -34,7 +34,7 @@ function taoDatabaseUrl(): string {
 const adapter = new PrismaPg({ connectionString: taoDatabaseUrl() });
 const db = new PrismaClient({ adapter });
 
-const PHIEN_BAN_HIEN_TAI = "SEED_V240_3D_WEBGL_THAT";
+const PHIEN_BAN_HIEN_TAI = "SEED_V250_DANH_GIA_SAN_PHAM";
 
 const danh_muc = [
   ["HOBBY_RC", "Mô hình & RC", "mo-hinh-rc", "Mô hình cơ khí, xe điều khiển và sản phẩm lắp ráp."],
@@ -208,7 +208,8 @@ const phien_ban_seed = [
   ["SEED_V210_THANH_TOAN_GIA_LAP_LOCAL", "NhienIn3d v2.1.0 cho phép giả lập cổng thanh toán online khi chạy local; production vẫn khóa phương thức chưa tích hợp thật."],
   ["SEED_V220_GIAO_DIEN_3D_TINH_GON", "NhienIn3d v2.2.0 tinh gọn storefront, bổ sung trình xem ảnh 3D tương tác và ảnh local cho sản phẩm khối lập phương bánh răng."],
   ["SEED_V230_YEU_THICH_TIM_KIEM", "NhienIn3d v2.3.0 bổ sung yêu thích lưu PostgreSQL, trang danh sách sản phẩm và bộ lọc/tìm kiếm nâng cao."],
-  [PHIEN_BAN_HIEN_TAI, "NhienIn3d v2.4.0 bỏ dải chữ trang trí trên storefront và thay trình xoay ảnh giả bằng viewer WebGL/Three.js có mesh 3D thật."]
+  ["SEED_V241_SAP_XEP_SAN_PHAM_TANG_DAN", "NhienIn3d v2.4.1 chuẩn hóa thứ tự hiển thị sản phẩm tăng dần theo số thứ tự trong mã sản phẩm trên API và storefront."],
+  [PHIEN_BAN_HIEN_TAI, "NhienIn3d v2.5.0 bổ sung đánh giá sản phẩm có duyệt, điểm sao, sản phẩm liên quan và lịch sử xem gần đây."]
 ] as const;
 
 async function main() {
@@ -347,6 +348,32 @@ async function main() {
       where: { ma_phien_san_pham_id: { ma_phien, san_pham_id: san_pham_map.get(sp.ma_san_pham)!.id } },
       update: {},
       create: { ma_phien, san_pham_id: san_pham_map.get(sp.ma_san_pham)!.id }
+    });
+  }
+
+
+  // v2.5.0: 10 đánh giá mẫu đã duyệt, mỗi sản phẩm một đánh giá để bảng mới luôn có dữ liệu thật dễ kiểm tra.
+  const danh_gia_mau = [
+    ["Nguyễn Minh Anh", 5, "Chi tiết in sắc nét, lắp ráp chắc chắn và đóng gói cẩn thận."],
+    ["Trần Hoàng Nam", 4, "Thiết kế hữu ích, bề mặt đẹp và đúng mô tả sản phẩm."],
+    ["Lê Thu Hà", 5, "Màu in đẹp, kích thước vừa vặn và hoàn thiện tốt."],
+    ["Phạm Gia Huy", 4, "Cơ cấu hoạt động ổn, sản phẩm cầm chắc tay."],
+    ["Võ Ngọc Linh", 5, "Dùng trên bàn làm việc rất gọn, chất lượng vượt mong đợi."],
+    ["Đặng Quốc Bảo", 4, "Ánh sáng và bề mặt sản phẩm đẹp, đúng phong cách decor."],
+    ["Bùi Khánh Vy", 5, "Bánh răng quay mượt, màu phối nổi bật và thú vị."],
+    ["Hoàng Đức Anh", 4, "Khay chắc chắn, sắp xếp linh kiện rất tiện."],
+    ["Đỗ Mai Phương", 5, "Ảnh lithophane lên rõ, phù hợp làm quà tặng cá nhân hóa."],
+    ["Quản trị NhienIn3d", 5, "Vỏ vừa Raspberry Pi 5, thoáng khí và bố trí cổng hợp lý."]
+  ] as const;
+  for (let i = 0; i < san_pham.length; i++) {
+    const sp = san_pham[i];
+    const [ho_ten, so_sao, noi_dung] = danh_gia_mau[i];
+    const san_pham_id = san_pham_map.get(sp.ma_san_pham)!.id;
+    const ma_phien = `N3D-DG-MAU-${String(i + 1).padStart(2, "0")}-PHIEN`;
+    await db.danhGiaSanPham.upsert({
+      where: { ma_phien_san_pham_id: { ma_phien, san_pham_id } },
+      update: { ho_ten, so_sao, noi_dung, da_duyet: true },
+      create: { ma_phien, san_pham_id, ho_ten, so_sao, noi_dung, da_duyet: true }
     });
   }
 
@@ -545,7 +572,8 @@ async function main() {
     phuong_thuc_thanh_toan: await db.phuongThucThanhToan.count(),
     thanh_toan: await db.thanhToan.count(),
     dia_chi_nguoi_dung: await db.diaChiNguoiDung.count(),
-    yeu_thich: await db.yeuThich.count()
+    yeu_thich: await db.yeuThich.count(),
+    danh_gia_san_pham: await db.danhGiaSanPham.count()
   };
 
   const thieu = Object.entries(dem).filter(([, so_luong]) => so_luong < 10);

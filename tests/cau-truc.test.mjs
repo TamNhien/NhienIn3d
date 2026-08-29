@@ -63,16 +63,16 @@ test("V2 co migration nang cap khong ghi de migration V1", () => {
   assert.equal(existsSync("apps/api/prisma/migrations/202608290002_v002_gio_hang_thanh_toan/migration.sql"), true);
 });
 
-test("version v2.4.0 dong bo root API va Web", () => {
-  assert.equal(readFileSync("VERSION", "utf8").trim(), "2.4.0");
-  assert.equal(docJson("package.json").version, "2.4.0");
-  assert.equal(docJson("apps/api/package.json").version, "2.4.0");
-  assert.equal(docJson("apps/web/package.json").version, "2.4.0");
+test("version v2.5.0 dong bo root API va Web", () => {
+  assert.equal(readFileSync("VERSION", "utf8").trim(), "2.5.0");
+  assert.equal(docJson("package.json").version, "2.5.0");
+  assert.equal(docJson("apps/api/package.json").version, "2.5.0");
+  assert.equal(docJson("apps/web/package.json").version, "2.5.0");
 });
 
-test("README co lich su phien ban tang dan den v2.4.0", () => {
+test("README co lich su phien ban tang dan den v2.5.0", () => {
   const readme = readFileSync("README.md", "utf8");
-  const viTri = ["## v1.0.0", "## v1.0.1", "## v1.0.2", "## v1.0.3", "## v1.0.4", "## v1.0.5", "## v1.0.6", "## v1.0.7", "## v2.0.0", "## v2.1.0", "## v2.1.1", "## v2.2.0", "## v2.2.1", "## v2.3.0", "## v2.4.0"].map(x => readme.indexOf(x));
+  const viTri = ["## v1.0.0", "## v1.0.1", "## v1.0.2", "## v1.0.3", "## v1.0.4", "## v1.0.5", "## v1.0.6", "## v1.0.7", "## v2.0.0", "## v2.1.0", "## v2.1.1", "## v2.2.0", "## v2.2.1", "## v2.3.0", "## v2.4.0", "## v2.4.1", "## v2.5.0"].map(x => readme.indexOf(x));
   assert.ok(viTri.every(x => x >= 0));
   assert.deepEqual([...viTri].sort((a,b)=>a-b), viTri);
 });
@@ -126,7 +126,7 @@ test("v2.3.0 release chi cho phep dung version cua source va bat buoc lockfile",
 });
 
 
-test("v2.4.0 bo dai strip trang tri khoi trang chu", () => {
+test("v2.4.1 bo dai strip trang tri khoi trang chu", () => {
   const home = readFileSync("apps/web/app/page.tsx", "utf8");
   const css = readFileSync("apps/web/app/globals.css", "utf8");
   assert.doesNotMatch(home, /className="strip"/);
@@ -134,11 +134,39 @@ test("v2.4.0 bo dai strip trang tri khoi trang chu", () => {
   assert.doesNotMatch(css, /\.strip\{/);
 });
 
-test("v2.4.0 viewer san pham dung WebGL mesh 3D that", () => {
+test("v2.4.1 viewer san pham dung WebGL mesh 3D that", () => {
   const viewer = readFileSync("apps/web/components/trinh-xem-anh-3d.tsx", "utf8");
   assert.match(viewer, /<Canvas/);
   assert.match(viewer, /<OrbitControls/);
   assert.match(viewer, /KhoiLapPhuongBanhRang/);
   assert.match(viewer, /3D WebGL/u);
   assert.doesNotMatch(viewer, /product-image-3d-layer/);
+});
+
+
+test("v2.4.1 san pham hien thi mac dinh theo thu tu ma tang dan", () => {
+  const api = readFileSync("apps/api/src/san-pham/san-pham.controller.ts", "utf8");
+  const home = readFileSync("apps/web/app/page.tsx", "utf8");
+  const catalog = readFileSync("apps/web/app/san-pham/page.tsx", "utf8");
+  assert.match(api, /sap_xep = "ma_tang"/);
+  assert.match(home, /soThuTu/);
+  assert.match(catalog, /Mã sản phẩm tăng dần/u);
+});
+
+
+test("v2.5.0 co migration danh_gia_san_pham va giu migration cu", () => {
+  assert.equal(existsSync("apps/api/prisma/migrations/202608290004_v250_danh_gia_san_pham/migration.sql"), true);
+  const schema = readFileSync("apps/api/prisma/schema.prisma", "utf8");
+  assert.match(schema, /model\s+DanhGiaSanPham\b/);
+  assert.match(schema, /@@map\("danh_gia_san_pham"\)/);
+});
+
+test("v2.5.0 co API danh gia, san pham lien quan va 19 bang seed", () => {
+  assert.equal(existsSync("apps/api/src/danh-gia/danh-gia.controller.ts"), true);
+  const sanPham = readFileSync("apps/api/src/san-pham/san-pham.controller.ts", "utf8");
+  const seed = readFileSync("apps/api/prisma/seed.ts", "utf8");
+  const check = readFileSync("apps/api/prisma/kiem-tra-du-lieu.ts", "utf8");
+  assert.match(sanPham, /lien_quan/);
+  assert.match(seed, /SEED_V250_DANH_GIA_SAN_PHAM/);
+  assert.match(check, /19 bảng nghiệp vụ/u);
 });

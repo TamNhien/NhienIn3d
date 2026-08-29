@@ -5,6 +5,8 @@ import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { ThanhDieuHuong } from "../../../components/thanh-dieu-huong";
 import { TrinhXemAnh3D } from "../../../components/trinh-xem-anh-3d";
+import { DanhGiaSanPham } from "../../../components/danh-gia-san-pham";
+import { GoiYSanPham } from "../../../components/goi-y-san-pham";
 import { API_URL, themBienTheVaoGio } from "../../../lib/gio-hang";
 import { DU_LIEU_MAU, type SanPham } from "../../../lib/du-lieu-mau";
 import { layDanhSachYeuThich, themYeuThich, xoaYeuThich } from "../../../lib/yeu-thich";
@@ -80,6 +82,7 @@ export default function ChiTietSanPhamPage() {
           <div className="eyebrow">{san_pham.danh_muc?.ten_danh_muc || "SẢN PHẨM IN 3D"}</div>
           <div className="sku">{san_pham.ma_san_pham}</div>
           <h1>{san_pham.ten_san_pham}</h1>
+          {Number(san_pham.so_luong_danh_gia ?? 0) > 0 && <div className="detail-rating"><span>★ {Number(san_pham.diem_danh_gia ?? 0).toFixed(1)}</span><small>{san_pham.so_luong_danh_gia} đánh giá đã duyệt</small></div>}
           <p className="product-detail-description">{san_pham.mo_ta_ngan}</p>
           <div className="detail-price">{vnd.format(gia)}</div>
 
@@ -108,6 +111,8 @@ export default function ChiTietSanPhamPage() {
           <div className="detail-assurances"><span>✓ Kiểm tra tồn kho tại server</span><span>✓ Dữ liệu giỏ lưu PostgreSQL</span><span>✓ Thanh toán giả lập chỉ dành cho local</span></div>
         </div>
       </div>
+      <DanhGiaSanPham duong_dan={san_pham.duong_dan}/>
+      <GoiYSanPham san_pham={san_pham}/>
     </section>
   </main>;
 }

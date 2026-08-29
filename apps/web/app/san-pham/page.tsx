@@ -14,7 +14,7 @@ export default function DanhSachSanPhamPage() {
   const [danh_muc, setDanhMuc] = useState<DanhMuc[]>([]);
   const [tim, setTim] = useState("");
   const [loc_danh_muc, setLocDanhMuc] = useState("");
-  const [sap_xep, setSapXep] = useState("moi_nhat");
+  const [sap_xep, setSapXep] = useState("ma_tang");
   const [gia_tu, setGiaTu] = useState("");
   const [gia_den, setGiaDen] = useState("");
   const [chi_con_hang, setChiConHang] = useState(false);
@@ -54,6 +54,7 @@ export default function DanhSachSanPhamPage() {
     if (chi_con_hang) ds = ds.filter(x => x.bien_the?.some(bt => bt.so_luong_ton > 0));
     if (gia_tu) ds = ds.filter(x => Number(x.gia_ban) >= Number(gia_tu));
     if (gia_den) ds = ds.filter(x => Number(x.gia_ban) <= Number(gia_den));
+    if (sap_xep === "ma_tang") ds.sort((a,b)=>Number(a.ma_san_pham.match(/-(\d+)$/)?.[1] ?? 999999)-Number(b.ma_san_pham.match(/-(\d+)$/)?.[1] ?? 999999));
     if (sap_xep === "gia_tang") ds.sort((a,b)=>Number(a.gia_ban)-Number(b.gia_ban));
     if (sap_xep === "gia_giam") ds.sort((a,b)=>Number(b.gia_ban)-Number(a.gia_ban));
     if (sap_xep === "ten_az") ds.sort((a,b)=>a.ten_san_pham.localeCompare(b.ten_san_pham, "vi"));
@@ -97,6 +98,7 @@ export default function DanhSachSanPhamPage() {
         <input className="price-filter" inputMode="numeric" value={gia_tu} onChange={e=>setGiaTu(e.target.value.replace(/\D/g, ""))} placeholder="Giá từ (đ)"/>
         <input className="price-filter" inputMode="numeric" value={gia_den} onChange={e=>setGiaDen(e.target.value.replace(/\D/g, ""))} placeholder="Giá đến (đ)"/>
         <select value={sap_xep} onChange={e=>setSapXep(e.target.value)}>
+          <option value="ma_tang">Mã sản phẩm tăng dần</option>
           <option value="moi_nhat">Mới nhất</option>
           <option value="gia_tang">Giá thấp → cao</option>
           <option value="gia_giam">Giá cao → thấp</option>
@@ -108,7 +110,7 @@ export default function DanhSachSanPhamPage() {
       {thong_bao && <div className="inline-message catalog-message">{thong_bao}</div>}
       {hien_thi.length ? <div className="grid catalog-grid">
         {hien_thi.map((sp,i)=><TheSanPham key={sp.ma_san_pham} sp={sp} i={i} onThem={themVaoGio} dangThem={dang_them===sp.ma_san_pham} daYeuThich={yeu_thich.has(sp.ma_san_pham)} onYeuThich={doiYeuThich}/>) }
-      </div> : <div className="empty-state catalog-empty"><h2>Không tìm thấy sản phẩm phù hợp</h2><p>Thử xóa bớt bộ lọc hoặc dùng từ khóa khác.</p><button className="secondary secondary-button" onClick={()=>{setTim("");setLocDanhMuc("");setChiConHang(false);setGiaTu("");setGiaDen("");setSapXep("moi_nhat");}}>Xóa bộ lọc</button></div>}
+      </div> : <div className="empty-state catalog-empty"><h2>Không tìm thấy sản phẩm phù hợp</h2><p>Thử xóa bớt bộ lọc hoặc dùng từ khóa khác.</p><button className="secondary secondary-button" onClick={()=>{setTim("");setLocDanhMuc("");setChiConHang(false);setGiaTu("");setGiaDen("");setSapXep("ma_tang");}}>Xóa bộ lọc</button></div>}
     </section>
   </main>;
 }

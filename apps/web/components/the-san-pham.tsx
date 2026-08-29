@@ -57,6 +57,7 @@ export function TheSanPham({
     </div>
     <div className="product-body">
       <div className="sku">{sp.ma_san_pham}</div>
+      {Number(sp.so_luong_danh_gia ?? 0) > 0 && <div className="card-rating"><span>★ {Number(sp.diem_danh_gia ?? 0).toFixed(1)}</span><small>({sp.so_luong_danh_gia})</small></div>}
       <h3>{sp.ten_san_pham}</h3>
       <p>{sp.mo_ta_ngan}</p>
       <div className="meta">

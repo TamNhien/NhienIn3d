@@ -1,18 +1,16 @@
 # NhienIn3d
 
 > Cửa hàng sản phẩm in 3D hiện đại — Next.js + Three.js + NestJS + PostgreSQL + Docker  
-> Phiên bản hiện tại: **v2.4.0** — 29/08/2026
+> Phiên bản hiện tại: **v2.5.0** — 29/08/2026
 
-## Mới trong v2.4.0
+## Mới trong v2.5.0
 
-- Bỏ dải chữ trang trí `PLA • PETG • ABS • TPU • CHI TIẾT SẢN PHẨM • GIỎ HÀNG • CHECKOUT • POSTGRESQL` khỏi trang chủ vì không có chức năng tương tác.
-- Thay trình "3D" cũ vốn chỉ xoay ảnh 2D bằng **viewer WebGL thật** dùng React Three Fiber + Three.js + Drei.
-- Viewer mới render mesh 3D thực bên trong đúng khung media của trang chi tiết sản phẩm; hỗ trợ kéo xoay 360°, zoom bằng con lăn và tự xoay nhẹ.
-- Có mô hình 3D procedural riêng cho cả 10 sản phẩm mẫu; **Khối lập phương bánh răng** dùng mô hình cube + nhiều bánh răng 3D thay vì ảnh phẳng.
-- Giữ tab **Ảnh / 3D thật** để người dùng chuyển nhanh giữa ảnh tham khảo và mô hình WebGL.
-- Kiến trúc viewer đã sẵn sàng để thay mô hình procedural bằng file `.glb/.gltf` chính xác của từng sản phẩm khi có model CAD/mesh gốc.
-- Không đổi schema PostgreSQL; chỉ ghi thêm seed history `SEED_V240_3D_WEBGL_THAT`, không cần migration mới và không xóa dữ liệu hiện tại.
-- Giữ nguyên tìm kiếm/lọc sản phẩm, yêu thích PostgreSQL, giỏ hàng, checkout và thanh toán giả lập local từ các bản trước.
+- Thêm bảng `danh_gia_san_pham`, migration v2.5.0 và 10 đánh giá mẫu tiếng Việt có dấu.
+- API sản phẩm trả `diem_danh_gia` + `so_luong_danh_gia`; card và trang chi tiết hiển thị điểm sao.
+- Thêm API gửi/xem đánh giá. Local tự duyệt để test; production mặc định chuyển đánh giá mới sang chờ duyệt.
+- Trang chi tiết có khu vực đánh giá, sản phẩm liên quan và danh sách sản phẩm đã xem gần đây lưu cục bộ trên browser.
+- Tổng số bảng nghiệp vụ tăng lên 19, vẫn đảm bảo mỗi bảng có tối thiểu 10 dòng seed.
+- Giữ nguyên thứ tự sản phẩm mặc định `001 → 010`, viewer WebGL 3D thật, wishlist, giỏ hàng và checkout.
 
 ## Công nghệ
 
@@ -680,3 +678,44 @@ docker exec nhienin3d-postgres pg_isready -U nhienin3d_app -d nhienin3d
 - Hỗ trợ xoay 360°, zoom, auto-rotate, ánh sáng và bóng đổ bằng React Three Fiber + Drei.
 - Giữ tab Ảnh/3D thật và chuẩn bị kiến trúc để gắn GLB/GLTF chính xác khi có model gốc.
 - Không đổi schema PostgreSQL; thêm seed history `SEED_V240_3D_WEBGL_THAT`.
+
+
+## v2.4.1 — 29/08/2026
+
+- Chuẩn hóa thứ tự sản phẩm mặc định theo số thứ tự trong mã sản phẩm, từ `001` đến `010`.
+- Áp dụng trên trang chủ, danh sách sản phẩm, yêu thích và API.
+- Giữ nguyên các tùy chọn sắp xếp theo giá, tên và mới nhất.
+- Không đổi schema PostgreSQL; seed history: `SEED_V241_SAP_XEP_SAN_PHAM_TANG_DAN`.
+
+## v2.5.0 — 29/08/2026
+
+- Thêm đánh giá sản phẩm lưu PostgreSQL với điểm 1-5 sao, nội dung, người đánh giá và trạng thái duyệt.
+- Local tự duyệt đánh giá mới để thuận tiện kiểm thử; production mặc định chờ duyệt.
+- API danh sách/chi tiết sản phẩm bổ sung điểm sao trung bình và số lượng đánh giá đã duyệt.
+- Thêm sản phẩm liên quan theo danh mục và lịch sử sản phẩm đã xem gần đây trên browser.
+- Migration `202608290004_v250_danh_gia_san_pham` chạy nối tiếp migration cũ, không xóa dữ liệu.
+- Seed thêm 10 đánh giá mẫu; tổng cộng 19 bảng nghiệp vụ đều có tối thiểu 10 dòng.
+- Giữ nguyên thứ tự mã sản phẩm tăng dần `001 → 010`, WebGL 3D, yêu thích, giỏ hàng và checkout.
+
+
+## Nâng cấp v2.4.1 -> v2.5.0
+
+Từ thư mục mặc định:
+
+```powershell
+cd D:\LienThongDH\DoAn\NhienIn3d
+npm install
+npm audit
+npm test
+npm run typecheck
+npm run build
+npm run audit:security
+docker compose up -d --build
+docker compose ps
+```
+
+Không chạy `docker compose down -v`. Sau khi kiểm tra PASS, phát hành:
+
+```powershell
+.\scripts\release.ps1 v2.5.0
+```

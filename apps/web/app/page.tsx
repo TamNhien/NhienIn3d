@@ -22,10 +22,12 @@ export default function TrangChu() {
       .catch(() => {});
   }, []);
 
-  const hien_thi = useMemo(
-    () => san_pham.filter(x => x.ten_san_pham.toLocaleLowerCase("vi").includes(tim.toLocaleLowerCase("vi"))),
-    [san_pham, tim]
-  );
+  const hien_thi = useMemo(() => {
+    const soThuTu = (ma: string) => Number(ma.match(/-(\d+)$/)?.[1] ?? 999999);
+    return san_pham
+      .filter(x => x.ten_san_pham.toLocaleLowerCase("vi").includes(tim.toLocaleLowerCase("vi")))
+      .sort((a, b) => soThuTu(a.ma_san_pham) - soThuTu(b.ma_san_pham));
+  }, [san_pham, tim]);
 
   async function themVaoGio(sp: SanPham) {
     const bien_the = sp.bien_the?.[0];
@@ -57,7 +59,7 @@ export default function TrangChu() {
         </div>
         <div className="stats">
           <div><b>10</b><span>Sản phẩm mẫu</span></div>
-          <div><b>17+</b><span>Bảng nghiệp vụ</span></div>
+          <div><b>19+</b><span>Bảng nghiệp vụ</span></div>
           <div><b>Local</b><span>Thanh toán giả lập</span></div>
         </div>
       </div>

@@ -9,6 +9,8 @@ export type SanPham = {
   khoi_luong_gam: number | string;
   hinh_anh: { duong_dan_anh: string }[];
   danh_muc?: { ten_danh_muc: string };
+  diem_danh_gia?: number;
+  so_luong_danh_gia?: number;
   bien_the?: {
     ma_bien_the: string;
     gia_chenh_lech: number | string;

@@ -34,9 +34,11 @@ export default function YeuThichPage() {
     setSanPham(ds => ds.filter(x => x.ma_san_pham !== sp.ma_san_pham));
   }
 
+  const san_pham_tang_dan = [...san_pham].sort((a,b) => Number(a.ma_san_pham.match(/-(\d+)$/)?.[1] ?? 999999) - Number(b.ma_san_pham.match(/-(\d+)$/)?.[1] ?? 999999));
+
   return <main><ThanhDieuHuong/><section className="page-shell favorites-page">
     <div className="page-title-row"><div><div className="eyebrow">YÊU THÍCH</div><h1>Sản phẩm đã lưu</h1><p>Lưu sản phẩm bằng mã phiên ngẫu nhiên; dữ liệu được giữ trong PostgreSQL.</p></div><Link className="secondary" href="/san-pham">Khám phá sản phẩm</Link></div>
     {thong_bao && <div className="inline-message">{thong_bao}</div>}
-    {dang_tai ? <div className="empty-state"><p>Đang tải danh sách yêu thích…</p></div> : san_pham.length ? <div className="grid catalog-grid">{san_pham.map((sp,i)=><TheSanPham key={sp.ma_san_pham} sp={sp} i={i} onThem={themVaoGio} dangThem={dang_them===sp.ma_san_pham} daYeuThich onYeuThich={boYeuThich}/>)}</div> : <div className="empty-state"><h2>Chưa có sản phẩm yêu thích</h2><p>Nhấn biểu tượng trái tim trên sản phẩm để lưu lại.</p><Link className="primary" href="/san-pham">Xem sản phẩm</Link></div>}
+    {dang_tai ? <div className="empty-state"><p>Đang tải danh sách yêu thích…</p></div> : san_pham_tang_dan.length ? <div className="grid catalog-grid">{san_pham_tang_dan.map((sp,i)=><TheSanPham key={sp.ma_san_pham} sp={sp} i={i} onThem={themVaoGio} dangThem={dang_them===sp.ma_san_pham} daYeuThich onYeuThich={boYeuThich}/>)}</div> : <div className="empty-state"><h2>Chưa có sản phẩm yêu thích</h2><p>Nhấn biểu tượng trái tim trên sản phẩm để lưu lại.</p><Link className="primary" href="/san-pham">Xem sản phẩm</Link></div>}
   </section></main>;
 }
