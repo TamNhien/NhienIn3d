@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { ThanhDieuHuong } from "../../../components/thanh-dieu-huong";
-import { TrinhXemAnh3D } from "../../../components/trinh-xem-anh-3d";
 import { DanhGiaSanPham } from "../../../components/danh-gia-san-pham";
 import { GoiYSanPham } from "../../../components/goi-y-san-pham";
 import { API_URL, themBienTheVaoGio } from "../../../lib/gio-hang";
@@ -30,7 +29,8 @@ export default function ChiTietSanPhamPage() {
       .then(r => r.ok ? r.json() : Promise.reject())
       .then((du_lieu: SanPham) => {
         setSanPham(du_lieu);
-        setMaBienThe(du_lieu.bien_the?.[0]?.ma_bien_the ?? "");
+        const dau_tien_con_hang = du_lieu.bien_the?.find(x => x.so_luong_ton > 0) ?? du_lieu.bien_the?.[0];
+        setMaBienThe(dau_tien_con_hang?.ma_bien_the ?? "");
       })
       .catch(() => {});
   }, [duong_dan]);
@@ -45,7 +45,7 @@ export default function ChiTietSanPhamPage() {
       setDangThem(true);
       setThongBao("");
       await themBienTheVaoGio(bien_the.ma_bien_the, so_luong);
-      setThongBao(`Đã thêm ${so_luong} sản phẩm vào giỏ hàng.`);
+      setThongBao(`Đã thêm ${so_luong} sản phẩm màu ${bien_the.mau_sac?.ten_mau || "đã chọn"} vào giỏ hàng.`);
     } catch (loi) {
       setThongBao(loi instanceof Error ? loi.message : "Không thể thêm vào giỏ");
     } finally {
@@ -63,7 +63,7 @@ export default function ChiTietSanPhamPage() {
     }
   }
 
-  if (!san_pham) return <main><ThanhDieuHuong/><section className="page-shell"><div className="empty-state"><h1>Không tìm thấy sản phẩm</h1><Link className="primary" href="/#san-pham">Quay lại sản phẩm</Link></div></section></main>;
+  if (!san_pham) return <main><ThanhDieuHuong/><section className="page-shell"><div className="empty-state"><h1>Không tìm thấy sản phẩm</h1><Link className="primary" href="/san-pham">Quay lại sản phẩm</Link></div></section></main>;
 
   return <main>
     <ThanhDieuHuong/>
@@ -71,7 +71,9 @@ export default function ChiTietSanPhamPage() {
       <div className="breadcrumb"><Link href="/">Trang chủ</Link><span>/</span><Link href="/san-pham">Sản phẩm</Link><span>/</span><b>{san_pham.ten_san_pham}</b></div>
       <div className="product-detail-grid">
         <div className="product-gallery">
-          <TrinhXemAnh3D duong_dan_anh={san_pham.hinh_anh?.[0]?.duong_dan_anh} ten_san_pham={san_pham.ten_san_pham} ma_san_pham={san_pham.ma_san_pham}/>
+          <div className="product-main-image product-detail-photo">
+            {san_pham.hinh_anh?.[0]?.duong_dan_anh ? <img src={san_pham.hinh_anh[0].duong_dan_anh} alt={san_pham.ten_san_pham} referrerPolicy="no-referrer"/> : <div className="product-image-empty">Chưa có ảnh sản phẩm</div>}
+          </div>
           <div className="product-spec-strip">
             <div><span>Kích thước</span><b>{san_pham.kich_thuoc}</b></div>
             <div><span>Khối lượng</span><b>{san_pham.khoi_luong_gam} g</b></div>
@@ -86,20 +88,34 @@ export default function ChiTietSanPhamPage() {
           <p className="product-detail-description">{san_pham.mo_ta_ngan}</p>
           <div className="detail-price">{vnd.format(gia)}</div>
 
-          {!!san_pham.bien_the?.length && <div className="variant-block">
-            <label>Biến thể / vật liệu / màu sắc</label>
-            <div className="variant-options">
-              {san_pham.bien_the.map(bt => <button key={bt.ma_bien_the} className={bt.ma_bien_the === bien_the?.ma_bien_the ? "variant-option active" : "variant-option"} onClick={() => { setMaBienThe(bt.ma_bien_the); setSoLuong(1); }} disabled={bt.so_luong_ton <= 0}>
-                <span>{bt.vat_lieu?.ten_vat_lieu || "Tiêu chuẩn"}</span>
-                <small><i style={{background: bt.mau_sac?.ma_hex || "#fff"}}/>{bt.mau_sac?.ten_mau || "Màu tiêu chuẩn"} • còn {bt.so_luong_ton}</small>
+          {!!san_pham.bien_the?.length && <div className="variant-block color-variant-block">
+            <label>Chọn màu sắc</label>
+            <div className="color-options" role="list" aria-label="Màu sắc sản phẩm">
+              {san_pham.bien_the.map(bt => <button
+                key={bt.ma_bien_the}
+                type="button"
+                className={bt.ma_bien_the === bien_the?.ma_bien_the ? "color-option active" : "color-option"}
+                onClick={() => { setMaBienThe(bt.ma_bien_the); setSoLuong(1); setThongBao(""); }}
+                disabled={bt.so_luong_ton <= 0}
+                aria-pressed={bt.ma_bien_the === bien_the?.ma_bien_the}
+                title={`${bt.mau_sac?.ten_mau || "Màu tiêu chuẩn"} - còn ${bt.so_luong_ton}`}
+              >
+                <i className="color-swatch" style={{ background: bt.mau_sac?.ma_hex || "#ffffff" }}/>
+                <span>{bt.mau_sac?.ten_mau || "Màu tiêu chuẩn"}</span>
+                <small>{bt.so_luong_ton > 0 ? `Còn ${bt.so_luong_ton}` : "Hết"}</small>
               </button>)}
             </div>
+            {bien_the && <div className="selected-variant-meta">
+              <span>Màu đã chọn: <b>{bien_the.mau_sac?.ten_mau || "Màu tiêu chuẩn"}</b></span>
+              <span>Vật liệu: <b>{bien_the.vat_lieu?.ten_vat_lieu || "Tiêu chuẩn"}</b></span>
+              <span>Mã biến thể: <b>{bien_the.ma_bien_the}</b></span>
+            </div>}
           </div>}
 
           <div className="quantity-block">
             <label>Số lượng</label>
             <div className="quantity-control"><button onClick={() => setSoLuong(x => Math.max(1, x - 1))}>−</button><b>{so_luong}</b><button onClick={() => setSoLuong(x => Math.min(Math.max(1, ton), x + 1))}>+</button></div>
-            <span>{ton > 0 ? `Còn ${ton} sản phẩm` : "Hết hàng"}</span>
+            <span>{ton > 0 ? `Còn ${ton} sản phẩm với màu đã chọn` : "Màu này đang hết hàng"}</span>
           </div>
 
           {thong_bao && <div className="inline-message">{thong_bao}</div>}
@@ -108,7 +124,7 @@ export default function ChiTietSanPhamPage() {
             <Link className="secondary detail-cart-link" href="/gio-hang">Xem giỏ hàng</Link>
             <button className={da_yeu_thich ? "secondary favorite-detail active" : "secondary favorite-detail"} onClick={doiYeuThich}>{da_yeu_thich ? "♥ Đã yêu thích" : "♡ Yêu thích"}</button>
           </div>
-          <div className="detail-assurances"><span>✓ Kiểm tra tồn kho tại server</span><span>✓ Dữ liệu giỏ lưu PostgreSQL</span><span>✓ Thanh toán giả lập chỉ dành cho local</span></div>
+          <div className="detail-assurances"><span>✓ Chọn đúng màu trước khi thêm vào giỏ</span><span>✓ Tồn kho được kiểm tra theo từng biến thể</span><span>✓ Giỏ hàng lưu đúng màu và vật liệu đã chọn</span></div>
         </div>
       </div>
       <DanhGiaSanPham duong_dan={san_pham.duong_dan}/>

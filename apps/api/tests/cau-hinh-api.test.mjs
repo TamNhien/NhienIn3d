@@ -57,16 +57,16 @@ test("seed v2.5.0 dam bao 19 bang nghiep vu toi thieu 10 dong", () => {
     assert.match(seed, new RegExp(`${bang}: await db\\.`));
   }
   assert.match(seed, /so_luong < 10/);
-  assert.match(seed, /PHIEN_BAN_HIEN_TAI = "SEED_V260_TAI_KHOAN_PHAN_QUYEN"/);
+  assert.match(seed, /PHIEN_BAN_HIEN_TAI = "SEED_V261_CHON_MAU_SAN_PHAM"/);
   assert.match(seed, /\/images\/khoi-lap-phuong-banh-rang\.jpg/);
 });
 
 
-test("API hien thi dung version v2.6.0 o health va OpenAPI", () => {
+test("API hien thi dung version v2.6.1 o health va OpenAPI", () => {
   const health = readFileSync("src/suc-khoe/suc-khoe.controller.ts", "utf8");
   const main = readFileSync("src/main.ts", "utf8");
-  assert.match(health, /phien_ban: "v2\.6\.0"/);
-  assert.match(main, /setVersion\("2\.6\.0"\)/);
+  assert.match(health, /phien_ban: "v2\.6\.1"/);
+  assert.match(main, /setVersion\("2\.6\.1"\)/);
 });
 
 test("V2 co migration gio hang, thanh toan va dia chi", () => {
@@ -165,4 +165,13 @@ test("v2.6.0 khoa tai khoan tam thoi sau dang nhap sai", () => {
   assert.match(service, /SO_LAN_THAT_BAI_TOI_DA = 5/);
   assert.match(service, /THOI_GIAN_KHOA_MS/);
   assert.match(service, /DANG_NHAP_BI_KHOA/);
+});
+
+
+test("v2.6.1 seed tao 3 mau cho moi san pham va giu BT01 tuong thich", () => {
+  const seed = readFileSync("prisma/seed.ts", "utf8");
+  assert.match(seed, /bo_mau_san_pham/);
+  assert.match(seed, /j < bo_mau_san_pham\[i\]\.length/);
+  assert.match(seed, /BT\$\{String\(j \+ 1\)\.padStart\(2, "0"\)\}/);
+  assert.match(seed, /if \(j === 0\) bien_the_map\.set/);
 });

@@ -34,7 +34,7 @@ function taoDatabaseUrl(): string {
 const adapter = new PrismaPg({ connectionString: taoDatabaseUrl() });
 const db = new PrismaClient({ adapter });
 
-const PHIEN_BAN_HIEN_TAI = "SEED_V260_TAI_KHOAN_PHAN_QUYEN";
+const PHIEN_BAN_HIEN_TAI = "SEED_V261_CHON_MAU_SAN_PHAM";
 
 const danh_muc = [
   ["HOBBY_RC", "Mô hình & RC", "mo-hinh-rc", "Mô hình cơ khí, xe điều khiển và sản phẩm lắp ráp."],
@@ -210,7 +210,8 @@ const phien_ban_seed = [
   ["SEED_V230_YEU_THICH_TIM_KIEM", "NhienIn3d v2.3.0 bổ sung yêu thích lưu PostgreSQL, trang danh sách sản phẩm và bộ lọc/tìm kiếm nâng cao."],
   ["SEED_V241_SAP_XEP_SAN_PHAM_TANG_DAN", "NhienIn3d v2.4.1 chuẩn hóa thứ tự hiển thị sản phẩm tăng dần theo số thứ tự trong mã sản phẩm trên API và storefront."],
   ["SEED_V250_DANH_GIA_SAN_PHAM", "NhienIn3d v2.5.0 bổ sung đánh giá sản phẩm có duyệt, điểm sao, sản phẩm liên quan và lịch sử xem gần đây."],
-  [PHIEN_BAN_HIEN_TAI, "NhienIn3d v2.6.0 bổ sung đăng ký, đăng nhập, refresh session, khóa đăng nhập và RBAC 5 vai trò."]
+  ["SEED_V260_TAI_KHOAN_PHAN_QUYEN", "NhienIn3d v2.6.0 bổ sung đăng ký, đăng nhập, refresh session, khóa đăng nhập và RBAC 5 vai trò."],
+  [PHIEN_BAN_HIEN_TAI, "NhienIn3d v2.6.1 bỏ xem 3D sản phẩm không chính xác và bổ sung 3 lựa chọn màu cho mỗi sản phẩm mẫu."]
 ] as const;
 
 async function main() {
@@ -312,33 +313,50 @@ async function main() {
     nguoi_dung.push(user);
   }
 
-  // 10 biến thể: mỗi sản phẩm có một biến thể mẫu.
+  // v2.6.1: mỗi sản phẩm có 3 lựa chọn màu thật trong PostgreSQL.
+  // Giữ BT01 để không phá giỏ hàng/đơn mẫu cũ, bổ sung BT02 và BT03 idempotent.
   const ma_vat_lieu = ["PETG", "PLA", "PETG", "PETG", "PLA", "PLA", "PLA", "PETG", "PLA", "PETG"];
-  const ma_mau = ["DEN", "TRANG", "CAM", "XAM", "DO", "VANG", "TIM", "XANH_DUONG", "TRANG", "DEN"];
+  const bo_mau_san_pham = [
+    ["DEN", "CAM", "TRANG"],
+    ["TRANG", "DEN", "XANH_DUONG"],
+    ["CAM", "TRANG", "XANH_LA"],
+    ["XAM", "DEN", "TRANG"],
+    ["DO", "DEN", "XANH_DUONG"],
+    ["VANG", "TRANG", "DEN"],
+    ["TIM", "XANH_DUONG", "HONG"],
+    ["XANH_DUONG", "DEN", "CAM"],
+    ["TRANG", "VANG", "HONG"],
+    ["DEN", "XAM", "DO"]
+  ] as const;
   const bien_the_map = new Map<string, { id: string; ma_bien_the: string; so_luong_ton: number; gia_chenh_lech: unknown }>();
   for (let i = 0; i < san_pham.length; i++) {
     const sp = san_pham[i];
-    const bien_the = await db.bienTheSanPham.upsert({
-      where: { ma_bien_the: `${sp.ma_san_pham}-BT01` },
-      update: {
-        san_pham_id: san_pham_map.get(sp.ma_san_pham)!.id,
-        vat_lieu_id: vat_lieu_map.get(ma_vat_lieu[i])!,
-        mau_sac_id: mau_sac_map.get(ma_mau[i])!,
-        gia_chenh_lech: i % 3 === 0 ? 20000 : 0,
-        so_luong_ton: 8 + i,
-        dang_hien_thi: true
-      },
-      create: {
-        ma_bien_the: `${sp.ma_san_pham}-BT01`,
-        san_pham_id: san_pham_map.get(sp.ma_san_pham)!.id,
-        vat_lieu_id: vat_lieu_map.get(ma_vat_lieu[i])!,
-        mau_sac_id: mau_sac_map.get(ma_mau[i])!,
-        gia_chenh_lech: i % 3 === 0 ? 20000 : 0,
-        so_luong_ton: 8 + i,
-        dang_hien_thi: true
-      }
-    });
-    bien_the_map.set(sp.ma_san_pham, bien_the);
+    for (let j = 0; j < bo_mau_san_pham[i].length; j++) {
+      const ma_bien_the = `${sp.ma_san_pham}-BT${String(j + 1).padStart(2, "0")}`;
+      const so_luong_ton = Math.max(3, 8 + i - j);
+      const gia_chenh_lech = i % 3 === 0 ? 20000 : 0;
+      const bien_the = await db.bienTheSanPham.upsert({
+        where: { ma_bien_the },
+        update: {
+          san_pham_id: san_pham_map.get(sp.ma_san_pham)!.id,
+          vat_lieu_id: vat_lieu_map.get(ma_vat_lieu[i])!,
+          mau_sac_id: mau_sac_map.get(bo_mau_san_pham[i][j])!,
+          gia_chenh_lech,
+          so_luong_ton,
+          dang_hien_thi: true
+        },
+        create: {
+          ma_bien_the,
+          san_pham_id: san_pham_map.get(sp.ma_san_pham)!.id,
+          vat_lieu_id: vat_lieu_map.get(ma_vat_lieu[i])!,
+          mau_sac_id: mau_sac_map.get(bo_mau_san_pham[i][j])!,
+          gia_chenh_lech,
+          so_luong_ton,
+          dang_hien_thi: true
+        }
+      });
+      if (j === 0) bien_the_map.set(sp.ma_san_pham, bien_the);
+    }
   }
 
   // v2.3.0: 10 dòng yêu thích mẫu, mỗi phiên gắn với một sản phẩm khác nhau.

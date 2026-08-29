@@ -1,24 +1,23 @@
 # NhienIn3d
 
 > Cửa hàng sản phẩm in 3D hiện đại — Next.js + Three.js + NestJS + PostgreSQL + Docker  
-> Phiên bản hiện tại: **v2.6.0** — 29/08/2026
+> Phiên bản hiện tại: **v2.6.1** — 29/08/2026
 
-## Mới trong v2.6.0
+## Mới trong v2.6.1
 
-- Thêm đăng ký tài khoản khách hàng bằng email, họ tên và mật khẩu mạnh.
-- Mật khẩu được băm bằng **Argon2id** trước khi lưu PostgreSQL; API không lưu mật khẩu thuần.
-- Đăng nhập dùng access token ngắn hạn trong cookie HttpOnly + refresh token ngẫu nhiên; refresh token chỉ lưu **SHA-256 hash** trong `phien_dang_nhap`.
-- Refresh token được xoay khi làm mới phiên và có thể thu hồi khi đăng xuất.
-- Thêm khóa tạm tài khoản 15 phút sau 5 lần đăng nhập sai liên tiếp.
-- Thêm RBAC 5 vai trò: `KHACH_HANG`, `NHAN_VIEN`, `QUAN_LY`, `QUAN_TRI`, `SIEU_QUAN_TRI`.
-- Tài khoản tạo từ `ADMIN_EMAIL` được seed thành `SIEU_QUAN_TRI`; tài khoản tự đăng ký luôn là `KHACH_HANG`.
-- Thêm route web `/dang-ky`, `/dang-nhap`, `/tai-khoan` và navbar tự nhận trạng thái đăng nhập.
-- Thêm migration `202608290005_v260_tai_khoan_phan_quyen`, không xóa dữ liệu cũ.
+- Bỏ hoàn toàn chế độ **xem 3D sản phẩm** vì mesh procedural không phải model gốc và có thể gây hiểu nhầm so với ảnh sản phẩm thật.
+- Trang chi tiết chỉ hiển thị ảnh tham khảo của sản phẩm.
+- Bổ sung **3 màu có thể chọn cho mỗi sản phẩm mẫu**; màu được lưu bằng `bien_the_san_pham` hiện có, không cần đổi schema.
+- Khi chọn màu, web cập nhật đúng biến thể, tồn kho, mã biến thể và giá trước khi thêm vào giỏ.
+- Nút trên card đổi thành **Chọn màu**, không thêm thẳng biến thể mặc định vào giỏ nữa.
+- Giỏ hàng tiếp tục lưu và hiển thị đúng màu + vật liệu đã chọn.
+- Seed `SEED_V261_CHON_MAU_SAN_PHAM` bổ sung BT02/BT03 nhưng giữ BT01 để tương thích dữ liệu/giỏ hàng cũ.
+- Không có migration mới; roadmap giữ nguyên: **v2.7.0 quên mật khẩu qua email** là bước kế tiếp.
 
 ## Công nghệ
 
 - Web: Next.js 16.3.3, React 19.2.8, TypeScript 7.0.2.
-- 3D: Three.js, React Three Fiber, Drei.
+- 3D trang trí giao diện: Three.js, React Three Fiber, Drei (không dùng để giả lập model sản phẩm).
 - Animation: Motion.
 - API: NestJS 12 + Fastify 5.
 - Database: PostgreSQL 18.6.
@@ -751,6 +750,16 @@ Thu hồi toàn bộ phiên cũ
 - Chốt roadmap: v2.7 reset mật khẩu qua email, v2.8 khu vực tài khoản, v2.9 dashboard, v3.0 quản trị/MFA/hardening.
 
 
+## v2.6.1 — 29/08/2026
+
+- Bỏ viewer 3D sản phẩm procedural vì không khớp hình/model gốc.
+- Trang chi tiết chuyển về ảnh sản phẩm thật/tham khảo.
+- Mỗi sản phẩm mẫu có 3 lựa chọn màu trong `bien_the_san_pham`; lựa chọn được lưu đúng vào giỏ hàng.
+- Card sản phẩm không thêm thẳng màu mặc định; người dùng phải vào chi tiết để chọn màu trước.
+- Không đổi schema PostgreSQL, không có migration mới; chỉ chạy seed idempotent `SEED_V261_CHON_MAU_SAN_PHAM`.
+- Giữ nguyên tài khoản/RBAC v2.6.0 và roadmap v2.7 reset mật khẩu qua email.
+
+
 ## Nâng cấp v2.5.0 -> v2.6.0
 
 Từ thư mục mặc định:
@@ -771,4 +780,27 @@ Không chạy `docker compose down -v`. Sau khi kiểm tra PASS, phát hành:
 
 ```powershell
 .\scripts\release.ps1 v2.6.0
+```
+
+
+## Nâng cấp v2.6.0 -> v2.6.1
+
+Từ thư mục mặc định:
+
+```powershell
+cd D:\LienThongDH\DoAn\NhienIn3d
+npm install
+npm audit
+npm test
+npm run typecheck
+npm run build
+npm run audit:security
+docker compose up -d --build
+docker compose ps
+```
+
+Không chạy `docker compose down -v`. Container `migrate` không có migration mới nhưng sẽ chạy seed idempotent để bổ sung màu. Sau khi PASS:
+
+```powershell
+.\scripts\release.ps1 v2.6.1
 ```

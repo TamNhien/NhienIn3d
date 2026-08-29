@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ThanhDieuHuong } from "../../components/thanh-dieu-huong";
 import { TheSanPham } from "../../components/the-san-pham";
 import { DU_LIEU_MAU, type SanPham } from "../../lib/du-lieu-mau";
-import { API_URL, themBienTheVaoGio } from "../../lib/gio-hang";
+import { API_URL } from "../../lib/gio-hang";
 import { layDanhSachYeuThich, themYeuThich, xoaYeuThich } from "../../lib/yeu-thich";
 
 type DanhMuc = { ma_danh_muc: string; ten_danh_muc: string; duong_dan: string };
@@ -20,7 +20,6 @@ export default function DanhSachSanPhamPage() {
   const [chi_con_hang, setChiConHang] = useState(false);
   const [dang_tai, setDangTai] = useState(false);
   const [api_san_sang, setApiSanSang] = useState(false);
-  const [dang_them, setDangThem] = useState<string | null>(null);
   const [yeu_thich, setYeuThich] = useState<Set<string>>(new Set());
   const [thong_bao, setThongBao] = useState("");
 
@@ -62,17 +61,6 @@ export default function DanhSachSanPhamPage() {
   }, [tim, chi_con_hang, sap_xep, gia_tu, gia_den]);
   const hien_thi = api_san_sang ? san_pham : fallback;
 
-  async function themVaoGio(sp: SanPham) {
-    const bien_the = sp.bien_the?.find(x => x.so_luong_ton > 0);
-    if (!bien_the) return setThongBao("Sản phẩm hiện đã hết hàng.");
-    try {
-      setDangThem(sp.ma_san_pham);
-      await themBienTheVaoGio(bien_the.ma_bien_the, 1);
-      setThongBao(`Đã thêm “${sp.ten_san_pham}” vào giỏ.`);
-    } catch (loi) { setThongBao(loi instanceof Error ? loi.message : "Không thể thêm sản phẩm"); }
-    finally { setDangThem(null); }
-  }
-
   async function doiYeuThich(sp: SanPham) {
     const dang_co = yeu_thich.has(sp.ma_san_pham);
     try {
@@ -109,7 +97,7 @@ export default function DanhSachSanPhamPage() {
 
       {thong_bao && <div className="inline-message catalog-message">{thong_bao}</div>}
       {hien_thi.length ? <div className="grid catalog-grid">
-        {hien_thi.map((sp,i)=><TheSanPham key={sp.ma_san_pham} sp={sp} i={i} onThem={themVaoGio} dangThem={dang_them===sp.ma_san_pham} daYeuThich={yeu_thich.has(sp.ma_san_pham)} onYeuThich={doiYeuThich}/>) }
+        {hien_thi.map((sp,i)=><TheSanPham key={sp.ma_san_pham} sp={sp} i={i} daYeuThich={yeu_thich.has(sp.ma_san_pham)} onYeuThich={doiYeuThich}/>) }
       </div> : <div className="empty-state catalog-empty"><h2>Không tìm thấy sản phẩm phù hợp</h2><p>Thử xóa bớt bộ lọc hoặc dùng từ khóa khác.</p><button className="secondary secondary-button" onClick={()=>{setTim("");setLocDanhMuc("");setChiConHang(false);setGiaTu("");setGiaDen("");setSapXep("ma_tang");}}>Xóa bộ lọc</button></div>}
     </section>
   </main>;

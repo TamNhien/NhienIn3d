@@ -63,16 +63,16 @@ test("V2 co migration nang cap khong ghi de migration V1", () => {
   assert.equal(existsSync("apps/api/prisma/migrations/202608290002_v002_gio_hang_thanh_toan/migration.sql"), true);
 });
 
-test("version v2.6.0 dong bo root API va Web", () => {
-  assert.equal(readFileSync("VERSION", "utf8").trim(), "2.6.0");
-  assert.equal(docJson("package.json").version, "2.6.0");
-  assert.equal(docJson("apps/api/package.json").version, "2.6.0");
-  assert.equal(docJson("apps/web/package.json").version, "2.6.0");
+test("version v2.6.1 dong bo root API va Web", () => {
+  assert.equal(readFileSync("VERSION", "utf8").trim(), "2.6.1");
+  assert.equal(docJson("package.json").version, "2.6.1");
+  assert.equal(docJson("apps/api/package.json").version, "2.6.1");
+  assert.equal(docJson("apps/web/package.json").version, "2.6.1");
 });
 
-test("README co lich su phien ban tang dan den v2.6.0", () => {
+test("README co lich su phien ban tang dan den v2.6.1", () => {
   const readme = readFileSync("README.md", "utf8");
-  const viTri = ["## v1.0.0", "## v1.0.1", "## v1.0.2", "## v1.0.3", "## v1.0.4", "## v1.0.5", "## v1.0.6", "## v1.0.7", "## v2.0.0", "## v2.1.0", "## v2.1.1", "## v2.2.0", "## v2.2.1", "## v2.3.0", "## v2.4.0", "## v2.4.1", "## v2.5.0", "## v2.6.0"].map(x => readme.indexOf(x));
+  const viTri = ["## v1.0.0", "## v1.0.1", "## v1.0.2", "## v1.0.3", "## v1.0.4", "## v1.0.5", "## v1.0.6", "## v1.0.7", "## v2.0.0", "## v2.1.0", "## v2.1.1", "## v2.2.0", "## v2.2.1", "## v2.3.0", "## v2.4.0", "## v2.4.1", "## v2.5.0", "## v2.6.0", "## v2.6.1"].map(x => readme.indexOf(x));
   assert.ok(viTri.every(x => x >= 0));
   assert.deepEqual([...viTri].sort((a,b)=>a-b), viTri);
 });
@@ -98,9 +98,11 @@ test("v2.2.1 co ba route commerce tach biet", () => {
   ]) assert.equal(existsSync(tep), true, `Thieu ${tep}`);
 });
 
-test("v2.2.1 co trinh xem anh 3D va anh local mau", () => {
-  assert.equal(existsSync("apps/web/components/trinh-xem-anh-3d.tsx"), true);
+test("v2.6.1 bo trinh xem 3D san pham khong chinh xac nhung giu anh local", () => {
+  assert.equal(existsSync("apps/web/components/trinh-xem-anh-3d.tsx"), false);
   assert.equal(existsSync("apps/web/public/images/khoi-lap-phuong-banh-rang.jpg"), true);
+  const cleanup = readFileSync("scripts/don-dep-legacy.mjs", "utf8");
+  assert.match(cleanup, /trinh-xem-anh-3d\.tsx/);
 });
 
 
@@ -134,13 +136,15 @@ test("v2.4.1 bo dai strip trang tri khoi trang chu", () => {
   assert.doesNotMatch(css, /\.strip\{/);
 });
 
-test("v2.4.1 viewer san pham dung WebGL mesh 3D that", () => {
-  const viewer = readFileSync("apps/web/components/trinh-xem-anh-3d.tsx", "utf8");
-  assert.match(viewer, /<Canvas/);
-  assert.match(viewer, /<OrbitControls/);
-  assert.match(viewer, /KhoiLapPhuongBanhRang/);
-  assert.match(viewer, /3D WebGL/u);
-  assert.doesNotMatch(viewer, /product-image-3d-layer/);
+test("v2.6.1 chi tiet san pham dung anh that va bat buoc chon mau", () => {
+  const detail = readFileSync("apps/web/app/san-pham/[duong_dan]/page.tsx", "utf8");
+  const card = readFileSync("apps/web/components/the-san-pham.tsx", "utf8");
+  assert.match(detail, /product-detail-photo/);
+  assert.match(detail, /Chọn màu sắc/u);
+  assert.match(detail, /color-option/);
+  assert.match(detail, /ma_bien_the/);
+  assert.doesNotMatch(detail, /TrinhXemAnh3D/);
+  assert.match(card, /Chọn màu/u);
 });
 
 
@@ -188,4 +192,13 @@ test("v2.6.0 co giao dien dang ky dang nhap va tai khoan", () => {
 test("README v2.6.0 ghi ro roadmap xac thuc email dashboard", () => {
   const readme = readFileSync("README.md", "utf8");
   for (const muc of ["v2.6.0", "v2.7.0", "v2.8.0", "v2.9.0", "v3.0.0"]) assert.match(readme, new RegExp(muc.replaceAll(".", "\\.")));
+});
+
+
+test("v2.6.1 seed bo sung 3 mau moi san pham va khong can migration moi", () => {
+  const seed = readFileSync("apps/api/prisma/seed.ts", "utf8");
+  assert.match(seed, /SEED_V261_CHON_MAU_SAN_PHAM/);
+  assert.match(seed, /bo_mau_san_pham/);
+  assert.match(seed, /String\(j \+ 1\)\.padStart\(2, "0"\)/);
+  assert.equal(existsSync("apps/api/prisma/migrations/202608290006_v261_chon_mau/migration.sql"), false);
 });

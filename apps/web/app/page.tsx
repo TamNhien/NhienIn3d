@@ -7,13 +7,11 @@ import { Hero3D } from "../components/hero-3d";
 import { ThanhDieuHuong } from "../components/thanh-dieu-huong";
 import { TheSanPham } from "../components/the-san-pham";
 import { DU_LIEU_MAU, type SanPham } from "../lib/du-lieu-mau";
-import { API_URL, themBienTheVaoGio } from "../lib/gio-hang";
+import { API_URL } from "../lib/gio-hang";
 
 export default function TrangChu() {
   const [san_pham, setSanPham] = useState<SanPham[]>(DU_LIEU_MAU);
   const [tim, setTim] = useState("");
-  const [dang_them, setDangThem] = useState<string | null>(null);
-  const [thong_bao, setThongBao] = useState("");
 
   useEffect(() => {
     fetch(`${API_URL}/san-pham`, { credentials: "include" })
@@ -28,24 +26,6 @@ export default function TrangChu() {
       .filter(x => x.ten_san_pham.toLocaleLowerCase("vi").includes(tim.toLocaleLowerCase("vi")))
       .sort((a, b) => soThuTu(a.ma_san_pham) - soThuTu(b.ma_san_pham));
   }, [san_pham, tim]);
-
-  async function themVaoGio(sp: SanPham) {
-    const bien_the = sp.bien_the?.[0];
-    if (!bien_the) {
-      setThongBao("Sản phẩm chưa có biến thể để thêm vào giỏ.");
-      return;
-    }
-    try {
-      setDangThem(sp.ma_san_pham);
-      setThongBao("");
-      await themBienTheVaoGio(bien_the.ma_bien_the, 1);
-      setThongBao(`Đã thêm “${sp.ten_san_pham}” vào giỏ. Bạn có thể tiếp tục mua hoặc mở giỏ hàng.`);
-    } catch (loi) {
-      setThongBao(loi instanceof Error ? loi.message : "Không thể thêm sản phẩm");
-    } finally {
-      setDangThem(null);
-    }
-  }
 
   return <main>
     <ThanhDieuHuong />
@@ -67,19 +47,18 @@ export default function TrangChu() {
     </section>
 
 
-    {thong_bao && <div className="toast toast-with-action" role="status"><span>{thong_bao}</span><Link href="/gio-hang">Xem giỏ</Link></div>}
 
     <section id="san-pham" className="products section">
       <div className="section-head">
         <div>
           <div className="eyebrow">BỘ SƯU TẬP</div>
           <h2>Sản phẩm nổi bật</h2>
-          <p>Nhấp vào sản phẩm để xem đầy đủ thông tin, chọn biến thể và số lượng trước khi thêm vào giỏ hàng.</p>
+          <p>Nhấp vào sản phẩm để xem đầy đủ thông tin, chọn màu sắc và số lượng trước khi thêm vào giỏ hàng.</p>
         </div>
         <div className="home-product-actions"><input value={tim} onChange={e=>setTim(e.target.value)} placeholder="Tìm sản phẩm…" /><Link className="secondary" href="/san-pham">Xem tất cả</Link></div>
       </div>
       <div className="grid">
-        {hien_thi.map((sp,i)=><TheSanPham key={sp.ma_san_pham} sp={sp} i={i} onThem={themVaoGio} dangThem={dang_them===sp.ma_san_pham}/>)}
+        {hien_thi.map((sp,i)=><TheSanPham key={sp.ma_san_pham} sp={sp} i={i}/>)}
       </div>
     </section>
 

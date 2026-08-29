@@ -78,7 +78,6 @@ apps/web/components/goi-y-san-pham.tsx
 apps/web/components/hero-3d.tsx
 apps/web/components/thanh-dieu-huong.tsx
 apps/web/components/the-san-pham.tsx
-apps/web/components/trinh-xem-anh-3d.tsx
 apps/web/lib/danh-gia.ts
 apps/web/lib/du-lieu-mau.ts
 apps/web/lib/gio-hang.ts

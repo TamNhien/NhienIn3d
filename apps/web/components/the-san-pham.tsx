@@ -9,15 +9,11 @@ const vnd = new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" 
 export function TheSanPham({
   sp,
   i,
-  onThem,
-  dangThem,
   daYeuThich = false,
   onYeuThich
 }: {
   sp: SanPham;
   i: number;
-  onThem: (sp: SanPham) => void;
-  dangThem?: boolean;
   daYeuThich?: boolean;
   onYeuThich?: (sp: SanPham) => void;
 }) {
@@ -27,9 +23,9 @@ export function TheSanPham({
   const tong_ton = sp.bien_the?.reduce((tong, bt) => tong + Math.max(0, bt.so_luong_ton), 0) ?? 0;
   const con_hang = tong_ton > 0;
   const moChiTiet = () => router.push(`/san-pham/${encodeURIComponent(sp.duong_dan)}`);
-  const them = (event: MouseEvent<HTMLButtonElement>) => {
+  const chonMau = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
-    onThem(sp);
+    moChiTiet();
   };
   const yeuThich = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
@@ -68,8 +64,8 @@ export function TheSanPham({
       <div className="stock-row"><span className={con_hang ? "stock-ok" : "stock-out"}>{con_hang ? `Còn ${tong_ton}` : "Hết hàng"}</span><span>Xem chi tiết sản phẩm →</span></div>
       <div className="price-row">
         <strong>{vnd.format(gia)}</strong>
-        <button className="add-cart" onClick={them} disabled={dangThem || !con_hang}>
-          {dangThem ? "Đang thêm…" : con_hang ? "Thêm vào giỏ +" : "Hết hàng"}
+        <button className="add-cart" onClick={chonMau}>
+          {con_hang ? "Chọn màu →" : "Xem chi tiết"}
         </button>
       </div>
     </div>
