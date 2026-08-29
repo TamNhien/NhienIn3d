@@ -14,6 +14,7 @@ enum VaiTro {
   NHAN_VIEN
   QUAN_LY
   QUAN_TRI
+  SIEU_QUAN_TRI
 }
 
 enum TrangThaiSanPham {
@@ -44,6 +45,10 @@ model NguoiDung {
   ho_ten          String   @db.VarChar(150)
   vai_tro         VaiTro   @default(KHACH_HANG)
   da_kich_hoat    Boolean  @default(true)
+  so_lan_dang_nhap_that_bai Int @default(0)
+  khoa_den         DateTime? @db.Timestamptz(6)
+  lan_dang_nhap_cuoi DateTime? @db.Timestamptz(6)
+  phien_ban_mat_khau Int @default(1)
   ngay_tao        DateTime @default(now()) @db.Timestamptz(6)
   ngay_cap_nhat   DateTime @updatedAt @db.Timestamptz(6)
   don_hang        DonHang[]

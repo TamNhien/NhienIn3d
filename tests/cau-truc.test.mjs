@@ -63,16 +63,16 @@ test("V2 co migration nang cap khong ghi de migration V1", () => {
   assert.equal(existsSync("apps/api/prisma/migrations/202608290002_v002_gio_hang_thanh_toan/migration.sql"), true);
 });
 
-test("version v2.5.0 dong bo root API va Web", () => {
-  assert.equal(readFileSync("VERSION", "utf8").trim(), "2.5.0");
-  assert.equal(docJson("package.json").version, "2.5.0");
-  assert.equal(docJson("apps/api/package.json").version, "2.5.0");
-  assert.equal(docJson("apps/web/package.json").version, "2.5.0");
+test("version v2.6.0 dong bo root API va Web", () => {
+  assert.equal(readFileSync("VERSION", "utf8").trim(), "2.6.0");
+  assert.equal(docJson("package.json").version, "2.6.0");
+  assert.equal(docJson("apps/api/package.json").version, "2.6.0");
+  assert.equal(docJson("apps/web/package.json").version, "2.6.0");
 });
 
-test("README co lich su phien ban tang dan den v2.5.0", () => {
+test("README co lich su phien ban tang dan den v2.6.0", () => {
   const readme = readFileSync("README.md", "utf8");
-  const viTri = ["## v1.0.0", "## v1.0.1", "## v1.0.2", "## v1.0.3", "## v1.0.4", "## v1.0.5", "## v1.0.6", "## v1.0.7", "## v2.0.0", "## v2.1.0", "## v2.1.1", "## v2.2.0", "## v2.2.1", "## v2.3.0", "## v2.4.0", "## v2.4.1", "## v2.5.0"].map(x => readme.indexOf(x));
+  const viTri = ["## v1.0.0", "## v1.0.1", "## v1.0.2", "## v1.0.3", "## v1.0.4", "## v1.0.5", "## v1.0.6", "## v1.0.7", "## v2.0.0", "## v2.1.0", "## v2.1.1", "## v2.2.0", "## v2.2.1", "## v2.3.0", "## v2.4.0", "## v2.4.1", "## v2.5.0", "## v2.6.0"].map(x => readme.indexOf(x));
   assert.ok(viTri.every(x => x >= 0));
   assert.deepEqual([...viTri].sort((a,b)=>a-b), viTri);
 });
@@ -169,4 +169,23 @@ test("v2.5.0 co API danh gia, san pham lien quan va 19 bang seed", () => {
   assert.match(sanPham, /lien_quan/);
   assert.match(seed, /SEED_V250_DANH_GIA_SAN_PHAM/);
   assert.match(check, /19 bảng nghiệp vụ/u);
+});
+
+test("v2.6.0 co migration tai khoan va phan quyen 5 vai tro", () => {
+  assert.equal(existsSync("apps/api/prisma/migrations/202608290005_v260_tai_khoan_phan_quyen/migration.sql"), true);
+  const schema = readFileSync("apps/api/prisma/schema.prisma", "utf8");
+  assert.match(schema, /SIEU_QUAN_TRI/);
+  assert.match(schema, /so_lan_dang_nhap_that_bai/);
+  assert.match(schema, /phien_ban_mat_khau/);
+});
+
+test("v2.6.0 co giao dien dang ky dang nhap va tai khoan", () => {
+  for (const tep of ["apps/web/app/dang-ky/page.tsx", "apps/web/app/dang-nhap/page.tsx", "apps/web/app/tai-khoan/page.tsx", "apps/web/lib/xac-thuc.ts"]) {
+    assert.equal(existsSync(tep), true, `Thieu ${tep}`);
+  }
+});
+
+test("README v2.6.0 ghi ro roadmap xac thuc email dashboard", () => {
+  const readme = readFileSync("README.md", "utf8");
+  for (const muc of ["v2.6.0", "v2.7.0", "v2.8.0", "v2.9.0", "v3.0.0"]) assert.match(readme, new RegExp(muc.replaceAll(".", "\\.")));
 });

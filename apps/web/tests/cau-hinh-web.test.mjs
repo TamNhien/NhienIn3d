@@ -169,3 +169,17 @@ test('v2.5.0 web co san pham lien quan va da xem gan day', () => {
   assert.match(goiY, /nhienin3d_da_xem_gan_day/);
   assert.match(goiY, /ĐÃ XEM GẦN ĐÂY/u);
 });
+
+test('v2.6.0 web co dang ky dang nhap va tai khoan', () => {
+  for (const tep of ['app/dang-ky/page.tsx','app/dang-nhap/page.tsx','app/tai-khoan/page.tsx','lib/xac-thuc.ts']) assert.equal(existsSync(tep), true, `Thieu ${tep}`);
+  const nav = readFileSync('components/thanh-dieu-huong.tsx','utf8');
+  assert.match(nav, /Đăng nhập/u);
+  assert.match(nav, /Tài khoản/u);
+});
+
+test('v2.6.0 web dung cookie HttpOnly qua credentials include va refresh session', () => {
+  const auth = readFileSync('lib/xac-thuc.ts','utf8');
+  assert.match(auth, /credentials: "include"/);
+  assert.match(auth, /\/xac-thuc\/lam-moi/);
+  assert.match(auth, /SU_KIEN_XAC_THUC/);
+});

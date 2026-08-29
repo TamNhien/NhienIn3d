@@ -1,16 +1,19 @@
 # NhienIn3d
 
 > Cửa hàng sản phẩm in 3D hiện đại — Next.js + Three.js + NestJS + PostgreSQL + Docker  
-> Phiên bản hiện tại: **v2.5.0** — 29/08/2026
+> Phiên bản hiện tại: **v2.6.0** — 29/08/2026
 
-## Mới trong v2.5.0
+## Mới trong v2.6.0
 
-- Thêm bảng `danh_gia_san_pham`, migration v2.5.0 và 10 đánh giá mẫu tiếng Việt có dấu.
-- API sản phẩm trả `diem_danh_gia` + `so_luong_danh_gia`; card và trang chi tiết hiển thị điểm sao.
-- Thêm API gửi/xem đánh giá. Local tự duyệt để test; production mặc định chuyển đánh giá mới sang chờ duyệt.
-- Trang chi tiết có khu vực đánh giá, sản phẩm liên quan và danh sách sản phẩm đã xem gần đây lưu cục bộ trên browser.
-- Tổng số bảng nghiệp vụ tăng lên 19, vẫn đảm bảo mỗi bảng có tối thiểu 10 dòng seed.
-- Giữ nguyên thứ tự sản phẩm mặc định `001 → 010`, viewer WebGL 3D thật, wishlist, giỏ hàng và checkout.
+- Thêm đăng ký tài khoản khách hàng bằng email, họ tên và mật khẩu mạnh.
+- Mật khẩu được băm bằng **Argon2id** trước khi lưu PostgreSQL; API không lưu mật khẩu thuần.
+- Đăng nhập dùng access token ngắn hạn trong cookie HttpOnly + refresh token ngẫu nhiên; refresh token chỉ lưu **SHA-256 hash** trong `phien_dang_nhap`.
+- Refresh token được xoay khi làm mới phiên và có thể thu hồi khi đăng xuất.
+- Thêm khóa tạm tài khoản 15 phút sau 5 lần đăng nhập sai liên tiếp.
+- Thêm RBAC 5 vai trò: `KHACH_HANG`, `NHAN_VIEN`, `QUAN_LY`, `QUAN_TRI`, `SIEU_QUAN_TRI`.
+- Tài khoản tạo từ `ADMIN_EMAIL` được seed thành `SIEU_QUAN_TRI`; tài khoản tự đăng ký luôn là `KHACH_HANG`.
+- Thêm route web `/dang-ky`, `/dang-nhap`, `/tai-khoan` và navbar tự nhận trạng thái đăng nhập.
+- Thêm migration `202608290005_v260_tai_khoan_phan_quyen`, không xóa dữ liệu cũ.
 
 ## Công nghệ
 
@@ -127,8 +130,12 @@ DELETE /api/v1/gio-hang/:ma_phien/chi-tiet/:id
 GET    /api/v1/thanh-toan/phuong-thuc
 POST   /api/v1/thanh-toan/dat-hang
 
+POST   /api/v1/xac-thuc/dang-ky
 POST   /api/v1/xac-thuc/dang-nhap
+POST   /api/v1/xac-thuc/lam-moi
 POST   /api/v1/xac-thuc/dang-xuat
+GET    /api/v1/xac-thuc/toi
+GET    /api/v1/xac-thuc/quan-tri/kiem-tra
 GET    /api/v1/suc-khoe
 ```
 
@@ -167,6 +174,7 @@ phuong_thuc_thanh_toan      <-- V2
 thanh_toan                  <-- V2
 dia_chi_nguoi_dung          <-- V2
 yeu_thich                   <-- v2.3.0
+danh_gia_san_pham           <-- v2.5.0
 ```
 
 Bảng `_prisma_migrations` là bảng hệ thống của Prisma và không được chèn dữ liệu giả để đạt 10 dòng.
@@ -556,6 +564,40 @@ docker exec nhienin3d-postgres pg_isready -U nhienin3d_app -d nhienin3d
 
 ---
 
+# Lộ trình phát triển đã chốt
+
+| Phiên bản | Phạm vi | Trạng thái |
+|---|---|---|
+| **v2.6.0** | Đăng ký, đăng nhập, đăng xuất, refresh session, Argon2id, khóa brute-force, RBAC 5 vai trò | **Đã làm** |
+| **v2.7.0** | Quên mật khẩu qua email: gửi link một lần, token chỉ lưu hash, hết hạn, trang đặt lại mật khẩu, đổi mật khẩu Argon2id và thu hồi phiên cũ | Kế tiếp |
+| **v2.8.0** | Khu vực tài khoản: hồ sơ, địa chỉ, lịch sử đơn hàng, đổi mật khẩu, quản lý các phiên đăng nhập | Sau v2.7.0 |
+| **v2.9.0** | Dashboard quản trị: doanh thu, đơn hàng, người dùng, sản phẩm, tồn kho, thanh toán, đánh giá, lọc khoảng ngày và kiểm soát bằng RBAC | Sau v2.8.0 |
+| **v3.0.0** | CRUD quản trị hoàn chỉnh, MFA/TOTP cho quản trị, audit nâng cao, backup/restore, E2E security hardening | Mốc ổn định tiếp theo |
+
+## Luồng quên mật khẩu dự kiến ở v2.7.0
+
+```text
+Email đăng ký
+   ↓
+POST /quen-mat-khau
+   ↓
+Sinh token ngẫu nhiên 256-bit
+   ├─ gửi token gốc trong link email
+   └─ chỉ lưu HASH(token) + thời hạn trong PostgreSQL
+   ↓
+Người dùng nhấp link /dat-lai-mat-khau?token=...
+   ↓
+Nhập mật khẩu mới
+   ↓
+Argon2id hash
+   ↓
+Lưu mat_khau_bam + tăng phien_ban_mat_khau
+   ↓
+Thu hồi toàn bộ phiên cũ
+```
+
+> Không lưu token reset hoặc mật khẩu mới ở dạng thuần trong database. SMTP/API email thật sẽ được cấu hình qua biến môi trường ở v2.7.0; local có chế độ mail catcher để kiểm thử.
+
 # Lịch sử phiên bản
 
 ## v1.0.0 — 29/08/2026
@@ -698,7 +740,18 @@ docker exec nhienin3d-postgres pg_isready -U nhienin3d_app -d nhienin3d
 - Giữ nguyên thứ tự mã sản phẩm tăng dần `001 → 010`, WebGL 3D, yêu thích, giỏ hàng và checkout.
 
 
-## Nâng cấp v2.4.1 -> v2.5.0
+## v2.6.0 — 29/08/2026
+
+- Thêm đăng ký/đăng nhập/đăng xuất và làm mới phiên bằng cookie HttpOnly.
+- Mật khẩu đăng ký được băm Argon2id; refresh token chỉ lưu SHA-256 hash trong database.
+- Thêm khóa tài khoản tạm thời khi sai mật khẩu nhiều lần và ghi audit security events.
+- Thêm RBAC 5 vai trò, gồm `SIEU_QUAN_TRI`; admin seed từ `.env` được nâng thành siêu quản trị.
+- Thêm trang `/dang-ky`, `/dang-nhap`, `/tai-khoan` và trạng thái đăng nhập trên navbar.
+- Migration `202608290005_v260_tai_khoan_phan_quyen` chạy nối tiếp các migration cũ, không reset dữ liệu.
+- Chốt roadmap: v2.7 reset mật khẩu qua email, v2.8 khu vực tài khoản, v2.9 dashboard, v3.0 quản trị/MFA/hardening.
+
+
+## Nâng cấp v2.5.0 -> v2.6.0
 
 Từ thư mục mặc định:
 
@@ -717,5 +770,5 @@ docker compose ps
 Không chạy `docker compose down -v`. Sau khi kiểm tra PASS, phát hành:
 
 ```powershell
-.\scripts\release.ps1 v2.5.0
+.\scripts\release.ps1 v2.6.0
 ```

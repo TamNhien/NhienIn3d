@@ -34,7 +34,7 @@ function taoDatabaseUrl(): string {
 const adapter = new PrismaPg({ connectionString: taoDatabaseUrl() });
 const db = new PrismaClient({ adapter });
 
-const PHIEN_BAN_HIEN_TAI = "SEED_V250_DANH_GIA_SAN_PHAM";
+const PHIEN_BAN_HIEN_TAI = "SEED_V260_TAI_KHOAN_PHAN_QUYEN";
 
 const danh_muc = [
   ["HOBBY_RC", "Mô hình & RC", "mo-hinh-rc", "Mô hình cơ khí, xe điều khiển và sản phẩm lắp ráp."],
@@ -209,7 +209,8 @@ const phien_ban_seed = [
   ["SEED_V220_GIAO_DIEN_3D_TINH_GON", "NhienIn3d v2.2.0 tinh gọn storefront, bổ sung trình xem ảnh 3D tương tác và ảnh local cho sản phẩm khối lập phương bánh răng."],
   ["SEED_V230_YEU_THICH_TIM_KIEM", "NhienIn3d v2.3.0 bổ sung yêu thích lưu PostgreSQL, trang danh sách sản phẩm và bộ lọc/tìm kiếm nâng cao."],
   ["SEED_V241_SAP_XEP_SAN_PHAM_TANG_DAN", "NhienIn3d v2.4.1 chuẩn hóa thứ tự hiển thị sản phẩm tăng dần theo số thứ tự trong mã sản phẩm trên API và storefront."],
-  [PHIEN_BAN_HIEN_TAI, "NhienIn3d v2.5.0 bổ sung đánh giá sản phẩm có duyệt, điểm sao, sản phẩm liên quan và lịch sử xem gần đây."]
+  ["SEED_V250_DANH_GIA_SAN_PHAM", "NhienIn3d v2.5.0 bổ sung đánh giá sản phẩm có duyệt, điểm sao, sản phẩm liên quan và lịch sử xem gần đây."],
+  [PHIEN_BAN_HIEN_TAI, "NhienIn3d v2.6.0 bổ sung đăng ký, đăng nhập, refresh session, khóa đăng nhập và RBAC 5 vai trò."]
 ] as const;
 
 async function main() {
@@ -286,16 +287,16 @@ async function main() {
     const mat_khau_bam = await argon2.hash(admin_password, { type: argon2.argon2id });
     const admin = await db.nguoiDung.upsert({
       where: { thu_dien_tu: thu_dien_tu_quan_tri },
-      update: { ho_ten: ho_ten_quan_tri, vai_tro: VaiTro.QUAN_TRI, da_kich_hoat: true },
-      create: { thu_dien_tu: thu_dien_tu_quan_tri, mat_khau_bam, ho_ten: ho_ten_quan_tri, vai_tro: VaiTro.QUAN_TRI, da_kich_hoat: true }
+      update: { ho_ten: ho_ten_quan_tri, vai_tro: VaiTro.SIEU_QUAN_TRI, da_kich_hoat: true },
+      create: { thu_dien_tu: thu_dien_tu_quan_tri, mat_khau_bam, ho_ten: ho_ten_quan_tri, vai_tro: VaiTro.SIEU_QUAN_TRI, da_kich_hoat: true }
     });
     nguoi_dung.push(admin);
   } else {
     const mat_khau_bam = await argon2.hash(randomBytes(32).toString("base64url"), { type: argon2.argon2id });
     const admin_mau = await db.nguoiDung.upsert({
       where: { thu_dien_tu: "quantri.mau@nhienin3d.local" },
-      update: { ho_ten: "Quản trị mẫu NhienIn3d", vai_tro: VaiTro.QUAN_TRI, da_kich_hoat: false },
-      create: { thu_dien_tu: "quantri.mau@nhienin3d.local", mat_khau_bam, ho_ten: "Quản trị mẫu NhienIn3d", vai_tro: VaiTro.QUAN_TRI, da_kich_hoat: false }
+      update: { ho_ten: "Quản trị mẫu NhienIn3d", vai_tro: VaiTro.SIEU_QUAN_TRI, da_kich_hoat: false },
+      create: { thu_dien_tu: "quantri.mau@nhienin3d.local", mat_khau_bam, ho_ten: "Quản trị mẫu NhienIn3d", vai_tro: VaiTro.SIEU_QUAN_TRI, da_kich_hoat: false }
     });
     nguoi_dung.push(admin_mau);
     console.warn("⚠️ Chưa có ADMIN_EMAIL/ADMIN_PASSWORD hợp lệ: đã tạo quản trị mẫu bị vô hiệu hóa.");

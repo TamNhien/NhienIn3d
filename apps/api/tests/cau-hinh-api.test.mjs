@@ -57,16 +57,16 @@ test("seed v2.5.0 dam bao 19 bang nghiep vu toi thieu 10 dong", () => {
     assert.match(seed, new RegExp(`${bang}: await db\\.`));
   }
   assert.match(seed, /so_luong < 10/);
-  assert.match(seed, /PHIEN_BAN_HIEN_TAI = "SEED_V250_DANH_GIA_SAN_PHAM"/);
+  assert.match(seed, /PHIEN_BAN_HIEN_TAI = "SEED_V260_TAI_KHOAN_PHAN_QUYEN"/);
   assert.match(seed, /\/images\/khoi-lap-phuong-banh-rang\.jpg/);
 });
 
 
-test("API hien thi dung version v2.5.0 o health va OpenAPI", () => {
+test("API hien thi dung version v2.6.0 o health va OpenAPI", () => {
   const health = readFileSync("src/suc-khoe/suc-khoe.controller.ts", "utf8");
   const main = readFileSync("src/main.ts", "utf8");
-  assert.match(health, /phien_ban: "v2\.5\.0"/);
-  assert.match(main, /setVersion\("2\.5\.0"\)/);
+  assert.match(health, /phien_ban: "v2\.6\.0"/);
+  assert.match(main, /setVersion\("2\.6\.0"\)/);
 });
 
 test("V2 co migration gio hang, thanh toan va dia chi", () => {
@@ -137,4 +137,32 @@ test("v2.5.0 API san pham tra diem danh gia va goi y lien quan", () => {
   assert.match(controller, /diem_danh_gia/);
   assert.match(controller, /so_luong_danh_gia/);
   assert.match(controller, /lien-quan/);
+});
+
+test("v2.6.0 co dang ky dang nhap refresh va thong tin tai khoan", () => {
+  const controller = readFileSync("src/xac-thuc/xac-thuc.controller.ts", "utf8");
+  const service = readFileSync("src/xac-thuc/xac-thuc.service.ts", "utf8");
+  for (const route of ["dang-ky", "dang-nhap", "lam-moi", "toi"]) assert.match(controller, new RegExp(route));
+  assert.match(service, /argon2\.hash/);
+  assert.match(service, /argon2\.verify/);
+  assert.match(service, /randomBytes\(48\)/);
+  assert.match(service, /ma_lam_moi_bam/);
+});
+
+test("v2.6.0 RBAC co JwtGuard VaiTroGuard va 5 vai tro", () => {
+  const schema = readFileSync("prisma/schema.prisma", "utf8");
+  const controller = readFileSync("src/xac-thuc/xac-thuc.controller.ts", "utf8");
+  const jwt = readFileSync("src/xac-thuc/jwt.guard.ts", "utf8");
+  const role = readFileSync("src/xac-thuc/vai-tro.guard.ts", "utf8");
+  assert.match(schema, /SIEU_QUAN_TRI/);
+  assert.match(jwt, /phien_ban_mat_khau/);
+  assert.match(role, /KHOA_VAI_TRO/);
+  assert.match(controller, /VaiTroChoPhep\(VaiTro\.QUAN_TRI, VaiTro\.SIEU_QUAN_TRI\)/);
+});
+
+test("v2.6.0 khoa tai khoan tam thoi sau dang nhap sai", () => {
+  const service = readFileSync("src/xac-thuc/xac-thuc.service.ts", "utf8");
+  assert.match(service, /SO_LAN_THAT_BAI_TOI_DA = 5/);
+  assert.match(service, /THOI_GIAN_KHOA_MS/);
+  assert.match(service, /DANG_NHAP_BI_KHOA/);
 });
