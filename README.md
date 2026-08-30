@@ -1,6 +1,6 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v2.12.0** — 30/08/2026
+> Phiên bản hiện tại: **v2.12.1** — 30/08/2026
 
 NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **frontend Next.js** và **backend NestJS/Fastify** kết nối **PostgreSQL qua Prisma**.
 
@@ -19,7 +19,7 @@ NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **fro
 
 ## Giao diện dựng lại theo bố cục CineBooking Pro
 
-Bản source v2.12.0 tiếp tục dùng **frontend layout** theo cấu trúc CineBooking Pro, giữ nguyên nghiệp vụ NhienIn3d và làm lại đồng bộ các màn hình tài khoản/quản trị:
+Bản source v2.12.1 tiếp tục dùng **frontend layout** theo cấu trúc CineBooking Pro, giữ nguyên nghiệp vụ NhienIn3d và làm lại đồng bộ các màn hình tài khoản/quản trị:
 
 - Dùng `RootLayout` chung với **header sticky**, vùng nội dung `max-w-7xl`, **footer dùng chung** và menu drawer responsive; không còn lặp navbar ở từng route.
 - Bổ sung **Tailwind CSS 4 + `@tailwindcss/postcss`** giống lớp công nghệ frontend tham chiếu, đồng thời giữ toàn bộ CSS/logic nghiệp vụ cũ để tránh phá luồng sản phẩm, giỏ hàng, tài khoản và quản trị.
@@ -31,6 +31,7 @@ Bản source v2.12.0 tiếp tục dùng **frontend layout** theo cấu trúc Cin
 
 - v2.12.0 bổ sung **Quản trị đơn hàng**: tìm kiếm/lọc, xem chi tiết, cập nhật trạng thái theo luồng hợp lệ và xem lịch sử xử lý; khi hủy đơn hệ thống hoàn tồn kho các biến thể có mã được lưu trong `tuy_chon`.
 - v2.12.0 bổ sung **Quản trị sản phẩm & tồn kho** ở mức cơ bản: sửa tên, mô tả ngắn, giá bán, trạng thái sản phẩm; sửa tồn kho và bật/tắt hiển thị từng biến thể.
+- v2.12.1 tinh gọn tab **Sản phẩm & kho**: danh sách sản phẩm chuyển thành **ô chọn xổ xuống**, chỉ hiển thị một sản phẩm được chọn để chỉnh sửa; tìm kiếm vẫn lọc danh sách lựa chọn.
 - v2.12.0 bổ sung tab **Nhật ký Admin** lấy 200 sự kiện `ADMIN_*` gần nhất. Các thao tác khách hàng, nhân viên, ca làm, phân ca, đơn hàng, sản phẩm và tồn kho đều có audit trail trong `nhat_ky_bao_mat`.
 - Migration `202608300004_v212_quan_tri_don_hang_audit` tạo bảng `lich_su_don_hang`, backfill mốc đầu tiên cho đơn hiện có và checkout mới tự ghi lịch sử ngay khi tạo đơn.
 - Giữ Dashboard v2.11.0: doanh thu hôm nay/7 ngày/30 ngày, số đơn theo kỳ, giá trị đơn trung bình, khách hàng mới, biểu đồ doanh thu 7 ngày, top sản phẩm, tồn kho thấp và đơn gần nhất.
@@ -793,6 +794,15 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 - Seed v2.12.0 bảo đảm các đơn mẫu tạo sau migration vẫn có lịch sử ban đầu; `kiem-tra-du-lieu` theo dõi thêm bảng `lich_su_don_hang`.
 - Giao diện mới giữ dark glass/CineBooking Pro, responsive và các tab Admin có thể cuộn ngang trên màn hình hẹp.
 - Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm test` → `npm run typecheck` → `npm run build` → Docker Compose → `.\scripts\release.ps1 v2.12.0`.
+
+## v2.12.1 — 30/08/2026
+
+- Tinh gọn tab **Sản phẩm & tồn kho** theo yêu cầu: không còn render đồng thời 10 card sản phẩm kéo dài trang.
+- Thêm ô **Chọn sản phẩm** dạng danh sách xổ xuống; mỗi lựa chọn hiển thị `mã · tên · danh mục`, sau khi chọn chỉ một form sản phẩm và bảng biến thể tương ứng được mở.
+- Ô **Tìm sản phẩm** vẫn hoạt động và trực tiếp lọc các lựa chọn trong danh sách xổ xuống; số kết quả được cập nhật theo bộ lọc.
+- Khi sản phẩm đang chọn không còn khớp bộ lọc, giao diện tự dùng kết quả đầu tiên còn lại; nếu không có kết quả sẽ hiển thị trạng thái rỗng thay vì nhiều card.
+- Không thay đổi API, PostgreSQL, tồn kho hay dữ liệu sản phẩm; không có migration mới.
+- Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm test` → `npm run typecheck` → `npm run build` → Docker Compose → `.\scripts\release.ps1 v2.12.1`.
 
 ---
 

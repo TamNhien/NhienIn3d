@@ -614,3 +614,15 @@ test("v2.12.0 web co quan tri don hang san pham ton kho va nhat ky Admin", () =>
   assert.match(css, /cine-product-admin-card-v212/);
   assert.match(css, /cine-audit-row-v212/);
 });
+
+
+test("v2.12.1 san pham ton kho chon bang dropdown va chi mo mot san pham", () => {
+  const admin = readFileSync("app/quan-tri/page.tsx", "utf8");
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.match(admin, /san_pham_chon_id/);
+  assert.match(admin, /sanPhamDangChon/);
+  assert.match(admin, /Chọn sản phẩm cần chỉnh/u);
+  assert.match(admin, /sanPhamDaLoc\.map\(sp => <option/);
+  assert.match(admin, /cine-product-single-v2121/);
+  assert.match(css, /cine-product-picker-v2121/);
+});

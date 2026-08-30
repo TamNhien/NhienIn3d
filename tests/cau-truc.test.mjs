@@ -63,16 +63,16 @@ test("V2 co migration nang cap khong ghi de migration V1", () => {
   assert.equal(existsSync("apps/api/prisma/migrations/202608290002_v002_gio_hang_thanh_toan/migration.sql"), true);
 });
 
-test("version v2.12.0 dong bo root API va Web", () => {
-  assert.equal(readFileSync("VERSION", "utf8").trim(), "2.12.0");
-  assert.equal(docJson("package.json").version, "2.12.0");
-  assert.equal(docJson("apps/api/package.json").version, "2.12.0");
-  assert.equal(docJson("apps/web/package.json").version, "2.12.0");
+test("version v2.12.1 dong bo root API va Web", () => {
+  assert.equal(readFileSync("VERSION", "utf8").trim(), "2.12.1");
+  assert.equal(docJson("package.json").version, "2.12.1");
+  assert.equal(docJson("apps/api/package.json").version, "2.12.1");
+  assert.equal(docJson("apps/web/package.json").version, "2.12.1");
 });
 
-test("README co lich su phien ban tang dan den v2.12.0", () => {
+test("README co lich su phien ban tang dan den v2.12.1", () => {
   const readme = readFileSync("README.md", "utf8");
-  const viTri = ["## v1.0.0", "## v1.0.1", "## v1.0.2", "## v1.0.3", "## v1.0.4", "## v1.0.5", "## v1.0.6", "## v1.0.7", "## v2.0.0", "## v2.1.0", "## v2.1.1", "## v2.2.0", "## v2.2.1", "## v2.3.0", "## v2.4.0", "## v2.4.1", "## v2.5.0", "## v2.6.0", "## v2.6.1", "## v2.7.0", "## v2.8.0", "## v2.8.1", "## v2.8.2", "## v2.8.3", "## v2.8.4", "## v2.8.5", "## v2.8.6", "## v2.8.7", "## v2.8.8", "## v2.8.9", "## v2.9.0", "## v2.9.1", "## v2.9.2", "## v2.9.3", "## v2.9.4", "## v2.9.5", "## v2.9.6", "## v2.9.7", "## v2.9.8", "## v2.9.9", "## v2.10.0", "## v2.10.1", "## v2.10.2", "## v2.11.0", "## v2.12.0"].map(x => readme.indexOf(x));
+  const viTri = ["## v1.0.0", "## v1.0.1", "## v1.0.2", "## v1.0.3", "## v1.0.4", "## v1.0.5", "## v1.0.6", "## v1.0.7", "## v2.0.0", "## v2.1.0", "## v2.1.1", "## v2.2.0", "## v2.2.1", "## v2.3.0", "## v2.4.0", "## v2.4.1", "## v2.5.0", "## v2.6.0", "## v2.6.1", "## v2.7.0", "## v2.8.0", "## v2.8.1", "## v2.8.2", "## v2.8.3", "## v2.8.4", "## v2.8.5", "## v2.8.6", "## v2.8.7", "## v2.8.8", "## v2.8.9", "## v2.9.0", "## v2.9.1", "## v2.9.2", "## v2.9.3", "## v2.9.4", "## v2.9.5", "## v2.9.6", "## v2.9.7", "## v2.9.8", "## v2.9.9", "## v2.10.0", "## v2.10.1", "## v2.10.2", "## v2.11.0", "## v2.12.0", "## v2.12.1"].map(x => readme.indexOf(x));
   assert.ok(viTri.every(x => x >= 0));
   assert.deepEqual([...viTri].sort((a,b)=>a-b), viTri);
 });
@@ -690,4 +690,17 @@ test("v2.12.0 quan tri don hang san pham ton kho va audit Admin", () => {
   assert.match(css, /cine-order-admin-grid-v212/);
   assert.match(css, /cine-variant-table-v212/);
   assert.match(css, /cine-audit-list-v212/);
+});
+
+
+test("v2.12.1 san pham quan tri dung danh sach xo xuong mot san pham", () => {
+  const admin = readFileSync("apps/web/app/quan-tri/page.tsx", "utf8");
+  const css = readFileSync("apps/web/app/globals.css", "utf8");
+  assert.match(admin, /san_pham_chon_id/);
+  assert.match(admin, /sanPhamDangChon/);
+  assert.match(admin, /<span>Chọn sản phẩm<\/span><select/u);
+  assert.match(admin, /Chọn sản phẩm cần chỉnh/u);
+  assert.match(admin, /Không có sản phẩm phù hợp bộ lọc/u);
+  assert.match(css, /v2\.12\.1 - quản trị sản phẩm chọn bằng danh sách xổ xuống/u);
+  assert.match(css, /cine-product-picker-v2121/);
 });
