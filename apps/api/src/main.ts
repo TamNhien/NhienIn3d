@@ -27,7 +27,7 @@ async function khoi_dong() {
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
   app.enableShutdownHooks();
 
-  const cau_hinh_openapi = new DocumentBuilder().setTitle("NhienIn3d API").setDescription("API v2.10.0 cho cửa hàng sản phẩm in 3D NhienIn3d").setVersion("2.10.0").addCookieAuth("nhienin3d_phien").build();
+  const cau_hinh_openapi = new DocumentBuilder().setTitle("NhienIn3d API").setDescription("API v2.10.1 cho cửa hàng sản phẩm in 3D NhienIn3d").setVersion("2.10.1").addCookieAuth("nhienin3d_phien").build();
   const tai_lieu = SwaggerModule.createDocument(app, cau_hinh_openapi);
   SwaggerModule.setup("tai-lieu", app, tai_lieu);
 

@@ -63,16 +63,16 @@ test("V2 co migration nang cap khong ghi de migration V1", () => {
   assert.equal(existsSync("apps/api/prisma/migrations/202608290002_v002_gio_hang_thanh_toan/migration.sql"), true);
 });
 
-test("version v2.10.0 dong bo root API va Web", () => {
-  assert.equal(readFileSync("VERSION", "utf8").trim(), "2.10.0");
-  assert.equal(docJson("package.json").version, "2.10.0");
-  assert.equal(docJson("apps/api/package.json").version, "2.10.0");
-  assert.equal(docJson("apps/web/package.json").version, "2.10.0");
+test("version v2.10.1 dong bo root API va Web", () => {
+  assert.equal(readFileSync("VERSION", "utf8").trim(), "2.10.1");
+  assert.equal(docJson("package.json").version, "2.10.1");
+  assert.equal(docJson("apps/api/package.json").version, "2.10.1");
+  assert.equal(docJson("apps/web/package.json").version, "2.10.1");
 });
 
-test("README co lich su phien ban tang dan den v2.10.0", () => {
+test("README co lich su phien ban tang dan den v2.10.1", () => {
   const readme = readFileSync("README.md", "utf8");
-  const viTri = ["## v1.0.0", "## v1.0.1", "## v1.0.2", "## v1.0.3", "## v1.0.4", "## v1.0.5", "## v1.0.6", "## v1.0.7", "## v2.0.0", "## v2.1.0", "## v2.1.1", "## v2.2.0", "## v2.2.1", "## v2.3.0", "## v2.4.0", "## v2.4.1", "## v2.5.0", "## v2.6.0", "## v2.6.1", "## v2.7.0", "## v2.8.0", "## v2.8.1", "## v2.8.2", "## v2.8.3", "## v2.8.4", "## v2.8.5", "## v2.8.6", "## v2.8.7", "## v2.8.8", "## v2.8.9", "## v2.9.0", "## v2.9.1", "## v2.9.2", "## v2.9.3", "## v2.9.4", "## v2.9.5", "## v2.9.6", "## v2.9.7", "## v2.9.8", "## v2.9.9", "## v2.10.0"].map(x => readme.indexOf(x));
+  const viTri = ["## v1.0.0", "## v1.0.1", "## v1.0.2", "## v1.0.3", "## v1.0.4", "## v1.0.5", "## v1.0.6", "## v1.0.7", "## v2.0.0", "## v2.1.0", "## v2.1.1", "## v2.2.0", "## v2.2.1", "## v2.3.0", "## v2.4.0", "## v2.4.1", "## v2.5.0", "## v2.6.0", "## v2.6.1", "## v2.7.0", "## v2.8.0", "## v2.8.1", "## v2.8.2", "## v2.8.3", "## v2.8.4", "## v2.8.5", "## v2.8.6", "## v2.8.7", "## v2.8.8", "## v2.8.9", "## v2.9.0", "## v2.9.1", "## v2.9.2", "## v2.9.3", "## v2.9.4", "## v2.9.5", "## v2.9.6", "## v2.9.7", "## v2.9.8", "## v2.9.9", "## v2.10.0", "## v2.10.1"].map(x => readme.indexOf(x));
   assert.ok(viTri.every(x => x >= 0));
   assert.deepEqual([...viTri].sort((a,b)=>a-b), viTri);
 });
@@ -373,7 +373,7 @@ test("v2.9.1 anh mac dinh admin first kich hoat va logout ben vung", () => {
   assert.match(imageRoute, /clipPath/);
   assert.match(imageRoute, /feFlood/);
   assert.match(admin, /Kích hoạt/u);
-  assert.match(admin, /cine-user-actions/u);
+  assert.match(admin, /cine-customer-actions/u);
   assert.match(admin, />Xóa<\/button>/u);
   assert.match(adminService, /ADMIN:\s*0/);
   assert.match(auth, /thu_hoi_tat_ca_phien/);
@@ -398,7 +398,7 @@ test("v2.8.9 bao ve super admin va polish bo cuc tai khoan", () => {
   const adminWeb = readFileSync("apps/web/app/quan-tri/page.tsx", "utf8");
   const adminApi = readFileSync("apps/api/src/quan-tri/quan-tri.service.ts", "utf8");
   const css = readFileSync("apps/web/app/globals.css", "utf8");
-  assert.match(adminWeb, /admin-protected-badge/u);
+  assert.match(adminWeb, /Tài khoản khách hàng/u);
   assert.doesNotMatch(adminWeb, /Bảo vệ/u);
   assert.match(adminApi, /Không thể tự khóa/u);
   assert.doesNotMatch(adminApi, /Siêu quản trị/u);
@@ -436,7 +436,7 @@ test("v2.9.0 bo cuc tai khoan va quan tri compact theo CineBooking", () => {
   assert.match(account, /cine-profile-shell/);
   assert.match(account, /Tài khoản của tôi/u);
   assert.match(admin, /cine-admin-tabs/);
-  assert.match(admin, /cine-user-card/);
+  assert.match(admin, /cine-customer-card/);
   assert.match(login, /cine-auth-card/);
   assert.match(register, /cine-auth-card-register/);
   assert.match(reset, /cine-auth-card/);
@@ -548,8 +548,8 @@ test("v2.9.7 trang thai nhan vien luu PostgreSQL va form bo panel phan quyen", (
 test("v2.9.8 vai tro Admin va Nhan vien co dinh khong con mui ten dropdown", () => {
   const admin = readFileSync("apps/web/app/quan-tri/page.tsx", "utf8");
   const dto = readFileSync("apps/api/src/quan-tri/dto/cap-nhat-nguoi-dung.dto.ts", "utf8");
-  assert.match(admin, /cine-user-role-static/);
-  assert.match(admin, /Admin · Toàn quyền/u);
+  assert.match(admin, /Nhân viên bán hàng/u);
+  assert.match(admin, /Khách hàng/u);
   assert.doesNotMatch(admin, /<select value=\{u\.vai_tro\}/);
   assert.doesNotMatch(admin, /doiVaiTro/);
   assert.doesNotMatch(dto, /vai_tro/);
@@ -600,4 +600,27 @@ test("v2.10.0 cho sua xoa ca va phan ca da xep, bo STAFF OPERATIONS", () => {
   assert.match(admin, /Hủy chỉnh sửa/u);
   assert.match(lib, /ca-lam\/\$\{id\}\/xoa[\s\S]*method: "POST"/);
   assert.match(lib, /phan-ca\/\$\{id\}\/xoa[\s\S]*method: "POST"/);
+});
+
+
+test("v2.10.1 tach khach hang, sua thong tin va luu ca phan ca bang POST", () => {
+  const controller = readFileSync("apps/api/src/quan-tri/quan-tri.controller.ts", "utf8");
+  const service = readFileSync("apps/api/src/quan-tri/quan-tri.service.ts", "utf8");
+  const dto = readFileSync("apps/api/src/quan-tri/dto/cap-nhat-nguoi-dung.dto.ts", "utf8");
+  const admin = readFileSync("apps/web/app/quan-tri/page.tsx", "utf8");
+  const lib = readFileSync("apps/web/lib/quan-tri.ts", "utf8");
+  const footer = readFileSync("apps/web/components/chan-trang.tsx", "utf8");
+  assert.match(controller, /@Post\("nguoi-dung\/:id\/cap-nhat"\)/);
+  assert.match(controller, /@Post\("ca-lam\/:id\/cap-nhat"\)/);
+  assert.match(controller, /@Post\("phan-ca\/:id\/cap-nhat"\)/);
+  assert.match(dto, /thu_dien_tu/);
+  assert.match(dto, /dia_chi_mac_dinh/);
+  assert.match(service, /Email này đã được sử dụng/u);
+  assert.match(admin, /Tài khoản khách hàng/u);
+  assert.match(admin, /suaKhachHangLocal/);
+  assert.doesNotMatch(admin, /tab === "nguoi-dung"/);
+  assert.match(lib, /nguoi-dung\/\$\{id\}\/cap-nhat[\s\S]*method: "POST"/);
+  assert.match(lib, /ca-lam\/\$\{id\}\/cap-nhat[\s\S]*method: "POST"/);
+  assert.match(lib, /phan-ca\/\$\{id\}\/cap-nhat[\s\S]*method: "POST"/);
+  assert.doesNotMatch(footer, /Sản phẩm in 3D theo yêu cầu với cấu hình mua hàng mặc định/u);
 });

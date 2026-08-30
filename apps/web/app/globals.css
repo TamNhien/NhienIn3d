@@ -489,3 +489,21 @@ footer{border-top:1px solid var(--line);max-width:1240px;margin:auto;padding:30p
   .cine-schedule-row{grid-template-columns:6px 1fr}
   .cine-schedule-actions{grid-column:2;justify-self:start}
 }
+
+
+/* v2.10.1 - tách khách hàng/nhân viên, form khách hàng editable và lưu ca/phân ca qua POST ổn định. */
+.cine-customer-list{display:grid;gap:14px}
+.cine-customer-card{border:1px solid var(--border);border-radius:18px;background:rgba(9,16,29,.84);padding:18px;display:grid;gap:16px}
+.cine-customer-card-head{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.cine-customer-card-head>div{display:grid;gap:4px}
+.cine-customer-card-head b{font-size:18px}
+.cine-customer-card-head span{color:var(--muted)}
+.cine-customer-form-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.cine-customer-form-grid label{display:grid;gap:7px}
+.cine-customer-form-grid label>span{font-size:14px;font-weight:800;color:#cbd5e1}
+.cine-customer-form-grid input{min-height:50px;border-radius:12px;border:1px solid var(--border);background:#0b1322;color:#f8fafc;padding:0 14px;font-size:16px}
+.cine-customer-address{grid-column:1/-1}
+.cine-customer-actions{display:flex;flex-wrap:wrap;gap:10px}
+@media(max-width:900px){.cine-customer-form-grid{grid-template-columns:1fr}.cine-customer-address{grid-column:auto}.cine-customer-card-head{align-items:flex-start;flex-direction:column}}
+
+.cine-staff-row-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}

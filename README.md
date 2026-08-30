@@ -1,6 +1,6 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v2.10.0** — 30/08/2026
+> Phiên bản hiện tại: **v2.10.1** — 30/08/2026
 
 NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **frontend Next.js** và **backend NestJS/Fastify** kết nối **PostgreSQL qua Prisma**.
 
@@ -19,7 +19,7 @@ NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **fro
 
 ## Giao diện dựng lại theo bố cục CineBooking Pro
 
-Bản source v2.10.0 tiếp tục dùng **frontend layout** theo cấu trúc CineBooking Pro, giữ nguyên nghiệp vụ NhienIn3d và làm lại đồng bộ các màn hình tài khoản/quản trị:
+Bản source v2.10.1 tiếp tục dùng **frontend layout** theo cấu trúc CineBooking Pro, giữ nguyên nghiệp vụ NhienIn3d và làm lại đồng bộ các màn hình tài khoản/quản trị:
 
 - Dùng `RootLayout` chung với **header sticky**, vùng nội dung `max-w-7xl`, **footer dùng chung** và menu drawer responsive; không còn lặp navbar ở từng route.
 - Bổ sung **Tailwind CSS 4 + `@tailwindcss/postcss`** giống lớp công nghệ frontend tham chiếu, đồng thời giữ toàn bộ CSS/logic nghiệp vụ cũ để tránh phá luồng sản phẩm, giỏ hàng, tài khoản và quản trị.
@@ -30,6 +30,7 @@ Bản source v2.10.0 tiếp tục dùng **frontend layout** theo cấu trúc Cin
 ## Điểm chính bản hiện tại
 
 - v2.10.0 cho phép **chỉnh sửa/xóa phân ca đã xếp** ngay trên lịch: đổi nhân viên, ngày làm, mẫu ca, ghi chú; mỗi dòng lịch có nút **Chỉnh sửa** và **Xóa**.
+- v2.10.1 tách **Khách hàng** và **Nhân viên bán hàng** thành hai khu quản trị riêng; khách hàng được sửa họ tên/email/SĐT/địa chỉ, đồng thời ca làm và phân ca chuyển sang endpoint POST cập nhật ổn định và xác minh lại PostgreSQL sau khi lưu.
 - Mẫu ca đã có phân công vẫn **chỉnh sửa được**; tên/giờ/màu mới áp dụng tức thời cho các phân ca đang tham chiếu. Xóa mẫu ca sẽ xóa kèm các phân ca liên quan trong transaction.
 - Các thao tác xóa mẫu ca/phân ca trên web dùng endpoint `POST .../:id/xoa` có JSON body để ổn định với Fastify/proxy; endpoint `DELETE` vẫn giữ cho tương thích API.
 - Đã bỏ nhãn **STAFF OPERATIONS** khỏi cả màn hình Ca làm và Xếp ca.
@@ -739,6 +740,19 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 - Mỗi mẫu ca hiển thị số phân công đang sử dụng để Admin biết phạm vi ảnh hưởng trước khi chỉnh/xóa.
 - Không có migration mới; dữ liệu vận hành hiện tại được giữ nguyên.
 - Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm test` → `npm run typecheck` → `npm run build` → Docker Compose → `.\scripts\release.ps1 v2.10.0`.
+
+## v2.10.1 — 30/08/2026
+
+- Tách danh sách **Tài khoản khách hàng** khỏi **Nhân viên bán hàng**. Admin không còn quản lý hai loại tài khoản trong một danh sách chung.
+- Thêm form chỉnh sửa khách hàng trực tiếp trong Admin: họ tên, email đăng nhập, số điện thoại và địa chỉ mặc định; backend kiểm tra trùng email và đọc lại dữ liệu PostgreSQL sau khi commit.
+- Thêm endpoint ổn định `POST /api/v1/quan-tri/nguoi-dung/:id/cap-nhat`; endpoint PATCH cũ vẫn giữ để tương thích.
+- Sửa lưu **Ca làm** bằng `POST /api/v1/quan-tri/ca-lam/:id/cap-nhat`, sau đó frontend GET `no-store` để xác nhận mã/tên/giờ/màu vừa lưu trước khi báo thành công.
+- Sửa lưu **Phân ca đã xếp** bằng `POST /api/v1/quan-tri/phan-ca/:id/cap-nhat`, sau đó frontend đọc lại PostgreSQL và xác minh nhân viên/ngày/ca/ghi chú.
+- Giữ endpoint PATCH cũ cho ca và phân ca để tương thích API, nhưng giao diện quản trị mặc định dùng POST nhằm tránh lỗi proxy/Fastify từng gặp với request cập nhật.
+- Bỏ dòng mô tả `Sản phẩm in 3D theo yêu cầu với cấu hình mua hàng mặc định.` nằm ngay dưới logo NhienIn3d ở footer.
+- Không có migration database mới.
+- Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm test` → `npm run typecheck` → `npm run build` → Docker Compose → `.\scripts\release.ps1 v2.10.1`.
+
 
 ---
 

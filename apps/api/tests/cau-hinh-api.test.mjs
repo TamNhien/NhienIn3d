@@ -64,11 +64,11 @@ test("seed v2.9.9 giu 23 bang va cho phep du lieu van hanh bi xoa", () => {
 });
 
 
-test("API hien thi dung version v2.10.0 o health va OpenAPI", () => {
+test("API hien thi dung version v2.10.1 o health va OpenAPI", () => {
   const health = readFileSync("src/suc-khoe/suc-khoe.controller.ts", "utf8");
   const main = readFileSync("src/main.ts", "utf8");
-  assert.match(health, /phien_ban: "v2\.10\.0"/);
-  assert.match(main, /setVersion\("2\.10\.0"\)/);
+  assert.match(health, /phien_ban: "v2\.10\.1"/);
+  assert.match(main, /setVersion\("2\.10\.1"\)/);
 });
 
 test("V2 co migration gio hang, thanh toan va dia chi", () => {
@@ -449,4 +449,19 @@ test("v2.10.0 API cho sua xoa phan ca da xep va xoa ca bang POST alias", () => {
   assert.match(service, /ngay_lam = dto\.ngay_lam/);
   assert.match(dto, /@IsOptional\(\) @IsUUID\(\) nhan_vien_id/);
   assert.match(dto, /@IsOptional\(\) @IsUUID\(\) ca_lam_viec_id/);
+});
+
+
+test("v2.10.1 API cap nhat khach hang va POST alias cho ca phan ca", () => {
+  const controller = readFileSync("src/quan-tri/quan-tri.controller.ts", "utf8");
+  const service = readFileSync("src/quan-tri/quan-tri.service.ts", "utf8");
+  const dto = readFileSync("src/quan-tri/dto/cap-nhat-nguoi-dung.dto.ts", "utf8");
+  assert.match(controller, /@Post\("nguoi-dung\/:id\/cap-nhat"\)/);
+  assert.match(controller, /@Post\("ca-lam\/:id\/cap-nhat"\)/);
+  assert.match(controller, /@Post\("phan-ca\/:id\/cap-nhat"\)/);
+  assert.match(dto, /@IsOptional\(\) @IsEmail\(\).*thu_dien_tu/);
+  assert.match(dto, /dia_chi_mac_dinh/);
+  assert.match(service, /diaChiNguoiDung\.update/);
+  assert.match(service, /da_doc_lai_sau_commit: true/);
+  assert.match(service, /phanCa\.findUniqueOrThrow/);
 });

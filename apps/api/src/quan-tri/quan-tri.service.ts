@@ -16,10 +16,16 @@ export class QuanTriService {
   constructor(private readonly db: CoSoDuLieuService) {}
 
   async tong_quan() {
-    const [nguoi_dung, nhan_vien, ca_lam_viec, phan_ca, don_hang, san_pham] = await Promise.all([
-      this.db.nguoiDung.count(), this.db.nhanVien.count(), this.db.caLamViec.count(), this.db.phanCa.count(), this.db.donHang.count(), this.db.sanPham.count()
+    const [nguoi_dung, khach_hang, nhan_vien, ca_lam_viec, phan_ca, don_hang, san_pham] = await Promise.all([
+      this.db.nguoiDung.count(),
+      this.db.nguoiDung.count({ where: { vai_tro: VaiTro.KHACH_HANG } }),
+      this.db.nhanVien.count(),
+      this.db.caLamViec.count(),
+      this.db.phanCa.count(),
+      this.db.donHang.count(),
+      this.db.sanPham.count()
     ]);
-    return { nguoi_dung, nhan_vien, ca_lam_viec, phan_ca, don_hang, san_pham };
+    return { nguoi_dung, khach_hang, nhan_vien, ca_lam_viec, phan_ca, don_hang, san_pham };
   }
 
   async danh_sach_nguoi_dung() {
@@ -27,32 +33,47 @@ export class QuanTriService {
       select: {
         id: true, thu_dien_tu: true, ho_ten: true, so_dien_thoai: true, vai_tro: true, da_kich_hoat: true,
         ngay_tao: true, lan_dang_nhap_cuoi: true,
+        dia_chi: {
+          where: { la_mac_dinh: true },
+          orderBy: { ngay_cap_nhat: "desc" },
+          take: 1,
+          select: { dia_chi_cu_the: true }
+        },
         nhan_vien: { select: { id: true, ma_nhan_vien: true, chuc_danh: true, bo_phan: true, trang_thai: true } }
       }
     });
     const thu_tu: Record<VaiTro, number> = {
       ADMIN: 0, NHAN_VIEN: 1, KHACH_HANG: 2
     };
-    return ds.sort((a, b) => thu_tu[a.vai_tro] - thu_tu[b.vai_tro] || a.ho_ten.localeCompare(b.ho_ten, "vi"));
+    return ds
+      .map(({ dia_chi, ...item }) => ({ ...item, dia_chi_mac_dinh: dia_chi[0]?.dia_chi_cu_the || "" }))
+      .sort((a, b) => thu_tu[a.vai_tro] - thu_tu[b.vai_tro] || a.ho_ten.localeCompare(b.ho_ten, "vi"));
   }
 
   async cap_nhat_nguoi_dung(actor: NguoiDungXacThuc, id: string, dto: CapNhatNguoiDungDto) {
-    const target = await this.db.nguoiDung.findUnique({ where: { id }, select: { id: true } });
+    const target = await this.db.nguoiDung.findUnique({ where: { id }, select: { id: true, vai_tro: true, thu_dien_tu: true } });
     if (!target) throw new NotFoundException("Không tìm thấy người dùng");
 
-    // Vai trò được cố định theo luồng tạo tài khoản: Admin bootstrap, đăng ký = khách hàng,
-    // tạo nhân viên = Nhân viên bán hàng. PATCH người dùng không còn được đổi vai trò.
+    // PATCH người dùng không còn được đổi vai trò; POST cập nhật cũng giữ nguyên quy tắc này.
+    // Admin chỉ chỉnh thông tin tài khoản, không đổi khách hàng thành nhân viên hoặc Admin.
     if (actor.id === id && dto.da_kich_hoat === false) {
       throw new BadRequestException("Không thể tự khóa tài khoản Admin đang đăng nhập");
     }
 
     const data: {
+      thu_dien_tu?: string;
       ho_ten?: string;
       so_dien_thoai?: string | null;
       da_kich_hoat?: boolean;
       so_lan_dang_nhap_that_bai?: number;
       khoa_den?: Date | null;
     } = {};
+    if (dto.thu_dien_tu !== undefined) {
+      const email = dto.thu_dien_tu.trim().toLowerCase();
+      const da_co = await this.db.nguoiDung.findFirst({ where: { thu_dien_tu: email, id: { not: id } }, select: { id: true } });
+      if (da_co) throw new ConflictException("Email này đã được sử dụng bởi tài khoản khác");
+      data.thu_dien_tu = email;
+    }
     if (dto.ho_ten !== undefined) data.ho_ten = dto.ho_ten.trim();
     if (dto.so_dien_thoai !== undefined) data.so_dien_thoai = dto.so_dien_thoai.trim() || null;
     if (dto.da_kich_hoat !== undefined) {
@@ -62,25 +83,68 @@ export class QuanTriService {
         data.khoa_den = null;
       }
     }
+    const dia_chi = dto.dia_chi_mac_dinh !== undefined ? dto.dia_chi_mac_dinh.trim() : undefined;
+    if (!Object.keys(data).length && dia_chi === undefined) throw new BadRequestException("Không có thông tin nào để cập nhật");
 
-    const da_cap_nhat = await this.db.$transaction(async tx => {
+    await this.db.$transaction(async tx => {
       const updated = await tx.nguoiDung.update({ where: { id }, data });
       if (dto.da_kich_hoat === false) {
-        await tx.phienDangNhap.updateMany({
-          where: { nguoi_dung_id: id, da_thu_hoi: false },
-          data: { da_thu_hoi: true }
-        });
+        await tx.phienDangNhap.updateMany({ where: { nguoi_dung_id: id, da_thu_hoi: false }, data: { da_thu_hoi: true } });
       }
-      return updated;
+      if (dia_chi !== undefined) {
+        const hien_tai = await tx.diaChiNguoiDung.findFirst({
+          where: { nguoi_dung_id: id, la_mac_dinh: true },
+          orderBy: [{ ngay_cap_nhat: "desc" }, { ngay_tao: "desc" }]
+        });
+        if (hien_tai) {
+          await tx.diaChiNguoiDung.update({
+            where: { id: hien_tai.id },
+            data: {
+              dia_chi_cu_the: dia_chi,
+              ten_nguoi_nhan: updated.ho_ten,
+              so_dien_thoai: updated.so_dien_thoai || hien_tai.so_dien_thoai || "Chưa cập nhật",
+              la_mac_dinh: true
+            }
+          });
+          await tx.diaChiNguoiDung.updateMany({
+            where: { nguoi_dung_id: id, id: { not: hien_tai.id }, la_mac_dinh: true },
+            data: { la_mac_dinh: false }
+          });
+        } else if (dia_chi) {
+          await tx.diaChiNguoiDung.create({
+            data: {
+              nguoi_dung_id: id,
+              ten_nguoi_nhan: updated.ho_ten,
+              so_dien_thoai: updated.so_dien_thoai || "Chưa cập nhật",
+              tinh_thanh: "",
+              quan_huyen: "",
+              phuong_xa: "",
+              dia_chi_cu_the: dia_chi,
+              la_mac_dinh: true
+            }
+          });
+        }
+      }
+    });
+
+    const da_cap_nhat = await this.db.nguoiDung.findUniqueOrThrow({
+      where: { id },
+      select: {
+        id: true, thu_dien_tu: true, ho_ten: true, so_dien_thoai: true, vai_tro: true, da_kich_hoat: true,
+        ngay_tao: true, lan_dang_nhap_cuoi: true,
+        dia_chi: { where: { la_mac_dinh: true }, orderBy: { ngay_cap_nhat: "desc" }, take: 1, select: { dia_chi_cu_the: true } },
+        nhan_vien: { select: { id: true, ma_nhan_vien: true, chuc_danh: true, bo_phan: true, trang_thai: true } }
+      }
     });
     await this.db.nhatKyBaoMat.create({
       data: {
         loai_su_kien: dto.da_kich_hoat === true ? "ADMIN_KICH_HOAT_NGUOI_DUNG" : dto.da_kich_hoat === false ? "ADMIN_KHOA_NGUOI_DUNG" : "ADMIN_CAP_NHAT_NGUOI_DUNG",
         nguoi_dung_id: actor.id,
-        chi_tiet: { muc_tieu_id: id, truong_cap_nhat: Object.keys(data) }
+        chi_tiet: { muc_tieu_id: id, truong_cap_nhat: [...Object.keys(data), ...(dia_chi !== undefined ? ["dia_chi_mac_dinh"] : [])], email_cu: target.thu_dien_tu }
       }
     });
-    return { id: da_cap_nhat.id, ho_ten: da_cap_nhat.ho_ten, thu_dien_tu: da_cap_nhat.thu_dien_tu, so_dien_thoai: da_cap_nhat.so_dien_thoai, vai_tro: da_cap_nhat.vai_tro, da_kich_hoat: da_cap_nhat.da_kich_hoat };
+    const { dia_chi: dia_chi_ds, ...user } = da_cap_nhat;
+    return { ...user, dia_chi_mac_dinh: dia_chi_ds[0]?.dia_chi_cu_the || "" };
   }
 
   async kich_hoat_nguoi_dung(actor: NguoiDungXacThuc, id: string) {
@@ -300,7 +364,7 @@ export class QuanTriService {
 
     // Không chặn chỉnh sửa mẫu ca khi đã có phân công. PhanCa giữ khóa ngoại tới
     // cùng ca_lam_viec_id nên tên/giờ/màu mới tự động áp dụng cho toàn bộ lịch đã xếp.
-    const [da_cap_nhat, so_phan_ca_bi_anh_huong] = await this.db.$transaction([
+    const [, so_phan_ca_bi_anh_huong] = await this.db.$transaction([
       this.db.caLamViec.update({
         where: { id },
         data: {
@@ -314,7 +378,8 @@ export class QuanTriService {
       }),
       this.db.phanCa.count({ where: { ca_lam_viec_id: id } })
     ]);
-    return { ...da_cap_nhat, so_phan_ca_bi_anh_huong };
+    const da_cap_nhat = await this.db.caLamViec.findUniqueOrThrow({ where: { id } });
+    return { ...da_cap_nhat, so_phan_ca_bi_anh_huong, da_doc_lai_sau_commit: true };
   }
 
   async xoa_ca(id: string) {
@@ -390,7 +455,7 @@ export class QuanTriService {
     });
     if (trung) throw new ConflictException("Nhân viên đã được xếp ca này trong ngày đã chọn");
 
-    return this.db.phanCa.update({
+    await this.db.phanCa.update({
       where: { id },
       data: {
         nhan_vien_id,
@@ -398,7 +463,10 @@ export class QuanTriService {
         ngay_lam,
         trang_thai: dto.trang_thai as TrangThaiPhanCa | undefined,
         ghi_chu: dto.ghi_chu !== undefined ? dto.ghi_chu.trim() || null : undefined
-      },
+      }
+    });
+    return this.db.phanCa.findUniqueOrThrow({
+      where: { id },
       include: {
         nhan_vien: { include: { nguoi_dung: { select: { ho_ten: true, thu_dien_tu: true } } } },
         ca_lam_viec: true

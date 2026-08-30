@@ -358,7 +358,7 @@ test("v2.9.3 register phone address va mot vai tro Admin", () => {
   assert.match(register, /Số điện thoại/u);
   assert.match(register, /Địa chỉ/u);
   assert.match(account, /Địa chỉ mặc định/u);
-  assert.match(admin, /Admin · Toàn quyền/u);
+  assert.match(admin, /Admin có toàn quyền/u);
   assert.doesNotMatch(admin, /Bảo vệ/u);
   assert.doesNotMatch(auth, /SIEU_QUAN_TRI|QUAN_TRI/);
   assert.match(css, /account-panel-security/u);
@@ -393,7 +393,7 @@ test("v2.9.0 web theo CineBooking va admin co kich hoat xoa tai khoan", () => {
   assert.match(account, /cine-profile-shell/);
   assert.match(account, /Tài khoản của tôi/u);
   assert.match(admin, /cine-admin-tabs/);
-  assert.match(admin, /cine-user-card/);
+  assert.match(admin, /cine-customer-card/);
   assert.match(admin, /xoaTaiKhoan/);
   assert.match(admin, /Kích hoạt/u);
   assert.match(admin, />Xóa<\/button>/u);
@@ -510,13 +510,13 @@ test("v2.9.8 vai tro Admin va Nhan vien la nhan co dinh khong co dropdown", () =
   const admin = readFileSync("app/quan-tri/page.tsx", "utf8");
   const lib = readFileSync("lib/quan-tri.ts", "utf8");
   const css = readFileSync("app/globals.css", "utf8");
-  assert.match(admin, /cine-user-role-static/);
-  assert.match(admin, /Admin · Toàn quyền/u);
-  assert.match(admin, /tenVaiTro\(u\.vai_tro\)/);
+  assert.match(admin, /Tài khoản khách hàng/u);
+  assert.match(admin, /Nhân viên bán hàng/u);
+  assert.match(admin, /Admin có toàn quyền/u);
   assert.doesNotMatch(admin, /<select value=\{u\.vai_tro\}/);
   assert.doesNotMatch(admin, /doiVaiTro/);
   assert.doesNotMatch(lib, /ho_ten" \| "so_dien_thoai" \| "vai_tro"/);
-  assert.match(css, /\.cine-user-role-static\{/);
+  assert.match(css, /\.cine-customer-card\{/);
 });
 
 
@@ -530,7 +530,6 @@ test("v2.9.9 admin bo kicker va quan ly ca co chinh sua xoa", () => {
   assert.match(admin, /batDauSuaCa/);
   assert.match(admin, /xoaCa\(c\)/);
   assert.match(admin, /Hủy chỉnh sửa/u);
-  assert.match(lib, /capNhatCaLam[\s\S]*method: "PATCH"/);
   assert.match(lib, /xoaCaLam[\s\S]*method: "POST"/);
   assert.match(css, /cine-shift-template-actions/);
   assert.match(css, /cine-shift-form-actions/);
@@ -548,4 +547,22 @@ test("v2.10.0 xep ca cho sua xoa va bo STAFF OPERATIONS", () => {
   assert.match(lib, /xoaCaLam[\s\S]*ca-lam\/\$\{id\}\/xoa[\s\S]*method: "POST"/);
   assert.match(lib, /xoaPhanCa[\s\S]*phan-ca\/\$\{id\}\/xoa[\s\S]*method: "POST"/);
   assert.match(css, /cine-schedule-actions/);
+});
+
+
+test("v2.10.1 tach khach hang va luu cap nhat bang POST", () => {
+  const admin = readFileSync("app/quan-tri/page.tsx", "utf8");
+  const lib = readFileSync("lib/quan-tri.ts", "utf8");
+  const footer = readFileSync("components/chan-trang.tsx", "utf8");
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.match(admin, /Tài khoản khách hàng/u);
+  assert.match(admin, /khachHang = useMemo/);
+  assert.match(admin, /Lưu thông tin/u);
+  assert.match(admin, /PostgreSQL chưa xác nhận thay đổi ca làm việc/u);
+  assert.match(admin, /PostgreSQL chưa xác nhận thay đổi phân ca/u);
+  assert.match(lib, /capNhatNguoiDung[\s\S]*method: "POST"/);
+  assert.match(lib, /capNhatCaLam[\s\S]*method: "POST"/);
+  assert.match(lib, /capNhatPhanCa[\s\S]*method: "POST"/);
+  assert.doesNotMatch(footer, /Sản phẩm in 3D theo yêu cầu với cấu hình mua hàng mặc định/u);
+  assert.match(css, /cine-customer-form-grid/);
 });

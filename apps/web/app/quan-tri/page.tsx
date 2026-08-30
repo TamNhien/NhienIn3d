@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { danhGiaMatKhau, TruongMatKhau } from "../../components/truong-mat-khau";
-import { layTaiKhoan, TaiKhoan, tenVaiTro } from "../../lib/xac-thuc";
+import { layTaiKhoan, TaiKhoan } from "../../lib/xac-thuc";
 import {
   AdminNhanVien,
   AdminNguoiDung,
   CaLam,
   capNhatCaLam,
+  capNhatNguoiDung,
   capNhatNhanVien,
   capNhatPhanCa,
   kichHoatNguoiDung,
@@ -36,7 +37,7 @@ const sauNgay = (so_ngay: number) => {
 const ngayTuIso = (gia_tri: string) => gia_tri.slice(0, 10);
 const dinhDangNgay = (gia_tri: string) => new Intl.DateTimeFormat("vi-VN", { dateStyle: "full" }).format(new Date(`${ngayTuIso(gia_tri)}T00:00:00`));
 
-type TabQuanTri = "nguoi-dung" | "nhan-vien" | "tao-nhan-vien" | "ca-lam" | "xep-ca";
+type TabQuanTri = "khach-hang" | "nhan-vien" | "tao-nhan-vien" | "ca-lam" | "xep-ca";
 
 export default function QuanTriPage() {
   const [tai_khoan, setTaiKhoan] = useState<TaiKhoan | null | undefined>(undefined);
@@ -46,7 +47,7 @@ export default function QuanTriPage() {
   const [ca_lam, setCaLam] = useState<CaLam[]>([]);
   const [phan_ca, setPhanCa] = useState<PhanCa[]>([]);
   const [thong_bao, setThongBao] = useState("");
-  const [tab, setTab] = useState<TabQuanTri>("nguoi-dung");
+  const [tab, setTab] = useState<TabQuanTri>("khach-hang");
   const [dang_xu_ly, setDangXuLy] = useState<string | null>(null);
   const [tu_ngay, setTuNgay] = useState(homNay());
   const [den_ngay, setDenNgay] = useState(sauNgay(14));
@@ -71,6 +72,37 @@ export default function QuanTriPage() {
   }, []);
 
   useEffect(() => { taiDuLieu().catch(e => setThongBao(e instanceof Error ? e.message : "Không thể tải dữ liệu quản trị")); }, [taiDuLieu]);
+
+  function suaKhachHangLocal(id: string, patch: Partial<AdminNguoiDung>) {
+    setNguoiDung(ds => ds.map(x => x.id === id ? { ...x, ...patch } : x));
+  }
+
+  async function luuKhachHang(user: AdminNguoiDung) {
+    setDangXuLy(`kh-${user.id}`);
+    setThongBao("");
+    try {
+      const payload = {
+        thu_dien_tu: user.thu_dien_tu.trim(),
+        ho_ten: user.ho_ten.trim(),
+        so_dien_thoai: user.so_dien_thoai?.trim() || "",
+        dia_chi_mac_dinh: user.dia_chi_mac_dinh?.trim() || ""
+      };
+      const da_luu = await capNhatNguoiDung(user.id, payload);
+      setNguoiDung(ds => ds.map(x => x.id === user.id ? { ...x, ...da_luu } : x));
+      const ds_moi = await layNguoiDung();
+      const xac_nhan = ds_moi.find(x => x.id === user.id);
+      if (!xac_nhan || xac_nhan.thu_dien_tu !== payload.thu_dien_tu.toLowerCase() || xac_nhan.ho_ten !== payload.ho_ten || (xac_nhan.so_dien_thoai || "") !== payload.so_dien_thoai || (xac_nhan.dia_chi_mac_dinh || "") !== payload.dia_chi_mac_dinh) {
+        throw new Error("PostgreSQL chưa xác nhận đầy đủ thông tin khách hàng vừa lưu.");
+      }
+      setNguoiDung(ds_moi);
+      setThongBao(`Đã lưu thông tin khách hàng ${xac_nhan.ho_ten}. F5 vẫn giữ dữ liệu mới.`);
+    } catch (e) {
+      setThongBao(e instanceof Error ? e.message : "Không thể cập nhật khách hàng");
+      await layNguoiDung().then(setNguoiDung).catch(() => undefined);
+    } finally {
+      setDangXuLy(null);
+    }
+  }
 
   async function doiTrangThai(user: AdminNguoiDung) {
     setDangXuLy(user.id); setThongBao("");
@@ -178,14 +210,22 @@ export default function QuanTriPage() {
     setThongBao("");
     try {
       if (ca_dang_sua_id) {
-        await capNhatCaLam(ca_dang_sua_id, ca);
-        setThongBao("Đã lưu thay đổi ca làm việc.");
+        const id_dang_sua = ca_dang_sua_id;
+        await capNhatCaLam(id_dang_sua, ca);
+        const ds_ca = await layCaLam();
+        const xac_nhan = ds_ca.find(x => x.id === id_dang_sua);
+        if (!xac_nhan || xac_nhan.ma_ca !== ca.ma_ca.trim().toUpperCase() || xac_nhan.ten_ca !== ca.ten_ca.trim() || xac_nhan.gio_bat_dau !== ca.gio_bat_dau || xac_nhan.gio_ket_thuc !== ca.gio_ket_thuc || (xac_nhan.mau_hien_thi || "").toUpperCase() !== ca.mau_hien_thi.toUpperCase()) {
+          throw new Error("PostgreSQL chưa xác nhận thay đổi ca làm việc vừa lưu.");
+        }
+        setCaLam(ds_ca);
+        setPhanCa(await layPhanCa());
+        setThongBao(`Đã lưu ${xac_nhan.ma_ca} · ${xac_nhan.ten_ca} (${xac_nhan.gio_bat_dau}–${xac_nhan.gio_ket_thuc}).`);
       } else {
         await taoCaLam(ca);
         setThongBao("Đã tạo ca làm việc.");
+        setCaLam(await layCaLam());
       }
       datLaiFormCa();
-      await taiDuLieu();
     } catch (err) {
       setThongBao(err instanceof Error ? err.message : ca_dang_sua_id ? "Không thể cập nhật ca" : "Không thể tạo ca");
     } finally {
@@ -237,14 +277,21 @@ export default function QuanTriPage() {
     setThongBao("");
     try {
       if (pc_dang_sua_id) {
-        await capNhatPhanCa(pc_dang_sua_id, pc);
-        setThongBao("Đã lưu thay đổi phân ca.");
+        const id_dang_sua = pc_dang_sua_id;
+        await capNhatPhanCa(id_dang_sua, pc);
+        const ds_pc = await layPhanCa();
+        const xac_nhan = ds_pc.find(x => x.id === id_dang_sua);
+        if (!xac_nhan || xac_nhan.nhan_vien.id !== pc.nhan_vien_id || xac_nhan.ca_lam_viec.id !== pc.ca_lam_viec_id || ngayTuIso(xac_nhan.ngay_lam) !== pc.ngay_lam || (xac_nhan.ghi_chu || "") !== pc.ghi_chu.trim()) {
+          throw new Error("PostgreSQL chưa xác nhận thay đổi phân ca vừa lưu.");
+        }
+        setPhanCa(ds_pc);
+        setThongBao(`Đã lưu phân ca ${xac_nhan.nhan_vien.ma_nhan_vien} · ${xac_nhan.ca_lam_viec.ten_ca} ngày ${new Date(`${pc.ngay_lam}T00:00:00`).toLocaleDateString("vi-VN")}.`);
       } else {
         await taoPhanCa(pc);
         setThongBao("Đã xếp ca cho nhân viên.");
+        setPhanCa(await layPhanCa());
       }
       datLaiFormPhanCa();
-      await taiDuLieu();
     } catch (err) {
       setThongBao(err instanceof Error ? err.message : pc_dang_sua_id ? "Không thể cập nhật phân ca" : "Không thể xếp ca");
     } finally {
@@ -271,8 +318,10 @@ export default function QuanTriPage() {
     return dem;
   }, [phan_ca]);
 
+  const khachHang = useMemo(() => nguoi_dung.filter(x => x.vai_tro === "KHACH_HANG"), [nguoi_dung]);
+
   const thongKe = useMemo(() => [
-    ["Người dùng", tong_quan.nguoi_dung || 0],
+    ["Khách hàng", tong_quan.khach_hang || 0],
     ["NV bán hàng", tong_quan.nhan_vien || 0],
     ["Ca làm", tong_quan.ca_lam_viec || 0],
     ["Phân ca", tong_quan.phan_ca || 0],
@@ -301,7 +350,7 @@ export default function QuanTriPage() {
   if (tai_khoan.vai_tro !== "ADMIN") return <main className="auth-shell"><section className="auth-card"><h1>Không có quyền truy cập</h1><p>Khu vực này chỉ dành cho Admin.</p><Link className="primary auth-primary-link" href="/tai-khoan">Về tài khoản</Link></section></main>;
 
   const tabs: Array<[TabQuanTri, string]> = [
-    ["nguoi-dung", "Người dùng"],
+    ["khach-hang", "Khách hàng"],
     ["nhan-vien", "Nhân viên bán hàng"],
     ["tao-nhan-vien", "Tạo nhân viên bán hàng"],
     ["ca-lam", "Ca làm"],
@@ -320,23 +369,27 @@ export default function QuanTriPage() {
 
     <nav className="cine-admin-tabs" aria-label="Chức năng quản trị">{tabs.map(([ma, ten]) => <button type="button" key={ma} className={`cine-btn ${tab === ma ? "cine-btn-primary" : "cine-btn-secondary"}`} onClick={() => setTab(ma)}>{ten}</button>)}</nav>
 
-    {tab === "nguoi-dung" && <section className="cine-card cine-admin-section">
-      <div className="cine-section-heading"><div><h2>Người dùng & quyền hệ thống</h2><p>Vai trò được cố định theo loại tài khoản. Admin có toàn quyền hệ thống; nhân viên luôn là Nhân viên bán hàng.</p></div><span>{nguoi_dung.length} tài khoản</span></div>
-      <div className="cine-user-list">
-        {nguoi_dung.map(u => {
-          const la_chinh_minh = u.id === tai_khoan.id;
-          return <article key={u.id} className={`cine-user-card ${u.vai_tro === "ADMIN" ? "is-admin" : ""}`}>
-            <div className="cine-user-identity"><b>{u.ho_ten}{u.vai_tro === "ADMIN" ? " · ADMIN" : ""}</b><span>{u.thu_dien_tu}</span><small>{u.so_dien_thoai || "Chưa có SĐT"}{u.nhan_vien ? ` · ${u.nhan_vien.ma_nhan_vien} · ${u.nhan_vien.bo_phan}` : ""}</small></div>
-            <div className="cine-user-role"><label>Vai trò</label><div className={`cine-user-role-static ${u.vai_tro === "ADMIN" ? "is-admin" : ""}`} aria-label={`Vai trò ${tenVaiTro(u.vai_tro)}`}><b>{u.vai_tro === "ADMIN" ? "Admin · Toàn quyền" : tenVaiTro(u.vai_tro)}</b></div></div>
-            <div className="cine-user-status"><span className={u.da_kich_hoat ? "status-badge active" : "status-badge locked"}>{u.da_kich_hoat ? "Đang hoạt động" : "Đã khóa"}</span></div>
-            <div className="cine-user-actions">
-              {la_chinh_minh ? <span className="admin-protected-badge">Đang đăng nhập</span> : <>
-                <button type="button" className={`cine-btn ${u.da_kich_hoat ? "cine-btn-danger" : "cine-btn-success"}`} onClick={() => doiTrangThai(u)} disabled={dang_xu_ly === u.id}>{dang_xu_ly === u.id ? "Đang xử lý…" : u.da_kich_hoat ? "Khóa" : "Kích hoạt"}</button>
-                <button type="button" className="cine-btn cine-btn-danger-outline" onClick={() => xoaTaiKhoan(u)} disabled={dang_xu_ly === u.id}>Xóa</button>
-              </>}
-            </div>
-          </article>;
-        })}
+    {tab === "khach-hang" && <section className="cine-card cine-admin-section">
+      <div className="cine-section-heading"><div><h2>Tài khoản khách hàng</h2><p>Khách hàng được quản lý riêng với nhân viên. Admin có thể sửa họ tên, email, số điện thoại, địa chỉ, khóa/kích hoạt hoặc xóa tài khoản.</p></div><span>{khachHang.length} khách hàng</span></div>
+      <div className="cine-customer-list">
+        {khachHang.map(u => <article key={u.id} className="cine-customer-card">
+          <div className="cine-customer-card-head">
+            <div><b>{u.ho_ten}</b><span>{u.thu_dien_tu}</span></div>
+            <span className={u.da_kich_hoat ? "status-badge active" : "status-badge locked"}>{u.da_kich_hoat ? "Đang hoạt động" : "Đã khóa"}</span>
+          </div>
+          <div className="cine-customer-form-grid">
+            <label><span>Họ và tên</span><input value={u.ho_ten} onChange={e => suaKhachHangLocal(u.id, { ho_ten: e.target.value })}/></label>
+            <label><span>Email đăng nhập</span><input type="email" value={u.thu_dien_tu} onChange={e => suaKhachHangLocal(u.id, { thu_dien_tu: e.target.value })}/></label>
+            <label><span>Số điện thoại</span><input value={u.so_dien_thoai || ""} onChange={e => suaKhachHangLocal(u.id, { so_dien_thoai: e.target.value })}/></label>
+            <label className="cine-customer-address"><span>Địa chỉ mặc định</span><input value={u.dia_chi_mac_dinh || ""} onChange={e => suaKhachHangLocal(u.id, { dia_chi_mac_dinh: e.target.value })}/></label>
+          </div>
+          <div className="cine-customer-actions">
+            <button type="button" className="cine-btn cine-btn-primary" onClick={() => luuKhachHang(u)} disabled={dang_xu_ly === `kh-${u.id}`}>{dang_xu_ly === `kh-${u.id}` ? "Đang lưu…" : "Lưu thông tin"}</button>
+            <button type="button" className={`cine-btn ${u.da_kich_hoat ? "cine-btn-danger" : "cine-btn-success"}`} onClick={() => doiTrangThai(u)} disabled={dang_xu_ly === u.id}>{dang_xu_ly === u.id ? "Đang xử lý…" : u.da_kich_hoat ? "Khóa" : "Kích hoạt"}</button>
+            <button type="button" className="cine-btn cine-btn-danger-outline" onClick={() => xoaTaiKhoan(u)} disabled={dang_xu_ly === u.id}>Xóa</button>
+          </div>
+        </article>)}
+        {khachHang.length === 0 && <div className="cine-empty-state">Chưa có tài khoản khách hàng.</div>}
       </div>
     </section>}
 
@@ -347,7 +400,10 @@ export default function QuanTriPage() {
         <div className="cine-staff-static"><span>Chức danh</span><b>Nhân viên bán hàng</b></div>
         <div className="cine-staff-static"><span>Bộ phận</span><b>Bán hàng</b></div>
         <label className="cine-staff-status"><span>Trạng thái</span><select value={n.trang_thai} onChange={e => suaNhanVienLocal(n.id, { trang_thai: e.target.value })}><option value="DANG_LAM">Đang làm</option><option value="TAM_NGHI">Tạm nghỉ</option><option value="NGHI_VIEC">Nghỉ việc</option></select></label>
-        <button type="button" className="cine-btn cine-btn-secondary" onClick={() => luuNhanVien(n)} disabled={dang_xu_ly === `nv-${n.id}`}>{dang_xu_ly === `nv-${n.id}` ? "Đang lưu…" : "Lưu trạng thái"}</button>
+        <div className="cine-staff-row-actions">
+          <button type="button" className="cine-btn cine-btn-secondary" onClick={() => luuNhanVien(n)} disabled={dang_xu_ly === `nv-${n.id}`}>{dang_xu_ly === `nv-${n.id}` ? "Đang lưu…" : "Lưu trạng thái"}</button>
+          <button type="button" className="cine-btn cine-btn-danger-outline" onClick={() => xoaTaiKhoan(n.nguoi_dung)} disabled={dang_xu_ly === n.nguoi_dung.id}>Xóa tài khoản</button>
+        </div>
       </article>)}</div>
       <div className="cine-staff-status-note">Đang làm: tài khoản được kích hoạt. Tạm nghỉ/Nghỉ việc: tài khoản bị khóa và các phiên đăng nhập đang mở được thu hồi.</div>
     </section>}

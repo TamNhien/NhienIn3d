@@ -1,7 +1,9 @@
-import { IsBoolean, IsOptional, IsString, Length, Matches, ValidateIf } from "class-validator";
+import { IsBoolean, IsEmail, IsOptional, IsString, Length, Matches, ValidateIf } from "class-validator";
 
 export class CapNhatNguoiDungDto {
+  @IsOptional() @IsEmail() @Length(5, 255) thu_dien_tu?: string;
   @IsOptional() @IsString() @Length(2, 150) ho_ten?: string;
   @IsOptional() @IsString() @ValidateIf((_o, value) => value !== "") @Matches(/^[0-9+()\-\s]{8,30}$/) so_dien_thoai?: string;
+  @IsOptional() @IsString() @Length(0, 500) dia_chi_mac_dinh?: string;
   @IsOptional() @IsBoolean() da_kich_hoat?: boolean;
 }
