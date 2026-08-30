@@ -63,16 +63,16 @@ test("V2 co migration nang cap khong ghi de migration V1", () => {
   assert.equal(existsSync("apps/api/prisma/migrations/202608290002_v002_gio_hang_thanh_toan/migration.sql"), true);
 });
 
-test("version v2.11.0 dong bo root API va Web", () => {
-  assert.equal(readFileSync("VERSION", "utf8").trim(), "2.11.0");
-  assert.equal(docJson("package.json").version, "2.11.0");
-  assert.equal(docJson("apps/api/package.json").version, "2.11.0");
-  assert.equal(docJson("apps/web/package.json").version, "2.11.0");
+test("version v2.12.0 dong bo root API va Web", () => {
+  assert.equal(readFileSync("VERSION", "utf8").trim(), "2.12.0");
+  assert.equal(docJson("package.json").version, "2.12.0");
+  assert.equal(docJson("apps/api/package.json").version, "2.12.0");
+  assert.equal(docJson("apps/web/package.json").version, "2.12.0");
 });
 
-test("README co lich su phien ban tang dan den v2.11.0", () => {
+test("README co lich su phien ban tang dan den v2.12.0", () => {
   const readme = readFileSync("README.md", "utf8");
-  const viTri = ["## v1.0.0", "## v1.0.1", "## v1.0.2", "## v1.0.3", "## v1.0.4", "## v1.0.5", "## v1.0.6", "## v1.0.7", "## v2.0.0", "## v2.1.0", "## v2.1.1", "## v2.2.0", "## v2.2.1", "## v2.3.0", "## v2.4.0", "## v2.4.1", "## v2.5.0", "## v2.6.0", "## v2.6.1", "## v2.7.0", "## v2.8.0", "## v2.8.1", "## v2.8.2", "## v2.8.3", "## v2.8.4", "## v2.8.5", "## v2.8.6", "## v2.8.7", "## v2.8.8", "## v2.8.9", "## v2.9.0", "## v2.9.1", "## v2.9.2", "## v2.9.3", "## v2.9.4", "## v2.9.5", "## v2.9.6", "## v2.9.7", "## v2.9.8", "## v2.9.9", "## v2.10.0", "## v2.10.1", "## v2.10.2", "## v2.11.0"].map(x => readme.indexOf(x));
+  const viTri = ["## v1.0.0", "## v1.0.1", "## v1.0.2", "## v1.0.3", "## v1.0.4", "## v1.0.5", "## v1.0.6", "## v1.0.7", "## v2.0.0", "## v2.1.0", "## v2.1.1", "## v2.2.0", "## v2.2.1", "## v2.3.0", "## v2.4.0", "## v2.4.1", "## v2.5.0", "## v2.6.0", "## v2.6.1", "## v2.7.0", "## v2.8.0", "## v2.8.1", "## v2.8.2", "## v2.8.3", "## v2.8.4", "## v2.8.5", "## v2.8.6", "## v2.8.7", "## v2.8.8", "## v2.8.9", "## v2.9.0", "## v2.9.1", "## v2.9.2", "## v2.9.3", "## v2.9.4", "## v2.9.5", "## v2.9.6", "## v2.9.7", "## v2.9.8", "## v2.9.9", "## v2.10.0", "## v2.10.1", "## v2.10.2", "## v2.11.0", "## v2.12.0"].map(x => readme.indexOf(x));
   assert.ok(viTri.every(x => x >= 0));
   assert.deepEqual([...viTri].sort((a,b)=>a-b), viTri);
 });
@@ -656,4 +656,38 @@ test("v2.11.0 dashboard quan tri co doanh thu don hang top san pham ton kho", ()
   assert.match(admin, /Tồn kho thấp/u);
   assert.match(lib, /export type AdminTongQuan/);
   assert.match(css, /cine-dashboard-v211/);
+});
+
+
+test("v2.12.0 quan tri don hang san pham ton kho va audit Admin", () => {
+  const schema = readFileSync("apps/api/prisma/schema.prisma", "utf8");
+  const migration = readFileSync("apps/api/prisma/migrations/202608300004_v212_quan_tri_don_hang_audit/migration.sql", "utf8");
+  const controller = readFileSync("apps/api/src/quan-tri/quan-tri.controller.ts", "utf8");
+  const service = readFileSync("apps/api/src/quan-tri/quan-tri.service.ts", "utf8");
+  const checkout = readFileSync("apps/api/src/thanh-toan/thanh-toan.service.ts", "utf8");
+  const admin = readFileSync("apps/web/app/quan-tri/page.tsx", "utf8");
+  const lib = readFileSync("apps/web/lib/quan-tri.ts", "utf8");
+  const css = readFileSync("apps/web/app/globals.css", "utf8");
+  assert.match(schema, /model LichSuDonHang/);
+  assert.match(schema, /@@map\("lich_su_don_hang"\)/);
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS "lich_su_don_hang"/);
+  assert.match(controller, /@Get\("don-hang"\)/);
+  assert.match(controller, /@Post\("don-hang\/:id\/trang-thai"\)/);
+  assert.match(controller, /@Get\("san-pham"\)/);
+  assert.match(controller, /@Post\("bien-the\/:id\/ton-kho"\)/);
+  assert.match(controller, /@Get\("nhat-ky"\)/);
+  assert.match(service, /ADMIN_CAP_NHAT_DON_HANG/);
+  assert.match(service, /ADMIN_CAP_NHAT_SAN_PHAM/);
+  assert.match(service, /ADMIN_CAP_NHAT_TON_KHO/);
+  assert.match(service, /so_luong_ton: \{ increment: ct\.so_luong \}/);
+  assert.match(checkout, /lichSuDonHang\.create/);
+  assert.match(admin, /\["don-hang", "Đơn hàng"\]/u);
+  assert.match(admin, /\["san-pham", "Sản phẩm & kho"\]/u);
+  assert.match(admin, /\["nhat-ky", "Nhật ký Admin"\]/u);
+  assert.match(lib, /layDonHangAdmin/);
+  assert.match(lib, /capNhatTrangThaiDonHangAdmin/);
+  assert.match(lib, /capNhatTonKhoAdmin/);
+  assert.match(css, /cine-order-admin-grid-v212/);
+  assert.match(css, /cine-variant-table-v212/);
+  assert.match(css, /cine-audit-list-v212/);
 });

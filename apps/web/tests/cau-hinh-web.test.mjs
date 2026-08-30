@@ -593,3 +593,24 @@ test("v2.11.0 web co tab tong quan va dashboard CineBooking", () => {
   assert.match(css, /cine-dashboard-period-cards/);
   assert.match(css, /cine-revenue-track/);
 });
+
+
+test("v2.12.0 web co quan tri don hang san pham ton kho va nhat ky Admin", () => {
+  const admin = readFileSync("app/quan-tri/page.tsx", "utf8");
+  const lib = readFileSync("lib/quan-tri.ts", "utf8");
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.match(admin, /\["don-hang", "Đơn hàng"\]/u);
+  assert.match(admin, /\["san-pham", "Sản phẩm & kho"\]/u);
+  assert.match(admin, /\["nhat-ky", "Nhật ký Admin"\]/u);
+  assert.match(admin, /Quản trị đơn hàng/u);
+  assert.match(admin, /Sản phẩm & tồn kho/u);
+  assert.match(admin, /Lịch sử xử lý/u);
+  assert.match(lib, /export type AdminDonHang/);
+  assert.match(lib, /layChiTietDonHangAdmin/);
+  assert.match(lib, /capNhatSanPhamAdmin/);
+  assert.match(lib, /layNhatKyAdmin/);
+  assert.match(css, /v2\.12\.0 - quản trị đơn hàng/u);
+  assert.match(css, /cine-order-detail-v212/);
+  assert.match(css, /cine-product-admin-card-v212/);
+  assert.match(css, /cine-audit-row-v212/);
+});

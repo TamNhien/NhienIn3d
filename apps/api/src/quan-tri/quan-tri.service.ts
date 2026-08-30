@@ -10,6 +10,9 @@ import { CapNhatPhanCaDto } from "./dto/cap-nhat-phan-ca.dto.js";
 import { TaoCaLamDto } from "./dto/tao-ca-lam.dto.js";
 import { TaoNhanVienDto } from "./dto/tao-nhan-vien.dto.js";
 import { TaoPhanCaDto } from "./dto/tao-phan-ca.dto.js";
+import { CapNhatTrangThaiDonHangDto } from "./dto/cap-nhat-trang-thai-don-hang.dto.js";
+import { CapNhatSanPhamQuanTriDto } from "./dto/cap-nhat-san-pham-quan-tri.dto.js";
+import { CapNhatTonKhoDto } from "./dto/cap-nhat-ton-kho.dto.js";
 
 @Injectable()
 export class QuanTriService {
@@ -460,12 +463,12 @@ export class QuanTriService {
     }
   }
 
-  async tao_ca(dto: TaoCaLamDto) {
+  async tao_ca(actor: NguoiDungXacThuc, dto: TaoCaLamDto) {
     const ma_ca = dto.ma_ca.trim().toUpperCase();
     this.kiem_tra_khung_gio(dto.gio_bat_dau, dto.gio_ket_thuc);
     const da_co = await this.db.caLamViec.findUnique({ where: { ma_ca }, select: { id: true } });
     if (da_co) throw new ConflictException("Mã ca đã tồn tại");
-    return this.db.caLamViec.create({
+    const da_tao = await this.db.caLamViec.create({
       data: {
         ma_ca,
         ten_ca: dto.ten_ca.trim(),
@@ -474,9 +477,11 @@ export class QuanTriService {
         mau_hien_thi: dto.mau_hien_thi || "#22C55E"
       }
     });
+    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_TAO_CA_LAM", nguoi_dung_id: actor.id, chi_tiet: { ca_lam_id: da_tao.id, ma_ca: da_tao.ma_ca, ten_ca: da_tao.ten_ca } } });
+    return da_tao;
   }
 
-  async cap_nhat_ca(id: string, dto: CapNhatCaLamDto) {
+  async cap_nhat_ca(actor: NguoiDungXacThuc, id: string, dto: CapNhatCaLamDto) {
     const hien_tai = await this.db.caLamViec.findUnique({ where: { id } });
     if (!hien_tai) throw new NotFoundException("Không tìm thấy ca làm việc");
 
@@ -508,10 +513,11 @@ export class QuanTriService {
       this.db.phanCa.count({ where: { ca_lam_viec_id: id } })
     ]);
     const da_cap_nhat = await this.db.caLamViec.findUniqueOrThrow({ where: { id } });
+    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_CAP_NHAT_CA_LAM", nguoi_dung_id: actor.id, chi_tiet: { ca_lam_id: id, ma_ca_cu: hien_tai.ma_ca, ma_ca_moi: da_cap_nhat.ma_ca, gio_cu: `${hien_tai.gio_bat_dau}-${hien_tai.gio_ket_thuc}`, gio_moi: `${da_cap_nhat.gio_bat_dau}-${da_cap_nhat.gio_ket_thuc}`, so_phan_ca_bi_anh_huong } } });
     return { ...da_cap_nhat, so_phan_ca_bi_anh_huong, da_doc_lai_sau_commit: true };
   }
 
-  async xoa_ca(id: string) {
+  async xoa_ca(actor: NguoiDungXacThuc, id: string) {
     const hien_tai = await this.db.caLamViec.findUnique({
       where: { id },
       select: { id: true, ma_ca: true, ten_ca: true, _count: { select: { phan_ca: true } } }
@@ -523,6 +529,7 @@ export class QuanTriService {
       await tx.caLamViec.delete({ where: { id } });
     });
 
+    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_XOA_CA_LAM", nguoi_dung_id: actor.id, chi_tiet: { ca_lam_id: id, ma_ca: hien_tai.ma_ca, ten_ca: hien_tai.ten_ca, so_phan_ca_da_xoa: hien_tai._count.phan_ca } } });
     return {
       thong_bao: `Đã xóa ca ${hien_tai.ma_ca} · ${hien_tai.ten_ca}`,
       so_phan_ca_da_xoa: hien_tai._count.phan_ca
@@ -540,7 +547,7 @@ export class QuanTriService {
     });
   }
 
-  async tao_phan_ca(dto: TaoPhanCaDto) {
+  async tao_phan_ca(actor: NguoiDungXacThuc, dto: TaoPhanCaDto) {
     const [nhan_vien, ca] = await Promise.all([
       this.db.nhanVien.findUnique({ where: { id: dto.nhan_vien_id }, include: { nguoi_dung: true } }),
       this.db.caLamViec.findUnique({ where: { id: dto.ca_lam_viec_id } })
@@ -549,15 +556,18 @@ export class QuanTriService {
     if (!ca || !ca.dang_hoat_dong) throw new BadRequestException("Ca làm việc không tồn tại hoặc đã ngừng hoạt động");
 
     try {
-      return await this.db.phanCa.create({
+      const da_tao = await this.db.phanCa.create({
         data: { nhan_vien_id: dto.nhan_vien_id, ca_lam_viec_id: dto.ca_lam_viec_id, ngay_lam: new Date(`${dto.ngay_lam}T00:00:00Z`), ghi_chu: dto.ghi_chu?.trim() || null }
       });
-    } catch {
+      await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_TAO_PHAN_CA", nguoi_dung_id: actor.id, chi_tiet: { phan_ca_id: da_tao.id, nhan_vien_id: dto.nhan_vien_id, ca_lam_viec_id: dto.ca_lam_viec_id, ngay_lam: dto.ngay_lam } } });
+      return da_tao;
+    } catch (error) {
+      if (error instanceof ConflictException) throw error;
       throw new ConflictException("Nhân viên đã được xếp ca này trong ngày đã chọn");
     }
   }
 
-  async cap_nhat_phan_ca(id: string, dto: CapNhatPhanCaDto) {
+  async cap_nhat_phan_ca(actor: NguoiDungXacThuc, id: string, dto: CapNhatPhanCaDto) {
     const hien_tai = await this.db.phanCa.findUnique({ where: { id } });
     if (!hien_tai) throw new NotFoundException("Không tìm thấy phân ca");
 
@@ -594,19 +604,170 @@ export class QuanTriService {
         ghi_chu: dto.ghi_chu !== undefined ? dto.ghi_chu.trim() || null : undefined
       }
     });
-    return this.db.phanCa.findUniqueOrThrow({
+    const da_cap_nhat = await this.db.phanCa.findUniqueOrThrow({
       where: { id },
       include: {
         nhan_vien: { include: { nguoi_dung: { select: { ho_ten: true, thu_dien_tu: true } } } },
         ca_lam_viec: true
       }
     });
+    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_CAP_NHAT_PHAN_CA", nguoi_dung_id: actor.id, chi_tiet: { phan_ca_id: id, nhan_vien_cu: hien_tai.nhan_vien_id, nhan_vien_moi: da_cap_nhat.nhan_vien_id, ca_cu: hien_tai.ca_lam_viec_id, ca_moi: da_cap_nhat.ca_lam_viec_id, ngay_lam: da_cap_nhat.ngay_lam.toISOString().slice(0, 10) } } });
+    return da_cap_nhat;
   }
 
-  async xoa_phan_ca(id: string) {
-    const da_co = await this.db.phanCa.findUnique({ where: { id }, select: { id: true } });
+  async xoa_phan_ca(actor: NguoiDungXacThuc, id: string) {
+    const da_co = await this.db.phanCa.findUnique({ where: { id }, select: { id: true, nhan_vien_id: true, ca_lam_viec_id: true, ngay_lam: true } });
     if (!da_co) throw new NotFoundException("Không tìm thấy phân ca");
     await this.db.phanCa.delete({ where: { id } });
+    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_XOA_PHAN_CA", nguoi_dung_id: actor.id, chi_tiet: { phan_ca_id: id, nhan_vien_id: da_co.nhan_vien_id, ca_lam_viec_id: da_co.ca_lam_viec_id, ngay_lam: da_co.ngay_lam.toISOString().slice(0, 10) } } });
     return { thong_bao: "Đã xóa phân ca" };
   }
+
+  async danh_sach_don_hang(trang_thai?: string, tim_kiem?: string) {
+    const status = trang_thai?.trim();
+    if (status && !Object.values(TrangThaiDonHang).includes(status as TrangThaiDonHang)) throw new BadRequestException("Trạng thái đơn hàng không hợp lệ");
+    const q = tim_kiem?.trim();
+    if (q && q.length > 120) throw new BadRequestException("Từ khóa tối đa 120 ký tự");
+    const ds = await this.db.donHang.findMany({
+      where: {
+        ...(status ? { trang_thai: status as TrangThaiDonHang } : {}),
+        ...(q ? { OR: [
+          { ma_don_hang: { contains: q, mode: "insensitive" } },
+          { ho_ten_nguoi_nhan: { contains: q, mode: "insensitive" } },
+          { so_dien_thoai: { contains: q } },
+          { nguoi_dung: { thu_dien_tu: { contains: q, mode: "insensitive" } } }
+        ] } : {})
+      },
+      include: {
+        nguoi_dung: { select: { id: true, thu_dien_tu: true, ho_ten: true } },
+        chi_tiet: { select: { so_luong: true } },
+        thanh_toan: { orderBy: { ngay_tao: "desc" }, take: 1, select: { trang_thai: true, ma_giao_dich: true } }
+      },
+      orderBy: { ngay_tao: "desc" },
+      take: 250
+    });
+    return ds.map(item => ({
+      id: item.id,
+      ma_don_hang: item.ma_don_hang,
+      ho_ten_nguoi_nhan: item.ho_ten_nguoi_nhan,
+      so_dien_thoai: item.so_dien_thoai,
+      tong_tien: Number(item.tong_tien),
+      trang_thai: item.trang_thai,
+      ngay_tao: item.ngay_tao,
+      ngay_cap_nhat: item.ngay_cap_nhat,
+      khach_hang: item.nguoi_dung,
+      so_mat_hang: item.chi_tiet.length,
+      tong_so_luong: item.chi_tiet.reduce((sum, x) => sum + x.so_luong, 0),
+      thanh_toan: item.thanh_toan[0] || null
+    }));
+  }
+
+  async chi_tiet_don_hang(id: string) {
+    const item = await this.db.donHang.findUnique({
+      where: { id },
+      include: {
+        nguoi_dung: { select: { id: true, thu_dien_tu: true, ho_ten: true, so_dien_thoai: true } },
+        chi_tiet: { orderBy: { id: "asc" } },
+        thanh_toan: { include: { phuong_thuc: true }, orderBy: { ngay_tao: "desc" } },
+        lich_su: { include: { nguoi_thuc_hien: { select: { id: true, ho_ten: true, thu_dien_tu: true, vai_tro: true } } }, orderBy: { ngay_tao: "desc" } }
+      }
+    });
+    if (!item) throw new NotFoundException("Không tìm thấy đơn hàng");
+    return {
+      id: item.id, ma_don_hang: item.ma_don_hang, ho_ten_nguoi_nhan: item.ho_ten_nguoi_nhan, so_dien_thoai: item.so_dien_thoai,
+      dia_chi_giao_hang: item.dia_chi_giao_hang, ghi_chu: item.ghi_chu, tong_tien: Number(item.tong_tien), trang_thai: item.trang_thai,
+      ngay_tao: item.ngay_tao, ngay_cap_nhat: item.ngay_cap_nhat, khach_hang: item.nguoi_dung, so_mat_hang: item.chi_tiet.length, tong_so_luong: item.chi_tiet.reduce((sum, x) => sum + x.so_luong, 0),
+      chi_tiet: item.chi_tiet.map(ct => ({ ...ct, don_gia: Number(ct.don_gia), thanh_tien: Number(ct.thanh_tien) })),
+      thanh_toan: item.thanh_toan.map(tt => ({ ...tt, so_tien: Number(tt.so_tien) })),
+      lich_su: item.lich_su.map(ls => ({ ...ls, id: ls.id.toString() }))
+    };
+  }
+
+  async cap_nhat_trang_thai_don_hang(actor: NguoiDungXacThuc, id: string, dto: CapNhatTrangThaiDonHangDto) {
+    const hien_tai = await this.db.donHang.findUnique({ where: { id }, include: { chi_tiet: true } });
+    if (!hien_tai) throw new NotFoundException("Không tìm thấy đơn hàng");
+    const trang_thai_moi = dto.trang_thai as TrangThaiDonHang;
+    if (hien_tai.trang_thai === trang_thai_moi) return this.chi_tiet_don_hang(id);
+
+    const chuyenHopLe: Record<TrangThaiDonHang, TrangThaiDonHang[]> = {
+      CHO_XAC_NHAN: [TrangThaiDonHang.DA_XAC_NHAN, TrangThaiDonHang.DA_HUY],
+      DA_XAC_NHAN: [TrangThaiDonHang.DANG_SAN_XUAT, TrangThaiDonHang.DA_HUY],
+      DANG_SAN_XUAT: [TrangThaiDonHang.DANG_GIAO, TrangThaiDonHang.DA_HUY],
+      DANG_GIAO: [TrangThaiDonHang.HOAN_TAT],
+      HOAN_TAT: [],
+      DA_HUY: []
+    };
+    if (!chuyenHopLe[hien_tai.trang_thai].includes(trang_thai_moi)) {
+      throw new BadRequestException(`Không thể chuyển đơn từ ${hien_tai.trang_thai} sang ${trang_thai_moi}`);
+    }
+
+    await this.db.$transaction(async tx => {
+      if (trang_thai_moi === TrangThaiDonHang.DA_HUY && hien_tai.trang_thai !== TrangThaiDonHang.DA_HUY) {
+        for (const ct of hien_tai.chi_tiet) {
+          const tuy_chon = ct.tuy_chon as Record<string, unknown>;
+          const ma_bien_the = typeof tuy_chon?.ma_bien_the === "string" ? tuy_chon.ma_bien_the : undefined;
+          if (ma_bien_the) {
+            await tx.bienTheSanPham.updateMany({ where: { ma_bien_the }, data: { so_luong_ton: { increment: ct.so_luong } } });
+          }
+        }
+      }
+      await tx.donHang.update({ where: { id }, data: { trang_thai: trang_thai_moi } });
+      await tx.lichSuDonHang.create({
+        data: {
+          don_hang_id: id,
+          nguoi_thuc_hien_id: actor.id,
+          trang_thai_cu: hien_tai.trang_thai,
+          trang_thai_moi,
+          ghi_chu: dto.ghi_chu?.trim() || null
+        }
+      });
+    });
+    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_CAP_NHAT_DON_HANG", nguoi_dung_id: actor.id, chi_tiet: { don_hang_id: id, ma_don_hang: hien_tai.ma_don_hang, trang_thai_cu: hien_tai.trang_thai, trang_thai_moi, ghi_chu: dto.ghi_chu?.trim() || null } } });
+    return this.chi_tiet_don_hang(id);
+  }
+
+  async danh_sach_san_pham_quan_tri() {
+    const ds = await this.db.sanPham.findMany({
+      include: {
+        danh_muc: { select: { id: true, ma_danh_muc: true, ten_danh_muc: true } },
+        bien_the: { include: { vat_lieu: { select: { ten_vat_lieu: true } }, mau_sac: { select: { ten_mau: true, ma_hex: true } } }, orderBy: { ma_bien_the: "asc" } },
+        hinh_anh: { where: { la_anh_chinh: true }, take: 1, select: { duong_dan_anh: true } }
+      },
+      orderBy: { ma_san_pham: "asc" }
+    });
+    return ds.map(item => ({ ...item, gia_ban: Number(item.gia_ban), gia_von: item.gia_von == null ? null : Number(item.gia_von) }));
+  }
+
+  async cap_nhat_san_pham_quan_tri(actor: NguoiDungXacThuc, id: string, dto: CapNhatSanPhamQuanTriDto) {
+    const hien_tai = await this.db.sanPham.findUnique({ where: { id }, select: { id: true, ma_san_pham: true, ten_san_pham: true, gia_ban: true, trang_thai: true } });
+    if (!hien_tai) throw new NotFoundException("Không tìm thấy sản phẩm");
+    const data = {
+      ...(dto.ten_san_pham !== undefined ? { ten_san_pham: dto.ten_san_pham.trim() } : {}),
+      ...(dto.mo_ta_ngan !== undefined ? { mo_ta_ngan: dto.mo_ta_ngan.trim() || null } : {}),
+      ...(dto.gia_ban !== undefined ? { gia_ban: dto.gia_ban } : {}),
+      ...(dto.trang_thai !== undefined ? { trang_thai: dto.trang_thai as TrangThaiSanPham } : {})
+    };
+    if (!Object.keys(data).length) throw new BadRequestException("Không có dữ liệu sản phẩm để cập nhật");
+    await this.db.sanPham.update({ where: { id }, data });
+    const da_cap_nhat = (await this.danh_sach_san_pham_quan_tri()).find(x => x.id === id)!;
+    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_CAP_NHAT_SAN_PHAM", nguoi_dung_id: actor.id, chi_tiet: { san_pham_id: id, ma_san_pham: hien_tai.ma_san_pham, gia_cu: Number(hien_tai.gia_ban), gia_moi: da_cap_nhat.gia_ban, trang_thai_cu: hien_tai.trang_thai, trang_thai_moi: da_cap_nhat.trang_thai } } });
+    return da_cap_nhat;
+  }
+
+  async cap_nhat_ton_kho(actor: NguoiDungXacThuc, id: string, dto: CapNhatTonKhoDto) {
+    const hien_tai = await this.db.bienTheSanPham.findUnique({ where: { id }, include: { san_pham: { select: { ma_san_pham: true, ten_san_pham: true } } } });
+    if (!hien_tai) throw new NotFoundException("Không tìm thấy biến thể sản phẩm");
+    const da_cap_nhat = await this.db.bienTheSanPham.update({ where: { id }, data: { so_luong_ton: dto.so_luong_ton, dang_hien_thi: dto.dang_hien_thi ?? hien_tai.dang_hien_thi }, include: { vat_lieu: true, mau_sac: true } });
+    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_CAP_NHAT_TON_KHO", nguoi_dung_id: actor.id, chi_tiet: { bien_the_id: id, ma_bien_the: hien_tai.ma_bien_the, ma_san_pham: hien_tai.san_pham.ma_san_pham, ton_cu: hien_tai.so_luong_ton, ton_moi: da_cap_nhat.so_luong_ton, hien_thi: da_cap_nhat.dang_hien_thi } } });
+    return da_cap_nhat;
+  }
+
+  async danh_sach_nhat_ky_admin() {
+    const ds = await this.db.nhatKyBaoMat.findMany({ where: { loai_su_kien: { startsWith: "ADMIN_" } }, orderBy: { ngay_tao: "desc" }, take: 200 });
+    const actorIds = [...new Set(ds.map(x => x.nguoi_dung_id).filter((x): x is string => Boolean(x)))];
+    const actors = actorIds.length ? await this.db.nguoiDung.findMany({ where: { id: { in: actorIds } }, select: { id: true, ho_ten: true, thu_dien_tu: true } }) : [];
+    const actorMap = new Map(actors.map(x => [x.id, x]));
+    return ds.map(item => ({ id: item.id.toString(), loai_su_kien: item.loai_su_kien, nguoi_dung_id: item.nguoi_dung_id, nguoi_thuc_hien: item.nguoi_dung_id ? actorMap.get(item.nguoi_dung_id) || null : null, chi_tiet: item.chi_tiet, ngay_tao: item.ngay_tao }));
+  }
+
 }

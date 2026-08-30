@@ -89,6 +89,16 @@ export class ThanhToanService {
         include: { chi_tiet: true }
       });
 
+      await tx.lichSuDonHang.create({
+        data: {
+          don_hang_id: don_hang.id,
+          nguoi_thuc_hien_id: gio_hang.nguoi_dung_id,
+          trang_thai_cu: null,
+          trang_thai_moi: don_hang.trang_thai,
+          ghi_chu: "Khách hàng tạo đơn hàng"
+        }
+      });
+
       const thanh_toan = await tx.thanhToan.create({
         data: {
           don_hang_id: don_hang.id,

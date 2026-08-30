@@ -29,6 +29,7 @@ const dem = {
   bien_the_san_pham: await db.bienTheSanPham.count(),
   don_hang: await db.donHang.count(),
   chi_tiet_don_hang: await db.chiTietDonHang.count(),
+  lich_su_don_hang: await db.lichSuDonHang.count(),
   phien_dang_nhap: await db.phienDangNhap.count(),
   nhat_ky_bao_mat: await db.nhatKyBaoMat.count(),
   phien_ban_seed: await db.phienBanSeed.count(),

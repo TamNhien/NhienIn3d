@@ -70,6 +70,7 @@ model NguoiDung {
   dia_chi         DiaChiNguoiDung[]
   dat_lai_mat_khau DatLaiMatKhau[]
   nhan_vien       NhanVien?
+  lich_su_don_hang LichSuDonHang[]
 
   @@map("nguoi_dung")
 }
@@ -183,12 +184,29 @@ model DonHang {
   nguoi_dung       NguoiDung?        @relation(fields: [nguoi_dung_id], references: [id], onDelete: SetNull)
   chi_tiet         ChiTietDonHang[]
   thanh_toan       ThanhToan[]
+  lich_su           LichSuDonHang[]
   ngay_tao         DateTime          @default(now()) @db.Timestamptz(6)
   ngay_cap_nhat    DateTime          @updatedAt @db.Timestamptz(6)
 
   @@index([nguoi_dung_id])
   @@index([trang_thai])
   @@map("don_hang")
+}
+
+model LichSuDonHang {
+  id                  BigInt            @id @default(autoincrement())
+  don_hang_id         String            @db.Uuid
+  nguoi_thuc_hien_id  String?           @db.Uuid
+  trang_thai_cu       TrangThaiDonHang?
+  trang_thai_moi      TrangThaiDonHang
+  ghi_chu             String?           @db.VarChar(500)
+  ngay_tao            DateTime          @default(now()) @db.Timestamptz(6)
+  don_hang            DonHang           @relation(fields: [don_hang_id], references: [id], onDelete: Cascade)
+  nguoi_thuc_hien     NguoiDung?        @relation(fields: [nguoi_thuc_hien_id], references: [id], onDelete: SetNull)
+
+  @@index([don_hang_id, ngay_tao])
+  @@index([nguoi_thuc_hien_id])
+  @@map("lich_su_don_hang")
 }
 
 model ChiTietDonHang {

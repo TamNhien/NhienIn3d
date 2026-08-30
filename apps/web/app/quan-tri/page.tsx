@@ -8,11 +8,18 @@ import {
   AdminNhanVien,
   AdminNguoiDung,
   AdminTongQuan,
+  AdminDonHang,
+  AdminDonHangChiTiet,
+  AdminSanPham,
+  NhatKyAdmin,
   CaLam,
   capNhatCaLam,
   capNhatNguoiDung,
   capNhatNhanVien,
   capNhatPhanCa,
+  capNhatTrangThaiDonHangAdmin,
+  capNhatSanPhamAdmin,
+  capNhatTonKhoAdmin,
   kichHoatNguoiDung,
   khoaNguoiDung,
   layCaLam,
@@ -20,6 +27,10 @@ import {
   layNguoiDung,
   layPhanCa,
   layTongQuan,
+  layDonHangAdmin,
+  layChiTietDonHangAdmin,
+  laySanPhamAdmin,
+  layNhatKyAdmin,
   PhanCa,
   taoCaLam,
   taoNhanVien,
@@ -46,8 +57,16 @@ const nhanTrangThaiDon = (trang_thai: string) => ({
   HOAN_TAT: "Hoàn tất",
   DA_HUY: "Đã hủy"
 }[trang_thai] || trang_thai);
+const TRANG_THAI_DON = ["CHO_XAC_NHAN", "DA_XAC_NHAN", "DANG_SAN_XUAT", "DANG_GIAO", "HOAN_TAT", "DA_HUY"] as const;
+const TRANG_THAI_TIEP_THEO: Record<string, string[]> = { CHO_XAC_NHAN: ["DA_XAC_NHAN", "DA_HUY"], DA_XAC_NHAN: ["DANG_SAN_XUAT", "DA_HUY"], DANG_SAN_XUAT: ["DANG_GIAO", "DA_HUY"], DANG_GIAO: ["HOAN_TAT"], HOAN_TAT: [], DA_HUY: [] };
+const nhanSuKienAudit = (loai: string) => ({
+  ADMIN_CAP_NHAT_NGUOI_DUNG: "Cập nhật khách hàng", ADMIN_KICH_HOAT_NGUOI_DUNG: "Kích hoạt tài khoản", ADMIN_KHOA_NGUOI_DUNG: "Khóa tài khoản", ADMIN_XOA_NGUOI_DUNG: "Xóa tài khoản",
+  ADMIN_TAO_NHAN_VIEN: "Tạo nhân viên", ADMIN_CAP_NHAT_NHAN_VIEN: "Cập nhật nhân viên", ADMIN_TAO_CA_LAM: "Tạo ca", ADMIN_CAP_NHAT_CA_LAM: "Cập nhật ca", ADMIN_XOA_CA_LAM: "Xóa ca",
+  ADMIN_TAO_PHAN_CA: "Tạo phân ca", ADMIN_CAP_NHAT_PHAN_CA: "Cập nhật phân ca", ADMIN_XOA_PHAN_CA: "Xóa phân ca", ADMIN_CAP_NHAT_DON_HANG: "Cập nhật đơn hàng",
+  ADMIN_CAP_NHAT_SAN_PHAM: "Cập nhật sản phẩm", ADMIN_CAP_NHAT_TON_KHO: "Cập nhật tồn kho"
+}[loai] || loai.replaceAll("_", " "));
 
-type TabQuanTri = "tong-quan" | "khach-hang" | "nhan-vien" | "tao-nhan-vien" | "ca-lam" | "xep-ca";
+type TabQuanTri = "tong-quan" | "don-hang" | "san-pham" | "khach-hang" | "nhan-vien" | "tao-nhan-vien" | "ca-lam" | "xep-ca" | "nhat-ky";
 
 export default function QuanTriPage() {
   const [tai_khoan, setTaiKhoan] = useState<TaiKhoan | null | undefined>(undefined);
@@ -56,11 +75,21 @@ export default function QuanTriPage() {
   const [nhan_vien, setNhanVien] = useState<AdminNhanVien[]>([]);
   const [ca_lam, setCaLam] = useState<CaLam[]>([]);
   const [phan_ca, setPhanCa] = useState<PhanCa[]>([]);
+  const [don_hang, setDonHang] = useState<AdminDonHang[]>([]);
+  const [don_chon, setDonChon] = useState<AdminDonHangChiTiet | null>(null);
+  const [san_pham_qt, setSanPhamQt] = useState<AdminSanPham[]>([]);
+  const [nhat_ky, setNhatKy] = useState<NhatKyAdmin[]>([]);
   const [thong_bao, setThongBao] = useState("");
   const [tab, setTab] = useState<TabQuanTri>("tong-quan");
   const [dang_xu_ly, setDangXuLy] = useState<string | null>(null);
   const [tu_ngay, setTuNgay] = useState(homNay());
   const [den_ngay, setDenNgay] = useState(sauNgay(14));
+  const [don_tim_kiem, setDonTimKiem] = useState("");
+  const [don_loc_trang_thai, setDonLocTrangThai] = useState("");
+  const [don_trang_thai_moi, setDonTrangThaiMoi] = useState("");
+  const [don_ghi_chu, setDonGhiChu] = useState("");
+  const [san_pham_tim_kiem, setSanPhamTimKiem] = useState("");
+  const [nhat_ky_tim_kiem, setNhatKyTimKiem] = useState("");
 
   const [nv, setNv] = useState({ thu_dien_tu: "", ho_ten: "", so_dien_thoai: "", mat_khau: "", xac_nhan_mat_khau: "", ma_nhan_vien: "", ngay_vao_lam: homNay() });
   const [ca, setCa] = useState({ ma_ca: "", ten_ca: "", gio_bat_dau: "06:00", gio_ket_thuc: "14:00", mau_hien_thi: "#38BDF8" });
@@ -72,12 +101,15 @@ export default function QuanTriPage() {
     const tk = await layTaiKhoan();
     setTaiKhoan(tk);
     if (!tk || tk.vai_tro !== "ADMIN") return;
-    const [tq, nd, nvData, caData, pcData] = await Promise.all([layTongQuan(), layNguoiDung(), layNhanVien(), layCaLam(), layPhanCa()]);
+    const [tq, nd, nvData, caData, pcData, donData, spData, nkData] = await Promise.all([layTongQuan(), layNguoiDung(), layNhanVien(), layCaLam(), layPhanCa(), layDonHangAdmin(), laySanPhamAdmin(), layNhatKyAdmin()]);
     setTongQuan(tq);
     setNguoiDung(nd);
     setNhanVien(nvData);
     setCaLam(caData);
     setPhanCa(pcData);
+    setDonHang(donData);
+    setSanPhamQt(spData);
+    setNhatKy(nkData);
     setPc(x => ({ ...x, nhan_vien_id: x.nhan_vien_id || nvData[0]?.id || "", ca_lam_viec_id: x.ca_lam_viec_id || caData[0]?.id || "" }));
   }, []);
 
@@ -322,6 +354,78 @@ export default function QuanTriPage() {
     finally { setDangXuLy(null); }
   }
 
+  async function taiDonTheoBoLoc() {
+    setDangXuLy("loc-don");
+    setThongBao("");
+    try {
+      const ds = await layDonHangAdmin(don_loc_trang_thai, don_tim_kiem);
+      setDonHang(ds);
+      if (don_chon && !ds.some(x => x.id === don_chon.id)) setDonChon(null);
+    } catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể lọc đơn hàng"); }
+    finally { setDangXuLy(null); }
+  }
+
+  async function moChiTietDon(id: string) {
+    setDangXuLy(`don-xem-${id}`);
+    setThongBao("");
+    try {
+      const ct = await layChiTietDonHangAdmin(id);
+      setDonChon(ct);
+      setDonTrangThaiMoi(ct.trang_thai);
+      setDonGhiChu("");
+    } catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể tải chi tiết đơn hàng"); }
+    finally { setDangXuLy(null); }
+  }
+
+  async function luuTrangThaiDon() {
+    if (!don_chon || !don_trang_thai_moi) return;
+    setDangXuLy(`don-${don_chon.id}`);
+    setThongBao("");
+    try {
+      const da_luu = await capNhatTrangThaiDonHangAdmin(don_chon.id, { trang_thai: don_trang_thai_moi, ghi_chu: don_ghi_chu.trim() || undefined });
+      setDonChon(da_luu);
+      setDonTrangThaiMoi(da_luu.trang_thai);
+      setDonGhiChu("");
+      const [ds, tq, sp, nk] = await Promise.all([layDonHangAdmin(don_loc_trang_thai, don_tim_kiem), layTongQuan(), laySanPhamAdmin(), layNhatKyAdmin()]);
+      setDonHang(ds); setTongQuan(tq); setSanPhamQt(sp); setNhatKy(nk);
+      setThongBao(`Đã cập nhật ${da_luu.ma_don_hang} → ${nhanTrangThaiDon(da_luu.trang_thai)}.`);
+    } catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể cập nhật trạng thái đơn hàng"); }
+    finally { setDangXuLy(null); }
+  }
+
+  function suaSanPhamLocal(id: string, patch: Partial<AdminSanPham>) {
+    setSanPhamQt(ds => ds.map(x => x.id === id ? { ...x, ...patch } : x));
+  }
+
+  function suaBienTheLocal(san_pham_id: string, bien_the_id: string, patch: { so_luong_ton?: number; dang_hien_thi?: boolean }) {
+    setSanPhamQt(ds => ds.map(sp => sp.id === san_pham_id ? { ...sp, bien_the: sp.bien_the.map(bt => bt.id === bien_the_id ? { ...bt, ...patch } : bt) } : sp));
+  }
+
+  async function luuSanPham(item: AdminSanPham) {
+    setDangXuLy(`sp-${item.id}`); setThongBao("");
+    try {
+      await capNhatSanPhamAdmin(item.id, { ten_san_pham: item.ten_san_pham.trim(), mo_ta_ngan: item.mo_ta_ngan?.trim() || "", gia_ban: Number(item.gia_ban), trang_thai: item.trang_thai });
+      const [ds, tq, nk] = await Promise.all([laySanPhamAdmin(), layTongQuan(), layNhatKyAdmin()]);
+      setSanPhamQt(ds); setTongQuan(tq); setNhatKy(nk);
+      setThongBao(`Đã lưu sản phẩm ${item.ma_san_pham}.`);
+    } catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể cập nhật sản phẩm"); }
+    finally { setDangXuLy(null); }
+  }
+
+  async function luuTonKho(san_pham_id: string, bien_the_id: string) {
+    const sp = san_pham_qt.find(x => x.id === san_pham_id);
+    const bt = sp?.bien_the.find(x => x.id === bien_the_id);
+    if (!bt) return;
+    setDangXuLy(`kho-${bien_the_id}`); setThongBao("");
+    try {
+      await capNhatTonKhoAdmin(bien_the_id, { so_luong_ton: Number(bt.so_luong_ton), dang_hien_thi: bt.dang_hien_thi });
+      const [ds, tq, nk] = await Promise.all([laySanPhamAdmin(), layTongQuan(), layNhatKyAdmin()]);
+      setSanPhamQt(ds); setTongQuan(tq); setNhatKy(nk);
+      setThongBao(`Đã lưu tồn kho ${bt.ma_bien_the}: ${bt.so_luong_ton}.`);
+    } catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể cập nhật tồn kho"); }
+    finally { setDangXuLy(null); }
+  }
+
   const soPhanCaCuaCa = useMemo(() => {
     const dem = new Map<string, number>();
     for (const item of phan_ca) dem.set(item.ca_lam_viec.id, (dem.get(item.ca_lam_viec.id) || 0) + 1);
@@ -329,6 +433,8 @@ export default function QuanTriPage() {
   }, [phan_ca]);
 
   const khachHang = useMemo(() => nguoi_dung.filter(x => x.vai_tro === "KHACH_HANG"), [nguoi_dung]);
+  const sanPhamDaLoc = useMemo(() => { const q = san_pham_tim_kiem.trim().toLocaleLowerCase("vi"); return q ? san_pham_qt.filter(x => `${x.ma_san_pham} ${x.ten_san_pham} ${x.danh_muc.ten_danh_muc}`.toLocaleLowerCase("vi").includes(q)) : san_pham_qt; }, [san_pham_qt, san_pham_tim_kiem]);
+  const nhatKyDaLoc = useMemo(() => { const q = nhat_ky_tim_kiem.trim().toLocaleLowerCase("vi"); return q ? nhat_ky.filter(x => `${x.loai_su_kien} ${x.nguoi_thuc_hien?.ho_ten || ""} ${x.nguoi_thuc_hien?.thu_dien_tu || ""} ${JSON.stringify(x.chi_tiet)}`.toLocaleLowerCase("vi").includes(q)) : nhat_ky; }, [nhat_ky, nhat_ky_tim_kiem]);
 
   const thongKe = useMemo(() => [
     ["Khách hàng", tong_quan?.khach_hang || 0],
@@ -363,16 +469,19 @@ export default function QuanTriPage() {
 
   const tabs: Array<[TabQuanTri, string]> = [
     ["tong-quan", "Tổng quan"],
+    ["don-hang", "Đơn hàng"],
+    ["san-pham", "Sản phẩm & kho"],
     ["khach-hang", "Khách hàng"],
     ["nhan-vien", "Nhân viên bán hàng"],
     ["tao-nhan-vien", "Tạo nhân viên bán hàng"],
     ["ca-lam", "Ca làm"],
-    ["xep-ca", "Xếp ca"]
+    ["xep-ca", "Xếp ca"],
+    ["nhat-ky", "Nhật ký Admin"]
   ];
 
   return <main className="cine-admin-shell page-shell">
     <div className="cine-admin-heading">
-      <div><h1>Admin Dashboard</h1><p>Admin có toàn quyền quản trị tài khoản, nhân sự và lịch làm việc.</p></div>
+      <div><h1>Admin Dashboard</h1><p>Admin có toàn quyền hệ thống: quản trị đơn hàng, sản phẩm, tồn kho, khách hàng, nhân sự và lịch làm việc.</p></div>
       <div className="cine-admin-heading-actions"><span>{tai_khoan.ho_ten} · Admin</span><Link className="cine-btn cine-btn-secondary" href="/tai-khoan">Tài khoản của tôi</Link></div>
     </div>
 
@@ -430,6 +539,51 @@ export default function QuanTriPage() {
           {tong_quan.don_gan_day.length === 0 && <div className="cine-dashboard-empty">Chưa có đơn hàng.</div>}</div>
         </article>
       </>}
+    </section>}
+
+    {tab === "don-hang" && <section className="cine-admin-operations cine-commerce-admin-v212">
+      <div className="cine-operations-heading"><div><h2>Quản trị đơn hàng</h2><p>Tìm kiếm, xem chi tiết, cập nhật trạng thái và theo dõi lịch sử xử lý.</p></div><span className="cine-admin-count">{don_hang.length} đơn</span></div>
+      <div className="cine-card cine-admin-filterbar-v212">
+        <label><span>Tìm đơn hàng</span><input value={don_tim_kiem} onChange={e => setDonTimKiem(e.target.value)} placeholder="Mã đơn, người nhận, SĐT, email..."/></label>
+        <label><span>Trạng thái</span><select value={don_loc_trang_thai} onChange={e => setDonLocTrangThai(e.target.value)}><option value="">Tất cả trạng thái</option>{TRANG_THAI_DON.map(x => <option key={x} value={x}>{nhanTrangThaiDon(x)}</option>)}</select></label>
+        <button type="button" className="cine-btn cine-btn-primary" onClick={taiDonTheoBoLoc} disabled={dang_xu_ly === "loc-don"}>{dang_xu_ly === "loc-don" ? "Đang lọc…" : "Lọc đơn"}</button>
+      </div>
+      <div className="cine-order-admin-grid-v212">
+        <div className="cine-card cine-order-admin-list-v212">
+          <div className="cine-section-heading"><div><h3>Danh sách đơn</h3><p>Đơn mới nhất hiển thị trước.</p></div></div>
+          <div className="cine-order-admin-items-v212">{don_hang.map(item => <button type="button" key={item.id} className={`cine-order-admin-item-v212 ${don_chon?.id === item.id ? "is-active" : ""}`} onClick={() => moChiTietDon(item.id)}>
+            <span><b>{item.ma_don_hang}</b><small>{item.ho_ten_nguoi_nhan} · {item.so_dien_thoai}</small></span>
+            <span><b>{dinhDangTien(item.tong_tien)}</b><small>{item.tong_so_luong} SP · {new Date(item.ngay_tao).toLocaleString("vi-VN")}</small></span>
+            <i className="cine-order-state" data-status={item.trang_thai}>{nhanTrangThaiDon(item.trang_thai)}</i>
+          </button>)}{don_hang.length === 0 && <div className="cine-dashboard-empty">Không có đơn phù hợp bộ lọc.</div>}</div>
+        </div>
+        <div className="cine-card cine-order-detail-v212">
+          {!don_chon ? <div className="cine-order-detail-empty-v212"><b>Chọn một đơn hàng</b><p>Chi tiết người nhận, sản phẩm, thanh toán và lịch sử trạng thái sẽ hiển thị tại đây.</p></div> : <>
+            <div className="cine-order-detail-head-v212"><div><span>Mã đơn</span><h3>{don_chon.ma_don_hang}</h3><small>{new Date(don_chon.ngay_tao).toLocaleString("vi-VN")}</small></div><strong>{dinhDangTien(don_chon.tong_tien)}</strong></div>
+            <div className="cine-order-recipient-v212"><div><span>Người nhận</span><b>{don_chon.ho_ten_nguoi_nhan}</b><small>{don_chon.so_dien_thoai}</small></div><div><span>Địa chỉ giao hàng</span><b>{don_chon.dia_chi_giao_hang}</b>{don_chon.khach_hang?.thu_dien_tu && <small>{don_chon.khach_hang.thu_dien_tu}</small>}</div></div>
+            <div className="cine-order-lines-v212"><h4>Sản phẩm</h4>{don_chon.chi_tiet.map(ct => <div className="cine-order-line-v212" key={ct.id}><span><b>{ct.ten_san_pham}</b><small>{ct.ma_san_pham} · {String(ct.tuy_chon?.ma_bien_the || "Cấu hình mặc định")}</small></span><span>{ct.so_luong} × {dinhDangTien(ct.don_gia)}</span><strong>{dinhDangTien(ct.thanh_tien)}</strong></div>)}</div>
+            <div className="cine-order-update-v212"><h4>Cập nhật trạng thái</h4><div className="cine-order-update-fields-v212"><label><span>Trạng thái mới</span><select value={don_trang_thai_moi} onChange={e => setDonTrangThaiMoi(e.target.value)}><option value={don_chon.trang_thai}>{nhanTrangThaiDon(don_chon.trang_thai)} (hiện tại)</option>{(TRANG_THAI_TIEP_THEO[don_chon.trang_thai] || []).map(x => <option key={x} value={x}>{nhanTrangThaiDon(x)}</option>)}</select></label><label><span>Ghi chú xử lý</span><input value={don_ghi_chu} onChange={e => setDonGhiChu(e.target.value)} placeholder="VD: Đã xác nhận với khách hàng"/></label></div><button type="button" className="cine-btn cine-btn-primary" onClick={luuTrangThaiDon} disabled={dang_xu_ly === `don-${don_chon.id}` || don_trang_thai_moi === don_chon.trang_thai}>{dang_xu_ly === `don-${don_chon.id}` ? "Đang lưu…" : "Lưu trạng thái"}</button>{TRANG_THAI_TIEP_THEO[don_chon.trang_thai]?.length === 0 && <small className="cine-terminal-note-v212">Đơn đã ở trạng thái kết thúc, không chuyển tiếp.</small>}</div>
+            <div className="cine-order-history-v212"><h4>Lịch sử xử lý</h4>{don_chon.lich_su.map(ls => <div key={ls.id} className="cine-order-history-item-v212"><i/><span><b>{nhanTrangThaiDon(ls.trang_thai_moi)}</b><small>{new Date(ls.ngay_tao).toLocaleString("vi-VN")} · {ls.nguoi_thuc_hien?.ho_ten || "Hệ thống/khách hàng"}</small>{ls.ghi_chu && <em>{ls.ghi_chu}</em>}</span></div>)}</div>
+          </>}
+        </div>
+      </div>
+    </section>}
+
+    {tab === "san-pham" && <section className="cine-admin-operations cine-commerce-admin-v212">
+      <div className="cine-operations-heading"><div><h2>Sản phẩm & tồn kho</h2><p>Chỉnh thông tin bán hàng cơ bản, trạng thái hiển thị và số lượng từng biến thể.</p></div><span className="cine-admin-count">{san_pham_qt.length} sản phẩm</span></div>
+      <div className="cine-card cine-product-filter-v212"><label><span>Tìm sản phẩm</span><input value={san_pham_tim_kiem} onChange={e => setSanPhamTimKiem(e.target.value)} placeholder="Mã, tên hoặc danh mục..."/></label><div><b>{sanPhamDaLoc.length}</b><span>kết quả</span></div></div>
+      <div className="cine-product-admin-list-v212">{sanPhamDaLoc.map(sp => <article className="cine-card cine-product-admin-card-v212" key={sp.id}>
+        <div className="cine-product-admin-head-v212"><div><span>{sp.ma_san_pham} · {sp.danh_muc.ten_danh_muc}</span><h3>{sp.ten_san_pham}</h3></div><span className="cine-order-state" data-status={sp.trang_thai}>{sp.trang_thai.replaceAll("_", " ")}</span></div>
+        <div className="cine-product-form-v212"><label><span>Tên sản phẩm</span><input value={sp.ten_san_pham} onChange={e => suaSanPhamLocal(sp.id, { ten_san_pham: e.target.value })}/></label><label><span>Giá bán</span><input type="number" min="0" step="1000" value={sp.gia_ban} onChange={e => suaSanPhamLocal(sp.id, { gia_ban: Number(e.target.value) })}/></label><label><span>Trạng thái</span><select value={sp.trang_thai} onChange={e => suaSanPhamLocal(sp.id, { trang_thai: e.target.value })}><option value="NHAP">Nháp</option><option value="DANG_BAN">Đang bán</option><option value="TAM_AN">Tạm ẩn</option><option value="NGUNG_BAN">Ngừng bán</option></select></label><label className="wide"><span>Mô tả ngắn</span><textarea value={sp.mo_ta_ngan || ""} onChange={e => suaSanPhamLocal(sp.id, { mo_ta_ngan: e.target.value })}/></label></div>
+        <button type="button" className="cine-btn cine-btn-primary" onClick={() => luuSanPham(sp)} disabled={dang_xu_ly === `sp-${sp.id}`}>{dang_xu_ly === `sp-${sp.id}` ? "Đang lưu…" : "Lưu sản phẩm"}</button>
+        <div className="cine-variant-table-v212"><div className="cine-variant-head-v212"><span>Biến thể</span><span>Vật liệu / màu</span><span>Tồn kho</span><span>Hiển thị</span><span>Thao tác</span></div>{sp.bien_the.map(bt => <div className="cine-variant-row-v212" key={bt.id}><b>{bt.ma_bien_the}</b><span>{bt.vat_lieu?.ten_vat_lieu || "Mặc định"} · {bt.mau_sac?.ten_mau || "Mặc định"}</span><input type="number" min="0" max="1000000" value={bt.so_luong_ton} onChange={e => suaBienTheLocal(sp.id, bt.id, { so_luong_ton: Math.max(0, Number(e.target.value)) })}/><label className="cine-stock-toggle-v212"><input type="checkbox" checked={bt.dang_hien_thi} onChange={e => suaBienTheLocal(sp.id, bt.id, { dang_hien_thi: e.target.checked })}/><span>{bt.dang_hien_thi ? "Đang hiện" : "Đang ẩn"}</span></label><button type="button" className="cine-btn cine-btn-secondary" onClick={() => luuTonKho(sp.id, bt.id)} disabled={dang_xu_ly === `kho-${bt.id}`}>{dang_xu_ly === `kho-${bt.id}` ? "Đang lưu…" : "Lưu kho"}</button></div>)}</div>
+      </article>)}</div>
+    </section>}
+
+    {tab === "nhat-ky" && <section className="cine-admin-operations cine-commerce-admin-v212">
+      <div className="cine-operations-heading"><div><h2>Nhật ký thao tác Admin</h2><p>200 sự kiện quản trị gần nhất trên khách hàng, nhân viên, ca làm, phân ca, đơn hàng, sản phẩm và tồn kho.</p></div><span className="cine-admin-count">{nhat_ky.length} sự kiện</span></div>
+      <div className="cine-card cine-product-filter-v212"><label><span>Tìm trong nhật ký</span><input value={nhat_ky_tim_kiem} onChange={e => setNhatKyTimKiem(e.target.value)} placeholder="Loại thao tác, Admin hoặc nội dung..."/></label><div><b>{nhatKyDaLoc.length}</b><span>kết quả</span></div></div>
+      <div className="cine-card cine-audit-list-v212">{nhatKyDaLoc.map(item => <article className="cine-audit-row-v212" key={item.id}><i/><div><b>{nhanSuKienAudit(item.loai_su_kien)}</b><span>{item.nguoi_thuc_hien?.ho_ten || "Admin/hệ thống"} · {new Date(item.ngay_tao).toLocaleString("vi-VN")}</span><code>{JSON.stringify(item.chi_tiet)}</code></div></article>)}{nhatKyDaLoc.length === 0 && <div className="cine-dashboard-empty">Không có sự kiện phù hợp.</div>}</div>
     </section>}
 
     {tab === "khach-hang" && <section className="cine-card cine-admin-section">

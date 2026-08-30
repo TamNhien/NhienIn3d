@@ -36,7 +36,7 @@ function taoDatabaseUrl(): string {
 const adapter = new PrismaPg({ connectionString: taoDatabaseUrl() });
 const db = new PrismaClient({ adapter });
 
-const PHIEN_BAN_HIEN_TAI = "SEED_V2100_QUAN_LY_CA";
+const PHIEN_BAN_HIEN_TAI = "SEED_V2120_DON_HANG_SAN_PHAM_AUDIT";
 
 const danh_muc = [
   ["HOBBY_RC", "Mô hình & RC", "mo-hinh-rc", "Mô hình cơ khí, xe điều khiển và sản phẩm lắp ráp."],
@@ -239,7 +239,7 @@ const phien_ban_seed = [
   ["SEED_V285_DU_LIEU_NGUOI_DUNG_HO_SO_LOGOUT", "NhienIn3d v2.8.5 chuẩn hóa dữ liệu người dùng mẫu, cho sửa email hồ sơ, sửa logout session và đổi màu trực tiếp trên ảnh sản phẩm."],
   ["SEED_V286_TAI_KHOAN_MAT_KHAU_BRAVE", "NhienIn3d v2.8.6 nhận diện Brave, lưu hồ sơ bền vững và đổi mật khẩu ngay trong trang Tài khoản."],
   ["SEED_V294_PERSIST_TAI_KHOAN_HO_SO", "NhienIn3d v2.9.4 không reset hồ sơ/trạng thái kích hoạt/địa chỉ/nhân viên đã chỉnh khi chạy lại seed."],
-  [PHIEN_BAN_HIEN_TAI, "NhienIn3d v2.10.0 cho phép chỉnh/xóa mẫu ca và phân ca đã xếp; seed không tái tạo dữ liệu vận hành bị Admin xóa."]
+  [PHIEN_BAN_HIEN_TAI, "NhienIn3d v2.12.0 bổ sung quản trị đơn hàng, lịch sử trạng thái, sản phẩm/tồn kho và audit Admin."]
 ] as const;
 
 async function main() {
@@ -570,6 +570,21 @@ async function main() {
         tuy_chon: { du_lieu_mau: true, ghi_chu: "Thông số tùy chọn minh họa" }
       }
     });
+
+    // v2.12.0: đơn mẫu tạo sau khi migration đã chạy vẫn phải có mốc lịch sử đầu tiên.
+    const da_co_lich_su = await db.lichSuDonHang.findFirst({ where: { don_hang_id: don.id }, select: { id: true } });
+    if (!da_co_lich_su) {
+      await db.lichSuDonHang.create({
+        data: {
+          don_hang_id: don.id,
+          nguoi_thuc_hien_id: user.id,
+          trang_thai_cu: null,
+          trang_thai_moi: don.trang_thai,
+          ghi_chu: "Khởi tạo lịch sử đơn hàng mẫu v2.12.0",
+          ngay_tao: don.ngay_tao
+        }
+      });
+    }
   }
 
   // V2: 10 giao dịch thanh toán mẫu, mỗi đơn hàng một giao dịch.
@@ -764,6 +779,7 @@ async function main() {
     bien_the_san_pham: await db.bienTheSanPham.count(),
     don_hang: await db.donHang.count(),
     chi_tiet_don_hang: await db.chiTietDonHang.count(),
+    lich_su_don_hang: await db.lichSuDonHang.count(),
     phien_dang_nhap: await db.phienDangNhap.count(),
     nhat_ky_bao_mat: await db.nhatKyBaoMat.count(),
     phien_ban_seed: await db.phienBanSeed.count(),

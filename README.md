@@ -1,6 +1,6 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v2.11.0** — 30/08/2026
+> Phiên bản hiện tại: **v2.12.0** — 30/08/2026
 
 NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **frontend Next.js** và **backend NestJS/Fastify** kết nối **PostgreSQL qua Prisma**.
 
@@ -19,7 +19,7 @@ NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **fro
 
 ## Giao diện dựng lại theo bố cục CineBooking Pro
 
-Bản source v2.11.0 tiếp tục dùng **frontend layout** theo cấu trúc CineBooking Pro, giữ nguyên nghiệp vụ NhienIn3d và làm lại đồng bộ các màn hình tài khoản/quản trị:
+Bản source v2.12.0 tiếp tục dùng **frontend layout** theo cấu trúc CineBooking Pro, giữ nguyên nghiệp vụ NhienIn3d và làm lại đồng bộ các màn hình tài khoản/quản trị:
 
 - Dùng `RootLayout` chung với **header sticky**, vùng nội dung `max-w-7xl`, **footer dùng chung** và menu drawer responsive; không còn lặp navbar ở từng route.
 - Bổ sung **Tailwind CSS 4 + `@tailwindcss/postcss`** giống lớp công nghệ frontend tham chiếu, đồng thời giữ toàn bộ CSS/logic nghiệp vụ cũ để tránh phá luồng sản phẩm, giỏ hàng, tài khoản và quản trị.
@@ -29,7 +29,11 @@ Bản source v2.11.0 tiếp tục dùng **frontend layout** theo cấu trúc Cin
 
 ## Điểm chính bản hiện tại
 
-- v2.11.0 bổ sung **Dashboard quản trị nâng cao** theo roadmap: doanh thu hôm nay/7 ngày/30 ngày, số đơn theo kỳ, giá trị đơn trung bình, khách hàng mới, trạng thái đơn, biểu đồ doanh thu 7 ngày, top sản phẩm 30 ngày, tồn kho thấp và 8 đơn hàng gần nhất. Toàn bộ endpoint tổng quan tiếp tục nằm sau `JwtGuard + VaiTroGuard` và chỉ `ADMIN` truy cập được.
+- v2.12.0 bổ sung **Quản trị đơn hàng**: tìm kiếm/lọc, xem chi tiết, cập nhật trạng thái theo luồng hợp lệ và xem lịch sử xử lý; khi hủy đơn hệ thống hoàn tồn kho các biến thể có mã được lưu trong `tuy_chon`.
+- v2.12.0 bổ sung **Quản trị sản phẩm & tồn kho** ở mức cơ bản: sửa tên, mô tả ngắn, giá bán, trạng thái sản phẩm; sửa tồn kho và bật/tắt hiển thị từng biến thể.
+- v2.12.0 bổ sung tab **Nhật ký Admin** lấy 200 sự kiện `ADMIN_*` gần nhất. Các thao tác khách hàng, nhân viên, ca làm, phân ca, đơn hàng, sản phẩm và tồn kho đều có audit trail trong `nhat_ky_bao_mat`.
+- Migration `202608300004_v212_quan_tri_don_hang_audit` tạo bảng `lich_su_don_hang`, backfill mốc đầu tiên cho đơn hiện có và checkout mới tự ghi lịch sử ngay khi tạo đơn.
+- Giữ Dashboard v2.11.0: doanh thu hôm nay/7 ngày/30 ngày, số đơn theo kỳ, giá trị đơn trung bình, khách hàng mới, biểu đồ doanh thu 7 ngày, top sản phẩm, tồn kho thấp và đơn gần nhất.
 - v2.10.0 cho phép **chỉnh sửa/xóa phân ca đã xếp** ngay trên lịch: đổi nhân viên, ngày làm, mẫu ca, ghi chú; mỗi dòng lịch có nút **Chỉnh sửa** và **Xóa**.
 - v2.10.1 tách **Khách hàng** và **Nhân viên bán hàng** thành hai khu quản trị riêng; khách hàng được sửa họ tên/email/SĐT/địa chỉ, đồng thời ca làm và phân ca chuyển sang endpoint POST cập nhật ổn định và xác minh lại PostgreSQL sau khi lưu.
 - v2.10.2 sửa lỗi **Lưu thay đổi hồ sơ/địa chỉ** và **Đổi mật khẩu** báo `Failed to fetch`: Fastify CORS cho phép tường minh `GET/HEAD/POST/PUT/PATCH/DELETE/OPTIONS`, frontend tài khoản chuyển hai thao tác này sang POST alias ổn định; PATCH cũ vẫn giữ tương thích.
@@ -290,7 +294,7 @@ ca_lam_viec
 phan_ca
 ```
 
-Tổng số bảng nghiệp vụ được script kiểm tra seed: **23 bảng**.
+Tổng số bảng nghiệp vụ được script kiểm tra seed: **24 bảng**.
 
 Quy ước database vẫn giữ nguyên:
 
@@ -779,16 +783,27 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 - Không có migration database mới; toàn bộ số liệu được tổng hợp trực tiếp từ PostgreSQL hiện có.
 - Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm test` → `npm run typecheck` → `npm run build` → Docker Compose → `.\scripts\release.ps1 v2.11.0`.
 
+## v2.12.0 — 30/08/2026
+
+- Thêm tab **Đơn hàng** trong Admin: lọc theo trạng thái, tìm theo mã đơn/người nhận/SĐT/email, xem chi tiết người nhận, sản phẩm, thanh toán và lịch sử xử lý.
+- Thêm luồng cập nhật trạng thái có kiểm soát `Chờ xác nhận → Đã xác nhận → Đang sản xuất → Đang giao → Hoàn tất`; cho hủy ở các bước trước giao và tự hoàn tồn kho khi hủy.
+- Migration `202608300004_v212_quan_tri_don_hang_audit` tạo bảng `lich_su_don_hang`; các đơn cũ được backfill một mốc lịch sử, đơn mới ghi mốc ngay khi checkout, Admin cập nhật trạng thái ghi người thực hiện và ghi chú.
+- Thêm tab **Sản phẩm & kho**: sửa tên, mô tả ngắn, giá bán, trạng thái; cập nhật số lượng tồn và bật/tắt hiển thị từng biến thể.
+- Thêm tab **Nhật ký Admin**, hiển thị 200 sự kiện `ADMIN_*` gần nhất; bổ sung audit cho tạo/sửa/xóa ca, tạo/sửa/xóa phân ca, cập nhật đơn, sản phẩm và tồn kho bên cạnh các audit tài khoản/nhân viên sẵn có.
+- Seed v2.12.0 bảo đảm các đơn mẫu tạo sau migration vẫn có lịch sử ban đầu; `kiem-tra-du-lieu` theo dõi thêm bảng `lich_su_don_hang`.
+- Giao diện mới giữ dark glass/CineBooking Pro, responsive và các tab Admin có thể cuộn ngang trên màn hình hẹp.
+- Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm test` → `npm run typecheck` → `npm run build` → Docker Compose → `.\scripts\release.ps1 v2.12.0`.
+
 ---
 
 # Lộ trình tiếp theo
 
-## v2.12.0
+## v2.13.0
 
-- Quản trị đơn hàng chi tiết: lọc, xem, cập nhật trạng thái và lịch sử xử lý.
-- Quản trị sản phẩm/tồn kho ở mức thao tác cơ bản.
-- Audit log thao tác Admin trên khách hàng, nhân viên, ca làm và đơn hàng.
-- Bổ sung E2E regression cho các luồng cập nhật dữ liệu đã từng phát sinh lỗi.
+- CRUD danh mục/sản phẩm mở rộng, quản lý hình ảnh và biến thể đầy đủ.
+- Duyệt/ẩn đánh giá sản phẩm trong Admin.
+- Xuất báo cáo đơn hàng/doanh thu/tồn kho theo CSV.
+- Mở rộng regression test cho luồng quản trị thương mại điện tử.
 
 ## v3.0.0
 

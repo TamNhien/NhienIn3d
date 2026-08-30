@@ -46,29 +46,29 @@ test("Swagger Fastify co @fastify/static tuong thich Fastify 5", () => {
   assert.equal(pkg.dependencies['@fastify/static'], '10.1.3');
 });
 
-test("seed v2.9.9 giu 23 bang va cho phep du lieu van hanh bi xoa", () => {
+test("seed v2.12.0 theo doi 24 bang va cho phep du lieu van hanh bi xoa", () => {
   const seed = readFileSync('prisma/seed.ts', 'utf8');
   for (const bang of [
     'nguoi_dung', 'danh_muc', 'san_pham', 'hinh_anh_san_pham',
     'vat_lieu', 'mau_sac', 'bien_the_san_pham', 'don_hang',
-    'chi_tiet_don_hang', 'phien_dang_nhap', 'nhat_ky_bao_mat', 'phien_ban_seed',
+    'chi_tiet_don_hang', 'lich_su_don_hang', 'phien_dang_nhap', 'nhat_ky_bao_mat', 'phien_ban_seed',
     'gio_hang', 'chi_tiet_gio_hang', 'phuong_thuc_thanh_toan', 'thanh_toan', 'dia_chi_nguoi_dung', 'yeu_thich', 'danh_gia_san_pham', 'dat_lai_mat_khau', 'nhan_vien', 'ca_lam_viec', 'phan_ca'
   ]) {
     assert.match(seed, new RegExp(`${bang}: await db\\.`));
   }
   assert.match(seed, /so_luong < 10/);
-  assert.match(seed, /PHIEN_BAN_HIEN_TAI = "SEED_V2100_QUAN_LY_CA"/);
+  assert.match(seed, /PHIEN_BAN_HIEN_TAI = "SEED_V2120_DON_HANG_SAN_PHAM_AUDIT"/);
   assert.match(seed, /bang_bien_dong/);
   assert.match(seed, /SEED_V286_TAI_KHOAN_MAT_KHAU_BRAVE/);
   assert.match(seed, /\/images\/khoi-lap-phuong-banh-rang\.jpg/);
 });
 
 
-test("API hien thi dung version v2.11.0 o health va OpenAPI", () => {
+test("API hien thi dung version v2.12.0 o health va OpenAPI", () => {
   const health = readFileSync("src/suc-khoe/suc-khoe.controller.ts", "utf8");
   const main = readFileSync("src/main.ts", "utf8");
-  assert.match(health, /phien_ban: "v2\.11\.0"/);
-  assert.match(main, /setVersion\("2\.11\.0"\)/);
+  assert.match(health, /phien_ban: "v2\.12\.0"/);
+  assert.match(main, /setVersion\("2\.12\.0"\)/);
 });
 
 test("V2 co migration gio hang, thanh toan va dia chi", () => {
@@ -495,4 +495,29 @@ test("v2.11.0 API tong quan co dashboard kinh doanh chi danh cho Admin", () => {
   assert.match(service, /gia_tri_don_trung_binh_30_ngay/);
   assert.match(service, /top_san_pham_30_ngay/);
   assert.match(service, /so_luong_ton: \{ lte: 5 \}/);
+});
+
+
+test("v2.12.0 API co lich su don hang quan tri san pham ton kho va audit", () => {
+  const schema = readFileSync("prisma/schema.prisma", "utf8");
+  const migration = readFileSync("prisma/migrations/202608300004_v212_quan_tri_don_hang_audit/migration.sql", "utf8");
+  const controller = readFileSync("src/quan-tri/quan-tri.controller.ts", "utf8");
+  const service = readFileSync("src/quan-tri/quan-tri.service.ts", "utf8");
+  const checkout = readFileSync("src/thanh-toan/thanh-toan.service.ts", "utf8");
+  const seed = readFileSync("prisma/seed.ts", "utf8");
+  assert.match(schema, /model LichSuDonHang/);
+  assert.match(migration, /Khởi tạo lịch sử từ dữ liệu trước v2\.12\.0/u);
+  assert.match(controller, /@Get\("don-hang"\)/);
+  assert.match(controller, /@Get\("don-hang\/:id"\)/);
+  assert.match(controller, /@Post\("don-hang\/:id\/trang-thai"\)/);
+  assert.match(controller, /@Get\("san-pham"\)/);
+  assert.match(controller, /@Post\("san-pham\/:id\/cap-nhat"\)/);
+  assert.match(controller, /@Post\("bien-the\/:id\/ton-kho"\)/);
+  assert.match(controller, /@Get\("nhat-ky"\)/);
+  assert.match(service, /chuyenHopLe/);
+  assert.match(service, /TrangThaiDonHang\.DA_HUY/);
+  assert.match(service, /lichSuDonHang\.create/);
+  assert.match(service, /startsWith: "ADMIN_"/);
+  assert.match(checkout, /Khách hàng tạo đơn hàng/u);
+  assert.match(seed, /Khởi tạo lịch sử đơn hàng mẫu v2\.12\.0/u);
 });

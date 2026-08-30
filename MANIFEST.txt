@@ -24,6 +24,7 @@ apps/api/prisma/migrations/202608290007_v280_tai_khoan_nhan_vien_phan_ca/migrati
 apps/api/prisma/migrations/202608300001_v293_hop_nhat_admin/migration.sql
 apps/api/prisma/migrations/202608300002_v295_nhan_vien_ban_hang/migration.sql
 apps/api/prisma/migrations/202608300003_v299_hai_ca_lam_va_quan_ly_ca/migration.sql
+apps/api/prisma/migrations/202608300004_v212_quan_tri_don_hang_audit/migration.sql
 apps/api/prisma/migrations/migration_lock.toml
 apps/api/prisma/schema.prisma
 apps/api/prisma/seed.ts
@@ -47,6 +48,9 @@ apps/api/src/quan-tri/dto/cap-nhat-ca-lam.dto.ts
 apps/api/src/quan-tri/dto/cap-nhat-nguoi-dung.dto.ts
 apps/api/src/quan-tri/dto/cap-nhat-nhan-vien.dto.ts
 apps/api/src/quan-tri/dto/cap-nhat-phan-ca.dto.ts
+apps/api/src/quan-tri/dto/cap-nhat-san-pham-quan-tri.dto.ts
+apps/api/src/quan-tri/dto/cap-nhat-ton-kho.dto.ts
+apps/api/src/quan-tri/dto/cap-nhat-trang-thai-don-hang.dto.ts
 apps/api/src/quan-tri/dto/tao-ca-lam.dto.ts
 apps/api/src/quan-tri/dto/tao-nhan-vien.dto.ts
 apps/api/src/quan-tri/dto/tao-phan-ca.dto.ts
