@@ -1,6 +1,6 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v2.10.1** — 30/08/2026
+> Phiên bản hiện tại: **v2.10.2** — 30/08/2026
 
 NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **frontend Next.js** và **backend NestJS/Fastify** kết nối **PostgreSQL qua Prisma**.
 
@@ -19,7 +19,7 @@ NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **fro
 
 ## Giao diện dựng lại theo bố cục CineBooking Pro
 
-Bản source v2.10.1 tiếp tục dùng **frontend layout** theo cấu trúc CineBooking Pro, giữ nguyên nghiệp vụ NhienIn3d và làm lại đồng bộ các màn hình tài khoản/quản trị:
+Bản source v2.10.2 tiếp tục dùng **frontend layout** theo cấu trúc CineBooking Pro, giữ nguyên nghiệp vụ NhienIn3d và làm lại đồng bộ các màn hình tài khoản/quản trị:
 
 - Dùng `RootLayout` chung với **header sticky**, vùng nội dung `max-w-7xl`, **footer dùng chung** và menu drawer responsive; không còn lặp navbar ở từng route.
 - Bổ sung **Tailwind CSS 4 + `@tailwindcss/postcss`** giống lớp công nghệ frontend tham chiếu, đồng thời giữ toàn bộ CSS/logic nghiệp vụ cũ để tránh phá luồng sản phẩm, giỏ hàng, tài khoản và quản trị.
@@ -31,6 +31,8 @@ Bản source v2.10.1 tiếp tục dùng **frontend layout** theo cấu trúc Cin
 
 - v2.10.0 cho phép **chỉnh sửa/xóa phân ca đã xếp** ngay trên lịch: đổi nhân viên, ngày làm, mẫu ca, ghi chú; mỗi dòng lịch có nút **Chỉnh sửa** và **Xóa**.
 - v2.10.1 tách **Khách hàng** và **Nhân viên bán hàng** thành hai khu quản trị riêng; khách hàng được sửa họ tên/email/SĐT/địa chỉ, đồng thời ca làm và phân ca chuyển sang endpoint POST cập nhật ổn định và xác minh lại PostgreSQL sau khi lưu.
+- v2.10.2 sửa lỗi **Lưu thay đổi hồ sơ/địa chỉ** và **Đổi mật khẩu** báo `Failed to fetch`: Fastify CORS cho phép tường minh `GET/HEAD/POST/PUT/PATCH/DELETE/OPTIONS`, frontend tài khoản chuyển hai thao tác này sang POST alias ổn định; PATCH cũ vẫn giữ tương thích.
+- Seed Admin không còn có nhánh nào reset `ADMIN_PASSWORD` lên tài khoản đã tồn tại; mật khẩu môi trường chỉ được dùng đúng lúc bootstrap tài khoản Admin lần đầu.
 - Mẫu ca đã có phân công vẫn **chỉnh sửa được**; tên/giờ/màu mới áp dụng tức thời cho các phân ca đang tham chiếu. Xóa mẫu ca sẽ xóa kèm các phân ca liên quan trong transaction.
 - Các thao tác xóa mẫu ca/phân ca trên web dùng endpoint `POST .../:id/xoa` có JSON body để ổn định với Fastify/proxy; endpoint `DELETE` vẫn giữ cho tương thích API.
 - Đã bỏ nhãn **STAFF OPERATIONS** khỏi cả màn hình Ca làm và Xếp ca.
@@ -753,6 +755,17 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 - Không có migration database mới.
 - Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm test` → `npm run typecheck` → `npm run build` → Docker Compose → `.\scripts\release.ps1 v2.10.1`.
 
+
+## v2.10.2 — 30/08/2026
+
+- Sửa nguyên nhân gốc của lỗi `Failed to fetch` khi cập nhật tài khoản: cấu hình `@fastify/cors` khai báo đầy đủ `GET`, `HEAD`, `POST`, `PUT`, `PATCH`, `DELETE`, `OPTIONS` và headers cần thiết.
+- Thêm `POST /api/v1/tai-khoan/ho-so` làm alias cho `PATCH /api/v1/tai-khoan/ho-so`; giao diện `/tai-khoan` mặc định dùng POST để lưu họ tên, email, số điện thoại và địa chỉ.
+- Thêm `POST /api/v1/tai-khoan/doi-mat-khau` làm alias cho PATCH; cả hai endpoint dùng chung một handler cookie/JWT để không lệch hành vi.
+- Giữ transaction PostgreSQL khi lưu hồ sơ: địa chỉ mặc định được update/create cùng người dùng, sau đó response đọc lại chính dữ liệu vừa ghi.
+- Khi đổi mật khẩu cần đăng nhập lại, backend dọn cả access cookie và refresh cookie đúng path; khi giữ phiên hiện tại thì vẫn phát access JWT mới theo `phien_ban_mat_khau`.
+- Seed Admin được harden: nếu email Admin đã tồn tại thì chỉ bảo đảm `vai_tro=ADMIN` và `da_kich_hoat=true`, tuyệt đối không hash/reset mật khẩu hoặc ghi đè họ tên. `ADMIN_PASSWORD` chỉ dùng khi tạo Admin lần đầu.
+- Không có migration database mới.
+- Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm test` → `npm run typecheck` → `npm run build` → Docker Compose → `.\scripts\release.ps1 v2.10.2`.
 
 ---
 

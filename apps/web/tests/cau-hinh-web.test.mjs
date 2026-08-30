@@ -566,3 +566,14 @@ test("v2.10.1 tach khach hang va luu cap nhat bang POST", () => {
   assert.doesNotMatch(footer, /Sản phẩm in 3D theo yêu cầu với cấu hình mua hàng mặc định/u);
   assert.match(css, /cine-customer-form-grid/);
 });
+
+
+test("v2.10.2 ho so va doi mat khau gui POST on dinh", () => {
+  const lib = readFileSync("lib/tai-khoan.ts", "utf8");
+  const account = readFileSync("app/tai-khoan/page.tsx", "utf8");
+  assert.match(lib, /capNhatHoSo[\s\S]*method: "POST"/);
+  assert.match(lib, /doiMatKhau[\s\S]*method: "POST"/);
+  assert.match(lib, /cache: "no-store"/);
+  assert.match(account, /setDiaChi\(da_luu\.dia_chi\?\.\[0\]\?\.dia_chi_cu_the \|\| ""\)/);
+  assert.match(account, /window\.location\.replace\("\/dang-nhap\?doi_mat_khau=thanh_cong"\)/);
+});

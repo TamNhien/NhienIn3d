@@ -33,8 +33,8 @@ export type DonHangTaiKhoan = { id: string; ma_don_hang: string; tong_tien: stri
 export type LichLamViec = null | { id: string; ma_nhan_vien: string; chuc_danh: string; bo_phan: string; trang_thai: string; phan_ca: Array<{ id: string; ngay_lam: string; trang_thai: string; ghi_chu?: string | null; ca_lam_viec: { ma_ca: string; ten_ca: string; gio_bat_dau: string; gio_ket_thuc: string; mau_hien_thi?: string | null } }> };
 
 export const layHoSo = () => goi<HoSoTaiKhoan>("/tai-khoan/ho-so", { cache: "no-store" });
-export const capNhatHoSo = (payload: { ho_ten: string; so_dien_thoai: string; thu_dien_tu: string; dia_chi: string }) => goi<HoSoTaiKhoan>("/tai-khoan/ho-so", { method: "PATCH", body: JSON.stringify(payload), cache: "no-store" });
-export const doiMatKhau = (payload: { mat_khau_hien_tai: string; mat_khau_moi: string }) => goi<{ thong_bao: string; yeu_cau_dang_nhap_lai: boolean }>("/tai-khoan/doi-mat-khau", { method: "PATCH", body: JSON.stringify(payload), cache: "no-store" });
+export const capNhatHoSo = (payload: { ho_ten: string; so_dien_thoai: string; thu_dien_tu: string; dia_chi: string }) => goi<HoSoTaiKhoan>("/tai-khoan/ho-so", { method: "POST", body: JSON.stringify(payload), cache: "no-store" });
+export const doiMatKhau = (payload: { mat_khau_hien_tai: string; mat_khau_moi: string }) => goi<{ thong_bao: string; yeu_cau_dang_nhap_lai: boolean }>("/tai-khoan/doi-mat-khau", { method: "POST", body: JSON.stringify(payload), cache: "no-store" });
 export const layPhien = () => goi<PhienTaiKhoan[]>("/tai-khoan/phien", { cache: "no-store" });
 export const capNhatPhienHienTai = (trinh_duyet_hien_thi: string) => goi<{ da_cap_nhat: boolean }>("/tai-khoan/phien/hien-tai", { method: "PATCH", body: JSON.stringify({ trinh_duyet_hien_thi }), cache: "no-store" });
 export const thuHoiPhien = (id: string) => goi<{ thong_bao: string }>(`/tai-khoan/phien/${encodeURIComponent(id)}`, { method: "DELETE" });

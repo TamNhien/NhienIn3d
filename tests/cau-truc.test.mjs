@@ -63,16 +63,16 @@ test("V2 co migration nang cap khong ghi de migration V1", () => {
   assert.equal(existsSync("apps/api/prisma/migrations/202608290002_v002_gio_hang_thanh_toan/migration.sql"), true);
 });
 
-test("version v2.10.1 dong bo root API va Web", () => {
-  assert.equal(readFileSync("VERSION", "utf8").trim(), "2.10.1");
-  assert.equal(docJson("package.json").version, "2.10.1");
-  assert.equal(docJson("apps/api/package.json").version, "2.10.1");
-  assert.equal(docJson("apps/web/package.json").version, "2.10.1");
+test("version v2.10.2 dong bo root API va Web", () => {
+  assert.equal(readFileSync("VERSION", "utf8").trim(), "2.10.2");
+  assert.equal(docJson("package.json").version, "2.10.2");
+  assert.equal(docJson("apps/api/package.json").version, "2.10.2");
+  assert.equal(docJson("apps/web/package.json").version, "2.10.2");
 });
 
-test("README co lich su phien ban tang dan den v2.10.1", () => {
+test("README co lich su phien ban tang dan den v2.10.2", () => {
   const readme = readFileSync("README.md", "utf8");
-  const viTri = ["## v1.0.0", "## v1.0.1", "## v1.0.2", "## v1.0.3", "## v1.0.4", "## v1.0.5", "## v1.0.6", "## v1.0.7", "## v2.0.0", "## v2.1.0", "## v2.1.1", "## v2.2.0", "## v2.2.1", "## v2.3.0", "## v2.4.0", "## v2.4.1", "## v2.5.0", "## v2.6.0", "## v2.6.1", "## v2.7.0", "## v2.8.0", "## v2.8.1", "## v2.8.2", "## v2.8.3", "## v2.8.4", "## v2.8.5", "## v2.8.6", "## v2.8.7", "## v2.8.8", "## v2.8.9", "## v2.9.0", "## v2.9.1", "## v2.9.2", "## v2.9.3", "## v2.9.4", "## v2.9.5", "## v2.9.6", "## v2.9.7", "## v2.9.8", "## v2.9.9", "## v2.10.0", "## v2.10.1"].map(x => readme.indexOf(x));
+  const viTri = ["## v1.0.0", "## v1.0.1", "## v1.0.2", "## v1.0.3", "## v1.0.4", "## v1.0.5", "## v1.0.6", "## v1.0.7", "## v2.0.0", "## v2.1.0", "## v2.1.1", "## v2.2.0", "## v2.2.1", "## v2.3.0", "## v2.4.0", "## v2.4.1", "## v2.5.0", "## v2.6.0", "## v2.6.1", "## v2.7.0", "## v2.8.0", "## v2.8.1", "## v2.8.2", "## v2.8.3", "## v2.8.4", "## v2.8.5", "## v2.8.6", "## v2.8.7", "## v2.8.8", "## v2.8.9", "## v2.9.0", "## v2.9.1", "## v2.9.2", "## v2.9.3", "## v2.9.4", "## v2.9.5", "## v2.9.6", "## v2.9.7", "## v2.9.8", "## v2.9.9", "## v2.10.0", "## v2.10.1", "## v2.10.2"].map(x => readme.indexOf(x));
   assert.ok(viTri.every(x => x >= 0));
   assert.deepEqual([...viTri].sort((a,b)=>a-b), viTri);
 });
@@ -623,4 +623,19 @@ test("v2.10.1 tach khach hang, sua thong tin va luu ca phan ca bang POST", () =>
   assert.match(lib, /ca-lam\/\$\{id\}\/cap-nhat[\s\S]*method: "POST"/);
   assert.match(lib, /phan-ca\/\$\{id\}\/cap-nhat[\s\S]*method: "POST"/);
   assert.doesNotMatch(footer, /Sản phẩm in 3D theo yêu cầu với cấu hình mua hàng mặc định/u);
+});
+
+
+test("v2.10.2 profile va doi mat khau dung POST, CORS mo day du method", () => {
+  const main = readFileSync("apps/api/src/main.ts", "utf8");
+  const controller = readFileSync("apps/api/src/tai-khoan/tai-khoan.controller.ts", "utf8");
+  const lib = readFileSync("apps/web/lib/tai-khoan.ts", "utf8");
+  const seed = readFileSync("apps/api/prisma/seed.ts", "utf8");
+  assert.match(main, /methods: \["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"\]/);
+  assert.match(controller, /@Post\("ho-so"\)/);
+  assert.match(controller, /@Post\("doi-mat-khau"\)/);
+  assert.match(lib, /capNhatHoSo[\s\S]*method: "POST"/);
+  assert.match(lib, /doiMatKhau[\s\S]*method: "POST"/);
+  assert.match(seed, /ADMIN_PASSWORD chỉ dùng khi tạo tài khoản lần đầu/u);
+  assert.doesNotMatch(seed, /update: \{ mat_khau_bam, ho_ten: ho_ten_quan_tri/);
 });

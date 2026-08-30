@@ -19,7 +19,12 @@ async function khoi_dong() {
   const fastify = app.getHttpAdapter().getInstance();
 
   await fastify.register(cookie, { secret: cookie_secret });
-  await fastify.register(cors, { origin: (process.env.CORS_ORIGIN || "http://localhost:3000").split(","), credentials: true });
+  await fastify.register(cors, {
+    origin: (process.env.CORS_ORIGIN || "http://localhost:3000").split(",").map(x => x.trim()).filter(Boolean),
+    credentials: true,
+    methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With"]
+  });
   await fastify.register(helmet, { global: true, contentSecurityPolicy: false });
   await fastify.register(rateLimit, { max: 120, timeWindow: "1 minute" });
 
@@ -27,7 +32,7 @@ async function khoi_dong() {
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
   app.enableShutdownHooks();
 
-  const cau_hinh_openapi = new DocumentBuilder().setTitle("NhienIn3d API").setDescription("API v2.10.1 cho cửa hàng sản phẩm in 3D NhienIn3d").setVersion("2.10.1").addCookieAuth("nhienin3d_phien").build();
+  const cau_hinh_openapi = new DocumentBuilder().setTitle("NhienIn3d API").setDescription("API v2.10.2 cho cửa hàng sản phẩm in 3D NhienIn3d").setVersion("2.10.2").addCookieAuth("nhienin3d_phien").build();
   const tai_lieu = SwaggerModule.createDocument(app, cau_hinh_openapi);
   SwaggerModule.setup("tai-lieu", app, tai_lieu);
 

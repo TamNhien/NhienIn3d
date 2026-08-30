@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Req, Res, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Req, Res, UseGuards } from "@nestjs/common";
 import { ApiCookieAuth, ApiTags } from "@nestjs/swagger";
 import type { FastifyReply } from "fastify";
 import { JwtGuard, type YeuCauCoNguoiDung } from "../xac-thuc/jwt.guard.js";
@@ -26,12 +26,33 @@ export class TaiKhoanController {
     return this.service.cap_nhat_ho_so(req.nguoi_dung_xac_thuc!.id, dto);
   }
 
+  // POST alias dùng cho trình duyệt/proxy chỉ cho phép nhóm method đơn giản ổn định.
+  // PATCH vẫn được giữ để tương thích API cũ.
+  @Post("ho-so")
+  cap_nhat_ho_so_post(@Req() req: YeuCauCoNguoiDung, @Body() dto: CapNhatHoSoDto) {
+    return this.service.cap_nhat_ho_so(req.nguoi_dung_xac_thuc!.id, dto);
+  }
+
   @Patch("doi-mat-khau")
   async doi_mat_khau(
     @Req() req: YeuCauCoNguoiDung,
     @Body() dto: DoiMatKhauDto,
     @Res({ passthrough: true }) reply: FastifyReply
   ) {
+    return this.xu_ly_doi_mat_khau(req, dto, reply);
+  }
+
+  // POST alias tránh lỗi CORS/preflight với PATCH trên một số cấu hình local/proxy.
+  @Post("doi-mat-khau")
+  async doi_mat_khau_post(
+    @Req() req: YeuCauCoNguoiDung,
+    @Body() dto: DoiMatKhauDto,
+    @Res({ passthrough: true }) reply: FastifyReply
+  ) {
+    return this.xu_ly_doi_mat_khau(req, dto, reply);
+  }
+
+  private async xu_ly_doi_mat_khau(req: YeuCauCoNguoiDung, dto: DoiMatKhauDto, reply: FastifyReply) {
     const kq = await this.service.doi_mat_khau(req.nguoi_dung_xac_thuc!.id, req.nguoi_dung_xac_thuc!.phien_id, dto);
     const bao_mat = process.env.NODE_ENV === "production";
     if ("ma_truy_cap" in kq && kq.ma_truy_cap) {
@@ -41,6 +62,8 @@ export class TaiKhoanController {
       const het_han = new Date(0);
       reply.setCookie("nhienin3d_phien", "", { httpOnly: true, secure: bao_mat, sameSite: "lax", path: "/", maxAge: 0, expires: het_han });
       reply.clearCookie("nhienin3d_phien", { path: "/" });
+      reply.setCookie("nhienin3d_lam_moi", "", { httpOnly: true, secure: bao_mat, sameSite: "strict", path: "/api/v1/xac-thuc", maxAge: 0, expires: het_han });
+      reply.clearCookie("nhienin3d_lam_moi", { path: "/api/v1/xac-thuc" });
     }
     const { ma_truy_cap: _bo_ma, ...phan_hoi } = kq as typeof kq & { ma_truy_cap?: string };
     return phan_hoi;

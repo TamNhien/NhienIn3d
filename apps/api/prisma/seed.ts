@@ -327,13 +327,22 @@ async function main() {
     });
     nguoi_dung.push(admin);
   } else if (thu_dien_tu_quan_tri && admin_password && admin_password.length >= 12) {
-    const mat_khau_bam = await argon2.hash(admin_password, { type: argon2.argon2id });
-    const admin = await db.nguoiDung.upsert({
-      where: { thu_dien_tu: thu_dien_tu_quan_tri },
-      update: { mat_khau_bam, ho_ten: ho_ten_quan_tri, vai_tro: VaiTro.ADMIN, da_kich_hoat: true },
-      create: { thu_dien_tu: thu_dien_tu_quan_tri, mat_khau_bam, ho_ten: ho_ten_quan_tri, vai_tro: VaiTro.ADMIN, da_kich_hoat: true }
-    });
-    nguoi_dung.push(admin);
+    // Nếu email bootstrap đã tồn tại thì giữ nguyên mật khẩu/hồ sơ người dùng đã chỉnh.
+    // ADMIN_PASSWORD chỉ dùng khi tạo tài khoản lần đầu, không reset mật khẩu sau khi Admin đổi trên web.
+    const admin_theo_email = await db.nguoiDung.findUnique({ where: { thu_dien_tu: thu_dien_tu_quan_tri } });
+    if (admin_theo_email) {
+      const admin = await db.nguoiDung.update({
+        where: { id: admin_theo_email.id },
+        data: { vai_tro: VaiTro.ADMIN, da_kich_hoat: true }
+      });
+      nguoi_dung.push(admin);
+    } else {
+      const mat_khau_bam = await argon2.hash(admin_password, { type: argon2.argon2id });
+      const admin = await db.nguoiDung.create({
+        data: { thu_dien_tu: thu_dien_tu_quan_tri, mat_khau_bam, ho_ten: ho_ten_quan_tri, vai_tro: VaiTro.ADMIN, da_kich_hoat: true }
+      });
+      nguoi_dung.push(admin);
+    }
   } else {
     const mat_khau_bam = await argon2.hash(randomBytes(32).toString("base64url"), { type: argon2.argon2id });
     const admin_mau = await db.nguoiDung.upsert({

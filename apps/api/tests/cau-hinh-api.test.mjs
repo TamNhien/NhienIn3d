@@ -64,11 +64,11 @@ test("seed v2.9.9 giu 23 bang va cho phep du lieu van hanh bi xoa", () => {
 });
 
 
-test("API hien thi dung version v2.10.1 o health va OpenAPI", () => {
+test("API hien thi dung version v2.10.2 o health va OpenAPI", () => {
   const health = readFileSync("src/suc-khoe/suc-khoe.controller.ts", "utf8");
   const main = readFileSync("src/main.ts", "utf8");
-  assert.match(health, /phien_ban: "v2\.10\.1"/);
-  assert.match(main, /setVersion\("2\.10\.1"\)/);
+  assert.match(health, /phien_ban: "v2\.10\.2"/);
+  assert.match(main, /setVersion\("2\.10\.2"\)/);
 });
 
 test("V2 co migration gio hang, thanh toan va dia chi", () => {
@@ -464,4 +464,20 @@ test("v2.10.1 API cap nhat khach hang va POST alias cho ca phan ca", () => {
   assert.match(service, /diaChiNguoiDung\.update/);
   assert.match(service, /da_doc_lai_sau_commit: true/);
   assert.match(service, /phanCa\.findUniqueOrThrow/);
+});
+
+
+test("v2.10.2 API sua CORS profile va doi mat khau", () => {
+  const main = readFileSync("src/main.ts", "utf8");
+  const controller = readFileSync("src/tai-khoan/tai-khoan.controller.ts", "utf8");
+  const seed = readFileSync("prisma/seed.ts", "utf8");
+  assert.match(main, /methods: \["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"\]/);
+  assert.match(main, /allowedHeaders/);
+  assert.match(controller, /@Post\("ho-so"\)/);
+  assert.match(controller, /cap_nhat_ho_so_post/);
+  assert.match(controller, /@Post\("doi-mat-khau"\)/);
+  assert.match(controller, /doi_mat_khau_post/);
+  assert.match(controller, /xu_ly_doi_mat_khau/);
+  assert.match(seed, /admin_theo_email/);
+  assert.match(seed, /ADMIN_PASSWORD chỉ dùng khi tạo tài khoản lần đầu/u);
 });

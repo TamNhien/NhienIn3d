@@ -507,3 +507,5 @@ footer{border-top:1px solid var(--line);max-width:1240px;margin:auto;padding:30p
 @media(max-width:900px){.cine-customer-form-grid{grid-template-columns:1fr}.cine-customer-address{grid-column:auto}.cine-customer-card-head{align-items:flex-start;flex-direction:column}}
 
 .cine-staff-row-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+
+/* v2.10.2 - hồ sơ và đổi mật khẩu dùng POST alias; CORS API cho phép đầy đủ method. */
