@@ -1,13 +1,42 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useCallback, useEffect, useState } from "react";
-import { ThanhDieuHuong } from "../../components/thanh-dieu-huong";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { danhGiaMatKhau, TruongMatKhau } from "../../components/truong-mat-khau";
 import { layTaiKhoan, TaiKhoan, tenVaiTro } from "../../lib/xac-thuc";
-import { AdminNhanVien, AdminNguoiDung, CaLam, capNhatNhanVien, capNhatNguoiDung, layCaLam, layNhanVien, layNguoiDung, layPhanCa, layTongQuan, PhanCa, taoCaLam, taoNhanVien, taoPhanCa, xoaPhanCa } from "../../lib/quan-tri";
+import {
+  AdminNhanVien,
+  AdminNguoiDung,
+  CaLam,
+  capNhatCaLam,
+  capNhatNhanVien,
+  capNhatPhanCa,
+  kichHoatNguoiDung,
+  khoaNguoiDung,
+  layCaLam,
+  layNhanVien,
+  layNguoiDung,
+  layPhanCa,
+  layTongQuan,
+  PhanCa,
+  taoCaLam,
+  taoNhanVien,
+  taoPhanCa,
+  xoaCaLam,
+  xoaNguoiDung,
+  xoaPhanCa
+} from "../../lib/quan-tri";
 
 const homNay = () => new Date().toISOString().slice(0, 10);
+const sauNgay = (so_ngay: number) => {
+  const d = new Date();
+  d.setDate(d.getDate() + so_ngay);
+  return d.toISOString().slice(0, 10);
+};
+const ngayTuIso = (gia_tri: string) => gia_tri.slice(0, 10);
+const dinhDangNgay = (gia_tri: string) => new Intl.DateTimeFormat("vi-VN", { dateStyle: "full" }).format(new Date(`${ngayTuIso(gia_tri)}T00:00:00`));
+
+type TabQuanTri = "nguoi-dung" | "nhan-vien" | "tao-nhan-vien" | "ca-lam" | "xep-ca";
 
 export default function QuanTriPage() {
   const [tai_khoan, setTaiKhoan] = useState<TaiKhoan | null | undefined>(undefined);
@@ -17,105 +46,412 @@ export default function QuanTriPage() {
   const [ca_lam, setCaLam] = useState<CaLam[]>([]);
   const [phan_ca, setPhanCa] = useState<PhanCa[]>([]);
   const [thong_bao, setThongBao] = useState("");
+  const [tab, setTab] = useState<TabQuanTri>("nguoi-dung");
+  const [dang_xu_ly, setDangXuLy] = useState<string | null>(null);
+  const [tu_ngay, setTuNgay] = useState(homNay());
+  const [den_ngay, setDenNgay] = useState(sauNgay(14));
 
-  const [nv, setNv] = useState({ thu_dien_tu: "", ho_ten: "", so_dien_thoai: "", mat_khau: "", vai_tro: "NHAN_VIEN", ma_nhan_vien: "", chuc_danh: "Kỹ thuật in 3D", bo_phan: "Sản xuất", ngay_vao_lam: homNay() });
-  const [ca, setCa] = useState({ ma_ca: "", ten_ca: "", gio_bat_dau: "08:00", gio_ket_thuc: "17:00", mau_hien_thi: "#22C55E" });
+  const [nv, setNv] = useState({ thu_dien_tu: "", ho_ten: "", so_dien_thoai: "", mat_khau: "", xac_nhan_mat_khau: "", ma_nhan_vien: "", ngay_vao_lam: homNay() });
+  const [ca, setCa] = useState({ ma_ca: "", ten_ca: "", gio_bat_dau: "06:00", gio_ket_thuc: "14:00", mau_hien_thi: "#38BDF8" });
+  const [ca_dang_sua_id, setCaDangSuaId] = useState<string | null>(null);
   const [pc, setPc] = useState({ nhan_vien_id: "", ca_lam_viec_id: "", ngay_lam: homNay(), ghi_chu: "" });
+  const [pc_dang_sua_id, setPcDangSuaId] = useState<string | null>(null);
 
   const taiDuLieu = useCallback(async () => {
-    const tk = await layTaiKhoan(); setTaiKhoan(tk);
-    if (!tk || !["QUAN_TRI", "SIEU_QUAN_TRI"].includes(tk.vai_tro)) return;
+    const tk = await layTaiKhoan();
+    setTaiKhoan(tk);
+    if (!tk || tk.vai_tro !== "ADMIN") return;
     const [tq, nd, nvData, caData, pcData] = await Promise.all([layTongQuan(), layNguoiDung(), layNhanVien(), layCaLam(), layPhanCa()]);
-    setTongQuan(tq); setNguoiDung(nd); setNhanVien(nvData); setCaLam(caData); setPhanCa(pcData);
+    setTongQuan(tq);
+    setNguoiDung(nd);
+    setNhanVien(nvData);
+    setCaLam(caData);
+    setPhanCa(pcData);
     setPc(x => ({ ...x, nhan_vien_id: x.nhan_vien_id || nvData[0]?.id || "", ca_lam_viec_id: x.ca_lam_viec_id || caData[0]?.id || "" }));
   }, []);
 
-  useEffect(() => { taiDuLieu().catch(e => { setThongBao(e instanceof Error ? e.message : "Không thể tải dữ liệu quản trị"); }); }, [taiDuLieu]);
+  useEffect(() => { taiDuLieu().catch(e => setThongBao(e instanceof Error ? e.message : "Không thể tải dữ liệu quản trị")); }, [taiDuLieu]);
 
-  async function doiVaiTro(user: AdminNguoiDung, vai_tro: AdminNguoiDung["vai_tro"]) {
-    try { await capNhatNguoiDung(user.id, { vai_tro }); setThongBao(`Đã đổi vai trò ${user.ho_ten}.`); await taiDuLieu(); }
-    catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể đổi vai trò"); }
-  }
   async function doiTrangThai(user: AdminNguoiDung) {
-    try { await capNhatNguoiDung(user.id, { da_kich_hoat: !user.da_kich_hoat }); setThongBao(`Đã cập nhật trạng thái ${user.ho_ten}.`); await taiDuLieu(); }
-    catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể cập nhật tài khoản"); }
+    setDangXuLy(user.id); setThongBao("");
+    try {
+      const kq = user.da_kich_hoat ? await khoaNguoiDung(user.id) : await kichHoatNguoiDung(user.id);
+      setThongBao(kq.thong_bao);
+      await taiDuLieu();
+    } catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể cập nhật tài khoản"); }
+    finally { setDangXuLy(null); }
   }
+
+  async function xoaTaiKhoan(user: AdminNguoiDung) {
+    if (!window.confirm(`Xóa tài khoản ${user.thu_dien_tu}?\n\nĐơn hàng đã phát sinh vẫn được giữ lại nhưng không còn liên kết tới tài khoản này.`)) return;
+    setDangXuLy(user.id); setThongBao("");
+    try {
+      const kq = await xoaNguoiDung(user.id);
+      setThongBao(kq.thong_bao);
+      await taiDuLieu();
+    } catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể xóa tài khoản"); }
+    finally { setDangXuLy(null); }
+  }
+
   async function taoNV(e: FormEvent) {
     e.preventDefault();
-    if (!danhGiaMatKhau(nv.mat_khau).hop_le) { setThongBao("Mật khẩu nhân viên phải có ít nhất 12 ký tự, chữ hoa, chữ thường, số và ký tự đặc biệt."); return; }
-    try { await taoNhanVien(nv); setThongBao("Đã tạo tài khoản nhân viên."); setNv(x => ({ ...x, thu_dien_tu: "", ho_ten: "", so_dien_thoai: "", mat_khau: "", ma_nhan_vien: "" })); await taiDuLieu(); }
-    catch (err) { setThongBao(err instanceof Error ? err.message : "Không thể tạo nhân viên"); }
+    setThongBao("");
+    if (!danhGiaMatKhau(nv.mat_khau).hop_le) {
+      setThongBao("Mật khẩu nhân viên phải có ít nhất 12 ký tự, chữ hoa, chữ thường, số và ký tự đặc biệt.");
+      return;
+    }
+    if (nv.mat_khau !== nv.xac_nhan_mat_khau) {
+      setThongBao("Mật khẩu và xác nhận mật khẩu chưa khớp.");
+      return;
+    }
+    setDangXuLy("tao-nhan-vien");
+    try {
+      await taoNhanVien({
+        thu_dien_tu: nv.thu_dien_tu.trim(),
+        ho_ten: nv.ho_ten.trim(),
+        so_dien_thoai: nv.so_dien_thoai.trim() || undefined,
+        mat_khau: nv.mat_khau,
+        ma_nhan_vien: nv.ma_nhan_vien.trim().toUpperCase(),
+        ngay_vao_lam: nv.ngay_vao_lam,
+      });
+      setThongBao("Đã tạo nhân viên bán hàng và kích hoạt tài khoản.");
+      setNv({ thu_dien_tu: "", ho_ten: "", so_dien_thoai: "", mat_khau: "", xac_nhan_mat_khau: "", ma_nhan_vien: "", ngay_vao_lam: homNay() });
+      await taiDuLieu();
+      setTab("nhan-vien");
+    } catch (err) {
+      setThongBao(err instanceof Error ? err.message : "Không thể tạo nhân viên bán hàng");
+    } finally {
+      setDangXuLy(null);
+    }
   }
+
   function suaNhanVienLocal(id: string, patch: Partial<AdminNhanVien>) {
     setNhanVien(ds => ds.map(x => x.id === id ? { ...x, ...patch } : x));
   }
+
   async function luuNhanVien(item: AdminNhanVien) {
+    const trang_thai_can_luu = item.trang_thai;
+    setDangXuLy(`nv-${item.id}`);
+    setThongBao("");
     try {
-      await capNhatNhanVien(item.id, { chuc_danh: item.chuc_danh, bo_phan: item.bo_phan, trang_thai: item.trang_thai });
-      setThongBao(`Đã cập nhật nhân viên ${item.ma_nhan_vien}.`);
+      const da_luu = await capNhatNhanVien(item.id, { trang_thai: trang_thai_can_luu });
+      setNhanVien(ds => ds.map(x => x.id === item.id ? da_luu : x));
+
+      // Xác minh lại bằng GET no-store ngay sau commit. Chỉ báo thành công khi
+      // PostgreSQL trả đúng trạng thái vừa lưu, nhờ vậy F5 sẽ giữ nguyên dữ liệu.
+      const ds_moi = await layNhanVien();
+      const xac_nhan = ds_moi.find(x => x.id === item.id);
+      if (!xac_nhan || xac_nhan.trang_thai !== trang_thai_can_luu) {
+        throw new Error("PostgreSQL chưa xác nhận trạng thái nhân viên vừa lưu. Vui lòng thử lại.");
+      }
+      setNhanVien(ds_moi);
+      setNguoiDung(await layNguoiDung());
+      setThongBao(`Đã lưu ${item.ma_nhan_vien}: ${trang_thai_can_luu === "DANG_LAM" ? "Đang làm" : trang_thai_can_luu === "TAM_NGHI" ? "Tạm nghỉ" : "Nghỉ việc"}. F5 vẫn giữ trạng thái này.`);
+    } catch (e) {
+      setThongBao(e instanceof Error ? e.message : "Không thể cập nhật nhân viên");
+      await layNhanVien().then(setNhanVien).catch(() => undefined);
+    } finally {
+      setDangXuLy(null);
+    }
+  }
+
+  function datLaiFormCa() {
+    setCaDangSuaId(null);
+    setCa({ ma_ca: "", ten_ca: "", gio_bat_dau: "06:00", gio_ket_thuc: "14:00", mau_hien_thi: "#38BDF8" });
+  }
+
+  function batDauSuaCa(item: CaLam) {
+    setCaDangSuaId(item.id);
+    setCa({
+      ma_ca: item.ma_ca,
+      ten_ca: item.ten_ca,
+      gio_bat_dau: item.gio_bat_dau,
+      gio_ket_thuc: item.gio_ket_thuc,
+      mau_hien_thi: item.mau_hien_thi || "#38BDF8"
+    });
+    setThongBao(`Đang chỉnh sửa ${item.ma_ca} · ${item.ten_ca}.`);
+  }
+
+  async function luuCa(e: FormEvent) {
+    e.preventDefault();
+    setDangXuLy(ca_dang_sua_id ? `ca-${ca_dang_sua_id}` : "tao-ca");
+    setThongBao("");
+    try {
+      if (ca_dang_sua_id) {
+        await capNhatCaLam(ca_dang_sua_id, ca);
+        setThongBao("Đã lưu thay đổi ca làm việc.");
+      } else {
+        await taoCaLam(ca);
+        setThongBao("Đã tạo ca làm việc.");
+      }
+      datLaiFormCa();
       await taiDuLieu();
-    } catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể cập nhật nhân viên"); }
-  }
-  async function taoCa(e: FormEvent) {
-    e.preventDefault(); try { await taoCaLam(ca); setThongBao("Đã tạo ca làm việc."); setCa(x => ({ ...x, ma_ca: "", ten_ca: "" })); await taiDuLieu(); }
-    catch (err) { setThongBao(err instanceof Error ? err.message : "Không thể tạo ca"); }
-  }
-  async function xepCa(e: FormEvent) {
-    e.preventDefault(); try { await taoPhanCa(pc); setThongBao("Đã xếp ca cho nhân viên."); setPc(x => ({ ...x, ghi_chu: "" })); await taiDuLieu(); }
-    catch (err) { setThongBao(err instanceof Error ? err.message : "Không thể xếp ca"); }
+    } catch (err) {
+      setThongBao(err instanceof Error ? err.message : ca_dang_sua_id ? "Không thể cập nhật ca" : "Không thể tạo ca");
+    } finally {
+      setDangXuLy(null);
+    }
   }
 
-  if (tai_khoan === undefined) return <><ThanhDieuHuong/><main className="auth-shell"><div className="auth-card"><p>Đang xác minh quyền quản trị...</p></div></main></>;
-  if (!tai_khoan) return <><ThanhDieuHuong/><main className="auth-shell"><section className="auth-card"><h1>Cần đăng nhập</h1><Link className="primary auth-primary-link" href="/dang-nhap?chuyen_den=/quan-tri">Đăng nhập</Link></section></main></>;
-  if (!["QUAN_TRI", "SIEU_QUAN_TRI"].includes(tai_khoan.vai_tro)) return <><ThanhDieuHuong/><main className="auth-shell"><section className="auth-card"><h1>Không có quyền truy cập</h1><p>Khu vực này chỉ dành cho Quản trị và Siêu quản trị.</p><Link className="primary auth-primary-link" href="/tai-khoan">Về tài khoản</Link></section></main></>;
+  async function xoaCa(item: CaLam) {
+    if (!window.confirm(`Xóa ca ${item.ma_ca} · ${item.ten_ca}?\n\nCác phân ca đang dùng mẫu ca này cũng sẽ bị xóa.`)) return;
+    setDangXuLy(`ca-${item.id}`);
+    setThongBao("");
+    try {
+      const kq = await xoaCaLam(item.id);
+      if (ca_dang_sua_id === item.id) datLaiFormCa();
+      setThongBao(kq.so_phan_ca_da_xoa > 0 ? `${kq.thong_bao}. Đã xóa kèm ${kq.so_phan_ca_da_xoa} phân ca.` : kq.thong_bao);
+      await taiDuLieu();
+    } catch (err) {
+      setThongBao(err instanceof Error ? err.message : "Không thể xóa ca");
+    } finally {
+      setDangXuLy(null);
+    }
+  }
 
-  return <>
-    <ThanhDieuHuong/>
-    <main className="admin-shell page-shell">
-      <div className="admin-heading"><div><div className="eyebrow">QUẢN TRỊ HỆ THỐNG</div><h1>Điều hành NhienIn3d</h1><p>{tai_khoan.ho_ten} · {tenVaiTro(tai_khoan.vai_tro)}</p></div><Link className="secondary" href="/tai-khoan">Tài khoản của tôi</Link></div>
-      {thong_bao && <div className="inline-message admin-message">{thong_bao}</div>}
+  function datLaiFormPhanCa() {
+    setPcDangSuaId(null);
+    setPc({
+      nhan_vien_id: nhan_vien.find(n => n.nguoi_dung.da_kich_hoat && n.trang_thai === "DANG_LAM")?.id || "",
+      ca_lam_viec_id: ca_lam.find(c => c.dang_hoat_dong)?.id || "",
+      ngay_lam: homNay(),
+      ghi_chu: ""
+    });
+  }
 
-      <section className="admin-stats">{Object.entries(tong_quan).map(([k,v]) => <article key={k}><span>{k.replaceAll("_", " ")}</span><b>{v}</b></article>)}</section>
+  function batDauSuaPhanCa(item: PhanCa) {
+    setPcDangSuaId(item.id);
+    setPc({
+      nhan_vien_id: item.nhan_vien.id,
+      ca_lam_viec_id: item.ca_lam_viec.id,
+      ngay_lam: ngayTuIso(item.ngay_lam),
+      ghi_chu: item.ghi_chu || ""
+    });
+    setThongBao(`Đang chỉnh sửa phân ca ${item.nhan_vien.ma_nhan_vien} · ${item.ca_lam_viec.ten_ca}.`);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
-      <section className="admin-panel">
-        <div className="panel-heading"><div><div className="eyebrow">PHÂN QUYỀN</div><h2>Người dùng & quyền hệ thống</h2></div><span>Admin quản lý vai trò và trạng thái tài khoản.</span></div>
-        <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Tài khoản</th><th>Vai trò</th><th>Trạng thái</th><th>Nhân viên</th></tr></thead><tbody>{nguoi_dung.map(u => <tr key={u.id}><td><b>{u.ho_ten}</b><small>{u.thu_dien_tu}<br/>{u.so_dien_thoai || "Chưa có SĐT"}</small></td><td><select value={u.vai_tro} onChange={e => doiVaiTro(u, e.target.value as AdminNguoiDung["vai_tro"])} disabled={u.vai_tro === "SIEU_QUAN_TRI" && tai_khoan.vai_tro !== "SIEU_QUAN_TRI"}><option value="KHACH_HANG">Khách hàng</option><option value="NHAN_VIEN">Nhân viên</option><option value="QUAN_LY">Quản lý</option><option value="QUAN_TRI">Quản trị</option>{tai_khoan.vai_tro === "SIEU_QUAN_TRI" && <option value="SIEU_QUAN_TRI">Siêu quản trị</option>}</select></td><td><button className={u.da_kich_hoat ? "status-button active" : "status-button"} onClick={() => doiTrangThai(u)}>{u.da_kich_hoat ? "Đang hoạt động" : "Đã khóa"}</button></td><td>{u.nhan_vien ? <><b>{u.nhan_vien.ma_nhan_vien}</b><small>{u.nhan_vien.bo_phan}</small></> : "—"}</td></tr>)}</tbody></table></div>
-      </section>
+  async function luuPhanCa(e: FormEvent) {
+    e.preventDefault();
+    setDangXuLy(pc_dang_sua_id ? `pc-${pc_dang_sua_id}` : "tao-phan-ca");
+    setThongBao("");
+    try {
+      if (pc_dang_sua_id) {
+        await capNhatPhanCa(pc_dang_sua_id, pc);
+        setThongBao("Đã lưu thay đổi phân ca.");
+      } else {
+        await taoPhanCa(pc);
+        setThongBao("Đã xếp ca cho nhân viên.");
+      }
+      datLaiFormPhanCa();
+      await taiDuLieu();
+    } catch (err) {
+      setThongBao(err instanceof Error ? err.message : pc_dang_sua_id ? "Không thể cập nhật phân ca" : "Không thể xếp ca");
+    } finally {
+      setDangXuLy(null);
+    }
+  }
 
-      <section className="admin-panel">
-        <div className="panel-heading"><div><div className="eyebrow">NHÂN VIÊN</div><h2>Hồ sơ nhân sự</h2></div><span>Admin có thể sửa chức danh, bộ phận và trạng thái làm việc.</span></div>
-        <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Nhân viên</th><th>Chức danh</th><th>Bộ phận</th><th>Trạng thái</th><th></th></tr></thead><tbody>{nhan_vien.map(n => <tr key={n.id}><td><b>{n.ma_nhan_vien}</b><small>{n.nguoi_dung.ho_ten}<br/>{n.nguoi_dung.thu_dien_tu}</small></td><td><input value={n.chuc_danh} onChange={e=>suaNhanVienLocal(n.id,{chuc_danh:e.target.value})}/></td><td><input value={n.bo_phan} onChange={e=>suaNhanVienLocal(n.id,{bo_phan:e.target.value})}/></td><td><select value={n.trang_thai} onChange={e=>suaNhanVienLocal(n.id,{trang_thai:e.target.value})}><option value="DANG_LAM">Đang làm</option><option value="TAM_NGHI">Tạm nghỉ</option><option value="NGHI_VIEC">Nghỉ việc</option></select></td><td><button className="secondary secondary-button" onClick={()=>luuNhanVien(n)}>Lưu</button></td></tr>)}</tbody></table></div>
-      </section>
+  async function huyPhanCa(item: PhanCa) {
+    if (!window.confirm(`Xóa phân ca ${item.nhan_vien.ma_nhan_vien} · ${item.ca_lam_viec.ten_ca} ngày ${new Date(`${ngayTuIso(item.ngay_lam)}T00:00:00`).toLocaleDateString("vi-VN")}?`)) return;
+    setDangXuLy(`pc-${item.id}`);
+    setThongBao("");
+    try {
+      const kq = await xoaPhanCa(item.id);
+      if (pc_dang_sua_id === item.id) datLaiFormPhanCa();
+      setThongBao(kq.thong_bao);
+      await taiDuLieu();
+    } catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể xóa phân ca"); }
+    finally { setDangXuLy(null); }
+  }
 
-      <div className="admin-two-col">
-        <section className="admin-panel"><div className="panel-heading"><div><div className="eyebrow">NHÂN SỰ</div><h2>Tạo tài khoản nhân viên</h2></div></div><form className="admin-form" onSubmit={taoNV}>
-          <input placeholder="Email" type="email" value={nv.thu_dien_tu} onChange={e=>setNv({...nv,thu_dien_tu:e.target.value})} required/>
-          <input placeholder="Họ tên" value={nv.ho_ten} onChange={e=>setNv({...nv,ho_ten:e.target.value})} required/>
-          <input placeholder="Số điện thoại" value={nv.so_dien_thoai} onChange={e=>setNv({...nv,so_dien_thoai:e.target.value})}/>
-          <TruongMatKhau nhan="Mật khẩu ban đầu" gia_tri={nv.mat_khau} datGiaTri={mat_khau => setNv({...nv,mat_khau})} autoComplete="new-password" hien_do_manh />
-          <select value={nv.vai_tro} onChange={e=>setNv({...nv,vai_tro:e.target.value})}><option value="NHAN_VIEN">Nhân viên</option><option value="QUAN_LY">Quản lý</option><option value="QUAN_TRI">Quản trị</option></select>
-          <input placeholder="Mã nhân viên, VD N3D-NV-011" value={nv.ma_nhan_vien} onChange={e=>setNv({...nv,ma_nhan_vien:e.target.value})} required/>
-          <input placeholder="Chức danh" value={nv.chuc_danh} onChange={e=>setNv({...nv,chuc_danh:e.target.value})} required/>
-          <input placeholder="Bộ phận" value={nv.bo_phan} onChange={e=>setNv({...nv,bo_phan:e.target.value})} required/>
-          <input type="date" value={nv.ngay_vao_lam} onChange={e=>setNv({...nv,ngay_vao_lam:e.target.value})} required/>
-          <button className="checkout-button">Tạo nhân viên</button>
-        </form></section>
+  const soPhanCaCuaCa = useMemo(() => {
+    const dem = new Map<string, number>();
+    for (const item of phan_ca) dem.set(item.ca_lam_viec.id, (dem.get(item.ca_lam_viec.id) || 0) + 1);
+    return dem;
+  }, [phan_ca]);
 
-        <section className="admin-panel"><div className="panel-heading"><div><div className="eyebrow">CA LÀM</div><h2>Tạo mẫu ca mới</h2></div></div><form className="admin-form" onSubmit={taoCa}>
-          <input placeholder="Mã ca" value={ca.ma_ca} onChange={e=>setCa({...ca,ma_ca:e.target.value})} required/>
-          <input placeholder="Tên ca" value={ca.ten_ca} onChange={e=>setCa({...ca,ten_ca:e.target.value})} required/>
-          <label><span>Bắt đầu</span><input type="time" value={ca.gio_bat_dau} onChange={e=>setCa({...ca,gio_bat_dau:e.target.value})} required/></label>
-          <label><span>Kết thúc</span><input type="time" value={ca.gio_ket_thuc} onChange={e=>setCa({...ca,gio_ket_thuc:e.target.value})} required/></label>
-          <label><span>Màu lịch</span><input type="color" value={ca.mau_hien_thi} onChange={e=>setCa({...ca,mau_hien_thi:e.target.value})}/></label>
-          <button className="checkout-button">Tạo ca</button>
-        </form></section>
+  const thongKe = useMemo(() => [
+    ["Người dùng", tong_quan.nguoi_dung || 0],
+    ["NV bán hàng", tong_quan.nhan_vien || 0],
+    ["Ca làm", tong_quan.ca_lam_viec || 0],
+    ["Phân ca", tong_quan.phan_ca || 0],
+    ["Đơn hàng", tong_quan.don_hang || 0],
+    ["Sản phẩm", tong_quan.san_pham || 0]
+  ] as const, [tong_quan]);
+
+  const phanCaTrongKhoang = useMemo(() => phan_ca.filter(x => {
+    const ngay = ngayTuIso(x.ngay_lam);
+    return ngay >= tu_ngay && ngay <= den_ngay;
+  }), [phan_ca, tu_ngay, den_ngay]);
+
+  const phanCaTheoNgay = useMemo(() => {
+    const nhom = new Map<string, PhanCa[]>();
+    for (const item of phanCaTrongKhoang) {
+      const ngay = ngayTuIso(item.ngay_lam);
+      const ds = nhom.get(ngay) || [];
+      ds.push(item);
+      nhom.set(ngay, ds);
+    }
+    return Array.from(nhom.entries()).sort(([a], [b]) => a.localeCompare(b));
+  }, [phanCaTrongKhoang]);
+
+  if (tai_khoan === undefined) return <main className="auth-shell"><div className="auth-card"><p>Đang xác minh quyền Admin...</p></div></main>;
+  if (!tai_khoan) return <main className="auth-shell"><section className="auth-card"><h1>Cần đăng nhập</h1><Link className="primary auth-primary-link" href="/dang-nhap?chuyen_den=/quan-tri">Đăng nhập</Link></section></main>;
+  if (tai_khoan.vai_tro !== "ADMIN") return <main className="auth-shell"><section className="auth-card"><h1>Không có quyền truy cập</h1><p>Khu vực này chỉ dành cho Admin.</p><Link className="primary auth-primary-link" href="/tai-khoan">Về tài khoản</Link></section></main>;
+
+  const tabs: Array<[TabQuanTri, string]> = [
+    ["nguoi-dung", "Người dùng"],
+    ["nhan-vien", "Nhân viên bán hàng"],
+    ["tao-nhan-vien", "Tạo nhân viên bán hàng"],
+    ["ca-lam", "Ca làm"],
+    ["xep-ca", "Xếp ca"]
+  ];
+
+  return <main className="cine-admin-shell page-shell">
+    <div className="cine-admin-heading">
+      <div><h1>Admin Dashboard</h1><p>Admin có toàn quyền quản trị tài khoản, nhân sự và lịch làm việc.</p></div>
+      <div className="cine-admin-heading-actions"><span>{tai_khoan.ho_ten} · Admin</span><Link className="cine-btn cine-btn-secondary" href="/tai-khoan">Tài khoản của tôi</Link></div>
+    </div>
+
+    {thong_bao && <div className="cine-admin-message" role="status">{thong_bao}</div>}
+
+    <div className="cine-admin-stats">{thongKe.map(([ten, gia_tri]) => <div className="cine-card cine-stat-card" key={ten}><span>{ten}</span><b>{gia_tri}</b></div>)}</div>
+
+    <nav className="cine-admin-tabs" aria-label="Chức năng quản trị">{tabs.map(([ma, ten]) => <button type="button" key={ma} className={`cine-btn ${tab === ma ? "cine-btn-primary" : "cine-btn-secondary"}`} onClick={() => setTab(ma)}>{ten}</button>)}</nav>
+
+    {tab === "nguoi-dung" && <section className="cine-card cine-admin-section">
+      <div className="cine-section-heading"><div><h2>Người dùng & quyền hệ thống</h2><p>Vai trò được cố định theo loại tài khoản. Admin có toàn quyền hệ thống; nhân viên luôn là Nhân viên bán hàng.</p></div><span>{nguoi_dung.length} tài khoản</span></div>
+      <div className="cine-user-list">
+        {nguoi_dung.map(u => {
+          const la_chinh_minh = u.id === tai_khoan.id;
+          return <article key={u.id} className={`cine-user-card ${u.vai_tro === "ADMIN" ? "is-admin" : ""}`}>
+            <div className="cine-user-identity"><b>{u.ho_ten}{u.vai_tro === "ADMIN" ? " · ADMIN" : ""}</b><span>{u.thu_dien_tu}</span><small>{u.so_dien_thoai || "Chưa có SĐT"}{u.nhan_vien ? ` · ${u.nhan_vien.ma_nhan_vien} · ${u.nhan_vien.bo_phan}` : ""}</small></div>
+            <div className="cine-user-role"><label>Vai trò</label><div className={`cine-user-role-static ${u.vai_tro === "ADMIN" ? "is-admin" : ""}`} aria-label={`Vai trò ${tenVaiTro(u.vai_tro)}`}><b>{u.vai_tro === "ADMIN" ? "Admin · Toàn quyền" : tenVaiTro(u.vai_tro)}</b></div></div>
+            <div className="cine-user-status"><span className={u.da_kich_hoat ? "status-badge active" : "status-badge locked"}>{u.da_kich_hoat ? "Đang hoạt động" : "Đã khóa"}</span></div>
+            <div className="cine-user-actions">
+              {la_chinh_minh ? <span className="admin-protected-badge">Đang đăng nhập</span> : <>
+                <button type="button" className={`cine-btn ${u.da_kich_hoat ? "cine-btn-danger" : "cine-btn-success"}`} onClick={() => doiTrangThai(u)} disabled={dang_xu_ly === u.id}>{dang_xu_ly === u.id ? "Đang xử lý…" : u.da_kich_hoat ? "Khóa" : "Kích hoạt"}</button>
+                <button type="button" className="cine-btn cine-btn-danger-outline" onClick={() => xoaTaiKhoan(u)} disabled={dang_xu_ly === u.id}>Xóa</button>
+              </>}
+            </div>
+          </article>;
+        })}
       </div>
+    </section>}
 
-      <section className="admin-panel">
-        <div className="panel-heading"><div><div className="eyebrow">XẾP CA</div><h2>Lịch làm việc nhân viên</h2></div><span>{phan_ca.length} phân ca</span></div>
-        <form className="schedule-form" onSubmit={xepCa}><select value={pc.nhan_vien_id} onChange={e=>setPc({...pc,nhan_vien_id:e.target.value})} required>{nhan_vien.map(n => <option key={n.id} value={n.id}>{n.ma_nhan_vien} · {n.nguoi_dung.ho_ten}</option>)}</select><select value={pc.ca_lam_viec_id} onChange={e=>setPc({...pc,ca_lam_viec_id:e.target.value})} required>{ca_lam.map(c => <option key={c.id} value={c.id}>{c.ma_ca} · {c.ten_ca} ({c.gio_bat_dau}-{c.gio_ket_thuc})</option>)}</select><input type="date" value={pc.ngay_lam} onChange={e=>setPc({...pc,ngay_lam:e.target.value})} required/><input placeholder="Ghi chú" value={pc.ghi_chu} onChange={e=>setPc({...pc,ghi_chu:e.target.value})}/><button className="checkout-button">Xếp ca</button></form>
-        <div className="schedule-grid">{phan_ca.map(x => <article key={x.id} className="schedule-card" style={{ borderTopColor: x.ca_lam_viec.mau_hien_thi || "#8b5cf6" }}><div><b>{x.nhan_vien.ma_nhan_vien} · {x.nhan_vien.nguoi_dung.ho_ten}</b><span>{new Date(x.ngay_lam).toLocaleDateString("vi-VN")}</span></div><strong>{x.ca_lam_viec.ten_ca} · {x.ca_lam_viec.gio_bat_dau}–{x.ca_lam_viec.gio_ket_thuc}</strong><small>{x.trang_thai}{x.ghi_chu ? ` · ${x.ghi_chu}` : ""}</small><button className="danger-button" onClick={async()=>{try{await xoaPhanCa(x.id);await taiDuLieu();}catch(e){setThongBao(e instanceof Error?e.message:"Không thể xóa phân ca");}}}>Xóa</button></article>)}</div>
-      </section>
-    </main>
-  </>;
+    {tab === "nhan-vien" && <section className="cine-card cine-admin-section">
+      <div className="cine-section-heading"><div><h2>Hồ sơ nhân viên bán hàng</h2><p>Admin quản lý trạng thái làm việc. Chức danh và bộ phận được chuẩn hóa cố định cho toàn bộ nhân viên bán hàng.</p></div><span>{nhan_vien.length} nhân viên</span></div>
+      <div className="cine-staff-list cine-staff-list-v295">{nhan_vien.map(n => <article key={n.id} className="cine-staff-card cine-staff-card-v295">
+        <div className="cine-staff-title"><b>{n.ma_nhan_vien} · {n.nguoi_dung.ho_ten}</b><span>{n.nguoi_dung.thu_dien_tu}</span><small>{n.nguoi_dung.so_dien_thoai || "Chưa có số điện thoại"}</small></div>
+        <div className="cine-staff-static"><span>Chức danh</span><b>Nhân viên bán hàng</b></div>
+        <div className="cine-staff-static"><span>Bộ phận</span><b>Bán hàng</b></div>
+        <label className="cine-staff-status"><span>Trạng thái</span><select value={n.trang_thai} onChange={e => suaNhanVienLocal(n.id, { trang_thai: e.target.value })}><option value="DANG_LAM">Đang làm</option><option value="TAM_NGHI">Tạm nghỉ</option><option value="NGHI_VIEC">Nghỉ việc</option></select></label>
+        <button type="button" className="cine-btn cine-btn-secondary" onClick={() => luuNhanVien(n)} disabled={dang_xu_ly === `nv-${n.id}`}>{dang_xu_ly === `nv-${n.id}` ? "Đang lưu…" : "Lưu trạng thái"}</button>
+      </article>)}</div>
+      <div className="cine-staff-status-note">Đang làm: tài khoản được kích hoạt. Tạm nghỉ/Nghỉ việc: tài khoản bị khóa và các phiên đăng nhập đang mở được thu hồi.</div>
+    </section>}
+
+    {tab === "tao-nhan-vien" && <section className="cine-admin-operations cine-staff-create-section">
+      <div className="cine-operations-heading">
+        <div><p className="cine-admin-kicker">STAFF · SALES</p><h2>Tạo nhân viên bán hàng</h2><p>Bố cục form theo CineBooking Pro. Admin là người quản lý toàn bộ nghiệp vụ quản trị hệ thống.</p></div>
+        <button type="button" className="cine-btn cine-btn-secondary" onClick={() => setTab("nhan-vien")}>Xem hồ sơ nhân sự</button>
+      </div>
+      <div className="cine-staff-create-layout">
+        <form className="cine-card cine-staff-create-form" onSubmit={taoNV}>
+          <div className="cine-form-card-heading"><h3>Thông tin nhân viên</h3><p>Tài khoản được kích hoạt ngay sau khi tạo.</p></div>
+          <div className="cine-form-row">
+            <label><span>Mã nhân viên</span><input placeholder="N3D-NV-011" value={nv.ma_nhan_vien} onChange={e => setNv({...nv, ma_nhan_vien:e.target.value})} required/></label>
+            <label><span>Ngày vào làm</span><input type="date" value={nv.ngay_vao_lam} onChange={e => setNv({...nv, ngay_vao_lam:e.target.value})} required/></label>
+          </div>
+          <label><span>Họ và tên</span><input placeholder="Nguyễn Văn A" value={nv.ho_ten} onChange={e => setNv({...nv, ho_ten:e.target.value})} required/></label>
+          <label><span>Email đăng nhập</span><input placeholder="nhanvien@example.com" type="email" value={nv.thu_dien_tu} onChange={e => setNv({...nv, thu_dien_tu:e.target.value})} required/></label>
+          <label><span>Số điện thoại</span><input placeholder="09xxxxxxxx" value={nv.so_dien_thoai} onChange={e => setNv({...nv, so_dien_thoai:e.target.value})}/></label>
+          <TruongMatKhau nhan="Mật khẩu ban đầu" gia_tri={nv.mat_khau} datGiaTri={mat_khau => setNv({...nv, mat_khau})} autoComplete="new-password" hien_do_manh/>
+          <TruongMatKhau nhan="Xác nhận mật khẩu" gia_tri={nv.xac_nhan_mat_khau} datGiaTri={xac_nhan_mat_khau => setNv({...nv, xac_nhan_mat_khau})} autoComplete="new-password"/>
+          <div className="cine-fixed-role-card"><span>Vai trò & hồ sơ cố định</span><b>Nhân viên bán hàng</b><small>Vai trò hệ thống: NHAN_VIEN · Bộ phận: Bán hàng</small></div>
+          <button className="cine-btn cine-btn-primary cine-btn-block" type="submit" disabled={dang_xu_ly === "tao-nhan-vien"}>{dang_xu_ly === "tao-nhan-vien" ? "Đang tạo…" : "Tạo nhân viên bán hàng"}</button>
+        </form>
+      </div>
+    </section>}
+
+    {tab === "ca-lam" && <section className="cine-admin-operations">
+      <div className="cine-operations-heading">
+        <div><h2>Ca làm việc</h2><p>Tạo mẫu ca gọn như CineBooking Pro rồi dùng lại khi xếp lịch.</p></div>
+        <button type="button" className="cine-btn cine-btn-secondary" onClick={() => setTab("xep-ca")}>Mở Xếp ca →</button>
+      </div>
+      <div className="cine-shift-management-grid">
+        <form className="cine-card cine-shift-editor" onSubmit={luuCa}>
+          <div className="cine-shift-editor-title"><div><h3>{ca_dang_sua_id ? "Chỉnh sửa ca" : "Tạo ca mới"}</h3><p>{ca_dang_sua_id ? "Thay đổi mã, tên, giờ làm hoặc màu hiển thị." : "Mặc định bắt đầu theo khung ca sáng 06:00–14:00."}</p></div><span>{ca.gio_bat_dau}–{ca.gio_ket_thuc}</span></div>
+          <label><span>Mã ca</span><input placeholder="VD: CA01" value={ca.ma_ca} onChange={e => setCa({...ca, ma_ca:e.target.value})} required/></label>
+          <label><span>Tên ca</span><input placeholder="Ca sáng" value={ca.ten_ca} onChange={e => setCa({...ca, ten_ca:e.target.value})} required/></label>
+          <div className="cine-time-grid"><label><span>Bắt đầu</span><input type="time" value={ca.gio_bat_dau} onChange={e => setCa({...ca, gio_bat_dau:e.target.value})} required/></label><label><span>Kết thúc</span><input type="time" value={ca.gio_ket_thuc} onChange={e => setCa({...ca, gio_ket_thuc:e.target.value})} required/></label></div>
+          <label className="cine-color-field"><span>Màu lịch</span><div><input type="color" value={ca.mau_hien_thi} onChange={e => setCa({...ca, mau_hien_thi:e.target.value})}/><code>{ca.mau_hien_thi.toUpperCase()}</code></div></label>
+          <div className="cine-shift-help">Ca mặc định của hệ thống: Ca sáng 06:00–14:00 và Ca chiều 14:00–22:00. Admin có thể chỉnh sửa hoặc xóa.</div>
+          <div className="cine-shift-form-actions">
+            <button className="cine-btn cine-btn-primary" disabled={dang_xu_ly === "tao-ca" || (ca_dang_sua_id ? dang_xu_ly === `ca-${ca_dang_sua_id}` : false)}>{ca_dang_sua_id ? "Lưu thay đổi" : "Tạo ca"}</button>
+            {ca_dang_sua_id && <button type="button" className="cine-btn cine-btn-secondary" onClick={datLaiFormCa}>Hủy chỉnh sửa</button>}
+          </div>
+        </form>
+
+        <div className="cine-shift-board">
+          <div className="cine-card cine-shift-board-head"><div><span>Mẫu ca hiện có</span><b>{ca_lam.length} ca</b></div><small>Có thể sửa cả ca đã phân công; lịch đã xếp sẽ dùng ngay tên/giờ/màu mới. Xóa mẫu ca sẽ xóa luôn các phân ca liên quan.</small></div>
+          {ca_lam.length === 0 && <div className="cine-card cine-empty-state">Chưa có mẫu ca làm việc.</div>}
+          <div className="cine-shift-template-list cine-shift-template-list-v293">{ca_lam.map(c => <article key={c.id} className={`cine-card cine-shift-template-v293 ${ca_dang_sua_id === c.id ? "is-editing" : ""}`}>
+            <i style={{background:c.mau_hien_thi || "#22C55E"}}/>
+            <div className="cine-shift-template-main"><div><b>{c.ma_ca}</b><span>{c.ten_ca}</span></div><strong>{c.gio_bat_dau}–{c.gio_ket_thuc}</strong></div>
+            <div className="cine-shift-template-meta"><span className={`status-badge ${c.dang_hoat_dong ? "active" : "locked"}`}>{c.dang_hoat_dong ? "Đang dùng" : "Ngừng dùng"}</span><small>{soPhanCaCuaCa.get(c.id) || 0} phân công</small></div>
+            <div className="cine-shift-template-actions">
+              <button type="button" className="cine-btn cine-btn-secondary" onClick={() => batDauSuaCa(c)} disabled={dang_xu_ly === `ca-${c.id}`}>Chỉnh sửa</button>
+              <button type="button" className="cine-btn cine-btn-danger-outline" onClick={() => xoaCa(c)} disabled={dang_xu_ly === `ca-${c.id}`}>{dang_xu_ly === `ca-${c.id}` ? "Đang xử lý…" : "Xóa"}</button>
+            </div>
+          </article>)}</div>
+        </div>
+      </div>
+    </section>}
+
+    {tab === "xep-ca" && <section className="cine-admin-operations">
+      <div className="cine-operations-heading">
+        <div><h2>Xếp ca nhân viên</h2><p>Bố cục theo CineBooking Pro: form xếp ca bên trái, lịch theo ngày bên phải.</p></div>
+        <button type="button" className="cine-btn cine-btn-secondary" onClick={() => setTab("ca-lam")}>Quản lý mẫu ca</button>
+      </div>
+      <div className="cine-shift-management-grid">
+        <form className="cine-card cine-shift-editor" onSubmit={luuPhanCa}>
+          <div className="cine-shift-editor-title"><div><h3>{pc_dang_sua_id ? "Chỉnh sửa phân ca" : "Xếp ca mới"}</h3><p>{pc_dang_sua_id ? "Có thể đổi nhân viên, ngày làm, mẫu ca và ghi chú của phân công đã tạo." : "Chọn nhân viên, ngày làm và mẫu ca."}</p></div></div>
+          <label><span>Nhân viên</span><select value={pc.nhan_vien_id} onChange={e => setPc({...pc, nhan_vien_id:e.target.value})} required><option value="">Chọn nhân viên</option>{nhan_vien.filter(n => (n.nguoi_dung.da_kich_hoat && n.trang_thai === "DANG_LAM") || n.id === pc.nhan_vien_id).map(n => <option key={n.id} value={n.id}>{n.ma_nhan_vien} · {n.nguoi_dung.ho_ten} · {n.bo_phan}</option>)}</select></label>
+          <label><span>Ngày làm</span><input type="date" value={pc.ngay_lam} onChange={e => setPc({...pc, ngay_lam:e.target.value})} required/></label>
+          <label><span>Ca làm</span><select value={pc.ca_lam_viec_id} onChange={e => setPc({...pc, ca_lam_viec_id:e.target.value})} required><option value="">Chọn ca</option>{ca_lam.filter(c => c.dang_hoat_dong || c.id === pc.ca_lam_viec_id).map(c => <option key={c.id} value={c.id}>{c.ma_ca} · {c.ten_ca} · {c.gio_bat_dau}–{c.gio_ket_thuc}</option>)}</select></label>
+          <label><span>Ghi chú</span><textarea value={pc.ghi_chu} onChange={e => setPc({...pc, ghi_chu:e.target.value})} placeholder="Khu vực làm việc, công việc ưu tiên..."/></label>
+          <div className="cine-shift-help">Một nhân viên không thể nhận trùng cùng một mẫu ca trong cùng ngày. Tài khoản đã khóa không xuất hiện trong danh sách xếp ca.</div>
+          <div className="cine-shift-form-actions">
+            <button className="cine-btn cine-btn-primary" disabled={dang_xu_ly === "tao-phan-ca" || (pc_dang_sua_id ? dang_xu_ly === `pc-${pc_dang_sua_id}` : false)}>{pc_dang_sua_id ? "Lưu thay đổi" : "Xếp ca"}</button>
+            {pc_dang_sua_id && <button type="button" className="cine-btn cine-btn-secondary" onClick={datLaiFormPhanCa}>Hủy chỉnh sửa</button>}
+          </div>
+        </form>
+
+        <div className="cine-shift-board">
+          <div className="cine-card cine-schedule-filter">
+            <label><span>Từ ngày</span><input type="date" value={tu_ngay} onChange={e => setTuNgay(e.target.value)}/></label>
+            <label><span>Đến ngày</span><input type="date" value={den_ngay} onChange={e => setDenNgay(e.target.value)}/></label>
+            <div><span>Trong khoảng</span><b>{phanCaTrongKhoang.length} phân ca</b></div>
+          </div>
+
+          {phanCaTheoNgay.length === 0 && <div className="cine-card cine-empty-state">Chưa có ca làm trong khoảng ngày này.</div>}
+          <div className="cine-schedule-groups">{phanCaTheoNgay.map(([ngay, danh_sach]) => <section key={ngay} className="cine-schedule-day">
+            <h3>📅 {dinhDangNgay(ngay)}</h3>
+            <div className="cine-schedule-day-list">{danh_sach.map(x => <article key={x.id} className="cine-card cine-schedule-row">
+              <i style={{background:x.ca_lam_viec.mau_hien_thi || "#8b5cf6"}}/>
+              <div className="cine-schedule-person"><b>{x.nhan_vien.ma_nhan_vien} · {x.nhan_vien.nguoi_dung.ho_ten}</b><span>{x.nhan_vien.bo_phan} · {x.nhan_vien.chuc_danh}</span>{x.ghi_chu && <small>{x.ghi_chu}</small>}</div>
+              <div className="cine-schedule-shift"><b>{x.ca_lam_viec.ten_ca}</b><span>{x.ca_lam_viec.gio_bat_dau}–{x.ca_lam_viec.gio_ket_thuc}</span></div>
+              <span className="status-badge active">{x.trang_thai.replaceAll("_", " ")}</span>
+              <div className="cine-schedule-actions">
+                <button type="button" className="cine-btn cine-btn-secondary" onClick={() => batDauSuaPhanCa(x)} disabled={dang_xu_ly === `pc-${x.id}`}>Chỉnh sửa</button>
+                <button type="button" className="cine-btn cine-btn-danger-outline" onClick={() => huyPhanCa(x)} disabled={dang_xu_ly === `pc-${x.id}`}>{dang_xu_ly === `pc-${x.id}` ? "Đang xử lý…" : "Xóa"}</button>
+              </div>
+            </article>)}</div>
+          </section>)}</div>
+        </div>
+      </div>
+    </section>}
+  </main>;
 }

@@ -1,5 +1,9 @@
 param([Parameter(Mandatory=$true)][string]$Version)
 $ErrorActionPreference = "Stop"
+$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+Set-Location $RepoRoot
+Write-Host "Repo root: $RepoRoot" -ForegroundColor DarkGray
+
 
 if ($Version -notmatch '^v\d+\.\d+\.\d+$') { throw "Version phai theo dang v1.0.0" }
 if (-not (Get-Command git -ErrorAction SilentlyContinue)) { throw "Chua cai Git" }

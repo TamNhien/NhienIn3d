@@ -1,4 +1,8 @@
 $ErrorActionPreference = "Stop"
+$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+Set-Location $RepoRoot
+Write-Host "Repo root: $RepoRoot" -ForegroundColor DarkGray
+
 
 Write-Host "[1/5] Cai dat dependencies tu thu muc goc..." -ForegroundColor Cyan
 npm install

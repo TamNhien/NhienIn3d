@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ThanhDieuHuong } from "../../components/thanh-dieu-huong";
 import { TheSanPham } from "../../components/the-san-pham";
 import { DU_LIEU_MAU, type SanPham } from "../../lib/du-lieu-mau";
 import { API_URL } from "../../lib/gio-hang";
@@ -70,7 +69,6 @@ export default function DanhSachSanPhamPage() {
   }
 
   return <main>
-    <ThanhDieuHuong/>
     <section className="page-shell catalog-page">
       <div className="catalog-heading">
         <div><div className="eyebrow">DANH MỤC SẢN PHẨM</div><h1>Khám phá sản phẩm in 3D</h1><p>Tìm theo tên/mã, lọc danh mục và tồn kho, rồi sắp xếp theo nhu cầu.</p></div>

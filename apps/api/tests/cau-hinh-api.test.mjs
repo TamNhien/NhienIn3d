@@ -46,7 +46,7 @@ test("Swagger Fastify co @fastify/static tuong thich Fastify 5", () => {
   assert.equal(pkg.dependencies['@fastify/static'], '10.1.3');
 });
 
-test("seed v2.8.0 dam bao 23 bang nghiep vu toi thieu 10 dong", () => {
+test("seed v2.9.9 giu 23 bang va cho phep du lieu van hanh bi xoa", () => {
   const seed = readFileSync('prisma/seed.ts', 'utf8');
   for (const bang of [
     'nguoi_dung', 'danh_muc', 'san_pham', 'hinh_anh_san_pham',
@@ -57,16 +57,18 @@ test("seed v2.8.0 dam bao 23 bang nghiep vu toi thieu 10 dong", () => {
     assert.match(seed, new RegExp(`${bang}: await db\\.`));
   }
   assert.match(seed, /so_luong < 10/);
-  assert.match(seed, /PHIEN_BAN_HIEN_TAI = "SEED_V284_DANG_NHAP_DANG_KI_GON"/);
+  assert.match(seed, /PHIEN_BAN_HIEN_TAI = "SEED_V2100_QUAN_LY_CA"/);
+  assert.match(seed, /bang_bien_dong/);
+  assert.match(seed, /SEED_V286_TAI_KHOAN_MAT_KHAU_BRAVE/);
   assert.match(seed, /\/images\/khoi-lap-phuong-banh-rang\.jpg/);
 });
 
 
-test("API hien thi dung version v2.8.4 o health va OpenAPI", () => {
+test("API hien thi dung version v2.10.0 o health va OpenAPI", () => {
   const health = readFileSync("src/suc-khoe/suc-khoe.controller.ts", "utf8");
   const main = readFileSync("src/main.ts", "utf8");
-  assert.match(health, /phien_ban: "v2\.8\.4"/);
-  assert.match(main, /setVersion\("2\.8\.4"\)/);
+  assert.match(health, /phien_ban: "v2\.10\.0"/);
+  assert.match(main, /setVersion\("2\.10\.0"\)/);
 });
 
 test("V2 co migration gio hang, thanh toan va dia chi", () => {
@@ -149,15 +151,17 @@ test("v2.6.0 co dang ky dang nhap refresh va thong tin tai khoan", () => {
   assert.match(service, /ma_lam_moi_bam/);
 });
 
-test("v2.6.0 RBAC co JwtGuard VaiTroGuard va 5 vai tro", () => {
+test("v2.9.3 RBAC co mot vai tro ADMIN duy nhat", () => {
   const schema = readFileSync("prisma/schema.prisma", "utf8");
   const controller = readFileSync("src/xac-thuc/xac-thuc.controller.ts", "utf8");
   const jwt = readFileSync("src/xac-thuc/jwt.guard.ts", "utf8");
   const role = readFileSync("src/xac-thuc/vai-tro.guard.ts", "utf8");
-  assert.match(schema, /SIEU_QUAN_TRI/);
+  assert.match(schema, /ADMIN/);
+  assert.doesNotMatch(schema, /SIEU_QUAN_TRI|QUAN_TRI/);
   assert.match(jwt, /phien_ban_mat_khau/);
   assert.match(role, /KHOA_VAI_TRO/);
-  assert.match(controller, /VaiTroChoPhep\(VaiTro\.QUAN_TRI, VaiTro\.SIEU_QUAN_TRI\)/);
+  assert.doesNotMatch(role, /SIEU_QUAN_TRI/);
+  assert.match(controller, /VaiTroChoPhep\(VaiTro\.ADMIN\)/);
 });
 
 test("v2.6.0 khoa tai khoan tam thoi sau dang nhap sai", () => {
@@ -216,15 +220,17 @@ test("v2.8.0 API admin quan ly nguoi dung nhan vien ca lam va phan ca", () => {
   const schema = readFileSync("prisma/schema.prisma", "utf8");
   for (const route of ["nguoi-dung", "nhan-vien", "ca-lam", "phan-ca"]) assert.match(controller, new RegExp(route));
   assert.match(service, /argon2\.argon2id/);
-  assert.match(service, /SIEU_QUAN_TRI/);
+  assert.match(service, /ADMIN/);
+  assert.doesNotMatch(service, /SIEU_QUAN_TRI/);
   assert.match(controller, /Patch\("nhan-vien\/:id"\)/);
   assert.match(service, /cap_nhat_nhan_vien/);
   for (const model of ["NhanVien", "CaLamViec", "PhanCa"]) assert.match(schema, new RegExp(`model\\s+${model}\\b`));
 });
 
-test("v2.8.0 VaiTroGuard cho SIEU_QUAN_TRI bypass", () => {
+test("v2.9.3 VaiTroGuard khong con super admin bypass", () => {
   const role = readFileSync("src/xac-thuc/vai-tro.guard.ts", "utf8");
-  assert.match(role, /vai_tro === VaiTro\.SIEU_QUAN_TRI/);
+  assert.match(role, /KHOA_VAI_TRO/);
+  assert.doesNotMatch(role, /SIEU_QUAN_TRI/);
 });
 
 
@@ -256,4 +262,191 @@ test("v2.8.3 XacThucModule re-export JwtModule cho JwtGuard o module tai khoan v
   assert.match(authModule, /exports:\s*\[JwtModule,\s*XacThucService,\s*JwtGuard,\s*VaiTroGuard\]/);
   assert.match(taiKhoanModule, /imports:\s*\[XacThucModule\]/);
   assert.match(quanTriModule, /imports:\s*\[XacThucModule\]/);
+});
+
+
+test("v2.8.5 ho so sua email va logout thu hoi session access", () => {
+  const dto = readFileSync("src/tai-khoan/dto/cap-nhat-ho-so.dto.ts", "utf8");
+  const account = readFileSync("src/tai-khoan/tai-khoan.service.ts", "utf8");
+  const auth = readFileSync("src/xac-thuc/xac-thuc.service.ts", "utf8");
+  const guard = readFileSync("src/xac-thuc/jwt.guard.ts", "utf8");
+  const controller = readFileSync("src/xac-thuc/xac-thuc.controller.ts", "utf8");
+  assert.match(dto, /thu_dien_tu/);
+  assert.match(dto, /IsEmail/);
+  assert.match(account, /Email này đã được sử dụng/u);
+  assert.match(auth, /sid: phien\.id/);
+  assert.match(auth, /ignoreExpiration: true/);
+  assert.match(guard, /phienDangNhap\.findFirst/);
+  assert.match(controller, /Đã đăng xuất hoàn toàn/u);
+});
+
+
+test("v2.8.6 API doi mat khau giu phien hien tai va thu hoi phien khac", () => {
+  const controller = readFileSync("src/tai-khoan/tai-khoan.controller.ts", "utf8");
+  const service = readFileSync("src/tai-khoan/tai-khoan.service.ts", "utf8");
+  const dto = readFileSync("src/tai-khoan/dto/doi-mat-khau.dto.ts", "utf8");
+  const guard = readFileSync("src/xac-thuc/jwt.guard.ts", "utf8");
+  assert.match(controller, /Patch\("doi-mat-khau"\)/);
+  assert.match(controller, /setCookie\("nhienin3d_phien"/);
+  assert.match(service, /argon2\.verify/);
+  assert.match(service, /argon2\.argon2id/);
+  assert.match(service, /id:\s*\{ not: phien_id \}/);
+  assert.match(dto, /Mật khẩu mới tối thiểu 12 ký tự/u);
+  assert.match(guard, /phien_id:\s*payload\.sid/);
+});
+
+test("v2.8.6 API cap nhat nhan trinh duyet hien tai", () => {
+  const controller = readFileSync("src/tai-khoan/tai-khoan.controller.ts", "utf8");
+  const service = readFileSync("src/tai-khoan/tai-khoan.service.ts", "utf8");
+  const loginDto = readFileSync("src/xac-thuc/dto/dang-nhap.dto.ts", "utf8");
+  assert.match(controller, /Patch\("phien\/hien-tai"\)/);
+  assert.match(service, /cap_nhat_phien_hien_tai/);
+  assert.match(service, /trinh_duyet:/);
+  assert.match(loginDto, /trinh_duyet_hien_thi/);
+});
+
+
+test("v2.8.9 admin xep super admin dau va logout thu hoi tat ca phien", () => {
+  const admin = readFileSync("src/quan-tri/quan-tri.service.ts", "utf8");
+  const auth = readFileSync("src/xac-thuc/xac-thuc.service.ts", "utf8");
+  const guard = readFileSync("src/xac-thuc/jwt.guard.ts", "utf8");
+  const controller = readFileSync("src/xac-thuc/xac-thuc.controller.ts", "utf8");
+  assert.match(admin, /ADMIN:\s*0/);
+  assert.match(admin, /localeCompare\(b\.ho_ten, "vi"\)/);
+  assert.match(auth, /where:\s*\{ nguoi_dung_id, da_thu_hoi: false \}/);
+  assert.match(auth, /thu_hoi_tat_ca_phien/);
+  assert.match(guard, /Phiên cũ cần đăng nhập lại/u);
+  assert.match(controller, /Dọn cookie refresh legacy/u);
+});
+
+
+test("v2.9.3 dang ky luu phone address va Admin khong tu khoa minh", () => {
+  const dto = readFileSync("src/xac-thuc/dto/dang-ky.dto.ts", "utf8");
+  const auth = readFileSync("src/xac-thuc/xac-thuc.service.ts", "utf8");
+  const admin = readFileSync("src/quan-tri/quan-tri.service.ts", "utf8");
+  assert.match(dto, /so_dien_thoai/u);
+  assert.match(dto, /dia_chi/u);
+  assert.match(auth, /diaChiNguoiDung\.create/u);
+  assert.match(admin, /Không thể tự khóa tài khoản Admin đang đăng nhập/u);
+  assert.doesNotMatch(admin, /Siêu quản trị/u);
+});
+
+
+test("v2.9.3 Admin kich hoat lai va xoa moi tai khoan khac", () => {
+  const controller = readFileSync("src/quan-tri/quan-tri.controller.ts", "utf8");
+  const service = readFileSync("src/quan-tri/quan-tri.service.ts", "utf8");
+  assert.match(controller, /@Post\("nguoi-dung\/:id\/kich-hoat"\)/);
+  assert.match(controller, /@Post\("nguoi-dung\/:id\/khoa"\)/);
+  assert.match(controller, /@Delete\("nguoi-dung\/:id"\)/);
+  assert.match(service, /da_kich_hoat: true, so_lan_dang_nhap_that_bai: 0, khoa_den: null/);
+  assert.match(service, /ADMIN_KICH_HOAT_NGUOI_DUNG/);
+  assert.match(service, /ADMIN_XOA_NGUOI_DUNG/);
+  assert.match(service, /Không thể xóa chính tài khoản Admin đang đăng nhập/u);
+  assert.doesNotMatch(service, /Siêu quản trị/u);
+});
+
+
+test("v2.9.3 migration gom QUAN_TRI va SIEU_QUAN_TRI vao ADMIN", () => {
+  const migration = readFileSync("prisma/migrations/202608300001_v293_hop_nhat_admin/migration.sql", "utf8");
+  assert.match(migration, /CREATE TYPE "VaiTro_v293" AS ENUM \('KHACH_HANG', 'NHAN_VIEN', 'QUAN_LY', 'ADMIN'\)/);
+  assert.match(migration, /IN \('QUAN_TRI', 'SIEU_QUAN_TRI'\) THEN 'ADMIN'/);
+  assert.match(migration, /DROP TYPE "VaiTro"/);
+});
+
+
+test("v2.9.4 seed khong ghi de ho so va trang thai tai khoan da thay doi", () => {
+  const seed = readFileSync("prisma/seed.ts", "utf8");
+  const account = readFileSync("src/tai-khoan/tai-khoan.service.ts", "utf8");
+  assert.match(seed, /admin_dang_hoat_dong/);
+  assert.match(seed, /where:\s*\{ vai_tro: VaiTro\.ADMIN, da_kich_hoat: true \}/);
+  assert.match(seed, /Dữ liệu mẫu chỉ bootstrap lần đầu/u);
+  assert.match(seed, /Chỉ đổi miền email legacy một lần/u);
+  assert.match(seed, /Không tạo lại địa chỉ mẫu/u);
+  assert.match(seed, /id:\s*\{ not: id_mac_dinh \}/);
+  assert.match(seed, /bootstrap lần đầu|bootstrap bản ghi còn thiếu/u);
+  assert.match(seed, /const nhan_vien = ho_so_cu \?\? await db\.nhanVien\.create/);
+  assert.doesNotMatch(seed, /nguoiDung\.upsert\(\{[\s\S]{0,220}update:\s*\{ ho_ten, vai_tro, da_kich_hoat: false \}/);
+  assert.match(account, /id:\s*\{ not: hien_tai\.id \}, la_mac_dinh: true/);
+  assert.match(account, /data:\s*\{ la_mac_dinh: false \}/);
+});
+
+
+test("v2.9.5 API chi con Admin va nhan vien ban hang, xoa tai khoan on dinh", () => {
+  const schema = readFileSync("prisma/schema.prisma", "utf8");
+  const controller = readFileSync("src/quan-tri/quan-tri.controller.ts", "utf8");
+  const service = readFileSync("src/quan-tri/quan-tri.service.ts", "utf8");
+  const taoDto = readFileSync("src/quan-tri/dto/tao-nhan-vien.dto.ts", "utf8");
+  const capNhatDto = readFileSync("src/quan-tri/dto/cap-nhat-nhan-vien.dto.ts", "utf8");
+  const account = readFileSync("src/tai-khoan/tai-khoan.service.ts", "utf8");
+  const migration = readFileSync("prisma/migrations/202608300002_v295_nhan_vien_ban_hang/migration.sql", "utf8");
+  assert.doesNotMatch(schema, /\bQUAN_LY\b/);
+  assert.match(schema, /enum VaiTro[\s\S]*KHACH_HANG[\s\S]*NHAN_VIEN[\s\S]*ADMIN/);
+  assert.match(controller, /@Post\("nguoi-dung\/:id\/xoa"\)/);
+  assert.match(service, /tx\.donHang\.updateMany/);
+  assert.match(service, /tx\.gioHang\.updateMany/);
+  assert.match(service, /tx\.phienDangNhap\.deleteMany/);
+  assert.match(service, /chuc_danh: "Nhân viên bán hàng"/u);
+  assert.match(service, /bo_phan: "Bán hàng"/u);
+  assert.match(service, /da_kich_hoat: false/);
+  assert.doesNotMatch(taoDto, /vai_tro|chuc_danh|bo_phan/);
+  assert.doesNotMatch(capNhatDto, /chuc_danh|bo_phan/);
+  assert.match(account, /return tx\.nguoiDung\.findUniqueOrThrow/);
+  assert.match(migration, /WHEN "vai_tro"::text = 'QUAN_LY' THEN 'KHACH_HANG'/);
+});
+
+
+test("v2.9.7 API luu trang thai nhan vien va doc lai sau commit", () => {
+  const controller = readFileSync("src/quan-tri/quan-tri.controller.ts", "utf8");
+  const service = readFileSync("src/quan-tri/quan-tri.service.ts", "utf8");
+  assert.match(controller, /@Post\("nhan-vien\/:id\/trang-thai"\)/);
+  assert.match(service, /await this\.db\.\$transaction/);
+  assert.match(service, /this\.db\.nhanVien\.findUniqueOrThrow/);
+  assert.match(service, /da_doc_lai_sau_commit: true/);
+  assert.match(service, /TrangThaiNhanVien\.TAM_NGHI/);
+  assert.match(service, /TrangThaiNhanVien\.NGHI_VIEC/);
+});
+
+
+test("v2.9.8 vai tro he thong co dinh khong doi qua PATCH nguoi dung", () => {
+  const dto = readFileSync("src/quan-tri/dto/cap-nhat-nguoi-dung.dto.ts", "utf8");
+  const service = readFileSync("src/quan-tri/quan-tri.service.ts", "utf8");
+  assert.doesNotMatch(dto, /vai_tro/);
+  assert.doesNotMatch(service, /dto\.vai_tro/);
+  assert.match(service, /PATCH người dùng không còn được đổi vai trò/u);
+});
+
+
+test("v2.9.9 API co 2 ca mac dinh va endpoint sua xoa ca", () => {
+  const controller = readFileSync("src/quan-tri/quan-tri.controller.ts", "utf8");
+  const service = readFileSync("src/quan-tri/quan-tri.service.ts", "utf8");
+  const dto = readFileSync("src/quan-tri/dto/cap-nhat-ca-lam.dto.ts", "utf8");
+  const migration = readFileSync("prisma/migrations/202608300003_v299_hai_ca_lam_va_quan_ly_ca/migration.sql", "utf8");
+  const seed = readFileSync("prisma/seed.ts", "utf8");
+  assert.match(controller, /@Patch\("ca-lam\/:id"\)/);
+  assert.match(controller, /@Delete\("ca-lam\/:id"\)/);
+  assert.match(service, /kiem_tra_khung_gio/);
+  assert.match(service, /async cap_nhat_ca/);
+  assert.match(service, /async xoa_ca/);
+  assert.match(service, /tx\.phanCa\.deleteMany/);
+  assert.match(dto, /dang_hoat_dong/);
+  assert.match(migration, /06:00/);
+  assert.match(migration, /14:00/);
+  assert.match(migration, /22:00/);
+  assert.match(seed, /\["CA01", "Ca sáng", "06:00", "14:00"/u);
+  assert.match(seed, /\["CA02", "Ca chiều", "14:00", "22:00"/u);
+});
+
+
+test("v2.10.0 API cho sua xoa phan ca da xep va xoa ca bang POST alias", () => {
+  const controller = readFileSync("src/quan-tri/quan-tri.controller.ts", "utf8");
+  const service = readFileSync("src/quan-tri/quan-tri.service.ts", "utf8");
+  const dto = readFileSync("src/quan-tri/dto/cap-nhat-phan-ca.dto.ts", "utf8");
+  assert.match(controller, /@Post\("ca-lam\/:id\/xoa"\)/);
+  assert.match(controller, /@Post\("phan-ca\/:id\/xoa"\)/);
+  assert.match(service, /Không chặn chỉnh sửa mẫu ca khi đã có phân công/u);
+  assert.match(service, /nhan_vien_id = dto\.nhan_vien_id/);
+  assert.match(service, /ca_lam_viec_id = dto\.ca_lam_viec_id/);
+  assert.match(service, /ngay_lam = dto\.ngay_lam/);
+  assert.match(dto, /@IsOptional\(\) @IsUUID\(\) nhan_vien_id/);
+  assert.match(dto, /@IsOptional\(\) @IsUUID\(\) ca_lam_viec_id/);
 });

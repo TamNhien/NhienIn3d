@@ -12,9 +12,7 @@ datasource db {
 enum VaiTro {
   KHACH_HANG
   NHAN_VIEN
-  QUAN_LY
-  QUAN_TRI
-  SIEU_QUAN_TRI
+  ADMIN
 }
 
 enum TrangThaiNhanVien {

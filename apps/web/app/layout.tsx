@@ -1,4 +1,27 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
-export const metadata: Metadata = { title: "NhienIn3d | Sản phẩm in 3D", description: "Cửa hàng sản phẩm in 3D hiện đại, tùy biến vật liệu và màu sắc." };
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) { return <html lang="vi"><body>{children}</body></html>; }
+import { ThanhDieuHuong } from "../components/thanh-dieu-huong";
+import { ChanTrang } from "../components/chan-trang";
+
+export const metadata: Metadata = {
+  title: "NhienIn3d | Sản phẩm in 3D",
+  description: "Cửa hàng sản phẩm in 3D hiện đại với quy trình đặt hàng tinh gọn.",
+  applicationName: "NhienIn3d"
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#080a10"
+};
+
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  return <html lang="vi">
+    <body>
+      <ThanhDieuHuong />
+      <div className="app-main relative z-10 mx-auto min-h-[70vh] w-full max-w-7xl px-4 py-7 md:px-6">{children}</div>
+      <ChanTrang />
+    </body>
+  </html>;
+}

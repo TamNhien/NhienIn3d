@@ -22,13 +22,15 @@ test('du lieu mau hien thi tieng Viet co dau', () => {
   assert.match(src, /sản phẩm|Sản phẩm|Đèn|Chậu|Giá/u);
 });
 
-test('storefront co gio hang va them vao gio tu chi tiet sau khi chon mau', () => {
+test('storefront co gio hang va them vao gio bang cau hinh mac dinh', () => {
   const page = readFileSync('app/page.tsx', 'utf8');
   const detail = readFileSync('app/san-pham/[duong_dan]/page.tsx', 'utf8');
   assert.match(detail, /themBienTheVaoGio/);
   assert.match(detail, /Thêm \$\{so_luong\} vào giỏ/u);
-  assert.match(page, /gio-hang/);
-  assert.match(page, /chọn màu sắc/u);
+  assert.match(detail, /Cấu hình mặc định/u);
+  assert.doesNotMatch(detail, /Chọn màu sắc/u);
+  assert.match(page, /cấu hình mặc định/u);
+  assert.doesNotMatch(page, /chọn màu sắc/u);
   assert.doesNotMatch(page, />v2\.4\.0</);
 });
 
@@ -78,7 +80,9 @@ test('co trang chi tiet san pham va click the san pham de mo chi tiet', () => {
   const detail = readFileSync('app/san-pham/[duong_dan]/page.tsx', 'utf8');
   assert.match(card, /router\.push\(`\/san-pham\//);
   assert.match(card, /Xem chi tiết sản phẩm/u);
-  assert.match(detail, /Chọn màu sắc/u);
+  assert.doesNotMatch(card, /Chọn màu/u);
+  assert.match(detail, /Cấu hình mặc định/u);
+  assert.doesNotMatch(detail, /Chọn màu sắc/u);
   assert.match(detail, /Thêm \$\{so_luong\} vào giỏ/u);
 });
 
@@ -101,16 +105,17 @@ test('v2.6.1 bo xem 3D san pham va chi hien thi anh tham khao', () => {
   assert.doesNotMatch(detail, /3D thật/u);
 });
 
-test('v2.6.1 chi tiet cho chon mau va card khong them thang bien the mac dinh', () => {
+test('v2.9.1 chi tiet tu chon bien the mac dinh va an lua chon mau', () => {
   const detail = readFileSync('app/san-pham/[duong_dan]/page.tsx', 'utf8');
   const card = readFileSync('components/the-san-pham.tsx', 'utf8');
   const data = readFileSync('lib/du-lieu-mau.ts', 'utf8');
-  assert.match(detail, /Chọn màu sắc/u);
-  assert.match(detail, /color-options/);
-  assert.match(detail, /Màu đã chọn/u);
+  assert.match(detail, /find\(x => x\.so_luong_ton > 0\) \?\? san_pham\?\.bien_the\?\.\[0\]/);
+  assert.match(detail, /Cấu hình mặc định/u);
   assert.match(detail, /themBienTheVaoGio\(bien_the\.ma_bien_the/);
-  assert.match(card, /Chọn màu/u);
-  assert.doesNotMatch(card, /onThem/);
+  assert.doesNotMatch(detail, /color-options/);
+  assert.doesNotMatch(detail, /Màu đã chọn/u);
+  assert.doesNotMatch(card, /Chọn màu/u);
+  assert.match(card, /Xem chi tiết →/u);
   assert.match(data, /BO_MAU_FALLBACK/);
   assert.match(data, /BT\$\{String\(mau_index \+ 1\)/);
 });
@@ -201,13 +206,14 @@ test("v2.7.0 web co quen mat khau va trang dat lai tu link email", () => {
 });
 
 
-test("v2.8.2 chon mau lam anh preview doi mau", () => {
+test("v2.9.1 anh chi tiet dung anh goc mac dinh, khong doi mau", () => {
   const detail = readFileSync("app/san-pham/[duong_dan]/page.tsx", "utf8");
   const css = readFileSync("app/globals.css", "utf8");
-  assert.match(detail, /mau_xem_truoc/);
-  assert.match(detail, /product-color-tint/);
-  assert.match(detail, /color-preview-badge/);
-  assert.match(css, /\.product-color-tint/);
+  assert.match(detail, /product-photo-default/);
+  assert.match(detail, /src=\{anh_goc\}/);
+  assert.doesNotMatch(detail, /product-photo-colorized/);
+  assert.doesNotMatch(detail, /anhBienTheUrl/);
+  assert.match(css, /\.product-photo-default/);
 });
 
 test("v2.8.2 nut tai khoan hien thong tin va dang xuat", () => {
@@ -225,10 +231,10 @@ test("v2.8.2 nut tai khoan hien thong tin va dang xuat", () => {
 test("v2.8.2 co giao dien admin tao nhan vien va xep ca", () => {
   const page = readFileSync("app/quan-tri/page.tsx", "utf8");
   const lib = readFileSync("lib/quan-tri.ts", "utf8");
-  assert.match(page, /Tạo tài khoản nhân viên/u);
-  assert.match(page, /XẾP CA/u);
-  assert.match(page, /Quản trị hệ thống/ui);
-  assert.match(page, /Hồ sơ nhân sự/u);
+  assert.match(page, /Tạo nhân viên bán hàng/u);
+  assert.match(page, /Xếp ca/u);
+  assert.match(page, /Admin Dashboard/u);
+  assert.match(page, /Hồ sơ nhân viên bán hàng/u);
   assert.match(lib, /capNhatNhanVien/);
   assert.match(lib, /\/quan-tri\/nhan-vien/);
   assert.match(lib, /\/quan-tri\/phan-ca/);
@@ -261,22 +267,285 @@ test("v2.8.2 dang nhap co ghi nho tai khoan chi luu email", () => {
 test("v2.8.2 quen mat khau noi ro gui vao email dang ky", () => {
   const forgot = readFileSync("app/quen-mat-khau/page.tsx", "utf8");
   assert.match(forgot, /email đã dùng để đăng ký/u);
-  assert.match(forgot, /gửi liên kết đặt lại mật khẩu vào chính địa chỉ email đó/u);
-  assert.match(forgot, /Xác nhận và gửi email đặt lại/u);
+  assert.match(forgot, /liên kết đặt lại mật khẩu sẽ được gửi vào email đó/u);
+  assert.match(forgot, /Gửi liên kết đặt lại/u);
 });
 
 
-test("v2.8.4 login bo dong mo ta, quen mat khau ngang hang ghi nho va nut dang nhap gon", () => {
+test("v2.8.4 login van giu ghi nho va quen mat khau sau khi nang layout", () => {
   const login = readFileSync("app/dang-nhap/page.tsx", "utf8");
   const register = readFileSync("app/dang-ky/page.tsx", "utf8");
   const css = readFileSync("app/globals.css", "utf8");
   assert.doesNotMatch(login, /Phiên đăng nhập dùng cookie HttpOnly/u);
-  assert.match(login, /auth-options-row/);
-  assert.match(login, /remember-account/);
-  assert.match(login, /forgot-inline/);
-  assert.match(login, /auth-login-button/);
-  assert.match(login, /href="\/dang-ky">Đăng kí<\/Link>/u);
-  assert.match(register, />Đăng kí<\/h1>/u);
-  assert.match(register, /"Đăng kí"/u);
-  assert.match(css, /min-width:132px/);
+  assert.match(login, /cine-auth-options/);
+  assert.match(login, /Ghi nhớ tài khoản/u);
+  assert.match(login, /Quên mật khẩu\?/u);
+  assert.match(login, /cine-auth-submit/);
+  assert.match(login, /href="\/dang-ky">Đăng ký<\/Link>/u);
+  assert.match(register, />Tạo tài khoản<\/h1>/u);
+  assert.match(register, /"Đăng ký"/u);
+  assert.match(css, /\.cine-auth-options/);
+});
+
+
+test("v2.8.5 auth canh giua ho so sua email va logout ro rang", () => {
+  const login = readFileSync("app/dang-nhap/page.tsx", "utf8");
+  const register = readFileSync("app/dang-ky/page.tsx", "utf8");
+  const account = readFileSync("app/tai-khoan/page.tsx", "utf8");
+  const nav = readFileSync("components/thanh-dieu-huong.tsx", "utf8");
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.match(login, /da_dang_xuat/);
+  assert.match(register, /cine-auth-card-register/);
+  assert.match(register, /cine-auth-submit/);
+  assert.match(account, /type="email" value=\{thu_dien_tu\}/);
+  assert.match(nav, /window\.location\.replace\("\/dang-nhap\?da_dang_xuat=1"\)/);
+  assert.match(css, /\.cine-auth-shell/);
+  assert.match(css, /\.cine-auth-submit/);
+});
+
+
+test("v2.8.6 nhan dang Brave va cap nhat nhan phien", () => {
+  const browser = readFileSync("lib/trinh-duyet.ts", "utf8");
+  const auth = readFileSync("lib/xac-thuc.ts", "utf8");
+  const account = readFileSync("app/tai-khoan/page.tsx", "utf8");
+  assert.match(browser, /navigator/);
+  assert.match(browser, /isBrave/);
+  assert.match(browser, /Brave/);
+  assert.match(auth, /nhanDangTrinhDuyet/);
+  assert.match(account, /capNhatPhienHienTai/);
+  assert.match(account, /hienThiNhanTrinhDuyet/);
+  assert.match(browser, /phiên cũ chưa phân biệt Brave\/Chrome/u);
+});
+
+test("v2.8.6 ho so doc lai PostgreSQL va co doi mat khau", () => {
+  const account = readFileSync("app/tai-khoan/page.tsx", "utf8");
+  const lib = readFileSync("lib/tai-khoan.ts", "utf8");
+  assert.match(account, /await capNhatHoSo/);
+  assert.doesNotMatch(account, /xac_nhan = await layHoSo/);
+  assert.match(account, /Đã lưu thông tin tài khoản vào PostgreSQL/u);
+  assert.match(account, /Đổi mật khẩu/u);
+  assert.match(account, /Mật khẩu hiện tại/u);
+  assert.match(account, /hien_do_manh/);
+  assert.match(lib, /doiMatKhau/);
+  assert.match(lib, /\/tai-khoan\/doi-mat-khau/);
+});
+
+
+test("v2.9.1 bo doi mau anh, giu admin kich hoat va logout khong tu refresh", () => {
+  const detail = readFileSync("app/san-pham/[duong_dan]/page.tsx", "utf8");
+  const route = readFileSync("app/api/anh-bien-the/route.ts", "utf8");
+  const helper = readFileSync("lib/anh-bien-the.ts", "utf8");
+  const admin = readFileSync("app/quan-tri/page.tsx", "utf8");
+  const auth = readFileSync("lib/xac-thuc.ts", "utf8");
+  assert.match(detail, /src=\{anh_goc\}/);
+  assert.doesNotMatch(detail, /anh_bien_the/);
+  assert.doesNotMatch(detail, /anhBienTheUrl/);
+  assert.match(helper, /\/api\/anh-bien-the/);
+  assert.match(route, /polygon points/);
+  assert.match(admin, /Kích hoạt/u);
+  assert.match(admin, /status-badge/);
+  assert.match(auth, /localStorage\.setItem\(KHOA_DA_DANG_XUAT, "1"\)/);
+  assert.match(auth, /localStorage\.removeItem\(KHOA_DA_DANG_XUAT\)/);
+});
+
+
+test("v2.9.3 register phone address va mot vai tro Admin", () => {
+  const register = readFileSync("app/dang-ky/page.tsx", "utf8");
+  const account = readFileSync("app/tai-khoan/page.tsx", "utf8");
+  const admin = readFileSync("app/quan-tri/page.tsx", "utf8");
+  const auth = readFileSync("lib/xac-thuc.ts", "utf8");
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.match(register, /Số điện thoại/u);
+  assert.match(register, /Địa chỉ/u);
+  assert.match(account, /Địa chỉ mặc định/u);
+  assert.match(admin, /Admin · Toàn quyền/u);
+  assert.doesNotMatch(admin, /Bảo vệ/u);
+  assert.doesNotMatch(auth, /SIEU_QUAN_TRI|QUAN_TRI/);
+  assert.match(css, /account-panel-security/u);
+  assert.match(css, /admin-protected-badge/u);
+});
+
+test('v2.8.9 dung bo cuc CineBooking Pro va nen 3D duoc cung cap', () => {
+  const pkg = docJson('package.json');
+  const layout = readFileSync('app/layout.tsx', 'utf8');
+  const css = readFileSync('app/globals.css', 'utf8');
+  assert.equal(pkg.devDependencies.tailwindcss, '^4.1.0');
+  assert.equal(pkg.devDependencies['@tailwindcss/postcss'], '^4.1.0');
+  assert.equal(existsSync('postcss.config.mjs'), true);
+  assert.equal(existsSync('public/backgrounds/nhienin3d-main.jpg'), true);
+  assert.match(layout, /ThanhDieuHuong/);
+  assert.match(layout, /ChanTrang/);
+  assert.match(layout, /max-w-7xl/);
+  assert.match(css, /@import "tailwindcss"/);
+  assert.match(css, /url\("\/backgrounds\/nhienin3d-main\.jpg"\)/);
+  assert.match(css, /menu-drawer-backdrop/);
+});
+
+
+test("v2.9.0 web theo CineBooking va admin co kich hoat xoa tai khoan", () => {
+  const account = readFileSync("app/tai-khoan/page.tsx", "utf8");
+  const admin = readFileSync("app/quan-tri/page.tsx", "utf8");
+  const lib = readFileSync("lib/quan-tri.ts", "utf8");
+  const login = readFileSync("app/dang-nhap/page.tsx", "utf8");
+  const register = readFileSync("app/dang-ky/page.tsx", "utf8");
+  const reset = readFileSync("app/dat-lai-mat-khau/page.tsx", "utf8");
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.match(account, /cine-profile-shell/);
+  assert.match(account, /Tài khoản của tôi/u);
+  assert.match(admin, /cine-admin-tabs/);
+  assert.match(admin, /cine-user-card/);
+  assert.match(admin, /xoaTaiKhoan/);
+  assert.match(admin, /Kích hoạt/u);
+  assert.match(admin, />Xóa<\/button>/u);
+  assert.match(lib, /xoaNguoiDung/);
+  assert.match(lib, /xoaNguoiDung[\s\S]*method: "POST"/);
+  assert.match(login, /cine-auth-card-login/);
+  assert.match(register, /cine-auth-card-register/);
+  assert.match(reset, /cine-auth-card/);
+  assert.match(css, /\.cine-profile-shell/);
+  assert.match(css, /\.cine-admin-shell/);
+});
+
+
+test("v2.9.1 bo chon mau san pham va dung bien the mac dinh", () => {
+  const detail = readFileSync("app/san-pham/[duong_dan]/page.tsx", "utf8");
+  const card = readFileSync("components/the-san-pham.tsx", "utf8");
+  const cart = readFileSync("app/gio-hang/page.tsx", "utf8");
+  assert.match(detail, /Cấu hình mặc định/u);
+  assert.match(detail, /find\(x => x\.so_luong_ton > 0\)/);
+  assert.doesNotMatch(detail, /Chọn màu sắc/u);
+  assert.doesNotMatch(detail, /color-options/);
+  assert.doesNotMatch(card, /Chọn màu/u);
+  assert.doesNotMatch(card, /color-chip/);
+  assert.doesNotMatch(cart, /mau_sac/);
+});
+
+
+test("v2.9.3 Admin hard-unlock va Ca lam/Xep ca theo CineBooking Pro", () => {
+  const admin = readFileSync("app/quan-tri/page.tsx", "utf8");
+  const lib = readFileSync("lib/quan-tri.ts", "utf8");
+  const auth = readFileSync("lib/xac-thuc.ts", "utf8");
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.match(lib, /kichHoatNguoiDung/);
+  assert.match(lib, /\/quan-tri\/nguoi-dung\/\$\{id\}\/kich-hoat/);
+  assert.match(lib, /khoaNguoiDung/);
+  assert.match(admin, /await kichHoatNguoiDung\(user\.id\)/);
+  assert.match(admin, /await khoaNguoiDung\(user\.id\)/);
+  assert.match(admin, /cine-shift-management-grid/);
+  assert.doesNotMatch(admin, /STAFF OPERATIONS/);
+  assert.match(admin, /Xếp ca nhân viên/u);
+  assert.match(admin, /phanCaTheoNgay/);
+  assert.match(css, /\.cine-shift-management-grid/);
+  assert.match(css, /\.cine-schedule-groups/);
+  assert.match(auth, /ADMIN: "Admin"/);
+  assert.doesNotMatch(admin, /SIEU_QUAN_TRI|QUAN_TRI/);
+});
+
+
+test("v2.9.4 request rong khong gan application json va ho so giu ket qua da luu", () => {
+  const adminLib = readFileSync("lib/quan-tri.ts", "utf8");
+  const accountLib = readFileSync("lib/tai-khoan.ts", "utf8");
+  const authLib = readFileSync("lib/xac-thuc.ts", "utf8");
+  const accountPage = readFileSync("app/tai-khoan/page.tsx", "utf8");
+  for (const source of [adminLib, accountLib, authLib]) {
+    assert.match(source, /init\.body !== undefined && init\.body !== null/);
+    assert.match(source, /headers\.set\("Content-Type", "application\/json"\)/);
+    assert.match(source, /cache: init\.cache \?\? "no-store"/);
+  }
+  assert.match(adminLib, /kichHoatNguoiDung[\s\S]*method: "POST"/);
+  assert.match(adminLib, /xoaNguoiDung[\s\S]*method: "POST"/);
+  assert.match(accountPage, /const da_luu = await capNhatHoSo/);
+  assert.doesNotMatch(accountPage, /let xac_nhan = da_luu/);
+  assert.match(accountPage, /Không GET lại ngay sau khi/u);
+});
+
+
+test("v2.9.5 form lon, tao nhan vien ban hang va xoa user bang POST", () => {
+  const admin = readFileSync("app/quan-tri/page.tsx", "utf8");
+  const account = readFileSync("app/tai-khoan/page.tsx", "utf8");
+  const adminLib = readFileSync("lib/quan-tri.ts", "utf8");
+  const auth = readFileSync("lib/xac-thuc.ts", "utf8");
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.match(admin, /Tạo nhân viên bán hàng/u);
+  assert.match(admin, /Xác nhận mật khẩu/u);
+  assert.doesNotMatch(admin, /Nhân viên chỉ tập trung bán hàng/u);
+  assert.match(admin, /Lưu trạng thái/u);
+  assert.doesNotMatch(admin, /value="QUAN_LY"/);
+  assert.doesNotMatch(admin, /placeholder="Chức danh"/u);
+  assert.match(adminLib, /nguoi-dung\/\$\{id\}\/xoa/);
+  assert.match(adminLib, /body: JSON\.stringify\(\{ xac_nhan: true \}\)/);
+  assert.match(auth, /NHAN_VIEN: "Nhân viên bán hàng"/u);
+  assert.match(account, /setHoSo\(da_luu\)/);
+  assert.doesNotMatch(account, /xac_nhan = await layHoSo/);
+  assert.match(css, /cine-staff-create-layout/);
+  assert.match(css, /cine-staff-card-v295/);
+  assert.match(css, /min-height:48px/);
+  assert.match(css, /font-size:15px/);
+});
+
+
+test("v2.9.6 doi nen nut gio hang sang dark glass", () => {
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.match(css, /\.cart-button\{[^}]*background:linear-gradient\(135deg,rgba\(23,32,51,\.98\),rgba\(15,23,42,\.98\)\)/);
+  assert.match(css, /\.cart-button b\{[^}]*background:linear-gradient\(135deg,#8b5cf6,#22d3ee\)/);
+});
+
+
+test("v2.9.7 ho so nhan vien luu trang thai qua POST va bo panel phan quyen", () => {
+  const admin = readFileSync("app/quan-tri/page.tsx", "utf8");
+  const lib = readFileSync("lib/quan-tri.ts", "utf8");
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.match(lib, /capNhatNhanVien[\s\S]*\/nhan-vien\/\$\{id\}\/trang-thai[\s\S]*method: "POST"/);
+  assert.match(admin, /const da_luu = await capNhatNhanVien/);
+  assert.match(admin, /const ds_moi = await layNhanVien\(\)/);
+  assert.match(admin, /F5 vẫn giữ trạng thái này/u);
+  assert.doesNotMatch(admin, /cine-staff-permissions/);
+  assert.doesNotMatch(admin, /PHÂN QUYỀN/u);
+  assert.match(css, /cine-staff-create-layout\{display:block;max-width:760px/);
+  assert.doesNotMatch(css, /\.cine-staff-permissions\{/);
+});
+
+
+test("v2.9.8 vai tro Admin va Nhan vien la nhan co dinh khong co dropdown", () => {
+  const admin = readFileSync("app/quan-tri/page.tsx", "utf8");
+  const lib = readFileSync("lib/quan-tri.ts", "utf8");
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.match(admin, /cine-user-role-static/);
+  assert.match(admin, /Admin · Toàn quyền/u);
+  assert.match(admin, /tenVaiTro\(u\.vai_tro\)/);
+  assert.doesNotMatch(admin, /<select value=\{u\.vai_tro\}/);
+  assert.doesNotMatch(admin, /doiVaiTro/);
+  assert.doesNotMatch(lib, /ho_ten" \| "so_dien_thoai" \| "vai_tro"/);
+  assert.match(css, /\.cine-user-role-static\{/);
+});
+
+
+test("v2.9.9 admin bo kicker va quan ly ca co chinh sua xoa", () => {
+  const admin = readFileSync("app/quan-tri/page.tsx", "utf8");
+  const lib = readFileSync("lib/quan-tri.ts", "utf8");
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.doesNotMatch(admin, /NHIENIN3D · ADMIN/u);
+  assert.match(admin, /06:00–14:00/u);
+  assert.match(admin, /14:00–22:00/u);
+  assert.match(admin, /batDauSuaCa/);
+  assert.match(admin, /xoaCa\(c\)/);
+  assert.match(admin, /Hủy chỉnh sửa/u);
+  assert.match(lib, /capNhatCaLam[\s\S]*method: "PATCH"/);
+  assert.match(lib, /xoaCaLam[\s\S]*method: "POST"/);
+  assert.match(css, /cine-shift-template-actions/);
+  assert.match(css, /cine-shift-form-actions/);
+});
+
+
+test("v2.10.0 xep ca cho sua xoa va bo STAFF OPERATIONS", () => {
+  const admin = readFileSync("app/quan-tri/page.tsx", "utf8");
+  const lib = readFileSync("lib/quan-tri.ts", "utf8");
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.doesNotMatch(admin, /STAFF OPERATIONS/);
+  assert.match(admin, /batDauSuaPhanCa/);
+  assert.match(admin, /Chỉnh sửa phân ca/u);
+  assert.match(admin, /soPhanCaCuaCa/);
+  assert.match(lib, /xoaCaLam[\s\S]*ca-lam\/\$\{id\}\/xoa[\s\S]*method: "POST"/);
+  assert.match(lib, /xoaPhanCa[\s\S]*phan-ca\/\$\{id\}\/xoa[\s\S]*method: "POST"/);
+  assert.match(css, /cine-schedule-actions/);
 });

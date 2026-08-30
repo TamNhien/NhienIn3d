@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
-import { ThanhDieuHuong } from "../../components/thanh-dieu-huong";
 import { API_URL, type GioHang, KHOA_GIO_HANG, layGioHangDaLuu, phatSuKienGioHang } from "../../lib/gio-hang";
 
 const vnd = new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" });
@@ -68,7 +67,6 @@ export default function ThanhToanPage() {
   }
 
   return <main>
-    <ThanhDieuHuong/>
     <section className="page-shell checkout-page">
       {ma_don_moi ? <div className="order-success standalone-success">
         <div className="success-icon">✓</div>

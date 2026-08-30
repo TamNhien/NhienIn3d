@@ -36,7 +36,7 @@ function taoDatabaseUrl(): string {
 const adapter = new PrismaPg({ connectionString: taoDatabaseUrl() });
 const db = new PrismaClient({ adapter });
 
-const PHIEN_BAN_HIEN_TAI = "SEED_V284_DANG_NHAP_DANG_KI_GON";
+const PHIEN_BAN_HIEN_TAI = "SEED_V2100_QUAN_LY_CA";
 
 const danh_muc = [
   ["HOBBY_RC", "Mô hình & RC", "mo-hinh-rc", "Mô hình cơ khí, xe điều khiển và sản phẩm lắp ráp."],
@@ -141,15 +141,15 @@ const san_pham = [
 ];
 
 const nguoi_dung_mau = [
-  ["minh.anh.demo@nhienin3d.local", "Nguyễn Minh Anh", VaiTro.KHACH_HANG],
-  ["hoang.nam.demo@nhienin3d.local", "Trần Hoàng Nam", VaiTro.KHACH_HANG],
-  ["thu.ha.demo@nhienin3d.local", "Lê Thu Hà", VaiTro.KHACH_HANG],
-  ["gia.huy.demo@nhienin3d.local", "Phạm Gia Huy", VaiTro.KHACH_HANG],
-  ["ngoc.linh.demo@nhienin3d.local", "Võ Ngọc Linh", VaiTro.KHACH_HANG],
-  ["quoc.bao.demo@nhienin3d.local", "Đặng Quốc Bảo", VaiTro.KHACH_HANG],
-  ["khanh.vy.demo@nhienin3d.local", "Bùi Khánh Vy", VaiTro.KHACH_HANG],
-  ["duc.anh.demo@nhienin3d.local", "Hoàng Đức Anh", VaiTro.NHAN_VIEN],
-  ["mai.phuong.demo@nhienin3d.local", "Đỗ Mai Phương", VaiTro.QUAN_LY]
+  ["minh.anh.demo@nhienin3d.local", "nguyen.minh.anh@example.com", "Nguyễn Minh Anh", VaiTro.KHACH_HANG],
+  ["hoang.nam.demo@nhienin3d.local", "tran.hoang.nam@example.com", "Trần Hoàng Nam", VaiTro.KHACH_HANG],
+  ["thu.ha.demo@nhienin3d.local", "le.thu.ha@example.com", "Lê Thu Hà", VaiTro.KHACH_HANG],
+  ["gia.huy.demo@nhienin3d.local", "pham.gia.huy@example.com", "Phạm Gia Huy", VaiTro.KHACH_HANG],
+  ["ngoc.linh.demo@nhienin3d.local", "vo.ngoc.linh@example.com", "Võ Ngọc Linh", VaiTro.KHACH_HANG],
+  ["quoc.bao.demo@nhienin3d.local", "dang.quoc.bao@example.com", "Đặng Quốc Bảo", VaiTro.KHACH_HANG],
+  ["khanh.vy.demo@nhienin3d.local", "bui.khanh.vy@example.com", "Bùi Khánh Vy", VaiTro.KHACH_HANG],
+  ["duc.anh.demo@nhienin3d.local", "hoang.duc.anh@example.com", "Hoàng Đức Anh", VaiTro.KHACH_HANG],
+  ["mai.phuong.demo@nhienin3d.local", "do.mai.phuong@example.com", "Đỗ Mai Phương", VaiTro.KHACH_HANG]
 ] as const;
 
 const don_hang_mau = [
@@ -189,33 +189,25 @@ const dia_chi_mau = [
   ["Bùi Khánh Vy", "0912001007", "Quảng Ninh", "Hạ Long", "Bạch Đằng", "15 Quang Trung"],
   ["Hoàng Đức Anh", "0912001008", "Đắk Lắk", "Buôn Ma Thuột", "Tân Lợi", "21 Phan Chu Trinh"],
   ["Đỗ Mai Phương", "0912001009", "Gia Lai", "Quy Nhơn", "Lê Lợi", "08 Lý Thường Kiệt"],
-  ["Quản trị NhienIn3d", "0912001010", "Khánh Hòa", "Nha Trang", "Lộc Thọ", "52 Trần Hưng Đạo"]
+  ["Lê Minh Quân", "0912001010", "Khánh Hòa", "Nha Trang", "Lộc Thọ", "52 Trần Hưng Đạo"]
 ] as const;
 
 const nhan_vien_mau = [
-  ["N3D-NV-001", "Nguyễn Thành Công", "Kỹ thuật in 3D", "Sản xuất"],
-  ["N3D-NV-002", "Trần Minh Khoa", "Kỹ thuật hậu kỳ", "Sản xuất"],
-  ["N3D-NV-003", "Lê Thảo Nguyên", "Tư vấn bán hàng", "Kinh doanh"],
-  ["N3D-NV-004", "Phạm Quốc Việt", "Đóng gói", "Kho vận"],
-  ["N3D-NV-005", "Võ Hoàng Yến", "Chăm sóc khách hàng", "Kinh doanh"],
-  ["N3D-NV-006", "Đặng Minh Tâm", "Thiết kế 3D", "Thiết kế"],
-  ["N3D-NV-007", "Bùi Gia Hân", "Kiểm soát chất lượng", "Sản xuất"],
-  ["N3D-NV-008", "Hoàng Tuấn Kiệt", "Quản lý kho", "Kho vận"],
-  ["N3D-NV-009", "Đỗ Ngọc Mai", "Điều phối đơn hàng", "Vận hành"],
-  ["N3D-NV-010", "Nguyễn Hải Đăng", "Kỹ thuật máy in", "Bảo trì"]
+  ["N3D-NV-001", "nguyen.thanh.cong@example.com", "Nguyễn Thành Công", "Nhân viên bán hàng", "Bán hàng"],
+  ["N3D-NV-002", "tran.minh.khoa@example.com", "Trần Minh Khoa", "Nhân viên bán hàng", "Bán hàng"],
+  ["N3D-NV-003", "le.thao.nguyen@example.com", "Lê Thảo Nguyên", "Nhân viên bán hàng", "Bán hàng"],
+  ["N3D-NV-004", "pham.quoc.viet@example.com", "Phạm Quốc Việt", "Nhân viên bán hàng", "Bán hàng"],
+  ["N3D-NV-005", "vo.hoang.yen@example.com", "Võ Hoàng Yến", "Nhân viên bán hàng", "Bán hàng"],
+  ["N3D-NV-006", "dang.minh.tam@example.com", "Đặng Minh Tâm", "Nhân viên bán hàng", "Bán hàng"],
+  ["N3D-NV-007", "bui.gia.han@example.com", "Bùi Gia Hân", "Nhân viên bán hàng", "Bán hàng"],
+  ["N3D-NV-008", "hoang.tuan.kiet@example.com", "Hoàng Tuấn Kiệt", "Nhân viên bán hàng", "Bán hàng"],
+  ["N3D-NV-009", "do.ngoc.mai@example.com", "Đỗ Ngọc Mai", "Nhân viên bán hàng", "Bán hàng"],
+  ["N3D-NV-010", "nguyen.hai.dang@example.com", "Nguyễn Hải Đăng", "Nhân viên bán hàng", "Bán hàng"]
 ] as const;
 
 const ca_lam_mau = [
-  ["CA01", "Ca sáng", "06:00", "10:00", "#38BDF8"],
-  ["CA02", "Ca hành chính sáng", "07:30", "11:30", "#22C55E"],
-  ["CA03", "Ca hành chính", "08:00", "17:00", "#14B8A6"],
-  ["CA04", "Ca trưa", "10:00", "14:00", "#F59E0B"],
-  ["CA05", "Ca chiều", "12:00", "16:00", "#F97316"],
-  ["CA06", "Ca chiều muộn", "14:00", "18:00", "#A855F7"],
-  ["CA07", "Ca tối", "16:00", "20:00", "#EC4899"],
-  ["CA08", "Ca tối muộn", "18:00", "22:00", "#6366F1"],
-  ["CA09", "Ca linh hoạt A", "09:00", "13:00", "#84CC16"],
-  ["CA10", "Ca linh hoạt B", "13:00", "17:00", "#06B6D4"]
+  ["CA01", "Ca sáng", "06:00", "14:00", "#38BDF8"],
+  ["CA02", "Ca chiều", "14:00", "22:00", "#A855F7"]
 ] as const;
 
 const phien_ban_seed = [
@@ -243,7 +235,11 @@ const phien_ban_seed = [
   ["SEED_V270_QUEN_MAT_KHAU_EMAIL", "NhienIn3d v2.7.0 bổ sung quên mật khẩu qua email, token dùng một lần và thu hồi toàn bộ phiên cũ sau khi đặt lại."],
   ["SEED_V281_GMAIL_SMTP", "NhienIn3d v2.8.1 bổ sung cấu hình Gmail/SMTP bằng biến MAIL_*, STARTTLS bắt buộc và công cụ kiểm tra SMTP."],
   ["SEED_V283_FIX_JWT_GUARD_DI", "NhienIn3d v2.8.3 sửa dependency injection JwtGuard/JwtService để API tài khoản và quản trị khởi động ổn định."],
-  [PHIEN_BAN_HIEN_TAI, "NhienIn3d v2.8.4 tinh gọn giao diện đăng nhập/đăng kí, đặt Quên mật khẩu ngang hàng với Ghi nhớ tài khoản."]
+  ["SEED_V284_DANG_NHAP_DANG_KI_GON", "NhienIn3d v2.8.4 tinh gọn giao diện đăng nhập/đăng kí, đặt Quên mật khẩu ngang hàng với Ghi nhớ tài khoản."],
+  ["SEED_V285_DU_LIEU_NGUOI_DUNG_HO_SO_LOGOUT", "NhienIn3d v2.8.5 chuẩn hóa dữ liệu người dùng mẫu, cho sửa email hồ sơ, sửa logout session và đổi màu trực tiếp trên ảnh sản phẩm."],
+  ["SEED_V286_TAI_KHOAN_MAT_KHAU_BRAVE", "NhienIn3d v2.8.6 nhận diện Brave, lưu hồ sơ bền vững và đổi mật khẩu ngay trong trang Tài khoản."],
+  ["SEED_V294_PERSIST_TAI_KHOAN_HO_SO", "NhienIn3d v2.9.4 không reset hồ sơ/trạng thái kích hoạt/địa chỉ/nhân viên đã chỉnh khi chạy lại seed."],
+  [PHIEN_BAN_HIEN_TAI, "NhienIn3d v2.10.0 cho phép chỉnh/xóa mẫu ca và phân ca đã xếp; seed không tái tạo dữ liệu vận hành bị Admin xóa."]
 ] as const;
 
 async function main() {
@@ -310,38 +306,61 @@ async function main() {
     });
   }
 
-  // 10 người dùng: 1 quản trị + 9 tài khoản mẫu bị vô hiệu hóa.
+  // 10 người dùng: 1 Admin + 9 tài khoản mẫu bị vô hiệu hóa.
+  // v2.8.6: ADMIN_EMAIL/ADMIN_NAME chỉ dùng bootstrap lần đầu.
+  // Nếu đã có Admin đang hoạt động thì tuyệt đối không ghi đè họ tên/email/mật khẩu do chính Admin đã sửa trong trang Tài khoản.
   const nguoi_dung: { id: string; ho_ten: string; thu_dien_tu: string }[] = [];
   const thu_dien_tu_quan_tri = process.env.ADMIN_EMAIL?.trim().toLowerCase();
   const admin_password = process.env.ADMIN_PASSWORD;
   const ho_ten_quan_tri = process.env.ADMIN_NAME?.trim() || "Quản trị NhienIn3d";
 
-  if (thu_dien_tu_quan_tri && admin_password && admin_password.length >= 12) {
+  const admin_dang_hoat_dong = await db.nguoiDung.findFirst({
+    where: { vai_tro: VaiTro.ADMIN, da_kich_hoat: true },
+    orderBy: { ngay_tao: "asc" }
+  });
+
+  if (admin_dang_hoat_dong) {
+    // Giữ nguyên dữ liệu người dùng đã chỉnh; seed chỉ bảo đảm quyền Admin và trạng thái hoạt động.
+    const admin = await db.nguoiDung.update({
+      where: { id: admin_dang_hoat_dong.id },
+      data: { vai_tro: VaiTro.ADMIN, da_kich_hoat: true }
+    });
+    nguoi_dung.push(admin);
+  } else if (thu_dien_tu_quan_tri && admin_password && admin_password.length >= 12) {
     const mat_khau_bam = await argon2.hash(admin_password, { type: argon2.argon2id });
     const admin = await db.nguoiDung.upsert({
       where: { thu_dien_tu: thu_dien_tu_quan_tri },
-      update: { ho_ten: ho_ten_quan_tri, vai_tro: VaiTro.SIEU_QUAN_TRI, da_kich_hoat: true },
-      create: { thu_dien_tu: thu_dien_tu_quan_tri, mat_khau_bam, ho_ten: ho_ten_quan_tri, vai_tro: VaiTro.SIEU_QUAN_TRI, da_kich_hoat: true }
+      update: { mat_khau_bam, ho_ten: ho_ten_quan_tri, vai_tro: VaiTro.ADMIN, da_kich_hoat: true },
+      create: { thu_dien_tu: thu_dien_tu_quan_tri, mat_khau_bam, ho_ten: ho_ten_quan_tri, vai_tro: VaiTro.ADMIN, da_kich_hoat: true }
     });
     nguoi_dung.push(admin);
   } else {
     const mat_khau_bam = await argon2.hash(randomBytes(32).toString("base64url"), { type: argon2.argon2id });
     const admin_mau = await db.nguoiDung.upsert({
-      where: { thu_dien_tu: "quantri.mau@nhienin3d.local" },
-      update: { ho_ten: "Quản trị mẫu NhienIn3d", vai_tro: VaiTro.SIEU_QUAN_TRI, da_kich_hoat: false },
-      create: { thu_dien_tu: "quantri.mau@nhienin3d.local", mat_khau_bam, ho_ten: "Quản trị mẫu NhienIn3d", vai_tro: VaiTro.SIEU_QUAN_TRI, da_kich_hoat: false }
+      where: { thu_dien_tu: "le.minh.quan@example.com" },
+      update: { vai_tro: VaiTro.ADMIN, da_kich_hoat: false },
+      create: { thu_dien_tu: "le.minh.quan@example.com", mat_khau_bam, ho_ten: "Lê Minh Quân", vai_tro: VaiTro.ADMIN, da_kich_hoat: false }
     });
     nguoi_dung.push(admin_mau);
-    console.warn("⚠️ Chưa có ADMIN_EMAIL/ADMIN_PASSWORD hợp lệ: đã tạo quản trị mẫu bị vô hiệu hóa.");
+    console.warn("⚠️ Chưa có ADMIN_EMAIL/ADMIN_PASSWORD hợp lệ: đã tạo Admin mẫu bị vô hiệu hóa.");
   }
 
   const mat_khau_mau_bam = await argon2.hash(randomBytes(32).toString("base64url"), { type: argon2.argon2id });
-  for (const [thu_dien_tu, ho_ten, vai_tro] of nguoi_dung_mau) {
-    const user = await db.nguoiDung.upsert({
-      where: { thu_dien_tu },
-      update: { ho_ten, vai_tro, da_kich_hoat: false },
-      create: { thu_dien_tu, ho_ten, vai_tro, mat_khau_bam: mat_khau_mau_bam, da_kich_hoat: false }
-    });
+  for (const [thu_dien_tu_cu, thu_dien_tu, ho_ten, vai_tro] of nguoi_dung_mau) {
+    // Dữ liệu mẫu chỉ bootstrap lần đầu. Nếu tài khoản đã tồn tại thì giữ nguyên
+    // họ tên, email đã đổi, vai trò và trạng thái kích hoạt do người dùng/Admin chỉnh.
+    let user = await db.nguoiDung.findUnique({ where: { thu_dien_tu } });
+    if (!user) {
+      const tai_khoan_cu = await db.nguoiDung.findUnique({ where: { thu_dien_tu: thu_dien_tu_cu } });
+      if (tai_khoan_cu) {
+        // Chỉ đổi miền email legacy một lần; tuyệt đối không reset hồ sơ/trạng thái.
+        user = await db.nguoiDung.update({ where: { id: tai_khoan_cu.id }, data: { thu_dien_tu } });
+      } else {
+        user = await db.nguoiDung.create({
+          data: { thu_dien_tu, ho_ten, vai_tro, mat_khau_bam: mat_khau_mau_bam, da_kich_hoat: false }
+        });
+      }
+    }
     nguoi_dung.push(user);
   }
 
@@ -414,7 +433,7 @@ async function main() {
     ["Bùi Khánh Vy", 5, "Bánh răng quay mượt, màu phối nổi bật và thú vị."],
     ["Hoàng Đức Anh", 4, "Khay chắc chắn, sắp xếp linh kiện rất tiện."],
     ["Đỗ Mai Phương", 5, "Ảnh lithophane lên rõ, phù hợp làm quà tặng cá nhân hóa."],
-    ["Quản trị NhienIn3d", 5, "Vỏ vừa Raspberry Pi 5, thoáng khí và bố trí cổng hợp lý."]
+    ["Lê Minh Quân", 5, "Vỏ vừa Raspberry Pi 5, thoáng khí và bố trí cổng hợp lý."]
   ] as const;
   for (let i = 0; i < san_pham.length; i++) {
     const sp = san_pham[i];
@@ -428,21 +447,32 @@ async function main() {
     });
   }
 
-  // V2: 10 địa chỉ mẫu.
+  // V2: 10 địa chỉ mẫu chỉ dùng để bootstrap. Không tạo lại địa chỉ mẫu theo
+  // chuỗi địa chỉ cũ vì việc đó từng làm địa chỉ người dùng vừa sửa bị "quay về" sau mỗi seed.
   for (let i = 0; i < 10; i++) {
     const user = nguoi_dung[i];
     const [ten_nguoi_nhan, so_dien_thoai, tinh_thanh, quan_huyen, phuong_xa, dia_chi_cu_the] = dia_chi_mau[i];
-    const da_co = await db.diaChiNguoiDung.findFirst({
-      where: { nguoi_dung_id: user.id, dia_chi_cu_the }
+    const dia_chi_hien_co = await db.diaChiNguoiDung.findMany({
+      where: { nguoi_dung_id: user.id },
+      orderBy: { ngay_tao: "asc" },
+      select: { id: true, la_mac_dinh: true }
     });
-    if (da_co) {
-      await db.diaChiNguoiDung.update({
-        where: { id: da_co.id },
-        data: { ten_nguoi_nhan, so_dien_thoai, tinh_thanh, quan_huyen, phuong_xa, la_mac_dinh: true }
-      });
-    } else {
+    if (!dia_chi_hien_co.length) {
       await db.diaChiNguoiDung.create({
         data: { nguoi_dung_id: user.id, ten_nguoi_nhan, so_dien_thoai, tinh_thanh, quan_huyen, phuong_xa, dia_chi_cu_the, la_mac_dinh: true }
+      });
+      continue;
+    }
+
+    // Sửa dữ liệu cũ từng bị seed tạo nhiều địa chỉ mặc định: giữ bản ghi được tạo
+    // đầu tiên (bản ghi người dùng đã chỉnh tại chỗ) và bỏ cờ mặc định ở các bản sao sau.
+    const mac_dinh = dia_chi_hien_co.filter(x => x.la_mac_dinh);
+    const id_mac_dinh = (mac_dinh[0] ?? dia_chi_hien_co[0]).id;
+    await db.diaChiNguoiDung.update({ where: { id: id_mac_dinh }, data: { la_mac_dinh: true } });
+    if (dia_chi_hien_co.length > 1) {
+      await db.diaChiNguoiDung.updateMany({
+        where: { nguoi_dung_id: user.id, id: { not: id_mac_dinh }, la_mac_dinh: true },
+        data: { la_mac_dinh: false }
       });
     }
   }
@@ -605,49 +635,94 @@ async function main() {
     });
   }
 
-  // v2.8.0: 10 tài khoản nhân viên mẫu + hồ sơ nhân viên. Các tài khoản mẫu bị vô hiệu hóa và dùng mật khẩu ngẫu nhiên.
+  // v2.9.5: nhân sự của NhienIn3d chỉ còn Nhân viên bán hàng. Migration v2.9.5
+  // chuẩn hóa dữ liệu cũ đúng một lần; seed sau đó chỉ bootstrap bản ghi còn thiếu
+  // để trạng thái do Admin chỉnh không bị reset khi chạy Docker lại.
   const nhan_vien_ids: string[] = [];
   for (let i = 0; i < nhan_vien_mau.length; i++) {
-    const [ma_nhan_vien, ho_ten, chuc_danh, bo_phan] = nhan_vien_mau[i];
-    const thu_dien_tu = `nhanvien${String(i + 1).padStart(2, "0")}.demo@nhienin3d.local`;
+    const [ma_nhan_vien, thu_dien_tu, ho_ten, chuc_danh, bo_phan] = nhan_vien_mau[i];
+    const thu_dien_tu_cu = `nhanvien${String(i + 1).padStart(2, "0")}.demo@nhienin3d.local`;
     const so_dien_thoai = `0908${String(100000 + i).slice(-6)}`;
-    const user = await db.nguoiDung.upsert({
-      where: { thu_dien_tu },
-      update: { ho_ten, so_dien_thoai, vai_tro: VaiTro.NHAN_VIEN, da_kich_hoat: false },
-      create: { thu_dien_tu, ho_ten, so_dien_thoai, vai_tro: VaiTro.NHAN_VIEN, mat_khau_bam: mat_khau_mau_bam, da_kich_hoat: false }
-    });
-    const nhan_vien = await db.nhanVien.upsert({
-      where: { ma_nhan_vien },
-      update: { nguoi_dung_id: user.id, chuc_danh, bo_phan, trang_thai: TrangThaiNhanVien.DANG_LAM },
-      create: {
+    const ho_so_cu = await db.nhanVien.findUnique({ where: { ma_nhan_vien } });
+    let user = ho_so_cu ? await db.nguoiDung.findUnique({ where: { id: ho_so_cu.nguoi_dung_id } }) : null;
+
+    if (!user) user = await db.nguoiDung.findUnique({ where: { thu_dien_tu } });
+    if (!user) {
+      const user_legacy = await db.nguoiDung.findUnique({ where: { thu_dien_tu: thu_dien_tu_cu } });
+      if (user_legacy) {
+        user = await db.nguoiDung.update({ where: { id: user_legacy.id }, data: { thu_dien_tu } });
+      } else {
+        user = await db.nguoiDung.create({
+          data: { thu_dien_tu, ho_ten, so_dien_thoai, vai_tro: VaiTro.NHAN_VIEN, mat_khau_bam: mat_khau_mau_bam, da_kich_hoat: true }
+        });
+      }
+    } else if (user.thu_dien_tu === thu_dien_tu_cu) {
+      const user_email_moi = await db.nguoiDung.findUnique({ where: { thu_dien_tu } });
+      if (!user_email_moi || user_email_moi.id === user.id) {
+        user = await db.nguoiDung.update({ where: { id: user.id }, data: { thu_dien_tu } });
+      }
+    }
+
+    if (!ho_so_cu) {
+      // Hồ sơ mới ở trạng thái ĐANG_LÀM phải đồng bộ tài khoản ngay từ lần seed đầu.
+      // Những lần seed sau không chạm trạng thái để giữ thay đổi của Admin.
+      user = await db.nguoiDung.update({
+        where: { id: user.id },
+        data: { vai_tro: VaiTro.NHAN_VIEN, da_kich_hoat: true, so_lan_dang_nhap_that_bai: 0, khoa_den: null }
+      });
+    }
+
+    const nhan_vien = ho_so_cu ?? await db.nhanVien.create({
+      data: {
         nguoi_dung_id: user.id, ma_nhan_vien, chuc_danh, bo_phan,
         ngay_vao_lam: new Date(Date.UTC(2026, 0, 2 + i)), trang_thai: TrangThaiNhanVien.DANG_LAM,
-        ghi_chu: "Tài khoản nhân viên mẫu phục vụ kiểm thử phân ca."
+        ghi_chu: "Nhân viên bán hàng mẫu phục vụ kiểm thử phân ca."
       }
     });
     nhan_vien_ids.push(nhan_vien.id);
   }
 
-  // v2.8.0: 10 mẫu ca làm việc.
-  const ca_ids: string[] = [];
-  for (const [ma_ca, ten_ca, gio_bat_dau, gio_ket_thuc, mau_hien_thi] of ca_lam_mau) {
-    const ca = await db.caLamViec.upsert({
-      where: { ma_ca },
-      update: { ten_ca, gio_bat_dau, gio_ket_thuc, mau_hien_thi, dang_hoat_dong: true },
-      create: { ma_ca, ten_ca, gio_bat_dau, gio_ket_thuc, mau_hien_thi, dang_hoat_dong: true }
+  // v2.9.9: chỉ bootstrap đúng 2 ca mặc định một lần. Migration v2.9.9 đã tạo
+  // CA01 06:00-14:00 và CA02 14:00-22:00. Nếu seed chạy độc lập trên môi trường
+  // đặc biệt, chỉ tạo khi marker chưa tồn tại. Sau đó tuyệt đối không ghi đè/khôi
+  // phục ca mà Admin đã chỉnh sửa hoặc xóa.
+  const marker_hai_ca = await db.phienBanSeed.findUnique({ where: { phien_ban: "SEED_V299_HAI_CA_MAC_DINH" } });
+  if (!marker_hai_ca) {
+    for (const [ma_ca, ten_ca, gio_bat_dau, gio_ket_thuc, mau_hien_thi] of ca_lam_mau) {
+      await db.caLamViec.upsert({
+        where: { ma_ca },
+        update: {},
+        create: { ma_ca, ten_ca, gio_bat_dau, gio_ket_thuc, mau_hien_thi, dang_hoat_dong: true }
+      });
+    }
+    await db.phienBanSeed.create({
+      data: { phien_ban: "SEED_V299_HAI_CA_MAC_DINH", mo_ta: "Khởi tạo 2 ca mặc định; từ đây Admin tự chỉnh sửa/xóa." }
     });
-    ca_ids.push(ca.id);
   }
 
-  // v2.8.0: 10 phân ca mẫu, mỗi nhân viên một dòng.
-  for (let i = 0; i < 10; i++) {
-    const ngay_lam = new Date(Date.UTC(2026, 7, 30 + i));
-    const da_co = await db.phanCa.findFirst({ where: { nhan_vien_id: nhan_vien_ids[i], ca_lam_viec_id: ca_ids[i], ngay_lam } });
-    if (da_co) {
-      await db.phanCa.update({ where: { id: da_co.id }, data: { trang_thai: TrangThaiPhanCa.DA_XEP, ghi_chu: `Phân ca mẫu số ${i + 1}` } });
-    } else {
-      await db.phanCa.create({ data: { nhan_vien_id: nhan_vien_ids[i], ca_lam_viec_id: ca_ids[i], ngay_lam, trang_thai: TrangThaiPhanCa.DA_XEP, ghi_chu: `Phân ca mẫu số ${i + 1}` } });
+  const ca_hien_tai = await db.caLamViec.findMany({
+    where: { ma_ca: { in: ["CA01", "CA02"] } },
+    orderBy: { gio_bat_dau: "asc" }
+  });
+  const ca_ids = ca_hien_tai.map(x => x.id);
+
+  // Phân ca mẫu cũng chỉ bootstrap một lần. Sau khi Admin chỉnh/xóa ca hoặc phân ca,
+  // seed về sau không tái tạo dữ liệu vận hành đã bị thay đổi có chủ đích.
+  const marker_phan_ca = await db.phienBanSeed.findUnique({ where: { phien_ban: "SEED_V299_PHAN_CA_MAU" } });
+  if (!marker_phan_ca && ca_ids.length > 0) {
+    for (let i = 0; i < 10; i++) {
+      const ngay_lam = new Date(Date.UTC(2026, 7, 30 + i));
+      const ca_lam_viec_id = ca_ids[i % ca_ids.length];
+      const da_co = await db.phanCa.findFirst({ where: { nhan_vien_id: nhan_vien_ids[i], ngay_lam } });
+      if (da_co) {
+        await db.phanCa.update({ where: { id: da_co.id }, data: { ca_lam_viec_id, trang_thai: TrangThaiPhanCa.DA_XEP, ghi_chu: `Phân ca mẫu số ${i + 1}` } });
+      } else {
+        await db.phanCa.create({ data: { nhan_vien_id: nhan_vien_ids[i], ca_lam_viec_id, ngay_lam, trang_thai: TrangThaiPhanCa.DA_XEP, ghi_chu: `Phân ca mẫu số ${i + 1}` } });
+      }
     }
+    await db.phienBanSeed.create({
+      data: { phien_ban: "SEED_V299_PHAN_CA_MAU", mo_ta: "Bootstrap phân ca mẫu luân phiên trên 2 ca v2.9.9; không tái tạo sau chỉnh sửa/xóa." }
+    });
   }
 
   // 10 nhật ký bảo mật mẫu, tách biệt bằng tiền tố DU_LIEU_MAU_.
@@ -696,13 +771,16 @@ async function main() {
     phan_ca: await db.phanCa.count()
   };
 
-  const thieu = Object.entries(dem).filter(([, so_luong]) => so_luong < 10);
+  // Tài khoản/nhân sự/ca/phân ca là dữ liệu vận hành có quyền xóa, vì vậy không
+  // ép số lượng tối thiểu sau khi bootstrap. Các bảng dữ liệu mẫu còn lại vẫn >= 10.
+  const bang_bien_dong = new Set(["nguoi_dung", "nhan_vien", "ca_lam_viec", "phan_ca"]);
+  const thieu = Object.entries(dem).filter(([bang, so_luong]) => !bang_bien_dong.has(bang) && so_luong < 10);
   if (thieu.length) {
-    throw new Error(`Seed chưa đủ 10 dòng: ${thieu.map(([bang, so]) => `${bang}=${so}`).join(", ")}`);
+    throw new Error(`Seed chưa đủ dữ liệu mẫu: ${thieu.map(([bang, so]) => `${bang}=${so}`).join(", ")}`);
   }
 
   console.table(dem);
-  console.log(`✅ ${PHIEN_BAN_HIEN_TAI}: mọi bảng nghiệp vụ có tối thiểu 10 dòng dữ liệu.`);
+  console.log(`✅ ${PHIEN_BAN_HIEN_TAI}: dữ liệu mẫu tĩnh đạt yêu cầu; dữ liệu vận hành được phép chỉnh sửa/xóa.`);
 }
 
 main()

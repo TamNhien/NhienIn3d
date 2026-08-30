@@ -1,3 +1,5 @@
+@import "tailwindcss";
+
 :root{
   --bg:#080a10;
   --card:#10131c;
@@ -12,7 +14,15 @@
 html{scroll-behavior:smooth}
 body{
   margin:0;
-  background:radial-gradient(circle at 70% 8%,#1a1640 0,transparent 30%),radial-gradient(circle at 20% 30%,#082b32 0,transparent 25%),var(--bg);
+  min-height:100vh;
+  background-color:#05070b;
+  background-image:
+    linear-gradient(180deg,rgba(2,5,10,.48) 0%,rgba(3,7,14,.66) 46%,rgba(3,5,9,.88) 100%),
+    url("/backgrounds/nhienin3d-main.jpg");
+  background-size:cover;
+  background-position:center center;
+  background-repeat:no-repeat;
+  background-attachment:fixed;
   color:var(--text);
   font-family:"Segoe UI Variable Text","Segoe UI Variable","Segoe UI",Inter,ui-sans-serif,system-ui,-apple-system,sans-serif;
   font-size:16px;
@@ -20,13 +30,14 @@ body{
   letter-spacing:-.01em;
   text-rendering:optimizeLegibility;
   -webkit-font-smoothing:antialiased;
+  transition:background-image .25s ease;
 }
 button,input,textarea,select{font:inherit}
 
 .nav{height:74px;display:flex;align-items:center;justify-content:space-between;max-width:1240px;margin:auto;padding:0 24px;border-bottom:1px solid rgba(255,255,255,.08)}
 .brand{font-weight:850;font-size:22px;letter-spacing:-.8px;color:white;text-decoration:none}.brand span{color:var(--accent)}
 .navlinks{display:flex;gap:28px}.navlinks a{color:#c6ccda;text-decoration:none;font-size:13px;font-weight:600;letter-spacing:.01em;transition:.2s}.navlinks a:hover{color:#fff}
-.cart-button{display:flex;align-items:center;gap:8px;background:#fff;color:#0b0d12;border:0;border-radius:999px;padding:9px 13px;font-size:13px;font-weight:800;cursor:pointer}.cart-button b{display:grid;place-items:center;min-width:22px;height:22px;border-radius:999px;background:#10131c;color:#fff;font-size:10px}
+.cart-button{display:flex;align-items:center;gap:8px;background:linear-gradient(135deg,#172033,#111827);color:#f8fafc;border:1px solid #334155;border-radius:999px;padding:9px 13px;font-size:13px;font-weight:800;cursor:pointer}.cart-button b{display:grid;place-items:center;min-width:22px;height:22px;border-radius:999px;background:linear-gradient(135deg,#8b5cf6,#22d3ee);color:#fff;font-size:10px}
 .navbtn,.primary{background:white;color:#0b0d12;border:0;border-radius:999px;padding:11px 17px;font-size:14px;font-weight:800}
 
 .hero{max-width:1240px;min-height:620px;margin:auto;padding:56px 24px 46px;display:grid;grid-template-columns:1.03fr .97fr;align-items:center;gap:34px}
@@ -90,12 +101,12 @@ footer{border-top:1px solid var(--line);max-width:1240px;margin:auto;padding:30p
 @media(max-width:600px){.color-options{grid-template-columns:1fr 1fr}}
 
 /* v2.6.0 - tài khoản, đăng nhập và RBAC */
-.auth-shell{min-height:calc(100vh - 74px);display:grid;place-items:center;padding:54px 20px}.auth-card{width:min(520px,100%);border:1px solid var(--line);border-radius:26px;background:linear-gradient(180deg,rgba(17,21,31,.96),rgba(10,13,20,.96));padding:30px;box-shadow:0 30px 90px rgba(0,0,0,.35)}.auth-card-wide{width:min(620px,100%)}.auth-card h1{font-size:clamp(34px,5vw,48px);line-height:1.05;letter-spacing:-2px;margin:8px 0 14px}.auth-card>p{color:var(--muted);font-size:13px;line-height:1.7;margin:0 0 24px}.auth-form{display:grid;gap:14px}.auth-form label{display:grid;gap:6px}.auth-form label>span{font-size:11px;font-weight:800;color:#d6dbea}.auth-form input{width:100%;border:1px solid var(--line);border-radius:13px;background:#090d14;color:#fff;padding:13px 14px;outline:none}.auth-form input:focus{border-color:#8b5cf6;box-shadow:0 0 0 3px rgba(139,92,246,.1)}.auth-error{border:1px solid rgba(251,113,133,.3);background:rgba(244,63,94,.08);color:#fecdd3;border-radius:12px;padding:10px 12px;font-size:11px}.password-hint{color:#8993a5;font-size:10px;margin-top:-8px}.auth-links{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:20px;color:var(--muted);font-size:11px}.auth-links a{color:#c4b5fd;text-decoration:none;font-weight:800}.auth-roadmap{margin-left:auto;border:1px solid var(--line);border-radius:999px;padding:5px 8px}.auth-primary-link{display:inline-block;text-decoration:none;margin-top:10px}.account-shell{max-width:900px}.account-shell>h1{font-size:clamp(38px,5vw,58px);letter-spacing:-2.3px;line-height:1.05;margin:8px 0 30px}.account-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.account-card{border:1px solid var(--line);border-radius:18px;background:#0e121b;padding:20px;display:grid;gap:6px}.account-card span{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:1px}.account-card strong{font-size:14px;word-break:break-word}.account-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}.account-actions .secondary{text-decoration:none}.account-note{margin-top:24px;color:var(--muted);font-size:11px}
+.auth-shell{min-height:calc(100vh - 74px);display:grid;place-items:center;padding:54px 20px}.auth-card{width:min(520px,100%);border:1px solid var(--line);border-radius:26px;background:linear-gradient(180deg,rgba(17,21,31,.96),rgba(10,13,20,.96));padding:30px;box-shadow:0 30px 90px rgba(0,0,0,.35)}.auth-card-wide{width:min(620px,100%)}.auth-card h1{font-size:clamp(34px,5vw,48px);line-height:1.05;letter-spacing:-2px;margin:8px 0 14px}.auth-card>p{color:var(--muted);font-size:13px;line-height:1.7;margin:0 0 24px}.auth-form{display:grid;gap:14px}.auth-form label{display:grid;gap:6px}.auth-form label>span{font-size:11px;font-weight:800;color:#d6dbea}.auth-form input{width:100%;border:1px solid var(--line);border-radius:13px;background:#090d14;color:#fff;padding:13px 14px;outline:none}.auth-form input:focus{border-color:#8b5cf6;box-shadow:0 0 0 3px rgba(139,92,246,.1)}.auth-error{border:1px solid rgba(251,113,133,.3);background:rgba(244,63,94,.08);color:#fecdd3;border-radius:12px;padding:10px 12px;font-size:11px}.password-hint{color:#8993a5;font-size:10px;margin-top:-8px}.auth-links{display:flex;gap:9px;align-items:center;justify-content:center;text-align:center;flex-wrap:wrap;margin-top:20px;color:var(--muted);font-size:11px}.auth-links a{color:#c4b5fd;text-decoration:none;font-weight:800}.auth-roadmap{margin-left:auto;border:1px solid var(--line);border-radius:999px;padding:5px 8px}.auth-primary-link{display:inline-block;text-decoration:none;margin-top:10px}.account-shell{max-width:900px}.account-shell>h1{font-size:clamp(38px,5vw,58px);letter-spacing:-2.3px;line-height:1.05;margin:8px 0 30px}.account-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.account-card{border:1px solid var(--line);border-radius:18px;background:#0e121b;padding:20px;display:grid;gap:6px}.account-card span{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:1px}.account-card strong{font-size:14px;word-break:break-word}.account-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}.account-actions .secondary{text-decoration:none}.account-note{margin-top:24px;color:var(--muted);font-size:11px}
 @media(max-width:700px){.account-grid{grid-template-columns:1fr}.auth-card{padding:23px}.auth-roadmap{margin-left:0;width:100%}}
 .auth-success{border:1px solid rgba(74,222,128,.28);background:rgba(34,197,94,.08);color:#bbf7d0;border-radius:12px;padding:10px 12px;font-size:11px;line-height:1.6}.auth-local-mail{margin-top:16px!important;font-size:10px!important;color:#7dd3fc!important}.auth-local-mail b{color:#bae6fd}
 
 /* v2.8.0 - preview màu sản phẩm, tài khoản, nhân viên, phân ca và quản trị */
-.colorized-product-preview{isolation:isolate}.colorized-product-preview img{position:relative;z-index:1}.product-color-tint{position:absolute;inset:0;z-index:2;pointer-events:none;transition:background-color .25s ease,opacity .25s ease}.color-preview-badge{position:absolute;left:14px;bottom:14px;z-index:3;display:flex;align-items:center;gap:7px;padding:7px 10px;border:1px solid rgba(255,255,255,.22);border-radius:999px;background:rgba(5,8,15,.72);backdrop-filter:blur(10px);font-size:10px;font-weight:800;color:#f8fafc}.color-preview-badge i{width:11px;height:11px;border-radius:50%;border:1px solid rgba(255,255,255,.7);box-shadow:0 0 0 1px rgba(0,0,0,.25)}
+.colorized-product-preview{isolation:isolate}.colorized-product-preview img{position:relative;z-index:1}.product-photo-colorized{transition:filter .28s ease;will-change:filter}.color-preview-badge{position:absolute;left:14px;bottom:14px;z-index:3;display:flex;align-items:center;gap:7px;padding:7px 10px;border:1px solid rgba(255,255,255,.22);border-radius:999px;background:rgba(5,8,15,.72);backdrop-filter:blur(10px);font-size:10px;font-weight:800;color:#f8fafc}.color-preview-badge i{width:11px;height:11px;border-radius:50%;border:1px solid rgba(255,255,255,.7);box-shadow:0 0 0 1px rgba(0,0,0,.25)}
 
 .account-menu{position:relative}.account-menu summary{list-style:none;cursor:pointer;color:#c6ccda;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px}.account-menu summary::-webkit-details-marker{display:none}.account-menu summary span{color:#fff}.account-menu[open] summary{color:#fff}.account-popover{position:absolute;right:0;top:32px;width:290px;z-index:30;border:1px solid var(--line);border-radius:17px;background:rgba(10,13,20,.98);box-shadow:0 20px 60px rgba(0,0,0,.5);padding:16px;display:grid;gap:5px}.account-popover strong{font-size:13px}.account-popover small{color:var(--muted);font-size:10px;word-break:break-all}.account-popover em{font-style:normal;color:#c4b5fd;font-size:10px}.account-popover-links{display:grid;gap:6px;margin-top:8px;padding-top:10px;border-top:1px solid var(--line)}.account-popover-links a,.account-popover-links button{width:100%;text-align:left;border:0;background:transparent;color:#e5e7eb;padding:8px 9px;border-radius:9px;text-decoration:none;font-size:11px;cursor:pointer}.account-popover-links a:hover,.account-popover-links button:hover{background:rgba(139,92,246,.12);color:white}.account-popover-links button:last-child{color:#fda4af}
 
@@ -111,4 +122,370 @@ footer{border-top:1px solid var(--line);max-width:1240px;margin:auto;padding:30p
 @media(max-width:600px){.password-rules{grid-template-columns:1fr}}
 
 /* v2.8.4 - đăng nhập/đăng kí gọn hơn */
-.auth-options-row{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}.remember-account{display:flex!important;align-items:center;gap:8px!important}.remember-account input{width:16px!important;height:16px;margin:0;accent-color:#8b5cf6}.remember-account span{font-size:11px!important}.forgot-inline{color:#c4b5fd;text-decoration:none;font-size:11px;font-weight:800}.forgot-inline:hover{text-decoration:underline}.auth-login-button{width:auto;min-width:132px;justify-self:start;padding:10px 22px;border-radius:12px}.auth-card:not(.auth-card-wide) .auth-form{align-items:start}.auth-card:not(.auth-card-wide) .auth-form>label,.auth-card:not(.auth-card-wide) .auth-form>.password-field,.auth-card:not(.auth-card-wide) .auth-form>.auth-options-row,.auth-card:not(.auth-card-wide) .auth-form>.auth-error,.auth-card:not(.auth-card-wide) .auth-form>.auth-success{width:100%}@media(max-width:520px){.auth-options-row{align-items:flex-start;flex-direction:column;gap:10px}.auth-login-button{width:100%}}
+.auth-options-row{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}.remember-account{display:flex!important;align-items:center;gap:8px!important}.remember-account input{width:16px!important;height:16px;margin:0;accent-color:#8b5cf6}.remember-account span{font-size:11px!important}.forgot-inline{color:#c4b5fd;text-decoration:none;font-size:11px;font-weight:800}.forgot-inline:hover{text-decoration:underline}.auth-login-button{width:auto;min-width:132px;justify-self:center;padding:10px 22px;border-radius:12px}.auth-card:not(.auth-card-wide) .auth-form{align-items:start}.auth-card:not(.auth-card-wide) .auth-form>label,.auth-card:not(.auth-card-wide) .auth-form>.password-field,.auth-card:not(.auth-card-wide) .auth-form>.auth-options-row,.auth-card:not(.auth-card-wide) .auth-form>.auth-error,.auth-card:not(.auth-card-wide) .auth-form>.auth-success{width:100%}@media(max-width:520px){.auth-options-row{align-items:flex-start;flex-direction:column;gap:10px}.auth-login-button{width:100%}}
+
+/* v2.8.5 - màu tác động trực tiếp lên ảnh sản phẩm, auth canh giữa và hồ sơ sửa được email */
+.auth-register-button{width:auto;min-width:150px;justify-self:center;padding:11px 24px}.auth-card-register>.eyebrow,.auth-card-register>h1,.auth-card-register>p{text-align:center}.auth-card-register .auth-links{justify-content:center}.profile-form input[type="email"]{color:#fff;background:#090d14}.account-title-actions .secondary-button{cursor:pointer}
+
+/* v2.8.6 - hồ sơ bền vững, đổi mật khẩu và nhận diện Brave */
+.password-change-form{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}.password-change-form>.password-field:first-child{grid-column:1/-1}.password-change-form>.password-match{grid-column:1/-1}.password-change-button{grid-column:1/-1;justify-self:start}.session-list article b{word-break:break-word}.session-list article span{line-height:1.5}
+@media(max-width:780px){.password-change-form{grid-template-columns:1fr}.password-change-form>.password-field:first-child,.password-change-form>.password-match,.password-change-button{grid-column:auto}.password-change-button{width:100%}}
+
+/* v2.8.7 */
+.status-badge{display:inline-flex;align-items:center;border:1px solid #475569;border-radius:999px;padding:.38rem .65rem;font-size:.76rem;font-weight:800}.status-badge.active{border-color:#16a34a;color:#86efac;background:rgba(22,163,74,.08)}.status-badge.locked{border-color:#be3455;color:#fda4af;background:rgba(190,52,85,.08)}.admin-root-row{background:rgba(139,92,246,.055)}.admin-account-action{min-width:92px}.admin-account-action.activate{border-color:#16a34a;color:#86efac}.product-photo-colorized{transition:opacity .18s ease}
+
+/* v2.8.9 - account/admin visual hierarchy + protected root account */
+.account-panel,.admin-panel{background:linear-gradient(180deg,rgba(24,30,43,.78),rgba(15,20,31,.84));box-shadow:0 10px 34px rgba(0,0,0,.12)}
+.account-panel-security{background:linear-gradient(180deg,rgba(22,31,45,.92),rgba(15,23,36,.94));border-color:rgba(125,141,168,.24)}
+.profile-form textarea,.auth-form textarea{width:100%;min-height:92px;resize:vertical;border:1px solid var(--line);border-radius:12px;background:#0b1019;color:#fff;padding:11px 12px;outline:none;font:inherit}
+.profile-address-field{grid-column:1/-1}.profile-address-field textarea{min-height:78px}
+.password-change-form{grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:18px;row-gap:14px}
+.password-change-form>.password-field:first-child{grid-column:1;max-width:none}
+.password-change-form>.password-field{padding:12px;border:1px solid rgba(126,145,176,.16);border-radius:14px;background:rgba(7,12,20,.34)}
+.password-change-form>.password-match{grid-column:1/-1}
+.password-change-button{grid-column:1/-1;justify-self:start}
+.admin-root-row{background:linear-gradient(90deg,rgba(139,92,246,.09),rgba(59,130,246,.035))}
+.admin-root-row select{opacity:.82;cursor:not-allowed}
+.admin-protected-badge{display:inline-flex;align-items:center;justify-content:center;min-width:92px;border:1px solid rgba(96,165,250,.32);background:rgba(59,130,246,.08);color:#bfdbfe;border-radius:10px;padding:8px 10px;font-size:10px;font-weight:800}
+@media(max-width:780px){.profile-address-field{grid-column:auto}.password-change-form{grid-template-columns:1fr}.password-change-form>.password-field:first-child,.password-change-form>.password-match,.password-change-button{grid-column:auto}}
+
+
+/* CineBooking-Pro layout architecture adapted for NhienIn3d v2.8.9.
+   Business flows remain unchanged; the supplied 3D image is the single global page background. */
+.app-main{min-width:0;isolation:isolate}
+.site-header{position:sticky;top:0;z-index:50;border-bottom:1px solid rgba(35,40,56,.86);background:rgba(5,8,15,.80);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.site-header-inner{width:100%;max-width:1500px;margin:0 auto;min-height:66px;display:flex;align-items:center;gap:18px;padding:10px 24px}
+.site-brand{flex:0 0 auto;color:#fff;text-decoration:none;font-size:20px;font-weight:900;letter-spacing:-.75px;white-space:nowrap}.site-brand span{color:var(--accent)}
+.desktop-primary-nav{min-width:0;flex:1;display:flex;align-items:center;justify-content:center;gap:24px;white-space:nowrap}
+.nav-link{display:inline-flex;align-items:center;gap:7px;color:#cbd5e1;text-decoration:none;font-size:13px;font-weight:750;transition:.15s ease}.nav-link:hover,.nav-link.active{color:#fff}.nav-link.active{position:relative}.nav-link.active::after{content:"";position:absolute;left:0;right:0;bottom:-12px;height:2px;border-radius:999px;background:var(--accent)}.nav-link b{display:grid;place-items:center;min-width:18px;height:18px;border-radius:999px;background:rgba(139,92,246,.18);color:#ddd6fe;font-size:9px}
+.header-actions{margin-left:auto;display:flex;align-items:center;gap:9px;flex:0 0 auto}.header-login{color:#e5e7eb;text-decoration:none;font-size:13px;font-weight:800}.header-login:hover{color:#fff}
+.cart-button{display:inline-flex;align-items:center;gap:7px;min-height:42px;background:linear-gradient(135deg,rgba(23,32,51,.98),rgba(15,23,42,.98));color:#f8fafc;border:1px solid #334155;border-radius:12px;padding:8px 11px;text-decoration:none;font-size:12px;font-weight:850;box-shadow:0 10px 30px rgba(0,0,0,.24);transition:background .18s ease,border-color .18s ease,transform .18s ease,box-shadow .18s ease}.cart-button:hover{background:linear-gradient(135deg,rgba(49,38,83,.98),rgba(23,32,51,.98));border-color:rgba(167,139,250,.78);transform:translateY(-1px);box-shadow:0 12px 34px rgba(0,0,0,.3)}.cart-button b{display:grid;place-items:center;min-width:21px;height:21px;border-radius:999px;background:linear-gradient(135deg,#8b5cf6,#22d3ee);color:#fff;font-size:9px;box-shadow:0 0 0 1px rgba(255,255,255,.12)}
+.account-menu{position:relative}.account-menu-trigger{display:flex;align-items:center;gap:7px;min-height:42px;border:1px solid #334155;border-radius:12px;padding:8px 10px;background:#172033;color:#fff;cursor:pointer}.account-menu-trigger span{font-size:11px;color:#9aa3b5}.account-menu-trigger b{max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}.account-menu-trigger i{font-style:normal;color:#94a3b8;font-size:12px}
+.account-popover{position:absolute;right:0;top:calc(100% + 10px);z-index:90;width:280px;display:grid;gap:6px;padding:14px;border:1px solid #334155;border-radius:15px;background:rgba(7,12,22,.98);box-shadow:0 22px 70px rgba(0,0,0,.48)}.account-popover>strong{font-size:13px}.account-popover>small{color:#94a3b8;font-size:10px;overflow-wrap:anywhere}.account-popover>em{width:max-content;max-width:100%;border-radius:999px;padding:5px 8px;background:rgba(139,92,246,.13);color:#ddd6fe;font-size:9px;font-style:normal;font-weight:850}.account-popover-links{display:grid;gap:4px;margin-top:7px;border-top:1px solid #263247;padding-top:8px}.account-popover-links a,.account-popover-links button{width:100%;border:0;border-radius:9px;padding:9px 10px;background:transparent;color:#e5e7eb;text-align:left;text-decoration:none;font-size:11px;font-weight:750;cursor:pointer}.account-popover-links a:hover,.account-popover-links button:hover{background:#172033;color:#fff}
+.menu-trigger{display:inline-grid;width:42px;height:42px;place-items:center;border:1px solid #475569;border-radius:12px;background:#1e293b;color:#f8fafc;font-size:17px;font-weight:900;line-height:1;cursor:pointer;transition:.15s ease}.menu-trigger:hover,.menu-trigger.is-open{background:#273449;border-color:#64748b}.menu-trigger:focus-visible{outline:2px solid #a78bfa;outline-offset:2px}
+.menu-drawer-backdrop{position:fixed;inset:0;z-index:9999;display:flex;justify-content:flex-end;background:rgba(2,6,23,.68);backdrop-filter:blur(5px);animation:nhienMenuFade .16s ease-out}.menu-drawer{width:min(390px,92vw);height:100dvh;display:flex;flex-direction:column;overflow:hidden;border-left:1px solid rgba(71,85,105,.8);background:linear-gradient(180deg,rgba(8,15,30,.99),rgba(4,9,18,.99));box-shadow:-24px 0 80px rgba(0,0,0,.48);animation:nhienMenuSlide .2s ease-out}.menu-drawer-head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 16px;border-bottom:1px solid rgba(51,65,85,.75)}.menu-drawer-head h2{margin:2px 0 0;font-size:22px;line-height:1.1}.menu-drawer-kicker{margin:0;color:#c4b5fd;font-size:10px;font-weight:900;letter-spacing:.18em;text-transform:uppercase}.menu-drawer-close{width:40px;height:40px;display:grid;place-items:center;border:1px solid #475569;border-radius:12px;background:#172033;color:#fff;cursor:pointer}.menu-drawer-user{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:14px 14px 0;padding:13px 14px;border:1px solid rgba(51,65,85,.8);border-radius:14px;background:rgba(15,23,42,.72)}.menu-drawer-user>div{min-width:0;display:grid;gap:3px}.menu-drawer-user strong{font-size:12px}.menu-drawer-user span{overflow:hidden;text-overflow:ellipsis;color:#94a3b8;font-size:9px}.menu-drawer-badge{flex:0 0 auto;border-radius:999px;padding:6px 8px;background:rgba(139,92,246,.14);color:#ddd6fe;font-size:9px;font-weight:850}.menu-drawer-nav{flex:1;overflow-y:auto;overscroll-behavior:contain;padding:12px 13px 20px}.menu-drawer-nav>a,.menu-drawer-logout{width:100%;display:flex;align-items:center;min-height:44px;margin:2px 0;border:0;border-radius:11px;padding:11px 12px;background:transparent;color:#e2e8f0;text-decoration:none;text-align:left;font-size:13px;font-weight:750;cursor:pointer;transition:.15s ease}.menu-drawer-nav>a:hover,.menu-drawer-logout:hover{background:#172033;color:#fff;transform:translateX(2px)}.menu-drawer-section{margin:16px 10px 5px;color:#64748b;font-size:9px;font-weight:900;letter-spacing:.16em;text-transform:uppercase}.menu-drawer-section:first-child{margin-top:4px}.menu-drawer-logout{color:#fecdd3}
+@keyframes nhienMenuFade{from{opacity:0}to{opacity:1}}@keyframes nhienMenuSlide{from{transform:translateX(28px);opacity:.65}to{transform:translateX(0);opacity:1}}
+
+/* Homepage follows the CineBooking content rhythm: glass hero -> collection section. */
+.hero{max-width:none;min-height:560px;margin:0;padding:44px;gap:38px;border:1px solid rgba(148,163,184,.15);border-radius:26px;background:linear-gradient(135deg,rgba(11,17,29,.83),rgba(6,10,19,.66));box-shadow:0 24px 80px rgba(0,0,0,.30);backdrop-filter:blur(12px)}
+.hero3d{height:470px;border-color:rgba(148,163,184,.15);background:linear-gradient(145deg,rgba(255,255,255,.055),rgba(10,14,24,.18));box-shadow:0 26px 80px rgba(0,0,0,.34)}
+.section{max-width:none;padding:72px 0 32px}.section-head{margin-bottom:24px}.section-head input{background:rgba(8,13,22,.86);border-color:#334155}.product-card{background:linear-gradient(180deg,rgba(17,23,36,.94),rgba(8,12,20,.94));border-color:rgba(148,163,184,.16);box-shadow:0 16px 50px rgba(0,0,0,.18);transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}.product-card:hover{transform:translateY(-4px);border-color:rgba(139,92,246,.42);box-shadow:0 22px 65px rgba(0,0,0,.32)}
+.page-shell{max-width:none;padding:32px 0 72px;min-height:calc(100vh - 140px)}.auth-shell{min-height:calc(100vh - 140px);padding:42px 0}.auth-card,.account-panel,.admin-panel,.form-panel,.checkout-summary,.cart-page-panel{backdrop-filter:blur(13px)}
+
+.site-footer{position:relative;z-index:10;display:block;max-width:none;margin:56px 0 0;padding:0;border-top:1px solid rgba(148,163,184,.16);background:rgba(6,9,16,.82);backdrop-filter:blur(14px);color:#94a3b8}.site-footer-grid{width:100%;max-width:1280px;margin:0 auto;display:grid;grid-template-columns:1.4fr .8fr .8fr;gap:34px;padding:34px 24px}.site-footer-grid>div{min-width:0}.site-footer h3{margin:0 0 10px;color:#f8fafc;font-size:12px;font-weight:850}.site-footer a:not(.site-brand),.site-footer p{display:block;margin:7px 0;color:#94a3b8;text-decoration:none;font-size:11px}.site-footer a:not(.site-brand):hover{color:#ddd6fe}.footer-brand{display:inline-block;margin-bottom:8px}.site-footer-bottom{border-top:1px solid rgba(148,163,184,.12);padding:16px 24px;text-align:center;color:#6f7b8e;font-size:10px}
+
+@media(max-width:1023px){.desktop-primary-nav{display:none}.header-login{display:none}.site-header-inner{padding-inline:18px}.hero{grid-template-columns:1fr;padding:34px}.hero3d{height:430px}.site-footer-grid{grid-template-columns:1.3fr 1fr 1fr}}
+@media(max-width:700px){body{background-attachment:scroll;background-position:center top}.app-main{padding-left:14px!important;padding-right:14px!important;padding-top:18px!important}.site-header-inner{min-height:62px;padding:9px 14px}.site-brand{font-size:18px}.cart-button span{display:none}.account-menu{display:none}.hero{min-height:auto;padding:26px 18px;border-radius:21px}.hero h1{font-size:clamp(38px,12vw,54px)}.hero3d{height:340px}.section{padding-top:54px}.page-shell{padding-top:24px}.site-footer-grid{grid-template-columns:1fr;gap:18px;padding:28px 18px}.site-footer-bottom{text-align:left;padding:14px 18px}}
+@media(prefers-reduced-motion:reduce){.menu-drawer-backdrop,.menu-drawer{animation:none}.menu-trigger,.menu-drawer-nav>a,.menu-drawer-logout,.product-card{transition:none}}
+
+/* v2.9.0 - bố cục tài khoản/quản trị theo nhịp CineBooking Pro */
+.cine-card{border:1px solid rgba(51,65,85,.78);border-radius:15px;background:linear-gradient(180deg,rgba(17,24,39,.94),rgba(12,18,30,.94));box-shadow:0 18px 55px rgba(0,0,0,.24);backdrop-filter:blur(16px)}
+.cine-btn{display:inline-flex;align-items:center;justify-content:center;min-height:38px;border:1px solid transparent;border-radius:10px;padding:8px 13px;font-size:11px;font-weight:850;text-decoration:none;cursor:pointer;transition:.16s ease;white-space:nowrap}.cine-btn:disabled{opacity:.5;cursor:not-allowed}.cine-btn:not(:disabled):hover{transform:translateY(-1px)}
+.cine-btn-primary{background:#f43f5e;border-color:#fb7185;color:#fff;box-shadow:0 8px 24px rgba(244,63,94,.18)}.cine-btn-primary:not(:disabled):hover{background:#fb4765}
+.cine-btn-secondary{border-color:#334155;background:#172033;color:#f1f5f9}.cine-btn-secondary:not(:disabled):hover{background:#1f2b40;border-color:#475569}
+.cine-btn-success{border-color:#16a34a;background:rgba(22,163,74,.08);color:#86efac}.cine-btn-success:not(:disabled):hover{background:rgba(22,163,74,.15)}
+.cine-btn-danger{border-color:#e11d48;background:#f43f5e;color:#fff}.cine-btn-danger-outline{border-color:rgba(244,63,94,.52);background:rgba(244,63,94,.06);color:#fda4af}.cine-btn-danger-outline:not(:disabled):hover{background:rgba(244,63,94,.14)}
+
+.cine-auth-shell{align-items:start;place-items:start center;padding-top:34px}
+.cine-auth-card{width:min(430px,100%);border:1px solid rgba(51,65,85,.78);border-radius:15px;background:linear-gradient(180deg,rgba(17,24,39,.95),rgba(12,18,30,.95));padding:21px;box-shadow:0 24px 70px rgba(0,0,0,.28);backdrop-filter:blur(16px)}
+.cine-auth-card-register{width:min(460px,100%)}.cine-auth-card h1{margin:0 0 15px;font-size:27px;line-height:1.1;letter-spacing:-.9px}.cine-auth-card>p:not(.cine-auth-footer){margin:-5px 0 15px;color:#94a3b8;font-size:11px;line-height:1.55}
+.cine-auth-form{display:grid;gap:11px}.cine-auth-form>input,.cine-auth-form>textarea,.cine-auth-form .password-input-wrap input{width:100%;border:1px solid #334155;border-radius:10px;background:#0b1220;color:#fff;padding:10px 12px;outline:none;font-size:12px}.cine-auth-form>textarea{min-height:62px;resize:vertical}.cine-auth-form>input:focus,.cine-auth-form>textarea:focus,.cine-auth-form .password-input-wrap input:focus{border-color:#64748b;box-shadow:0 0 0 2px rgba(148,163,184,.08)}
+.cine-auth-form .password-field{gap:5px}.cine-auth-form .password-field>label>span{font-size:10px;color:#cbd5e1}.cine-auth-form .password-toggle{border:0;background:transparent;color:#cbd5e1;padding:6px 8px}.cine-auth-form .password-strength{border-radius:10px;padding:9px 10px;background:#0a111e;border-color:#263449}.cine-auth-form .password-rules{gap:4px 8px}.cine-auth-form .password-rules span{font-size:8px}
+.cine-auth-submit{width:100%;margin-top:1px}.cine-auth-footer{margin:13px 0 0;color:#94a3b8;font-size:10px}.cine-auth-footer a{color:#fda4af;text-decoration:none;font-weight:800}.cine-auth-options{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:10px}.cine-auth-options label{display:flex;align-items:center;gap:7px;color:#cbd5e1}.cine-auth-options input{width:14px;height:14px;accent-color:#f43f5e}.cine-auth-options a{color:#fda4af;text-decoration:none;font-weight:800}
+
+.cine-profile-shell{width:min(640px,100%);margin:0 auto;padding:30px 0 70px}.cine-profile-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;margin-bottom:18px}.cine-profile-heading h1{margin:0;font-size:30px;line-height:1.08;letter-spacing:-1px}.cine-profile-heading p{margin:4px 0 0;color:#94a3b8;font-size:11px}.cine-profile-heading-actions{display:flex;gap:7px;flex-wrap:wrap}.cine-profile-message,.cine-admin-message{margin:0 0 13px;border:1px solid rgba(96,165,250,.28);border-radius:10px;background:rgba(37,99,235,.08);padding:9px 11px;color:#bfdbfe;font-size:10px;line-height:1.5}
+.cine-profile-card{padding:18px;margin-top:13px}.cine-profile-card h2{margin:0 0 14px;font-size:17px;letter-spacing:-.35px}.cine-profile-form,.cine-password-form{display:grid;gap:11px}.cine-profile-form label,.cine-admin-form label,.cine-staff-card label{display:grid;gap:5px}.cine-profile-form label>span,.cine-admin-form label>span,.cine-staff-card label>span{font-size:9px;font-weight:800;color:#b8c3d5}.cine-profile-form input,.cine-profile-form textarea,.cine-password-form .password-input-wrap input{width:100%;border:1px solid #334155;border-radius:10px;background:#0b1220;color:#fff;padding:10px 11px;outline:none;font-size:11px}.cine-profile-form input:disabled{color:#94a3b8;background:#0d1422}.cine-profile-form textarea{min-height:66px;resize:vertical}.cine-profile-form input:focus,.cine-profile-form textarea:focus,.cine-password-form .password-input-wrap input:focus{border-color:#64748b;box-shadow:0 0 0 2px rgba(148,163,184,.08)}.cine-password-form .password-field{gap:5px}.cine-password-form .password-field>label>span{font-size:9px;color:#cbd5e1}.cine-password-form .password-toggle{border:0;background:transparent;color:#cbd5e1}.cine-password-form .password-strength{border-radius:10px;background:#0a111e;border-color:#263449;padding:10px}.cine-profile-submit{justify-self:start}.cine-profile-meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:13px}.cine-profile-meta>div{border:1px solid #263449;border-radius:10px;background:rgba(8,13,22,.44);padding:9px 10px;display:grid;gap:3px}.cine-profile-meta span{font-size:7px;text-transform:uppercase;letter-spacing:.08em;color:#7f8a9e}.cine-profile-meta b{font-size:9px}.cine-section-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;margin-bottom:13px}.cine-section-heading h2{margin:0;font-size:18px}.cine-section-heading p{margin:3px 0 0;color:#94a3b8;font-size:10px}.cine-section-heading>span{color:#94a3b8;font-size:9px}.cine-compact-list{display:grid;gap:8px}.cine-compact-list article{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid #263449;border-radius:10px;background:rgba(8,13,22,.46);padding:10px 11px}.cine-compact-list article>div{min-width:0;display:grid;gap:2px}.cine-compact-list b,.cine-compact-list strong{font-size:10px}.cine-compact-list span,.cine-compact-list small{font-size:8px;color:#8b96a9;line-height:1.45}
+
+.cine-admin-shell{width:min(1180px,100%);margin:0 auto;padding:30px 0 74px}.cine-admin-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:16px}.cine-admin-heading h1{margin:0;font-size:30px;letter-spacing:-1px}.cine-admin-heading p{margin:4px 0 0;color:#94a3b8;font-size:11px}.cine-admin-heading-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.cine-admin-heading-actions>span{color:#94a3b8;font-size:9px}.cine-admin-stats{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}.cine-stat-card{padding:12px 13px}.cine-stat-card span{display:block;color:#94a3b8;font-size:8px}.cine-stat-card b{display:block;margin-top:4px;font-size:20px}.cine-admin-tabs{display:flex;flex-wrap:wrap;gap:7px;margin:14px 0}.cine-admin-section{padding:18px}.cine-user-list,.cine-staff-list{display:grid;gap:8px}.cine-user-card{display:grid;grid-template-columns:minmax(230px,1.4fr) minmax(150px,.75fr) 125px auto;align-items:center;gap:10px;border:1px solid #263449;border-radius:11px;background:rgba(8,13,22,.46);padding:11px}.cine-user-card.is-root{background:linear-gradient(90deg,rgba(139,92,246,.09),rgba(15,23,42,.5))}.cine-user-identity{min-width:0;display:grid;gap:2px}.cine-user-identity b{font-size:10px}.cine-user-identity span,.cine-user-identity small{overflow:hidden;text-overflow:ellipsis;font-size:8px;color:#8b96a9}.cine-user-role{display:grid;gap:4px}.cine-user-role label{font-size:7px;color:#7f8a9e;text-transform:uppercase}.cine-user-role select,.cine-staff-card input,.cine-staff-card select,.cine-admin-form input,.cine-admin-form select,.cine-schedule-form input,.cine-schedule-form select{width:100%;border:1px solid #334155;border-radius:9px;background:#0b1220;color:#fff;padding:9px 10px;outline:none;font-size:9px}.cine-user-role select:disabled{opacity:.68}.cine-user-actions{display:flex;justify-content:flex-end;gap:6px;flex-wrap:wrap}.cine-user-status{display:flex;align-items:center}.cine-staff-card{display:grid;grid-template-columns:minmax(190px,1.2fr) 1fr 1fr 140px auto;align-items:end;gap:9px;border:1px solid #263449;border-radius:11px;background:rgba(8,13,22,.46);padding:11px}.cine-staff-title{align-self:center;display:grid;gap:2px}.cine-staff-title b{font-size:10px}.cine-staff-title span{font-size:8px;color:#8b96a9}.cine-admin-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;max-width:760px}.cine-admin-form>.password-field{grid-column:1/-1}.cine-admin-form>.cine-btn{justify-self:start}.cine-form-section{min-height:320px}.cine-split-grid{display:grid;grid-template-columns:minmax(0,430px) 1fr;gap:18px}.cine-shift-template-list{display:grid;align-content:start;gap:8px}.cine-shift-template{display:flex;align-items:center;gap:9px;border:1px solid #263449;border-radius:10px;background:rgba(8,13,22,.46);padding:10px}.cine-shift-template i{width:5px;align-self:stretch;border-radius:999px}.cine-shift-template div{display:grid;gap:2px}.cine-shift-template b{font-size:10px}.cine-shift-template span{font-size:8px;color:#8b96a9}.cine-schedule-form{display:grid;grid-template-columns:1.2fr 1.2fr .8fr 1fr auto;gap:8px;margin-bottom:12px}.cine-schedule-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.cine-schedule-card{display:grid;gap:5px;border:1px solid #263449;border-top-width:3px;border-radius:10px;background:rgba(8,13,22,.46);padding:10px}.cine-schedule-card>div{display:flex;justify-content:space-between;gap:8px}.cine-schedule-card b,.cine-schedule-card strong{font-size:9px}.cine-schedule-card span,.cine-schedule-card small{font-size:8px;color:#8b96a9}.cine-schedule-card .cine-btn{justify-self:start}
+
+@media(max-width:980px){.cine-admin-stats{grid-template-columns:repeat(3,1fr)}.cine-user-card{grid-template-columns:1.4fr 1fr}.cine-user-status{justify-content:flex-start}.cine-user-actions{justify-content:flex-start}.cine-staff-card{grid-template-columns:1fr 1fr}.cine-staff-title{grid-column:1/-1}.cine-schedule-form{grid-template-columns:1fr 1fr}.cine-schedule-form .cine-btn{grid-column:1/-1}.cine-schedule-list{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){.cine-auth-shell{padding-top:18px}.cine-auth-card{padding:18px}.cine-profile-shell,.cine-admin-shell{padding-top:20px}.cine-profile-heading,.cine-admin-heading{align-items:flex-start;flex-direction:column}.cine-profile-heading-actions,.cine-admin-heading-actions{width:100%}.cine-profile-meta{grid-template-columns:1fr}.cine-compact-list article{align-items:flex-start;flex-direction:column}.cine-admin-stats{grid-template-columns:repeat(2,1fr)}.cine-user-card,.cine-staff-card,.cine-admin-form,.cine-split-grid,.cine-schedule-form,.cine-schedule-list{grid-template-columns:1fr}.cine-user-actions{justify-content:flex-start}.cine-admin-form>.password-field,.cine-staff-title,.cine-schedule-form .cine-btn{grid-column:auto}.cine-auth-options{align-items:flex-start;flex-direction:column}.cine-profile-submit{width:100%}}
+
+/* v2.9.1 - bo lua chon mau, dung cau hinh san pham mac dinh */
+.product-photo-default{filter:none!important;transition:none}
+.default-product-config{display:grid;gap:5px;margin:18px 0 0;padding:14px 15px;border:1px solid var(--line);border-radius:15px;background:rgba(255,255,255,.025)}
+.default-product-config>span{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.75px}
+.default-product-config>b{font-size:13px;color:#f8fafc}
+.default-product-config>small{font-size:10px;color:#8f99ac}
+
+/* v2.9.3 - Admin duy nhat + ca lam/xep ca theo bo cuc CineBooking Pro */
+.cine-admin-kicker{margin:0 0 6px;color:#c4b5fd;font-size:11px;font-weight:900;letter-spacing:.16em;text-transform:uppercase}
+.cine-user-card.is-admin{background:linear-gradient(90deg,rgba(139,92,246,.10),rgba(15,23,42,.50))}
+.cine-admin-operations{display:grid;gap:22px;max-width:1140px;margin:0 auto}
+.cine-admin-operations .cine-btn{min-height:40px;padding:9px 14px;font-size:13px}
+.cine-operations-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;padding:6px 2px 0}
+.cine-operations-heading h2{margin:0;font-size:30px;line-height:1.08;letter-spacing:-.8px}
+.cine-operations-heading p:not(.cine-admin-kicker){margin:7px 0 0;color:#94a3b8;font-size:13px;line-height:1.55}
+
+/* CineBooking Pro: form 420px ben trai, danh sach/lịch ben phai. */
+.cine-shift-management-grid{display:grid;grid-template-columns:minmax(340px,420px) minmax(0,1fr);gap:24px;align-items:start}
+.cine-shift-editor{display:grid;gap:16px;padding:20px;position:sticky;top:88px}
+.cine-shift-editor-title{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+.cine-shift-editor-title h3{margin:0;font-size:20px;line-height:1.2;letter-spacing:-.35px}
+.cine-shift-editor-title p{margin:5px 0 0;color:#94a3b8;font-size:12px;line-height:1.5}
+.cine-shift-editor-title>span{border:1px solid #334155;border-radius:999px;background:#0b1220;padding:7px 10px;color:#cbd5e1;font-size:11px;font-weight:800;white-space:nowrap}
+.cine-shift-editor label,.cine-schedule-filter label{display:grid;gap:7px}
+.cine-shift-editor label>span,.cine-schedule-filter label>span{color:#d2d9e5;font-size:13px;font-weight:700}
+.cine-shift-editor input,.cine-shift-editor select,.cine-shift-editor textarea,.cine-schedule-filter input{width:100%;min-height:42px;border:1px solid #334155;border-radius:10px;background:#0b1220;color:#f8fafc;padding:10px 12px;outline:none;font-size:14px;transition:border-color .15s ease,box-shadow .15s ease,background .15s ease}
+.cine-shift-editor textarea{min-height:96px;resize:vertical;line-height:1.55}
+.cine-shift-editor input:focus,.cine-shift-editor select:focus,.cine-shift-editor textarea:focus,.cine-schedule-filter input:focus{border-color:#64748b;background:#0d1524;box-shadow:0 0 0 3px rgba(148,163,184,.08)}
+.cine-time-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.cine-color-field>div{display:grid;grid-template-columns:58px 1fr;align-items:center;gap:10px}
+.cine-color-field input[type="color"]{height:42px;padding:4px}
+.cine-color-field code{border:1px solid #273449;border-radius:9px;background:#090f1a;padding:10px 12px;color:#cbd5e1;font-size:12px}
+.cine-shift-help{border:1px solid #263449;border-radius:11px;background:rgba(3,8,17,.52);padding:12px 13px;color:#94a3b8;font-size:12px;line-height:1.6}
+.cine-btn-block{width:100%;justify-content:center}
+
+.cine-shift-board{display:grid;gap:16px;min-width:0}
+.cine-shift-board-head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 18px}
+.cine-shift-board-head>div{display:flex;align-items:baseline;gap:10px}
+.cine-shift-board-head span{color:#cbd5e1;font-size:13px}
+.cine-shift-board-head b{font-size:20px}
+.cine-shift-board-head small{color:#94a3b8;font-size:12px;text-align:right}
+.cine-empty-state{padding:34px 18px;text-align:center;color:#94a3b8;font-size:13px}
+.cine-shift-template-list-v293{gap:10px}
+.cine-shift-template-v293{display:grid;grid-template-columns:6px minmax(0,1fr) auto;align-items:center;gap:14px;padding:15px 16px}
+.cine-shift-template-v293>i{width:6px;height:48px;border-radius:999px}
+.cine-shift-template-main{display:flex;align-items:center;justify-content:space-between;gap:16px;min-width:0}
+.cine-shift-template-main>div{display:grid;gap:3px;min-width:0}
+.cine-shift-template-main b{font-size:14px}
+.cine-shift-template-main span{color:#94a3b8;font-size:12px}
+.cine-shift-template-main strong{color:#f8fafc;font-size:14px;white-space:nowrap}
+.cine-shift-template-v293>.status-badge{font-size:11px;padding:6px 9px}
+
+/* Bo loc va lich xep ca - gan truc tiep voi layout /admin/shifts cua CineBooking Pro. */
+.cine-schedule-filter{display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:end;padding:16px}
+.cine-schedule-filter>div{display:grid;gap:5px;min-width:110px;padding:0 2px 4px}
+.cine-schedule-filter>div span{color:#94a3b8;font-size:11px;text-transform:uppercase;letter-spacing:.08em}
+.cine-schedule-filter>div b{font-size:14px}
+.cine-schedule-groups{display:grid;gap:18px}
+.cine-schedule-day{display:grid;gap:9px}
+.cine-schedule-day>h3{margin:2px 3px;color:#e2e8f0;font-size:14px;font-weight:800}
+.cine-schedule-day-list{display:grid;gap:9px}
+.cine-schedule-row{display:grid;grid-template-columns:6px minmax(220px,1.35fr) minmax(135px,.75fr) auto auto;align-items:center;gap:14px;padding:15px 16px}
+.cine-schedule-row>i{width:6px;height:50px;border-radius:999px}
+.cine-schedule-person,.cine-schedule-shift{min-width:0;display:grid;gap:3px}
+.cine-schedule-person b,.cine-schedule-shift b{font-size:14px}
+.cine-schedule-person span,.cine-schedule-person small,.cine-schedule-shift span{color:#94a3b8;font-size:12px;line-height:1.45;overflow:hidden;text-overflow:ellipsis}
+.cine-schedule-row>.status-badge{font-size:11px;padding:6px 9px}
+.cine-schedule-row .cine-btn{min-height:34px;padding:7px 10px;font-size:11px}
+
+@media(max-width:980px){
+  .cine-admin-operations{max-width:none}
+  .cine-shift-management-grid{grid-template-columns:1fr}
+  .cine-shift-editor{position:static}
+  .cine-schedule-row{grid-template-columns:6px minmax(0,1.4fr) minmax(130px,.7fr) auto}
+  .cine-schedule-row .cine-btn{grid-column:2/-1;justify-self:start}
+}
+@media(max-width:700px){
+  .cine-operations-heading{align-items:flex-start;flex-direction:column}
+  .cine-operations-heading .cine-btn{width:100%;justify-content:center}
+  .cine-operations-heading h2{font-size:25px}
+  .cine-time-grid,.cine-schedule-filter{grid-template-columns:1fr}
+  .cine-shift-template-v293{grid-template-columns:6px 1fr}
+  .cine-shift-template-v293>.status-badge{grid-column:2;justify-self:start}
+  .cine-shift-template-main{align-items:flex-start;flex-direction:column;gap:6px}
+  .cine-shift-board-head{align-items:flex-start;flex-direction:column}
+  .cine-shift-board-head small{text-align:left}
+  .cine-schedule-row{grid-template-columns:6px 1fr}
+  .cine-schedule-row .cine-schedule-shift,.cine-schedule-row>.status-badge,.cine-schedule-row .cine-btn{grid-column:2;justify-self:start}
+}
+
+
+/* v2.9.5 - biểu mẫu lớn, dễ đọc + nhân viên bán hàng theo bố cục CineBooking Pro */
+.cine-btn{min-height:44px;padding:10px 16px;font-size:14px;border-radius:11px}
+.cine-admin-operations .cine-btn{min-height:44px;padding:10px 16px;font-size:14px}
+
+/* Auth: giữ card gọn kiểu CineBooking nhưng bỏ cỡ chữ quá nhỏ. */
+.cine-auth-shell{padding-top:42px}
+.cine-auth-card{width:min(500px,100%);padding:28px;border-radius:18px}
+.cine-auth-card-register{width:min(540px,100%)}
+.cine-auth-card h1{margin-bottom:18px;font-size:32px;letter-spacing:-1px}
+.cine-auth-card>p:not(.cine-auth-footer){margin:-7px 0 18px;font-size:14px;line-height:1.6}
+.cine-auth-form{gap:15px}
+.cine-auth-form>input,.cine-auth-form>textarea,.cine-auth-form .password-input-wrap input{min-height:48px;padding:12px 14px;font-size:15px;border-radius:11px}
+.cine-auth-form>textarea{min-height:92px}
+.cine-auth-form .password-field{gap:7px}
+.cine-auth-form .password-field>label>span{font-size:13px}
+.cine-auth-form .password-toggle{padding:8px 10px;font-size:13px}
+.cine-auth-form .password-strength{padding:12px}
+.cine-auth-form .password-rules span{font-size:11px;line-height:1.45}
+.cine-auth-footer,.cine-auth-options{font-size:13px}
+.cine-auth-options input{width:17px;height:17px}
+
+/* Hồ sơ tài khoản. */
+.cine-profile-shell{width:min(780px,100%);padding:42px 0 88px}
+.cine-profile-heading{gap:18px;margin-bottom:22px}
+.cine-profile-heading h1{font-size:36px;letter-spacing:-1.2px}
+.cine-profile-heading p{font-size:14px;line-height:1.55}
+.cine-profile-card{padding:24px;margin-top:16px;border-radius:18px}
+.cine-profile-card h2{margin-bottom:18px;font-size:22px}
+.cine-profile-form,.cine-password-form{gap:15px}
+.cine-profile-form label,.cine-admin-form label,.cine-staff-card label{gap:7px}
+.cine-profile-form label>span,.cine-admin-form label>span,.cine-staff-card label>span{font-size:13px}
+.cine-profile-form input,.cine-profile-form textarea,.cine-password-form .password-input-wrap input{min-height:48px;padding:12px 14px;font-size:15px;border-radius:11px}
+.cine-profile-form textarea{min-height:100px;line-height:1.55}
+.cine-password-form .password-field{gap:7px}
+.cine-password-form .password-field>label>span{font-size:13px}
+.cine-password-form .password-toggle{font-size:13px;padding:8px 10px}
+.cine-password-form .password-strength{padding:12px}
+.cine-profile-message,.cine-admin-message{padding:12px 14px;font-size:13px;border-radius:11px}
+.cine-profile-meta{gap:10px;margin-top:16px}
+.cine-profile-meta>div{padding:12px 13px}
+.cine-profile-meta span{font-size:10px}
+.cine-profile-meta b{font-size:13px}
+.cine-section-heading{gap:18px;margin-bottom:18px}
+.cine-section-heading h2{font-size:24px}
+.cine-section-heading p{margin-top:5px;font-size:13px;line-height:1.55}
+.cine-section-heading>span{font-size:12px}
+.cine-compact-list{gap:10px}
+.cine-compact-list article{padding:13px 14px;border-radius:11px}
+.cine-compact-list b,.cine-compact-list strong{font-size:14px}
+.cine-compact-list span,.cine-compact-list small{font-size:12px}
+
+/* Admin: tăng kích thước toàn bộ bảng/card/form. */
+.cine-admin-shell{width:min(1240px,100%);padding:40px 0 88px}
+.cine-admin-heading{gap:22px;margin-bottom:20px}
+.cine-admin-heading h1{font-size:36px;letter-spacing:-1.2px}
+.cine-admin-heading p{font-size:14px;line-height:1.55}
+.cine-admin-heading-actions>span{font-size:12px}
+.cine-admin-kicker{font-size:12px}
+.cine-admin-stats{gap:10px}
+.cine-stat-card{padding:15px 16px}
+.cine-stat-card span{font-size:11px}
+.cine-stat-card b{margin-top:5px;font-size:24px}
+.cine-admin-tabs{gap:9px;margin:18px 0}
+.cine-admin-section{padding:22px;border-radius:18px}
+.cine-user-list,.cine-staff-list{gap:10px}
+.cine-user-card{grid-template-columns:minmax(260px,1.5fr) minmax(190px,.8fr) 150px auto;gap:14px;padding:14px 15px;border-radius:12px}
+.cine-user-identity{gap:4px}
+.cine-user-identity b{font-size:14px}
+.cine-user-identity span,.cine-user-identity small{font-size:12px;line-height:1.45}
+.cine-user-role{gap:6px}
+.cine-user-role label{font-size:10px}
+.cine-user-role select,.cine-staff-card input,.cine-staff-card select,.cine-admin-form input,.cine-admin-form select,.cine-schedule-form input,.cine-schedule-form select{min-height:44px;padding:10px 12px;font-size:14px;border-radius:10px}
+.cine-user-actions{gap:8px}
+.admin-protected-badge{min-height:42px;padding:9px 12px;font-size:12px}
+.status-badge{padding:.45rem .75rem;font-size:.82rem}
+
+/* Hồ sơ nhân viên bán hàng: chỉ chỉnh trạng thái. */
+.cine-staff-list-v295{gap:12px}
+.cine-staff-card-v295{grid-template-columns:minmax(260px,1.35fr) minmax(170px,.75fr) minmax(150px,.7fr) minmax(190px,.8fr) auto;align-items:end;gap:14px;padding:15px 16px}
+.cine-staff-title{gap:4px}
+.cine-staff-title b{font-size:14px}
+.cine-staff-title span,.cine-staff-title small{font-size:12px;color:#8b96a9;line-height:1.45}
+.cine-staff-static{display:grid;gap:6px;align-self:end;min-height:44px;border:1px solid #263449;border-radius:10px;background:#0b1220;padding:8px 11px}
+.cine-staff-static span{font-size:10px;color:#8b96a9;text-transform:uppercase;letter-spacing:.06em}
+.cine-staff-static b{font-size:13px;color:#e5e7eb}
+.cine-staff-status{gap:6px}
+.cine-staff-status-note{margin-top:15px;border:1px solid #263449;border-radius:11px;background:rgba(3,8,17,.46);padding:12px 14px;color:#94a3b8;font-size:12px;line-height:1.6}
+
+/* Form tạo nhân viên bán hàng v2.9.7: bỏ panel phân quyền, giữ một card lớn kiểu CineBooking Pro. */
+.cine-staff-create-section{max-width:1180px}
+.cine-staff-create-layout{display:block;max-width:760px;margin:0 auto}
+.cine-staff-create-form{display:grid;gap:16px;padding:26px;position:static}
+.cine-form-card-heading{display:grid;gap:5px;padding-bottom:2px}
+.cine-form-card-heading h3{margin:0;font-size:23px;line-height:1.25;letter-spacing:-.35px}
+.cine-form-card-heading p{margin:0;color:#94a3b8;font-size:14px;line-height:1.55}
+.cine-staff-create-form>label,.cine-staff-create-form .cine-form-row>label{display:grid;gap:7px}
+.cine-staff-create-form>label>span,.cine-staff-create-form .cine-form-row label>span,.cine-staff-create-form .password-field>label>span{font-size:13px;font-weight:750;color:#d2d9e5}
+.cine-staff-create-form input,.cine-staff-create-form select,.cine-staff-create-form textarea,.cine-staff-create-form .password-input-wrap input{width:100%;min-height:48px;border:1px solid #334155;border-radius:10px;background:#0b1220;color:#f8fafc;padding:12px 13px;outline:none;font-size:15px}
+.cine-staff-create-form input:focus,.cine-staff-create-form select:focus,.cine-staff-create-form textarea:focus,.cine-staff-create-form .password-input-wrap input:focus{border-color:#64748b;background:#0d1524;box-shadow:0 0 0 3px rgba(148,163,184,.08)}
+.cine-staff-create-form .password-field{display:grid;gap:7px}
+.cine-staff-create-form .password-toggle{font-size:13px;padding:8px 10px}
+.cine-staff-create-form .password-strength{padding:12px;border-radius:10px;background:#0a111e;border-color:#263449}
+.cine-staff-create-form .password-rules span{font-size:11px}
+.cine-form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.cine-fixed-role-card{display:grid;gap:5px;border:1px solid rgba(34,211,238,.25);border-radius:11px;background:rgba(34,211,238,.055);padding:13px 14px}
+.cine-fixed-role-card span{font-size:10px;color:#67e8f9;text-transform:uppercase;letter-spacing:.08em;font-weight:800}
+.cine-fixed-role-card b{font-size:16px}
+.cine-fixed-role-card small{font-size:12px;color:#94a3b8}
+
+/* Ca làm / xếp ca và các form nghiệp vụ. */
+.cine-operations-heading h2{font-size:32px}
+.cine-operations-heading p:not(.cine-admin-kicker){font-size:14px}
+.cine-shift-management-grid{grid-template-columns:minmax(380px,440px) minmax(0,1fr)}
+.cine-shift-editor{gap:17px;padding:22px}
+.cine-shift-editor-title h3{font-size:22px}
+.cine-shift-editor-title p{font-size:13px}
+.cine-shift-editor-title>span{font-size:12px}
+.cine-shift-editor label>span,.cine-schedule-filter label>span{font-size:14px}
+.cine-shift-editor input,.cine-shift-editor select,.cine-shift-editor textarea,.cine-schedule-filter input{min-height:48px;padding:12px 13px;font-size:15px}
+.cine-shift-help{font-size:13px}
+.cine-shift-board-head span{font-size:14px}.cine-shift-board-head small{font-size:13px}
+.cine-shift-template-main b,.cine-shift-template-main strong{font-size:15px}.cine-shift-template-main span{font-size:13px}
+.cine-schedule-filter>div span{font-size:11px}.cine-schedule-filter>div b{font-size:15px}
+.cine-schedule-day>h3{font-size:16px}
+.cine-schedule-person b,.cine-schedule-shift b{font-size:15px}
+.cine-schedule-person span,.cine-schedule-person small,.cine-schedule-shift span{font-size:13px}
+.cine-schedule-row .cine-btn{min-height:40px;padding:8px 12px;font-size:12px}
+
+/* Các form còn lại trong storefront cũng không dùng cỡ chữ 11-13px nữa. */
+.checkout-form input,.checkout-form textarea,.checkout-form select,.section-head input{min-height:46px;font-size:15px}
+.app-main form input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="hidden"]),.app-main form select,.app-main form textarea{font-size:15px}
+
+@media(max-width:1080px){
+  .cine-user-card{grid-template-columns:minmax(240px,1.3fr) minmax(180px,.9fr);align-items:end}
+  .cine-user-status,.cine-user-actions{justify-content:flex-start}
+  .cine-staff-card-v295{grid-template-columns:1fr 1fr}
+  .cine-staff-card-v295 .cine-staff-title{grid-column:1/-1}
+  .cine-staff-card-v295 .cine-btn{justify-self:start}
+}
+@media(max-width:900px){
+  .cine-shift-management-grid{grid-template-columns:1fr}
+  .cine-staff-create-form,.cine-shift-editor{position:static}
+}
+@media(max-width:700px){
+  .cine-auth-card{padding:22px}.cine-auth-card h1{font-size:29px}
+  .cine-profile-shell,.cine-admin-shell{padding-inline:16px}
+  .cine-profile-heading h1,.cine-admin-heading h1{font-size:31px}
+  .cine-admin-section{padding:17px}
+  .cine-user-card,.cine-staff-card-v295,.cine-form-row{grid-template-columns:1fr}
+  .cine-user-card .cine-user-identity,.cine-staff-card-v295 .cine-staff-title{grid-column:auto}
+  .cine-staff-create-form{padding:18px}
+  .cine-operations-heading h2{font-size:28px}
+}
+
+/* v2.9.5 accessibility sizing: tất cả biểu mẫu nghiệp vụ dùng cỡ đọc thoải mái trên desktop. */
+.app-main form label{font-size:14px;line-height:1.45}
+.app-main form label>span{font-size:14px}
+.app-main form input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="hidden"]),
+.app-main form select,
+.app-main form textarea{min-height:48px;font-size:16px;line-height:1.4}
+.cine-profile-form input,.cine-profile-form textarea,.cine-password-form .password-input-wrap input,
+.cine-staff-create-form input,.cine-staff-create-form select,.cine-staff-create-form textarea,.cine-staff-create-form .password-input-wrap input,
+.cine-shift-editor input,.cine-shift-editor select,.cine-shift-editor textarea,.cine-schedule-filter input{font-size:16px}
+.cine-btn,.cine-admin-operations .cine-btn{font-size:15px}
+.cine-profile-form label>span,.cine-password-form .password-field>label>span,
+.cine-staff-create-form>label>span,.cine-staff-create-form .cine-form-row label>span,.cine-staff-create-form .password-field>label>span,
+.cine-shift-editor label>span{font-size:14px}
+
+/* v2.9.8: Vai trò là nhãn cố định, không dùng select/dropdown để tránh hiểu nhầm có thể đổi Admin/Nhân viên. */
+.cine-user-role-static{min-height:44px;display:flex;align-items:center;width:100%;border:1px solid #334155;border-radius:10px;background:#0b1220;color:#f8fafc;padding:10px 12px;font-size:14px;font-weight:800;line-height:1.2}
+.cine-user-role-static.is-admin{border-color:rgba(139,92,246,.58);background:linear-gradient(135deg,rgba(139,92,246,.12),rgba(15,23,42,.92));color:#fff}
+
+/* v2.9.9 - quản lý ca: chỉnh sửa/xóa trực tiếp, giữ bố cục CineBooking */
+.cine-shift-template-v293{grid-template-columns:6px minmax(0,1fr) auto auto}
+.cine-shift-template-v293.is-editing{border-color:#8b5cf6;box-shadow:0 0 0 2px rgba(139,92,246,.12)}
+.cine-shift-template-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.cine-shift-template-actions .cine-btn{min-height:40px;padding:9px 12px}
+.cine-shift-form-actions{display:flex;gap:10px;flex-wrap:wrap}
+.cine-shift-form-actions .cine-btn{min-width:140px;justify-content:center}
+@media(max-width:900px){
+  .cine-shift-template-v293{grid-template-columns:6px minmax(0,1fr)}
+  .cine-shift-template-v293>.status-badge,.cine-shift-template-actions{grid-column:2;justify-self:start}
+}
+
+/* v2.10.0 - chỉnh/xóa mẫu ca và phân ca đã xếp trực tiếp. */
+.cine-shift-template-meta{display:grid;gap:5px;justify-items:start}
+.cine-shift-template-meta small{font-size:11px;color:#94a3b8;font-weight:700}
+.cine-schedule-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.cine-schedule-actions .cine-btn{min-height:40px;padding:8px 11px}
+@media(max-width:1080px){
+  .cine-schedule-row{grid-template-columns:6px minmax(0,1.4fr) minmax(130px,.7fr) auto}
+  .cine-schedule-actions{grid-column:2/-1;justify-self:start}
+}
+@media(max-width:700px){
+  .cine-schedule-row{grid-template-columns:6px 1fr}
+  .cine-schedule-actions{grid-column:2;justify-self:start}
+}

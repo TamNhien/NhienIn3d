@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ThanhDieuHuong } from "../../components/thanh-dieu-huong";
 import { capNhatSoLuong, type GioHang, layGioHangDaLuu, xoaKhoiGio } from "../../lib/gio-hang";
 
 const vnd = new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" });
@@ -44,7 +43,6 @@ export default function GioHangPage() {
   }
 
   return <main>
-    <ThanhDieuHuong/>
     <section className="page-shell cart-page">
       <div className="page-title-row">
         <div><div className="eyebrow">GIỎ HÀNG</div><h1>Kiểm tra đơn hàng trước khi thanh toán.</h1><p>Bạn có thể tăng giảm số lượng, xóa sản phẩm hoặc quay lại mua thêm.</p></div>
@@ -62,7 +60,7 @@ export default function GioHangPage() {
             <div className="cart-page-info">
               <span className="sku">{item.bien_the.san_pham.ma_san_pham}</span>
               <strong>{item.bien_the.san_pham.ten_san_pham}</strong>
-              <small>{item.bien_the.vat_lieu?.ten_vat_lieu || "Vật liệu tiêu chuẩn"} • {item.bien_the.mau_sac?.ten_mau || "Màu tiêu chuẩn"}</small>
+              <small>Vật liệu: {item.bien_the.vat_lieu?.ten_vat_lieu || "Tiêu chuẩn"}</small>
               <div className="cart-quantity-row">
                 <div className="quantity-control compact"><button onClick={() => doiSoLuong(item.id, item.so_luong - 1)} disabled={dang_cap_nhat === item.id || item.so_luong <= 1}>−</button><b>{item.so_luong}</b><button onClick={() => doiSoLuong(item.id, item.so_luong + 1)} disabled={dang_cap_nhat === item.id}>+</button></div>
                 <button className="remove-link" onClick={() => xoa(item.id)} disabled={dang_cap_nhat === item.id}>Xóa</button>

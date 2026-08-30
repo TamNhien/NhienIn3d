@@ -46,12 +46,12 @@ export class XacThucService {
     const ma_lam_moi = randomBytes(48).toString("base64url");
     const ma_lam_moi_bam = this.bamMaLamMoi(ma_lam_moi);
     const het_han_luc = new Date(Date.now() + THOI_GIAN_REFRESH_GIAY * 1000);
-    await this.db.phienDangNhap.create({
+    const phien = await this.db.phienDangNhap.create({
       data: { nguoi_dung_id: nguoi_dung.id, ma_lam_moi_bam, dia_chi_ip, trinh_duyet, het_han_luc }
     });
 
     const ma_truy_cap = await this.jwt.signAsync(
-      { sub: nguoi_dung.id, vai_tro: nguoi_dung.vai_tro, phien_ban_mat_khau: nguoi_dung.phien_ban_mat_khau },
+      { sub: nguoi_dung.id, sid: phien.id, vai_tro: nguoi_dung.vai_tro, phien_ban_mat_khau: nguoi_dung.phien_ban_mat_khau },
       { secret: jwt_secret, expiresIn: "15m", issuer: "NhienIn3d", audience: "NhienIn3d-Web" }
     );
     return { ma_truy_cap, ma_lam_moi, nguoi_dung: this.thongTinNguoiDung(nguoi_dung) };
@@ -63,17 +63,33 @@ export class XacThucService {
     if (da_co) throw new ConflictException("Email này đã được đăng ký");
 
     const mat_khau_bam = await argon2.hash(dto.mat_khau, { type: argon2.argon2id });
-    const nguoi_dung = await this.db.nguoiDung.create({
-      data: {
-        thu_dien_tu,
-        ho_ten: dto.ho_ten.trim(),
-        mat_khau_bam,
-        vai_tro: VaiTro.KHACH_HANG,
-        da_kich_hoat: true
-      }
-    });
-    await this.db.nhatKyBaoMat.create({
-      data: { loai_su_kien: "DANG_KY_TAI_KHOAN", nguoi_dung_id: nguoi_dung.id, dia_chi_ip, chi_tiet: { thu_dien_tu } }
+    const nguoi_dung = await this.db.$transaction(async tx => {
+      const moi = await tx.nguoiDung.create({
+        data: {
+          thu_dien_tu,
+          ho_ten: dto.ho_ten.trim(),
+          so_dien_thoai: dto.so_dien_thoai.trim(),
+          mat_khau_bam,
+          vai_tro: VaiTro.KHACH_HANG,
+          da_kich_hoat: true
+        }
+      });
+      await tx.diaChiNguoiDung.create({
+        data: {
+          nguoi_dung_id: moi.id,
+          ten_nguoi_nhan: moi.ho_ten,
+          so_dien_thoai: dto.so_dien_thoai.trim(),
+          tinh_thanh: "",
+          quan_huyen: "",
+          phuong_xa: "",
+          dia_chi_cu_the: dto.dia_chi.trim(),
+          la_mac_dinh: true
+        }
+      });
+      await tx.nhatKyBaoMat.create({
+        data: { loai_su_kien: "DANG_KY_TAI_KHOAN", nguoi_dung_id: moi.id, dia_chi_ip, chi_tiet: { thu_dien_tu, co_dia_chi_mac_dinh: true } }
+      });
+      return moi;
     });
     return this.taoPhien(nguoi_dung, dia_chi_ip, trinh_duyet);
   }
@@ -119,14 +135,50 @@ export class XacThucService {
       this.db.phienDangNhap.update({ where: { id: phien.id }, data: { da_thu_hoi: true } }),
       this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "LAM_MOI_PHIEN", nguoi_dung_id: phien.nguoi_dung_id, dia_chi_ip } })
     ]);
-    return this.taoPhien(phien.nguoi_dung, dia_chi_ip, trinh_duyet);
+    return this.taoPhien(phien.nguoi_dung, dia_chi_ip, phien.trinh_duyet || trinh_duyet);
   }
 
-  async dang_xuat(ma_lam_moi?: string, nguoi_dung_id?: string, dia_chi_ip?: string) {
-    if (ma_lam_moi) {
-      await this.db.phienDangNhap.updateMany({ where: { ma_lam_moi_bam: this.bamMaLamMoi(ma_lam_moi), da_thu_hoi: false }, data: { da_thu_hoi: true } });
+  async dang_xuat(ma_lam_moi?: string, ma_truy_cap?: string, dia_chi_ip?: string) {
+    let nguoi_dung_id: string | undefined;
+    let phien_id: string | undefined;
+    if (ma_truy_cap) {
+      const jwt_secret = process.env.JWT_SECRET;
+      if (jwt_secret) {
+        try {
+          const payload = await this.jwt.verifyAsync<{ sub?: string; sid?: string }>(ma_truy_cap, {
+            secret: jwt_secret, issuer: "NhienIn3d", audience: "NhienIn3d-Web", ignoreExpiration: true
+          });
+          nguoi_dung_id = payload.sub;
+          phien_id = payload.sid;
+        } catch {
+          // Cookie vẫn được xóa ở controller ngay cả khi access token đã hỏng/hết hạn.
+        }
+      }
     }
-    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "DANG_XUAT", nguoi_dung_id, dia_chi_ip } });
+    if (!nguoi_dung_id && ma_lam_moi) {
+      const phien_refresh = await this.db.phienDangNhap.findUnique({
+        where: { ma_lam_moi_bam: this.bamMaLamMoi(ma_lam_moi) },
+        select: { nguoi_dung_id: true }
+      });
+      nguoi_dung_id = phien_refresh?.nguoi_dung_id;
+    }
+
+    // Đăng xuất v2.8.7 thu hồi toàn bộ phiên của tài khoản. Cách này vô hiệu hóa cả
+    // refresh cookie cũ/duplicate từ các version trước, nên F5 không thể tự đăng nhập lại.
+    if (nguoi_dung_id) {
+      await this.db.phienDangNhap.updateMany({
+        where: { nguoi_dung_id, da_thu_hoi: false },
+        data: { da_thu_hoi: true }
+      });
+    } else {
+      if (ma_lam_moi) {
+        await this.db.phienDangNhap.updateMany({ where: { ma_lam_moi_bam: this.bamMaLamMoi(ma_lam_moi), da_thu_hoi: false }, data: { da_thu_hoi: true } });
+      }
+      if (phien_id) {
+        await this.db.phienDangNhap.updateMany({ where: { id: phien_id, da_thu_hoi: false }, data: { da_thu_hoi: true } });
+      }
+    }
+    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "DANG_XUAT", nguoi_dung_id, dia_chi_ip, chi_tiet: { phien_id, thu_hoi_tat_ca_phien: !!nguoi_dung_id } } });
     return { thong_bao: "Đã đăng xuất" };
   }
 

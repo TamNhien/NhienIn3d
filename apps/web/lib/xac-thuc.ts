@@ -1,13 +1,15 @@
+import { nhanDangTrinhDuyet } from "./trinh-duyet";
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
 
 export const SU_KIEN_XAC_THUC = "nhienin3d:xac-thuc";
+const KHOA_DA_DANG_XUAT = "nhienin3d_da_dang_xuat";
 
 export type TaiKhoan = {
   id: string;
   thu_dien_tu: string;
   ho_ten: string;
   so_dien_thoai?: string | null;
-  vai_tro: "KHACH_HANG" | "NHAN_VIEN" | "QUAN_LY" | "QUAN_TRI" | "SIEU_QUAN_TRI";
+  vai_tro: "KHACH_HANG" | "NHAN_VIEN" | "ADMIN";
   da_kich_hoat?: boolean;
   ngay_tao?: string;
   lan_dang_nhap_cuoi?: string | null;
@@ -25,22 +27,34 @@ async function docLoi(res: Response) {
   }
 }
 
-async function goi(duong_dan: string, init: RequestInit = {}) {
-  return fetch(`${API}${duong_dan}`, { ...init, credentials: "include", headers: { "Content-Type": "application/json", ...(init.headers || {}) } });
+function taoHeaders(init: RequestInit) {
+  const headers = new Headers(init.headers);
+  if (init.body !== undefined && init.body !== null && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+  return headers;
 }
 
-export async function dangKy(payload: { thu_dien_tu: string; ho_ten: string; mat_khau: string }) {
-  const res = await goi("/xac-thuc/dang-ky", { method: "POST", body: JSON.stringify(payload) });
+async function goi(duong_dan: string, init: RequestInit = {}) {
+  return fetch(`${API}${duong_dan}`, { ...init, credentials: "include", cache: init.cache ?? "no-store", headers: taoHeaders(init) });
+}
+
+export async function dangKy(payload: { thu_dien_tu: string; ho_ten: string; so_dien_thoai: string; dia_chi: string; mat_khau: string }) {
+  const trinh_duyet_hien_thi = await nhanDangTrinhDuyet();
+  const res = await goi("/xac-thuc/dang-ky", { method: "POST", body: JSON.stringify({ ...payload, trinh_duyet_hien_thi }) });
   if (!res.ok) throw new Error(await docLoi(res));
   const data = await res.json() as { nguoi_dung: TaiKhoan };
+  localStorage.removeItem(KHOA_DA_DANG_XUAT);
   window.dispatchEvent(new Event(SU_KIEN_XAC_THUC));
   return data.nguoi_dung;
 }
 
 export async function dangNhap(payload: { thu_dien_tu: string; mat_khau: string }) {
-  const res = await goi("/xac-thuc/dang-nhap", { method: "POST", body: JSON.stringify(payload) });
+  const trinh_duyet_hien_thi = await nhanDangTrinhDuyet();
+  const res = await goi("/xac-thuc/dang-nhap", { method: "POST", body: JSON.stringify({ ...payload, trinh_duyet_hien_thi }) });
   if (!res.ok) throw new Error(await docLoi(res));
   const data = await res.json() as { nguoi_dung: TaiKhoan };
+  localStorage.removeItem(KHOA_DA_DANG_XUAT);
   window.dispatchEvent(new Event(SU_KIEN_XAC_THUC));
   return data.nguoi_dung;
 }
@@ -53,6 +67,7 @@ export async function lamMoiPhien() {
 }
 
 export async function layTaiKhoan(): Promise<TaiKhoan | null> {
+  if (typeof window !== "undefined" && localStorage.getItem(KHOA_DA_DANG_XUAT) === "1") return null;
   let res = await goi("/xac-thuc/toi");
   if (res.status === 401) {
     const da_lam_moi = await lamMoiPhien();
@@ -64,20 +79,21 @@ export async function layTaiKhoan(): Promise<TaiKhoan | null> {
 }
 
 export async function dangXuat() {
+  // Đặt marker trước request để mọi component ngừng tự refresh session ngay lập tức.
+  localStorage.setItem(KHOA_DA_DANG_XUAT, "1");
   try {
-    await goi("/xac-thuc/dang-xuat", { method: "POST" });
+    const res = await goi("/xac-thuc/dang-xuat", { method: "POST", cache: "no-store" });
+    if (!res.ok) throw new Error(await docLoi(res));
   } finally {
-    window.dispatchEvent(new Event(SU_KIEN_XAC_THUC));
+    window.dispatchEvent(new CustomEvent(SU_KIEN_XAC_THUC, { detail: { da_dang_xuat: true } }));
   }
 }
 
 export function tenVaiTro(vai_tro: TaiKhoan["vai_tro"]) {
   return ({
     KHACH_HANG: "Khách hàng",
-    NHAN_VIEN: "Nhân viên",
-    QUAN_LY: "Quản lý",
-    QUAN_TRI: "Quản trị",
-    SIEU_QUAN_TRI: "Siêu quản trị"
+    NHAN_VIEN: "Nhân viên bán hàng",
+    ADMIN: "Admin"
   } as const)[vai_tro] || vai_tro;
 }
 export async function quenMatKhau(thu_dien_tu: string) {

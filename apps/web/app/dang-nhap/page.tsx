@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useEffect, useState } from "react";
-import { ThanhDieuHuong } from "../../components/thanh-dieu-huong";
 import { TruongMatKhau } from "../../components/truong-mat-khau";
 import { dangNhap } from "../../lib/xac-thuc";
 
@@ -20,10 +19,7 @@ function DangNhapNoiDung() {
 
   useEffect(() => {
     const da_luu = localStorage.getItem(KHOA_GHI_NHO_EMAIL);
-    if (da_luu) {
-      setEmail(da_luu);
-      setGhiNho(true);
-    }
+    if (da_luu) { setEmail(da_luu); setGhiNho(true); }
   }, []);
 
   async function gui(e: FormEvent) {
@@ -38,24 +34,24 @@ function DangNhapNoiDung() {
     finally { setDangGui(false); }
   }
 
-  return <>
-    <ThanhDieuHuong />
-    <main className="auth-shell">
-      <section className="auth-card">
-        <div className="eyebrow">TÀI KHOẢN NHIENIN3D</div>
-        <h1>Đăng nhập</h1>
-        {search.get("dat_lai") === "thanh_cong" && <div className="auth-success">Mật khẩu đã được đặt lại. Bạn có thể đăng nhập bằng mật khẩu mới.</div>}
-        <form onSubmit={gui} className="auth-form">
-          <label><span>Email</span><input type="email" autoComplete="email" value={thu_dien_tu} onChange={e=>setEmail(e.target.value)} required /></label>
-          <TruongMatKhau nhan="Mật khẩu" gia_tri={mat_khau} datGiaTri={setMatKhau} autoComplete="current-password" toi_thieu={8} />
-          <div className="auth-options-row"><label className="remember-account"><input type="checkbox" checked={ghi_nho} onChange={e => setGhiNho(e.target.checked)} /><span>Ghi nhớ tài khoản</span></label><Link className="forgot-inline" href="/quen-mat-khau">Quên mật khẩu?</Link></div>
-          {loi && <div className="auth-error">{loi}</div>}
-          <button className="checkout-button auth-login-button" disabled={dang_gui}>{dang_gui ? "Đang đăng nhập..." : "Đăng nhập"}</button>
-        </form>
-        <div className="auth-links"><span>Chưa có tài khoản?</span><Link href="/dang-ky">Đăng kí</Link></div>
-      </section>
-    </main>
-  </>;
+  return <main className="auth-shell cine-auth-shell">
+    <section className="cine-auth-card cine-auth-card-login">
+      <h1>Đăng nhập</h1>
+      {search.get("dat_lai") === "thanh_cong" && <div className="auth-success">Mật khẩu đã được đặt lại. Bạn có thể đăng nhập bằng mật khẩu mới.</div>}
+      {search.get("da_dang_xuat") === "1" && <div className="auth-success">Bạn đã đăng xuất thành công.</div>}
+      {search.get("doi_mat_khau") === "thanh_cong" && <div className="auth-success">Mật khẩu đã được đổi. Vui lòng đăng nhập lại.</div>}
+      <form onSubmit={gui} className="cine-auth-form">
+        <input aria-label="Email" type="email" autoComplete="email" value={thu_dien_tu} onChange={e => setEmail(e.target.value)} placeholder="Email" required/>
+        <TruongMatKhau nhan="Mật khẩu" gia_tri={mat_khau} datGiaTri={setMatKhau} autoComplete="current-password" toi_thieu={8}/>
+        <div className="cine-auth-options"><label><input type="checkbox" checked={ghi_nho} onChange={e => setGhiNho(e.target.checked)}/><span>Ghi nhớ tài khoản</span></label><Link href="/quen-mat-khau">Quên mật khẩu?</Link></div>
+        {loi && <div className="auth-error">{loi}</div>}
+        <button className="cine-btn cine-btn-primary cine-auth-submit" disabled={dang_gui}>{dang_gui ? "Đang đăng nhập..." : "Đăng nhập"}</button>
+      </form>
+      <p className="cine-auth-footer">Chưa có tài khoản? <Link href="/dang-ky">Đăng ký</Link></p>
+    </section>
+  </main>;
 }
 
-export default function DangNhapPage() { return <Suspense><DangNhapNoiDung /></Suspense>; }
+export default function DangNhapPage() {
+  return <Suspense fallback={<main className="auth-shell cine-auth-shell"><section className="cine-auth-card">Đang tải...</section></main>}><DangNhapNoiDung/></Suspense>;
+}

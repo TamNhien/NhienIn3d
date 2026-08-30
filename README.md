@@ -1,12 +1,12 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v2.8.4** — 29/08/2026
+> Phiên bản hiện tại: **v2.10.0** — 30/08/2026
 
 NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **frontend Next.js** và **backend NestJS/Fastify** kết nối **PostgreSQL qua Prisma**.
 
 ## Kiến trúc hiện tại
 
-- Frontend: Next.js 16.3.3 + React 19.2.8.
+- Frontend: Next.js 16.3.3 + React 19.2.8 + Tailwind CSS 4/PostCSS, giữ React Three Fiber/Drei cho khối 3D.
 - Backend: NestJS 12 + Fastify 5.
 - Database: PostgreSQL 18.6.
 - ORM: Prisma 7.10.0.
@@ -16,9 +16,71 @@ NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **fro
 - Container: Docker Compose.
 - CI/Release: GitHub Actions + GitHub CLI.
 
-## Mới trong v2.8.4
 
-V2.8.4 là hotfix giao diện xác thực, không thay đổi backend API hay database schema.
+## Giao diện dựng lại theo bố cục CineBooking Pro
+
+Bản source v2.10.0 tiếp tục dùng **frontend layout** theo cấu trúc CineBooking Pro, giữ nguyên nghiệp vụ NhienIn3d và làm lại đồng bộ các màn hình tài khoản/quản trị:
+
+- Dùng `RootLayout` chung với **header sticky**, vùng nội dung `max-w-7xl`, **footer dùng chung** và menu drawer responsive; không còn lặp navbar ở từng route.
+- Bổ sung **Tailwind CSS 4 + `@tailwindcss/postcss`** giống lớp công nghệ frontend tham chiếu, đồng thời giữ toàn bộ CSS/logic nghiệp vụ cũ để tránh phá luồng sản phẩm, giỏ hàng, tài khoản và quản trị.
+- Giữ Next.js App Router, React 19, Motion, Three.js/React Three Fiber/Drei, NestJS/Fastify, Prisma và PostgreSQL của NhienIn3d.
+- Nền toàn site dùng đúng ảnh người dùng cung cấp tại `apps/web/public/backgrounds/nhienin3d-main.jpg`, phủ gradient tối nhẹ để chữ và panel vẫn dễ đọc.
+- Các route hiện có (`/san-pham`, `/gio-hang`, `/thanh-toan`, `/dang-nhap`, `/tai-khoan`, `/quan-tri`...) giữ nguyên URL và luồng dữ liệu.
+
+## Điểm chính bản hiện tại
+
+- v2.10.0 cho phép **chỉnh sửa/xóa phân ca đã xếp** ngay trên lịch: đổi nhân viên, ngày làm, mẫu ca, ghi chú; mỗi dòng lịch có nút **Chỉnh sửa** và **Xóa**.
+- Mẫu ca đã có phân công vẫn **chỉnh sửa được**; tên/giờ/màu mới áp dụng tức thời cho các phân ca đang tham chiếu. Xóa mẫu ca sẽ xóa kèm các phân ca liên quan trong transaction.
+- Các thao tác xóa mẫu ca/phân ca trên web dùng endpoint `POST .../:id/xoa` có JSON body để ổn định với Fastify/proxy; endpoint `DELETE` vẫn giữ cho tương thích API.
+- Đã bỏ nhãn **STAFF OPERATIONS** khỏi cả màn hình Ca làm và Xếp ca.
+- Bỏ dòng kicker `NHIENIN3D · ADMIN` phía trên tiêu đề Admin Dashboard để giao diện gọn hơn.
+- Chuẩn hóa lịch làm việc mặc định còn **2 ca**: `CA01 · Ca sáng · 06:00–14:00` và `CA02 · Ca chiều · 14:00–22:00`. Migration v2.9.9 gom các mẫu ca cũ về hai khung này và giữ phân ca cũ hợp lệ.
+- Admin có thể **chỉnh sửa** mã ca, tên ca, giờ bắt đầu/kết thúc, màu hiển thị; có thể **xóa ca** trực tiếp trong tab Ca làm. Khi xóa ca, các phân ca đang tham chiếu ca đó được xóa cùng trong transaction để không bị lỗi khóa ngoại.
+- Seed ca/phân ca chuyển sang **bootstrap-only**. Sau khi Admin chỉnh sửa hoặc xóa, chạy Docker/seed lại sẽ không tạo lại ca đã xóa hay ghi đè giờ ca đã chỉnh.
+- Kiểm tra dữ liệu không còn ép `nguoi_dung`, `nhan_vien`, `ca_lam_viec`, `phan_ca` phải luôn >= 10 vì đây là dữ liệu vận hành được phép xóa/chỉnh; các bảng dữ liệu mẫu tĩnh vẫn giữ yêu cầu tối thiểu.
+- Đổi nền nút **Giỏ hàng** trên thanh điều hướng từ trắng sang **dark glass xanh đen** đồng bộ với nút Tài khoản/CineBooking Pro; badge số lượng dùng gradient tím → cyan và có hover viền tím nhẹ.
+- Sửa dứt điểm luồng **Lưu thay đổi** tại `/tai-khoan`: `PATCH /tai-khoan/ho-so` ghi và đọc lại dữ liệu trong **cùng transaction PostgreSQL**; frontend dùng trực tiếp phản hồi vừa commit và **không GET lại ngay sau khi lưu**, tránh state cũ ghi đè họ tên/email/số điện thoại/địa chỉ mới.
+- Tăng kích thước toàn bộ form CineBooking: input/select/textarea tối thiểu khoảng 46–48px, chữ nhập 14–15px, label 13–14px, button 14px; card Tài khoản, Đăng nhập/Đăng ký, Quản trị, Ca làm và Xếp ca đều rộng/dễ đọc hơn.
+- Sửa xóa tài khoản Admin bằng endpoint ghi an toàn `POST /api/v1/quan-tri/nguoi-dung/:id/xoa` có JSON body; vẫn giữ `DELETE /api/v1/quan-tri/nguoi-dung/:id` để tương thích. Backend dọn tường minh session/reset token/địa chỉ/hồ sơ nhân viên/phân ca và đặt liên kết đơn hàng/giỏ hàng về `NULL` trước khi xóa.
+- Hồ sơ nhân sự chỉ còn **Nhân viên bán hàng**. Chức danh cố định `Nhân viên bán hàng`, bộ phận cố định `Bán hàng`; Admin chỉ đổi trạng thái `Đang làm / Tạm nghỉ / Nghỉ việc`.
+- Khi Admin đổi trạng thái nhân viên: `Đang làm` tự kích hoạt tài khoản + reset lockout; `Tạm nghỉ`/`Nghỉ việc` tự khóa tài khoản và thu hồi phiên đăng nhập.
+- Form **Tạo nhân viên bán hàng** làm lại theo bố cục CineBooking Pro dạng một card lớn căn giữa, có mã nhân viên/ngày vào làm/họ tên/email/SĐT/mật khẩu/xác nhận mật khẩu. Không còn panel phân quyền, không còn chọn vai trò, chức danh hay bộ phận.
+- Hệ thống hiện hành chỉ còn ba vai trò: `ADMIN`, `NHAN_VIEN`, `KHACH_HANG`. `ADMIN` là quyền quản trị duy nhất và có toàn quyền hệ thống; `NHAN_VIEN` là nhân viên bán hàng.
+- Migration `202608300002_v295_nhan_vien_ban_hang` chuyển `QUAN_LY` legacy về `KHACH_HANG`, giữ `ADMIN`, đồng bộ mọi tài khoản có hồ sơ nhân viên thành `NHAN_VIEN`, và chuẩn hóa dữ liệu nhân sự cũ thành `Nhân viên bán hàng / Bán hàng`.
+- Seed mới giữ cơ chế **bootstrap-only**: dữ liệu người dùng đã sửa, trạng thái tài khoản và trạng thái nhân viên không bị reset khi chạy Docker lại. 10 hồ sơ nhân viên mẫu đều được chuẩn hóa thành nhân viên bán hàng.
+- Giữ thay đổi v2.9.1: trang chi tiết sản phẩm không yêu cầu chọn màu; tự dùng biến thể mặc định còn hàng.
+- Giữ nền 3D tại `apps/web/public/backgrounds/nhienin3d-main.jpg` và toàn bộ luồng JWT/HttpOnly cookie, Argon2id, SMTP, giỏ hàng, thanh toán, ca làm, xếp ca hiện có.
+
+## Tài khoản và bảo mật
+
+V2.8.6 sửa ba vấn đề trực tiếp ở khu vực Tài khoản mà không thay đổi schema PostgreSQL:
+
+- Nhận diện **Brave** bằng `navigator.brave.isBrave()` thay vì chỉ dựa vào User-Agent Chromium. Phiên hiện tại được cập nhật nhãn kiểu `Brave (Chromium 152) · Windows 10/11`; nhãn trình duyệt chỉ phục vụ hiển thị và không tham gia quyết định bảo mật.
+- Đăng nhập/đăng kí gửi nhãn trình duyệt đã nhận diện về backend; refresh session kế thừa nhãn của phiên trước để không quay lại chuỗi User-Agent dài.
+- **Lưu thông tin tài khoản** cập nhật PostgreSQL rồi frontend đọc lại `GET /tai-khoan/ho-so` để xác nhận dữ liệu đã lưu thật. Navbar nhận sự kiện cập nhật và hiển thị tên/email mới ngay.
+- Seed không còn ghi đè họ tên/email/mật khẩu của Super Admin đang hoạt động. `ADMIN_EMAIL`, `ADMIN_NAME`, `ADMIN_PASSWORD` chỉ dùng để bootstrap Admin lần đầu. Vì vậy Admin sửa hồ sơ xong sẽ không bị seed đổi ngược ở lần chạy Docker tiếp theo.
+- Thêm **Đổi mật khẩu** ngay tại `/tai-khoan` cho tất cả vai trò, kể cả `QUAN_TRI` và `SIEU_QUAN_TRI`. Bắt buộc nhập mật khẩu hiện tại, mật khẩu mới đủ 12 ký tự + chữ hoa + chữ thường + số + ký tự đặc biệt.
+- Mật khẩu mới được hash bằng Argon2id. Sau khi đổi thành công, backend tăng `phien_ban_mat_khau`, thu hồi mọi phiên khác và phát access JWT mới cho phiên hiện tại để người dùng không bị đá ra ngay.
+- Không có migration mới; dùng các bảng `nguoi_dung`, `phien_dang_nhap`, `nhat_ky_bao_mat` hiện có.
+
+### API tài khoản v2.8.6
+
+```text
+PATCH /api/v1/tai-khoan/ho-so
+PATCH /api/v1/tai-khoan/doi-mat-khau
+PATCH /api/v1/tai-khoan/phien/hien-tai
+GET   /api/v1/tai-khoan/phien
+```
+
+## Trải nghiệm sản phẩm và hồ sơ
+
+V2.8.5 là hotfix đồng bộ UI + tài khoản + session. Không thay đổi schema PostgreSQL nên không có migration mới.
+
+- Chọn màu áp bộ lọc trực tiếp lên ảnh sản phẩm, bỏ lớp màu phủ toàn khung ảnh.
+- Dữ liệu mẫu dùng họ tên Việt Nam và email định dạng thực tế trên miền `example.com` (miền dành riêng cho tài liệu/kiểm thử, tránh gửi nhầm người thật).
+- Đăng nhập và khu Đăng kí được canh giữa.
+- Mọi vai trò, kể cả `QUAN_TRI` và `SIEU_QUAN_TRI`, có thể sửa họ tên, email và số điện thoại của chính mình. Vai trò vẫn chỉ do hệ thống/Admin quản lý.
+- Access JWT mới gắn `sid` phiên đăng nhập; logout thu hồi phiên server-side và xóa cookie rõ ràng để không tự đăng nhập lại.
 
 - Bỏ dòng mô tả dài về cookie HttpOnly/ghi nhớ tài khoản khỏi trang Đăng nhập.
 - Đặt **Quên mật khẩu?** ngang hàng với **Ghi nhớ tài khoản** trong cùng một hàng tùy chọn.
@@ -27,7 +89,7 @@ V2.8.4 là hotfix giao diện xác thực, không thay đổi backend API hay da
 - Ghi nhớ tài khoản vẫn chỉ lưu email trong `localStorage`; không thay đổi cơ chế cookie HttpOnly/session phía backend.
 - Không có migration mới.
 
-## Mới trong v2.8.3
+## Ổn định backend NestJS
 
 V2.8.3 là bản vá runtime cho backend NestJS sau khi Docker build thành công nhưng API dừng ở lúc khởi tạo `TaiKhoanModule`/`QuanTriModule`.
 
@@ -47,7 +109,7 @@ JwtService at index [0] is not available in the TaiKhoanModule module
 
 Sau v2.8.3, `docker compose logs api` phải đi tới trạng thái NestJS lắng nghe cổng `3001` thay vì dừng tại `UnknownDependenciesException`.
 
-## Mới trong v2.8.2
+## Mật khẩu và ghi nhớ tài khoản
 
 V2.8.2 hoàn thiện luồng mật khẩu và SMTP theo đúng hành vi người dùng thực tế:
 
@@ -105,7 +167,7 @@ WEB_PUBLIC_URL=http://localhost:3000
 RESET_PASSWORD_EXPIRES_MINUTES=15
 ```
 
-## Mới trong v2.8.1
+## Gmail SMTP
 
 V2.8.1 chuẩn hóa cấu hình SMTP theo bộ biến `MAIL_*` để có thể gửi email khôi phục mật khẩu trực tiếp bằng Gmail/Google Workspace hoặc SMTP tương thích:
 
@@ -149,7 +211,7 @@ npm run mail:kiem-tra
 
 > `.env` thật bị `.gitignore`; tuyệt đối không đưa App Password vào README, source, commit hoặc GitHub Actions log.
 
-## Mới trong v2.8.0
+## Nhân sự và phân quyền
 
 V2.8.0 hoàn thiện khu vực tài khoản và quản trị nhân sự:
 
@@ -160,7 +222,7 @@ V2.8.0 hoàn thiện khu vực tài khoản và quản trị nhân sự:
 - Thêm tài khoản nhân viên, hồ sơ nhân viên, mẫu ca làm và phân ca.
 - Thêm `/quan-tri` cho `QUAN_TRI` và `SIEU_QUAN_TRI`: quản lý người dùng, vai trò, trạng thái tài khoản, tạo/sửa hồ sơ nhân viên, tạo ca và xếp ca.
 - `SIEU_QUAN_TRI` bypass mọi `VaiTroGuard`; `QUAN_TRI` có toàn quyền trên các module quản trị hiện có nhưng không được tự cấp/đụng tài khoản `SIEU_QUAN_TRI`.
-- Mỗi bảng nghiệp vụ mới tiếp tục có tối thiểu 10 dòng seed.
+- Các bảng dữ liệu mẫu tĩnh tiếp tục có tối thiểu 10 dòng seed; tài khoản/nhân sự/ca/phân ca là dữ liệu vận hành và được phép thay đổi số lượng.
 
 ### Backend v2.8.0
 
@@ -202,7 +264,7 @@ PATCH  /api/v1/quan-tri/phan-ca/:id
 DELETE /api/v1/quan-tri/phan-ca/:id
 ```
 
-## Database v2.8.0
+## Cấu trúc database tài khoản và nhân sự
 
 Migration mới:
 
@@ -232,7 +294,7 @@ Quy ước database vẫn giữ nguyên:
 - Dữ liệu: tiếng Việt có dấu UTF-8.
 - Migration chạy tăng dần, không ghi đè migration cũ.
 - Seed idempotent.
-- Mỗi bảng nghiệp vụ có tối thiểu 10 dòng dữ liệu mẫu/historical an toàn.
+- Các bảng dữ liệu mẫu tĩnh có tối thiểu 10 dòng; bảng tài khoản/nhân sự/ca/phân ca được phép giảm số lượng do thao tác quản trị.
 
 ## Phân quyền
 
@@ -334,7 +396,7 @@ Mailpit profile: http://localhost:8025 (chỉ khi chạy --profile mailpit)
 PostgreSQL:      127.0.0.1:5434
 ```
 
-## Test v2.8.4
+## Kiểm thử hiện tại
 
 1. Chạy `npm run mail:kiem-tra` và xác nhận Gmail SMTP kết nối thành công.
 2. Tạo tài khoản mới tại `/dang-ky`: thử mật khẩu yếu rồi tăng dần để kiểm tra thanh độ mạnh và 5 điều kiện.
@@ -345,10 +407,17 @@ PostgreSQL:      127.0.0.1:5434
 7. Click nút trong email. Browser phải mở `/dat-lai-mat-khau?ma=...`.
 8. Tại trang reset, thử mật khẩu yếu/mạnh, kiểm tra checklist, Hiện/Ẩn và xác nhận mật khẩu.
 9. Reset thành công rồi đăng nhập lại bằng mật khẩu mới; session cũ phải bị thu hồi.
-10. Đăng nhập tài khoản khách hàng và kiểm tra `/tai-khoan`, sửa họ tên/số điện thoại rồi lưu.
-11. Đăng nhập Admin/Super Admin, mở `/quan-tri`, tạo nhân viên với password strength/checklist rồi xếp ca.
-12. Đăng nhập tài khoản nhân viên để xem lịch tại `/tai-khoan`.
-13. Mở chi tiết sản phẩm, đổi màu và xác nhận ảnh preview đổi tông màu theo lựa chọn.
+10. Đăng nhập bằng **Brave**, mở `/tai-khoan`; phiên hiện tại phải hiện `Brave (Chromium ...) · Windows 10/11` thay vì chuỗi `Mozilla/... Chrome/...`. Phiên cũ chưa có nhãn chỉ hiện `Chromium ... (phiên cũ chưa phân biệt Brave/Chrome)`.
+11. Ở `/tai-khoan`, sửa họ tên/email/số điện thoại rồi bấm **Lưu thay đổi**. Trang phải báo `Đã lưu thông tin tài khoản vào PostgreSQL.`; refresh trang và xác nhận dữ liệu vẫn giữ nguyên. Kiểm tra cả tài khoản Admin/Super Admin.
+12. Ở mục **Đổi mật khẩu**, nhập mật khẩu hiện tại + mật khẩu mới đủ 5 điều kiện + xác nhận; đổi thành công rồi refresh trang vẫn đăng nhập bình thường. Các phiên khác phải bị thu hồi.
+13. Chạy lại `docker compose up -d --build`/seed và xác nhận hồ sơ Admin vừa sửa không bị `ADMIN_NAME`/`ADMIN_EMAIL` ghi đè trở lại.
+14. Đăng nhập Admin/Super Admin, mở `/quan-tri`, tạo nhân viên với password strength/checklist rồi xếp ca.
+15. Đăng nhập tài khoản nhân viên để xem lịch tại `/tai-khoan`.
+16. Mở chi tiết sản phẩm và xác nhận không còn khối **Chọn màu sắc**; ảnh dùng trực tiếp ảnh gốc, hệ thống tự chọn biến thể mặc định đầu tiên còn hàng và chỉ cho chọn số lượng.
+17. Trong `/quan-tri`, xác nhận Super Admin nằm đầu danh sách và hiển thị **Bảo vệ**; tài khoản khóa có nút **Kích hoạt**, tài khoản hoạt động có nút **Khóa**.
+18. Khóa một tài khoản thường, sau đó bấm **Kích hoạt** và đăng nhập ngay bằng tài khoản đó; không được còn lỗi khóa tạm thời từ `khoa_den`.
+19. Đăng nhập bằng tài khoản `QUAN_TRI`, xóa một tài khoản khách hàng/nhân viên thử nghiệm và xác nhận card biến mất sau khi tải lại; không được phép xóa chính tài khoản đang đăng nhập hoặc Super Admin gốc.
+20. Bấm **Đăng xuất**, sau đó F5 nhiều lần ở `/dang-nhap?da_dang_xuat=1`; navbar phải tiếp tục ở trạng thái chưa đăng nhập và `/xac-thuc/toi` không được tự phục hồi bằng refresh cookie cũ.
 
 ## Release GitHub
 
@@ -356,7 +425,7 @@ Sau khi test/build/Docker PASS:
 
 ```powershell
 cd D:\LienThongDH\DoAn\NhienIn3d
-.\scripts\release.ps1 v2.8.4
+.\scripts\release.ps1 v2.9.1
 ```
 
 ---
@@ -519,13 +588,165 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 - Thu nhỏ nút Đăng nhập trên desktop.
 - Không đổi backend/database.
 
+## v2.8.5 — 29/08/2026
+
+- Chọn màu tác động trực tiếp lên ảnh sản phẩm, bỏ lớp màu phủ toàn khung.
+- Chuẩn hóa dữ liệu mẫu bằng họ tên Việt Nam và email định dạng thực tế trên `example.com`.
+- Canh giữa nút Đăng nhập, heading/nút/liên kết Đăng kí.
+- Cho mọi tài khoản, kể cả Admin/Super Admin, sửa họ tên, email và số điện thoại của chính mình.
+- Access JWT mới gắn `sid`, logout thu hồi session PostgreSQL và xóa cookie dứt điểm.
+- Không đổi schema PostgreSQL; không có migration mới.
+
+## v2.8.6 — 29/08/2026
+
+- Nhận diện Brave đúng bằng Brave API phía browser và cập nhật nhãn phiên đăng nhập.
+- Sửa lưu hồ sơ: ghi PostgreSQL, đọc lại xác nhận và cập nhật navbar.
+- Seed không ghi đè hồ sơ/mật khẩu Super Admin đang hoạt động; biến `ADMIN_*` chỉ bootstrap lần đầu.
+- Thêm đổi mật khẩu trong trang Tài khoản cho mọi vai trò, xác minh mật khẩu hiện tại và dùng Argon2id cho mật khẩu mới.
+- Sau đổi mật khẩu, thu hồi các phiên khác và cấp access JWT mới cho phiên hiện tại.
+- Không đổi schema PostgreSQL; không có migration mới.
+
+
+## v2.8.7 — 29/08/2026
+
+- Ảnh màu sản phẩm chuyển sang URL ảnh biến thể riêng; ảnh gốc được giữ làm nền và vùng sản phẩm đổi màu, không áp filter lên toàn khung ảnh.
+- Danh sách quản trị luôn xếp `SIEU_QUAN_TRI` đầu bảng; thêm cột **Thao tác** với nút **Kích hoạt/Khóa** rõ ràng.
+- Đăng xuất thu hồi toàn bộ session PostgreSQL của tài khoản, dọn cả refresh cookie legacy và chặn frontend tự refresh lại sau F5.
+- JWT legacy không có `sid` phải đăng nhập lại để mọi thao tác thu hồi session có hiệu lực tức thì.
+
+## v2.8.8 — 29/08/2026
+
+- Bổ sung số điện thoại và địa chỉ trong form Đăng kí.
+- Backend tạo địa chỉ mặc định trong `dia_chi_nguoi_dung` cùng transaction tạo tài khoản.
+- Trang Tài khoản đọc và cho phép cập nhật địa chỉ mặc định.
+- Không đổi schema PostgreSQL.
+
+## v2.8.9 — 29/08/2026
+
+- Bảo vệ `SIEU_QUAN_TRI`: không thể khóa, xóa hoặc hạ vai trò tài khoản gốc từ UI/API.
+- Giữ Super Admin đứng đầu bảng và hiển thị trạng thái **Bảo vệ** thay cho nút Khóa.
+- Làm dịu nền panel Tài khoản/Quản trị để bố cục phân lớp rõ hơn.
+- Chỉnh bố cục đổi mật khẩu theo dạng 2 cột cân đối trên desktop, 1 cột trên mobile.
+- Kế thừa toàn bộ đăng kí số điện thoại/địa chỉ của v2.8.8 và các bản sửa session trước đó.
+
+## v2.9.0 — 30/08/2026
+
+- Đồng bộ giao diện Đăng nhập/Đăng ký/Quên mật khẩu/Đặt lại mật khẩu/Tài khoản theo card compact của CineBooking Pro.
+- Làm lại trang Quản trị theo dashboard + tab + card responsive thay cho bảng người dùng quá rộng.
+- Sửa kích hoạt lại tài khoản đã khóa bằng cách reset `khoa_den` và số lần đăng nhập thất bại; khóa thủ công đồng thời thu hồi session.
+- Bổ sung API và UI xóa tài khoản theo RBAC; giữ bảo vệ tài khoản đang đăng nhập và Super Admin gốc.
+- Không đổi schema PostgreSQL; giữ lịch sử đơn hàng/giỏ hàng theo quy tắc `SetNull` hiện có.
+
+## v2.9.1 — 30/08/2026
+
+- Bỏ hoàn toàn phần chọn màu trên trang chi tiết sản phẩm; người dùng chỉ chọn số lượng.
+- Tự lấy biến thể mặc định theo quy tắc: **biến thể đầu tiên còn hàng**, nếu tất cả hết thì lấy biến thể đầu tiên để hiển thị trạng thái hết hàng.
+- Ảnh chi tiết dùng ảnh gốc, không còn đổi `src` sang API ảnh biến thể theo màu.
+- Card sản phẩm đổi nút **Chọn màu** thành **Xem chi tiết** và bỏ chip màu.
+- Giỏ hàng ẩn màu biến thể, chỉ hiển thị vật liệu/cấu hình mặc định; backend vẫn giữ `ma_bien_the` để tồn kho và dữ liệu đơn hàng không bị phá.
+- Không đổi schema PostgreSQL, không cần migration mới.
+
+## v2.9.2 — 30/08/2026
+
+- Hợp nhất `QUAN_TRI` và `SIEU_QUAN_TRI` thành **một vai trò `ADMIN` duy nhất** có toàn quyền hệ thống; loại bỏ hai chức danh quản trị cũ khỏi schema, API và Web hiện hành.
+- Thêm migration PostgreSQL chuyển dữ liệu tài khoản `QUAN_TRI`/`SIEU_QUAN_TRI` hiện có sang `ADMIN`, không cần tạo lại tài khoản.
+- Tách API khóa/kích hoạt tài khoản thành endpoint chuyên dụng. Khi kích hoạt, hệ thống luôn đặt `da_kich_hoat=true`, xóa `khoa_den` và reset `so_lan_dang_nhap_that_bai=0` để tài khoản đăng nhập lại ngay.
+- Khi Admin khóa tài khoản, toàn bộ session đang hoạt động của tài khoản đó bị thu hồi.
+- Admin được đổi quyền, khóa/kích hoạt và xóa mọi tài khoản **khác**; chỉ chặn tự khóa hoặc tự xóa chính phiên Admin đang dùng để tránh tự mất quyền truy cập.
+- Giữ nguyên lịch sử đơn hàng và dữ liệu nghiệp vụ theo các quan hệ `SetNull` hiện có khi tài khoản bị xóa.
+
+## v2.9.3 — 30/08/2026
+
+- Làm lại **Ca làm** theo phong cách CineBooking Pro: tiêu đề `STAFF OPERATIONS`, form compact bên trái và danh sách mẫu ca bên phải, bố cục `420px + 1fr` trên desktop và tự xếp 1 cột trên màn hình nhỏ.
+- Làm lại **Xếp ca** theo đúng flow CineBooking Pro: form nhân viên/ngày/ca/ghi chú bên trái, bộ lọc từ ngày–đến ngày và lịch phân ca nhóm theo từng ngày ở bên phải.
+- Chỉ hiển thị nhân viên đang làm và tài khoản đang hoạt động trong danh sách xếp ca; ca ngừng hoạt động không xuất hiện để chọn.
+- Danh sách lịch hiển thị mã nhân viên, họ tên, bộ phận, chức danh, tên ca, giờ làm, trạng thái và thao tác xóa trong card gọn, responsive.
+- Giữ nguyên thay đổi v2.9.1: sản phẩm tự dùng cấu hình/biến thể mặc định, không yêu cầu người mua chọn màu.
+- Quy trình release chuẩn chạy từ `D:\LienThongDH\DoAn\NhienIn3d`: test → typecheck → build → Docker Compose → `scripts\release.ps1` để push tag và kích hoạt GitHub Release.
+
+## v2.9.4 — 30/08/2026
+
+- Sửa lỗi các request `POST`/`DELETE` không có body nhưng vẫn gửi `Content-Type: application/json`, nguyên nhân trực tiếp của thông báo `Body cannot be empty when content-type is set to application/json` trên trang Admin.
+- Nút **Kích hoạt**, **Khóa**, **Xóa tài khoản**, thu hồi phiên, refresh session và đăng xuất gửi request body rỗng đúng chuẩn Fastify 5.
+- Hồ sơ dùng bản ghi PostgreSQL trả về ngay từ `PATCH /tai-khoan/ho-so` làm dữ liệu đã lưu; request xác minh tiếp theo không còn có thể làm mất state vừa lưu khi mạng lỗi.
+- Bắt buộc `no-store` cho luồng xác thực/tài khoản/quản trị để tránh hiển thị lại dữ liệu cũ sau khi đổi họ tên, email, số điện thoại hoặc trạng thái tài khoản.
+- Seed v2.9.4 chuyển dữ liệu người dùng/nhân viên/địa chỉ mẫu sang cơ chế **bootstrap-only**: chạy lại Docker/migrate/seed không reset họ tên, email, số điện thoại, vai trò, trạng thái kích hoạt, chức danh/bộ phận hoặc địa chỉ đã chỉnh. `ADMIN_EMAIL`, `ADMIN_NAME`, `ADMIN_PASSWORD` cũng chỉ bootstrap Admin lần đầu.
+- Seed tự sửa dữ liệu cũ từng có nhiều địa chỉ `la_mac_dinh=true`: giữ bản ghi được tạo đầu tiên và bỏ cờ mặc định ở các bản sao do seed cũ tạo. Khi người dùng lưu hồ sơ, backend tiếp tục ép chỉ còn đúng một địa chỉ mặc định.
+- Nhờ vậy tài khoản mẫu đã **Kích hoạt** không bị seed khóa trở lại sau `docker compose up -d --build`, và thông tin hồ sơ không quay về dữ liệu mẫu.
+- Không có migration database mới.
+
+## v2.9.5 — 30/08/2026
+
+- Sửa lưu hồ sơ theo transaction PostgreSQL và bỏ request GET xác minh ngay sau PATCH, ngăn dữ liệu vừa sửa bị state cũ ghi đè trên giao diện.
+- Tăng kích thước form/chữ trên toàn bộ màn hình xác thực, tài khoản, quản trị, ca làm, xếp ca và checkout.
+- Thêm endpoint `POST /api/v1/quan-tri/nguoi-dung/:id/xoa` có body để xóa tài khoản ổn định qua Fastify/proxy; dọn quan hệ tường minh trước khi xóa nhưng giữ lịch sử đơn hàng/giỏ hàng.
+- Chỉ còn `ADMIN`, `NHAN_VIEN`, `KHACH_HANG`; loại `QUAN_LY` khỏi schema hiện hành. Admin là quyền quản trị duy nhất.
+- Nhân viên được chuẩn hóa thành **Nhân viên bán hàng / Bán hàng**; form tạo nhân viên không cho chọn chức danh, bộ phận hoặc quyền Admin.
+- Trạng thái hồ sơ nhân sự được đồng bộ trực tiếp với trạng thái tài khoản: Đang làm = kích hoạt; Tạm nghỉ/Nghỉ việc = khóa + thu hồi session.
+- Làm lại form tạo nhân viên theo bố cục CineBooking Pro `460px + 1fr`, thêm xác nhận mật khẩu và panel quyền rõ ràng.
+- Thêm migration `202608300002_v295_nhan_vien_ban_hang` để chuẩn hóa dữ liệu cũ và seed mới cho toàn bộ 10 nhân viên mẫu bán hàng.
+- Quy trình release chuẩn tiếp tục chạy từ `D:\LienThongDH\DoAn\NhienIn3d`: test → typecheck → build → Docker Compose → `.\scripts\release.ps1 v2.9.5`.
+
+## v2.9.6 — 30/08/2026
+
+- Đổi nền nút **Giỏ hàng** trên header từ trắng sang dark glass `#172033 → #0f172a`, đồng bộ với giao diện CineBooking Pro và thanh tài khoản.
+- Chữ/biểu tượng giỏ hàng chuyển sang màu sáng; badge số lượng dùng gradient tím → cyan để vẫn nổi bật trên nền tối.
+- Thêm trạng thái hover nâng nhẹ, viền tím và shadow tối; không thay đổi nghiệp vụ giỏ hàng, API hay database.
+- Không có migration mới.
+- Quy trình release tiếp tục chạy từ `D:\LienThongDH\DoAn\NhienIn3d` bằng `./scripts/release.ps1 v2.9.6` (PowerShell có thể dùng `.\scripts\release.ps1 v2.9.6`).
+
+
+## v2.9.7 — 30/08/2026
+
+- Sửa dứt điểm trạng thái **Hồ sơ nhân viên bán hàng** bị quay về giá trị cũ sau F5. Web chuyển sang endpoint chuyên dụng `POST /api/v1/quan-tri/nhan-vien/:id/trang-thai`, backend cập nhật hồ sơ + trạng thái tài khoản trong transaction rồi đọc lại trực tiếp PostgreSQL sau commit trước khi trả kết quả.
+- Sau khi bấm **Lưu trạng thái**, frontend xác minh lại bằng `GET /quan-tri/nhan-vien` với `cache: no-store`; chỉ báo thành công khi dữ liệu PostgreSQL khớp đúng trạng thái vừa chọn.
+- `Đang làm` tiếp tục kích hoạt tài khoản và xóa lockout; `Tạm nghỉ`/`Nghỉ việc` khóa tài khoản và thu hồi session đang mở.
+- Bỏ hoàn toàn panel **PHÂN QUYỀN / Nhân viên chỉ tập trung bán hàng** nằm cạnh form tạo nhân viên. Form tạo nhân viên chuyển thành một card lớn, căn giữa, rộng tối đa 760px theo bố cục CineBooking Pro.
+- Không có migration mới; dữ liệu trạng thái được lưu trực tiếp vào bảng `nhan_vien` hiện tại.
+- Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → test/typecheck/build/Docker → `.\scripts\release.ps1 v2.9.7`.
+
+
+## v2.9.8 — 30/08/2026
+
+- Bỏ hoàn toàn mũi tên/dropdown ở cột **Vai trò** trong danh sách người dùng. Vai trò giờ hiển thị bằng trường tĩnh: `Admin · Toàn quyền`, `Nhân viên bán hàng` hoặc `Khách hàng`.
+- Admin vẫn có toàn quyền quản trị hệ thống; việc bỏ dropdown chỉ loại bỏ khả năng đổi nhầm loại tài khoản ngay trên danh sách.
+- Vai trò được cố định theo đúng luồng nghiệp vụ: Admin được bootstrap từ cấu hình hệ thống, tài khoản đăng ký là Khách hàng, tài khoản tạo từ màn hình nhân sự luôn là Nhân viên bán hàng.
+- API `PATCH /quan-tri/nguoi-dung/:id` không còn nhận trường `vai_tro`; `ValidationPipe` sẽ từ chối payload cố đổi vai trò ngoài luồng chuẩn.
+- Không có migration database mới.
+- Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → test/typecheck/build/Docker → `.\scripts\release.ps1 v2.9.8`.
+
+
+## v2.9.9 — 30/08/2026
+
+- Bỏ dòng `NHIENIN3D · ADMIN` trên Admin Dashboard.
+- Chuẩn hóa mặc định thành 2 ca: `CA01 · Ca sáng · 06:00–14:00` và `CA02 · Ca chiều · 14:00–22:00`.
+- Thêm API `PATCH /api/v1/quan-tri/ca-lam/:id` để chỉnh sửa ca và `DELETE /api/v1/quan-tri/ca-lam/:id` để xóa ca.
+- Khi xóa ca, backend xóa các phân ca liên quan trong cùng transaction trước khi xóa mẫu ca.
+- UI tab Ca làm có trạng thái chỉnh sửa, nút **Chỉnh sửa**, **Lưu thay đổi**, **Hủy chỉnh sửa**, **Xóa** và cảnh báo khi xóa ca đang có phân công.
+- Migration `202608300003_v299_hai_ca_lam_va_quan_ly_ca` gom dữ liệu ca cũ về hai khung giờ mới và xử lý trùng phân ca trước khi cập nhật khóa ngoại.
+- Seed ca/phân ca là bootstrap-only để chỉnh sửa/xóa của Admin được giữ nguyên sau khi chạy lại Docker.
+- Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm test` → `npm run typecheck` → `npm run build` → Docker Compose → `.\scripts\release.ps1 v2.9.9`.
+
+
+## v2.10.0 — 30/08/2026
+
+- Bỏ dòng nhãn `STAFF OPERATIONS` khỏi cả tab **Ca làm** và **Xếp ca**.
+- Cho phép chỉnh sửa mẫu ca ngay cả khi mẫu ca đang được dùng bởi phân ca; thay đổi tên/giờ/màu áp dụng tức thời cho toàn bộ lịch đã xếp vì phân ca giữ cùng khóa ngoại `ca_lam_viec_id`.
+- Xóa mẫu ca đã tạo bằng endpoint ổn định `POST /api/v1/quan-tri/ca-lam/:id/xoa`; backend xóa toàn bộ phân ca liên quan trong transaction rồi mới xóa mẫu ca. Endpoint REST `DELETE` vẫn được giữ tương thích.
+- Cho phép chỉnh sửa **phân ca đã xếp**: đổi nhân viên, ngày làm, mẫu ca và ghi chú; backend kiểm tra tài khoản nhân viên, ca hoạt động và chống trùng `(nhân viên, ca, ngày)`.
+- Xóa phân ca đã xếp bằng `POST /api/v1/quan-tri/phan-ca/:id/xoa`, tránh lỗi body rỗng/proxy từng gặp với Fastify; `DELETE` vẫn được giữ.
+- UI lịch phân ca có hai nút **Chỉnh sửa** và **Xóa** trên từng dòng; form bên trái chuyển sang chế độ chỉnh sửa và có **Hủy chỉnh sửa**.
+- Mỗi mẫu ca hiển thị số phân công đang sử dụng để Admin biết phạm vi ảnh hưởng trước khi chỉnh/xóa.
+- Không có migration mới; dữ liệu vận hành hiện tại được giữ nguyên.
+- Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm test` → `npm run typecheck` → `npm run build` → Docker Compose → `.\scripts\release.ps1 v2.10.0`.
+
 ---
 
 # Lộ trình tiếp theo
 
-## v2.9.0
+## v2.11.0
 
-- Dashboard thống kê quản trị.
+- Dashboard thống kê quản trị nâng cao.
 - Doanh thu theo ngày/7 ngày/30 ngày.
 - Số đơn, trạng thái đơn, giá trị đơn trung bình.
 - Top sản phẩm, tồn kho thấp, khách hàng mới.

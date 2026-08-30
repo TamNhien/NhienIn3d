@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
 import { Hero3D } from "../components/hero-3d";
-import { ThanhDieuHuong } from "../components/thanh-dieu-huong";
 import { TheSanPham } from "../components/the-san-pham";
 import { DU_LIEU_MAU, type SanPham } from "../lib/du-lieu-mau";
 import { API_URL } from "../lib/gio-hang";
@@ -28,7 +27,6 @@ export default function TrangChu() {
   }, [san_pham, tim]);
 
   return <main>
-    <ThanhDieuHuong />
 
     <section className="hero">
       <div className="hero-copy">
@@ -53,7 +51,7 @@ export default function TrangChu() {
         <div>
           <div className="eyebrow">BỘ SƯU TẬP</div>
           <h2>Sản phẩm nổi bật</h2>
-          <p>Nhấp vào sản phẩm để xem đầy đủ thông tin, chọn màu sắc và số lượng trước khi thêm vào giỏ hàng.</p>
+          <p>Nhấp vào sản phẩm để xem đầy đủ thông tin, chọn số lượng và thêm vào giỏ hàng với cấu hình mặc định.</p>
         </div>
         <div className="home-product-actions"><input value={tim} onChange={e=>setTim(e.target.value)} placeholder="Tìm sản phẩm…" /><Link className="secondary" href="/san-pham">Xem tất cả</Link></div>
       </div>
@@ -62,9 +60,5 @@ export default function TrangChu() {
       </div>
     </section>
 
-    <footer>
-      <Link className="brand" href="/">Nhien<span>In3d</span></Link>
-      <p>© 2026 NhienIn3d • Sản phẩm in 3D theo yêu cầu.</p>
-    </footer>
   </main>;
 }

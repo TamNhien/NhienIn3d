@@ -46,12 +46,15 @@ const dem = {
 };
 
 console.table(dem);
-const thieu = Object.entries(dem).filter(([, so_luong]) => so_luong < 10);
+// Dữ liệu vận hành được Admin phép xóa/chỉnh nên không thể ép số lượng tối thiểu.
+// Các bảng dữ liệu mẫu tĩnh vẫn phải có ít nhất 10 dòng như thiết kế ban đầu.
+const bang_bien_dong = new Set(["nguoi_dung", "nhan_vien", "ca_lam_viec", "phan_ca"]);
+const thieu = Object.entries(dem).filter(([bang, so_luong]) => !bang_bien_dong.has(bang) && so_luong < 10);
 if (thieu.length) {
-  console.error(`❌ Chưa đủ 10 dòng: ${thieu.map(([bang, so]) => `${bang}=${so}`).join(", ")}`);
+  console.error(`❌ Chưa đủ dữ liệu mẫu: ${thieu.map(([bang, so]) => `${bang}=${so}`).join(", ")}`);
   process.exitCode = 1;
 } else {
-  console.log("✅ Tất cả 23 bảng nghiệp vụ có tối thiểu 10 dòng dữ liệu.");
+  console.log("✅ Dữ liệu mẫu tĩnh đạt yêu cầu; tài khoản/nhân sự/ca/phân ca được phép chỉnh sửa hoặc xóa.");
 }
 
 await db.$disconnect();

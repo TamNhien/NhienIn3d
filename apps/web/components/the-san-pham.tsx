@@ -23,7 +23,7 @@ export function TheSanPham({
   const tong_ton = sp.bien_the?.reduce((tong, bt) => tong + Math.max(0, bt.so_luong_ton), 0) ?? 0;
   const con_hang = tong_ton > 0;
   const moChiTiet = () => router.push(`/san-pham/${encodeURIComponent(sp.duong_dan)}`);
-  const chonMau = (event: MouseEvent<HTMLButtonElement>) => {
+  const xemChiTiet = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
     moChiTiet();
   };
@@ -49,7 +49,6 @@ export function TheSanPham({
       <img src={sp.hinh_anh?.[0]?.duong_dan_anh} alt={sp.ten_san_pham} loading="lazy" referrerPolicy="no-referrer"/>
       <span className="chip">In 3D</span>
       {onYeuThich && <button className={daYeuThich ? "favorite-button active" : "favorite-button"} onClick={yeuThich} aria-label={daYeuThich ? "Bỏ khỏi yêu thích" : "Thêm vào yêu thích"}>{daYeuThich ? "♥" : "♡"}</button>}
-      {bien_the?.mau_sac && <span className="color-chip"><i style={{ background: bien_the.mau_sac.ma_hex }}/>{bien_the.mau_sac.ten_mau}</span>}
     </div>
     <div className="product-body">
       <div className="sku">{sp.ma_san_pham}</div>
@@ -64,9 +63,7 @@ export function TheSanPham({
       <div className="stock-row"><span className={con_hang ? "stock-ok" : "stock-out"}>{con_hang ? `Còn ${tong_ton}` : "Hết hàng"}</span><span>Xem chi tiết sản phẩm →</span></div>
       <div className="price-row">
         <strong>{vnd.format(gia)}</strong>
-        <button className="add-cart" onClick={chonMau}>
-          {con_hang ? "Chọn màu →" : "Xem chi tiết"}
-        </button>
+        <button className="add-cart" onClick={xemChiTiet}>Xem chi tiết →</button>
       </div>
     </div>
   </motion.article>;

@@ -63,16 +63,16 @@ test("V2 co migration nang cap khong ghi de migration V1", () => {
   assert.equal(existsSync("apps/api/prisma/migrations/202608290002_v002_gio_hang_thanh_toan/migration.sql"), true);
 });
 
-test("version v2.8.4 dong bo root API va Web", () => {
-  assert.equal(readFileSync("VERSION", "utf8").trim(), "2.8.4");
-  assert.equal(docJson("package.json").version, "2.8.4");
-  assert.equal(docJson("apps/api/package.json").version, "2.8.4");
-  assert.equal(docJson("apps/web/package.json").version, "2.8.4");
+test("version v2.10.0 dong bo root API va Web", () => {
+  assert.equal(readFileSync("VERSION", "utf8").trim(), "2.10.0");
+  assert.equal(docJson("package.json").version, "2.10.0");
+  assert.equal(docJson("apps/api/package.json").version, "2.10.0");
+  assert.equal(docJson("apps/web/package.json").version, "2.10.0");
 });
 
-test("README co lich su phien ban tang dan den v2.8.4", () => {
+test("README co lich su phien ban tang dan den v2.10.0", () => {
   const readme = readFileSync("README.md", "utf8");
-  const viTri = ["## v1.0.0", "## v1.0.1", "## v1.0.2", "## v1.0.3", "## v1.0.4", "## v1.0.5", "## v1.0.6", "## v1.0.7", "## v2.0.0", "## v2.1.0", "## v2.1.1", "## v2.2.0", "## v2.2.1", "## v2.3.0", "## v2.4.0", "## v2.4.1", "## v2.5.0", "## v2.6.0", "## v2.6.1", "## v2.7.0", "## v2.8.0", "## v2.8.1", "## v2.8.2", "## v2.8.3", "## v2.8.4"].map(x => readme.indexOf(x));
+  const viTri = ["## v1.0.0", "## v1.0.1", "## v1.0.2", "## v1.0.3", "## v1.0.4", "## v1.0.5", "## v1.0.6", "## v1.0.7", "## v2.0.0", "## v2.1.0", "## v2.1.1", "## v2.2.0", "## v2.2.1", "## v2.3.0", "## v2.4.0", "## v2.4.1", "## v2.5.0", "## v2.6.0", "## v2.6.1", "## v2.7.0", "## v2.8.0", "## v2.8.1", "## v2.8.2", "## v2.8.3", "## v2.8.4", "## v2.8.5", "## v2.8.6", "## v2.8.7", "## v2.8.8", "## v2.8.9", "## v2.9.0", "## v2.9.1", "## v2.9.2", "## v2.9.3", "## v2.9.4", "## v2.9.5", "## v2.9.6", "## v2.9.7", "## v2.9.8", "## v2.9.9", "## v2.10.0"].map(x => readme.indexOf(x));
   assert.ok(viTri.every(x => x >= 0));
   assert.deepEqual([...viTri].sort((a,b)=>a-b), viTri);
 });
@@ -136,15 +136,16 @@ test("v2.4.1 bo dai strip trang tri khoi trang chu", () => {
   assert.doesNotMatch(css, /\.strip\{/);
 });
 
-test("v2.6.1 chi tiet san pham dung anh that va bat buoc chon mau", () => {
+test("v2.9.1 chi tiet san pham dung anh that va cau hinh mac dinh", () => {
   const detail = readFileSync("apps/web/app/san-pham/[duong_dan]/page.tsx", "utf8");
   const card = readFileSync("apps/web/components/the-san-pham.tsx", "utf8");
   assert.match(detail, /product-detail-photo/);
-  assert.match(detail, /Chọn màu sắc/u);
-  assert.match(detail, /color-option/);
+  assert.match(detail, /Cấu hình mặc định/u);
   assert.match(detail, /ma_bien_the/);
+  assert.doesNotMatch(detail, /Chọn màu sắc/u);
+  assert.doesNotMatch(detail, /color-option/);
   assert.doesNotMatch(detail, /TrinhXemAnh3D/);
-  assert.match(card, /Chọn màu/u);
+  assert.doesNotMatch(card, /Chọn màu/u);
 });
 
 
@@ -172,13 +173,14 @@ test("v2.8.0 co API danh gia, san pham lien quan va 23 bang seed", () => {
   const check = readFileSync("apps/api/prisma/kiem-tra-du-lieu.ts", "utf8");
   assert.match(sanPham, /lien_quan/);
   assert.match(seed, /SEED_V250_DANH_GIA_SAN_PHAM/);
-  assert.match(check, /23 bảng nghiệp vụ/u);
+  assert.match(check, /dữ liệu mẫu tĩnh|Dữ liệu mẫu tĩnh/u);
 });
 
 test("v2.6.0 co migration tai khoan va phan quyen 5 vai tro", () => {
   assert.equal(existsSync("apps/api/prisma/migrations/202608290005_v260_tai_khoan_phan_quyen/migration.sql"), true);
   const schema = readFileSync("apps/api/prisma/schema.prisma", "utf8");
-  assert.match(schema, /SIEU_QUAN_TRI/);
+  assert.match(schema, /ADMIN/);
+  assert.doesNotMatch(schema, /SIEU_QUAN_TRI|QUAN_TRI/);
   assert.match(schema, /so_lan_dang_nhap_that_bai/);
   assert.match(schema, /phien_ban_mat_khau/);
 });
@@ -249,14 +251,18 @@ test("v2.8.0 co backend ho so quan tri nhan vien va xep ca", () => {
     "apps/web/lib/quan-tri.ts"
   ]) assert.equal(existsSync(tep), true, `Thieu ${tep}`);
   const guard = readFileSync("apps/api/src/xac-thuc/vai-tro.guard.ts", "utf8");
-  assert.match(guard, /vai_tro === VaiTro\.SIEU_QUAN_TRI/);
+  const controller = readFileSync("apps/api/src/quan-tri/quan-tri.controller.ts", "utf8");
+  assert.match(guard, /KHOA_VAI_TRO/);
+  assert.doesNotMatch(guard, /SIEU_QUAN_TRI/);
+  assert.match(controller, /VaiTroChoPhep\(VaiTro\.ADMIN\)/);
 });
 
-test("v2.8.0 chon mau doi preview anh va account menu co dang xuat", () => {
+test("v2.9.1 san pham mac dinh va account menu co dang xuat", () => {
   const detail = readFileSync("apps/web/app/san-pham/[duong_dan]/page.tsx", "utf8");
   const nav = readFileSync("apps/web/components/thanh-dieu-huong.tsx", "utf8");
-  assert.match(detail, /product-color-tint/);
-  assert.match(detail, /mau_xem_truoc/);
+  assert.match(detail, /Cấu hình mặc định/u);
+  assert.match(detail, /product-photo-default/);
+  assert.doesNotMatch(detail, /color-preview-badge/);
   assert.match(nav, /account-popover/);
   assert.match(nav, /Đăng xuất/u);
 });
@@ -312,10 +318,286 @@ test("v2.8.4 giao dien dang nhap dang ki duoc tinh gon", () => {
   const register = readFileSync("apps/web/app/dang-ky/page.tsx", "utf8");
   const css = readFileSync("apps/web/app/globals.css", "utf8");
   assert.doesNotMatch(login, /Phiên đăng nhập dùng cookie HttpOnly/u);
-  assert.match(login, /auth-options-row/);
+  assert.match(login, /cine-auth-options/);
   assert.match(login, /Ghi nhớ tài khoản/u);
   assert.match(login, /Quên mật khẩu\?/u);
-  assert.match(login, /auth-login-button/);
-  assert.match(register, /<h1>Đăng kí<\/h1>/u);
-  assert.match(css, /auth-login-button/);
+  assert.match(login, /cine-auth-submit/);
+  assert.match(register, /<h1>Tạo tài khoản<\/h1>/u);
+  assert.match(css, /cine-auth-submit/);
+});
+
+
+test("v2.9.1 anh mac dinh du lieu mau ho so va logout", () => {
+  const detail = readFileSync("apps/web/app/san-pham/[duong_dan]/page.tsx", "utf8");
+  const account = readFileSync("apps/web/app/tai-khoan/page.tsx", "utf8");
+  const seed = readFileSync("apps/api/prisma/seed.ts", "utf8");
+  const guard = readFileSync("apps/api/src/xac-thuc/jwt.guard.ts", "utf8");
+  assert.match(detail, /product-photo-default/);
+  assert.doesNotMatch(detail, /product-photo-colorized/);
+  assert.match(account, /setThuDienTu/);
+  assert.match(account, /da_dang_xuat=1/);
+  assert.match(seed, /nguyen\.minh\.anh@example\.com/);
+  assert.doesNotMatch(seed, /minh\.anh\.demo@nhienin3d\.local", "Nguyễn Minh Anh"/);
+  assert.match(guard, /payload\.sid/);
+});
+
+
+test("v2.8.6 Brave ho so mat khau va seed admin ben vung", () => {
+  const browser = readFileSync("apps/web/lib/trinh-duyet.ts", "utf8");
+  const account = readFileSync("apps/web/app/tai-khoan/page.tsx", "utf8");
+  const service = readFileSync("apps/api/src/tai-khoan/tai-khoan.service.ts", "utf8");
+  const seed = readFileSync("apps/api/prisma/seed.ts", "utf8");
+  assert.match(browser, /isBrave/);
+  assert.match(browser, /Brave/);
+  assert.match(account, /Đổi mật khẩu/u);
+  assert.match(account, /Đã lưu thông tin tài khoản vào PostgreSQL/u);
+  assert.match(service, /argon2\.verify/);
+  assert.match(service, /DOI_MAT_KHAU/);
+  assert.match(seed, /admin_dang_hoat_dong/);
+  const nhanhAdmin = seed.slice(seed.indexOf("if (admin_dang_hoat_dong)"), seed.indexOf("else if", seed.indexOf("if (admin_dang_hoat_dong)")));
+  assert.doesNotMatch(nhanhAdmin, /ho_ten_quan_tri/);
+  assert.doesNotMatch(nhanhAdmin, /mat_khau_bam/);
+});
+
+
+test("v2.9.1 anh mac dinh admin first kich hoat va logout ben vung", () => {
+  const detail = readFileSync("apps/web/app/san-pham/[duong_dan]/page.tsx", "utf8");
+  const imageRoute = readFileSync("apps/web/app/api/anh-bien-the/route.ts", "utf8");
+  const admin = readFileSync("apps/web/app/quan-tri/page.tsx", "utf8");
+  const adminService = readFileSync("apps/api/src/quan-tri/quan-tri.service.ts", "utf8");
+  const auth = readFileSync("apps/api/src/xac-thuc/xac-thuc.service.ts", "utf8");
+  const guard = readFileSync("apps/api/src/xac-thuc/jwt.guard.ts", "utf8");
+  const webAuth = readFileSync("apps/web/lib/xac-thuc.ts", "utf8");
+  assert.match(detail, /src=\{anh_goc\}/);
+  assert.doesNotMatch(detail, /anhBienTheUrl/);
+  assert.match(imageRoute, /clipPath/);
+  assert.match(imageRoute, /feFlood/);
+  assert.match(admin, /Kích hoạt/u);
+  assert.match(admin, /cine-user-actions/u);
+  assert.match(admin, />Xóa<\/button>/u);
+  assert.match(adminService, /ADMIN:\s*0/);
+  assert.match(auth, /thu_hoi_tat_ca_phien/);
+  assert.match(guard, /if \(!payload\.sid\)/);
+  assert.match(webAuth, /KHOA_DA_DANG_XUAT/);
+});
+
+
+test("v2.8.8 dang ky co so dien thoai dia chi va tao dia chi mac dinh", () => {
+  const web = readFileSync("apps/web/app/dang-ky/page.tsx", "utf8");
+  const dto = readFileSync("apps/api/src/xac-thuc/dto/dang-ky.dto.ts", "utf8");
+  const service = readFileSync("apps/api/src/xac-thuc/xac-thuc.service.ts", "utf8");
+  assert.match(web, /Số điện thoại/u);
+  assert.match(web, /Địa chỉ/u);
+  assert.match(dto, /so_dien_thoai/u);
+  assert.match(dto, /dia_chi/u);
+  assert.match(service, /diaChiNguoiDung\.create/u);
+  assert.match(service, /la_mac_dinh:\s*true/u);
+});
+
+test("v2.8.9 bao ve super admin va polish bo cuc tai khoan", () => {
+  const adminWeb = readFileSync("apps/web/app/quan-tri/page.tsx", "utf8");
+  const adminApi = readFileSync("apps/api/src/quan-tri/quan-tri.service.ts", "utf8");
+  const css = readFileSync("apps/web/app/globals.css", "utf8");
+  assert.match(adminWeb, /admin-protected-badge/u);
+  assert.doesNotMatch(adminWeb, /Bảo vệ/u);
+  assert.match(adminApi, /Không thể tự khóa/u);
+  assert.doesNotMatch(adminApi, /Siêu quản trị/u);
+  assert.match(css, /account-panel-security/u);
+  assert.match(css, /password-change-form/u);
+});
+
+
+test("v2.9.0 admin kich hoat lai va xoa tai khoan dung RBAC", () => {
+  const controller = readFileSync("apps/api/src/quan-tri/quan-tri.controller.ts", "utf8");
+  const service = readFileSync("apps/api/src/quan-tri/quan-tri.service.ts", "utf8");
+  const adminWeb = readFileSync("apps/web/app/quan-tri/page.tsx", "utf8");
+  const adminLib = readFileSync("apps/web/lib/quan-tri.ts", "utf8");
+  assert.match(controller, /@Delete\("nguoi-dung\/:id"\)/);
+  assert.match(controller, /nguoi-dung\/:id\/kich-hoat/);
+  assert.match(controller, /nguoi-dung\/:id\/khoa/);
+  assert.match(service, /data: \{ da_kich_hoat: true, so_lan_dang_nhap_that_bai: 0, khoa_den: null \}/);
+  assert.match(service, /phienDangNhap\.updateMany/);
+  assert.match(service, /xoa_nguoi_dung/);
+  assert.match(service, /Không thể xóa chính tài khoản Admin đang đăng nhập/u);
+  assert.doesNotMatch(service, /Siêu quản trị/u);
+  assert.match(adminLib, /kichHoatNguoiDung/);
+  assert.match(adminLib, /xoaNguoiDung[\s\S]*method: "POST"/);
+  assert.match(adminWeb, /xoaNguoiDung/);
+  assert.match(adminWeb, /Kích hoạt/u);
+});
+
+test("v2.9.0 bo cuc tai khoan va quan tri compact theo CineBooking", () => {
+  const account = readFileSync("apps/web/app/tai-khoan/page.tsx", "utf8");
+  const admin = readFileSync("apps/web/app/quan-tri/page.tsx", "utf8");
+  const login = readFileSync("apps/web/app/dang-nhap/page.tsx", "utf8");
+  const register = readFileSync("apps/web/app/dang-ky/page.tsx", "utf8");
+  const reset = readFileSync("apps/web/app/dat-lai-mat-khau/page.tsx", "utf8");
+  const css = readFileSync("apps/web/app/globals.css", "utf8");
+  assert.match(account, /cine-profile-shell/);
+  assert.match(account, /Tài khoản của tôi/u);
+  assert.match(admin, /cine-admin-tabs/);
+  assert.match(admin, /cine-user-card/);
+  assert.match(login, /cine-auth-card/);
+  assert.match(register, /cine-auth-card-register/);
+  assert.match(reset, /cine-auth-card/);
+  assert.match(css, /\.cine-profile-shell/);
+  assert.match(css, /\.cine-admin-shell/);
+});
+
+
+test("v2.9.1 bo giao dien chon mau va tu dung bien the mac dinh", () => {
+  const detail = readFileSync("apps/web/app/san-pham/[duong_dan]/page.tsx", "utf8");
+  const card = readFileSync("apps/web/components/the-san-pham.tsx", "utf8");
+  const cart = readFileSync("apps/web/app/gio-hang/page.tsx", "utf8");
+  assert.match(detail, /Cấu hình mặc định/u);
+  assert.match(detail, /find\(x => x\.so_luong_ton > 0\)/);
+  assert.match(detail, /themBienTheVaoGio\(bien_the\.ma_bien_the/);
+  assert.doesNotMatch(detail, /Chọn màu sắc/u);
+  assert.doesNotMatch(detail, /color-options/);
+  assert.doesNotMatch(detail, /anhBienTheUrl/);
+  assert.doesNotMatch(card, /Chọn màu/u);
+  assert.doesNotMatch(cart, /mau_sac/);
+});
+
+
+test("v2.9.3 mot vai tro Admin va lich ca theo CineBooking Pro", () => {
+  const schema = readFileSync("apps/api/prisma/schema.prisma", "utf8");
+  const migration = readFileSync("apps/api/prisma/migrations/202608300001_v293_hop_nhat_admin/migration.sql", "utf8");
+  const admin = readFileSync("apps/web/app/quan-tri/page.tsx", "utf8");
+  const css = readFileSync("apps/web/app/globals.css", "utf8");
+  assert.match(schema, /ADMIN/);
+  assert.doesNotMatch(schema, /SIEU_QUAN_TRI|QUAN_TRI/);
+  assert.match(migration, /IN \('QUAN_TRI', 'SIEU_QUAN_TRI'\) THEN 'ADMIN'/);
+  assert.match(admin, /tk\.vai_tro !== "ADMIN"/);
+  assert.match(admin, /kichHoatNguoiDung/);
+  assert.match(admin, /cine-shift-management-grid/);
+  assert.match(admin, /Xếp ca nhân viên/u);
+  assert.match(admin, /phanCaTheoNgay/);
+  assert.match(css, /\.cine-shift-management-grid/);
+  assert.match(css, /\.cine-schedule-row/);
+});
+
+
+test("v2.9.4 khong reset profile activation khi seed", () => {
+  const seed = readFileSync("apps/api/prisma/seed.ts", "utf8");
+  const adminLib = readFileSync("apps/web/lib/quan-tri.ts", "utf8");
+  const account = readFileSync("apps/web/app/tai-khoan/page.tsx", "utf8");
+  assert.match(seed, /SEED_V294_PERSIST_TAI_KHOAN_HO_SO/);
+  assert.match(seed, /Dữ liệu mẫu chỉ bootstrap lần đầu/u);
+  assert.match(seed, /Không tạo lại địa chỉ mẫu/u);
+  assert.match(seed, /bootstrap lần đầu|bootstrap bản ghi còn thiếu/u);
+  assert.match(adminLib, /init\.body !== undefined && init\.body !== null/);
+  assert.match(account, /const da_luu = await capNhatHoSo/);
+});
+
+
+test("v2.9.5 luu profile, xoa user, trang thai nhan vien ban hang va form lon", () => {
+  const schema = readFileSync("apps/api/prisma/schema.prisma", "utf8");
+  const migration = readFileSync("apps/api/prisma/migrations/202608300002_v295_nhan_vien_ban_hang/migration.sql", "utf8");
+  const service = readFileSync("apps/api/src/quan-tri/quan-tri.service.ts", "utf8");
+  const controller = readFileSync("apps/api/src/quan-tri/quan-tri.controller.ts", "utf8");
+  const accountService = readFileSync("apps/api/src/tai-khoan/tai-khoan.service.ts", "utf8");
+  const adminPage = readFileSync("apps/web/app/quan-tri/page.tsx", "utf8");
+  const accountPage = readFileSync("apps/web/app/tai-khoan/page.tsx", "utf8");
+  const adminLib = readFileSync("apps/web/lib/quan-tri.ts", "utf8");
+  const css = readFileSync("apps/web/app/globals.css", "utf8");
+  assert.doesNotMatch(schema, /\bQUAN_LY\b/);
+  assert.match(migration, /'QUAN_LY' THEN 'KHACH_HANG'/);
+  assert.match(migration, /Nhân viên bán hàng/u);
+  assert.match(controller, /@Post\("nguoi-dung\/:id\/xoa"\)/);
+  assert.match(service, /tx\.donHang\.updateMany/);
+  assert.match(service, /tx\.phienDangNhap\.deleteMany/);
+  assert.match(service, /chuc_danh: "Nhân viên bán hàng"/u);
+  assert.match(service, /TrangThaiNhanVien\.TAM_NGHI/);
+  assert.match(accountService, /findUniqueOrThrow/);
+  assert.doesNotMatch(accountPage, /xac_nhan = await layHoSo/);
+  assert.match(adminLib, /nguoi-dung\/\$\{id\}\/xoa/);
+  assert.match(adminLib, /body: JSON\.stringify\(\{ xac_nhan: true \}\)/);
+  assert.match(adminPage, /Tạo nhân viên bán hàng/u);
+  assert.doesNotMatch(adminPage, /Nhân viên chỉ tập trung bán hàng/u);
+  assert.doesNotMatch(adminPage, /value="QUAN_LY"/);
+  assert.match(css, /v2\.9\.5 - biểu mẫu lớn/u);
+  assert.match(css, /cine-staff-create-layout/);
+  assert.match(css, /font-size:15px/);
+});
+
+
+test("v2.9.6 nut gio hang dung nen toi dong bo CineBooking", () => {
+  const css = readFileSync("apps/web/app/globals.css", "utf8");
+  assert.match(css, /\.cart-button\{[^}]*background:linear-gradient\(135deg,rgba\(23,32,51,\.98\),rgba\(15,23,42,\.98\)\)/);
+  assert.match(css, /\.cart-button:hover\{[^}]*border-color:rgba\(167,139,250,\.78\)/);
+  assert.match(css, /\.cart-button b\{[^}]*background:linear-gradient\(135deg,#8b5cf6,#22d3ee\)/);
+});
+
+
+test("v2.9.7 trang thai nhan vien luu PostgreSQL va form bo panel phan quyen", () => {
+  const controller = readFileSync("apps/api/src/quan-tri/quan-tri.controller.ts", "utf8");
+  const service = readFileSync("apps/api/src/quan-tri/quan-tri.service.ts", "utf8");
+  const admin = readFileSync("apps/web/app/quan-tri/page.tsx", "utf8");
+  const lib = readFileSync("apps/web/lib/quan-tri.ts", "utf8");
+  assert.match(controller, /@Post\("nhan-vien\/:id\/trang-thai"\)/);
+  assert.match(service, /findUniqueOrThrow/);
+  assert.match(service, /da_doc_lai_sau_commit/);
+  assert.match(lib, /nhan-vien\/\$\{id\}\/trang-thai/);
+  assert.match(admin, /F5 vẫn giữ trạng thái này/u);
+  assert.doesNotMatch(admin, /cine-staff-permissions/);
+  assert.doesNotMatch(admin, /PHÂN QUYỀN/u);
+});
+
+
+test("v2.9.8 vai tro Admin va Nhan vien co dinh khong con mui ten dropdown", () => {
+  const admin = readFileSync("apps/web/app/quan-tri/page.tsx", "utf8");
+  const dto = readFileSync("apps/api/src/quan-tri/dto/cap-nhat-nguoi-dung.dto.ts", "utf8");
+  assert.match(admin, /cine-user-role-static/);
+  assert.match(admin, /Admin · Toàn quyền/u);
+  assert.doesNotMatch(admin, /<select value=\{u\.vai_tro\}/);
+  assert.doesNotMatch(admin, /doiVaiTro/);
+  assert.doesNotMatch(dto, /vai_tro/);
+});
+
+
+test("v2.9.9 bo kicker Admin, dung 2 ca 06-14 14-22 va cho sua xoa ca", () => {
+  const migration = readFileSync("apps/api/prisma/migrations/202608300003_v299_hai_ca_lam_va_quan_ly_ca/migration.sql", "utf8");
+  const seed = readFileSync("apps/api/prisma/seed.ts", "utf8");
+  const controller = readFileSync("apps/api/src/quan-tri/quan-tri.controller.ts", "utf8");
+  const service = readFileSync("apps/api/src/quan-tri/quan-tri.service.ts", "utf8");
+  const admin = readFileSync("apps/web/app/quan-tri/page.tsx", "utf8");
+  const lib = readFileSync("apps/web/lib/quan-tri.ts", "utf8");
+  assert.doesNotMatch(admin, /NHIENIN3D · ADMIN/u);
+  assert.match(migration, /'CA01', 'Ca sáng', '06:00', '14:00'/u);
+  assert.match(migration, /'CA02', 'Ca chiều', '14:00', '22:00'/u);
+  assert.match(seed, /SEED_V299_HAI_CA_MAC_DINH/);
+  assert.match(seed, /SEED_V299_PHAN_CA_MAU/);
+  assert.match(controller, /@Patch\("ca-lam\/:id"\)/);
+  assert.match(controller, /@Delete\("ca-lam\/:id"\)/);
+  assert.match(service, /async cap_nhat_ca/);
+  assert.match(service, /async xoa_ca/);
+  assert.match(service, /tx\.phanCa\.deleteMany/);
+  assert.match(lib, /capNhatCaLam/);
+  assert.match(lib, /xoaCaLam/);
+  assert.match(admin, /Chỉnh sửa/);
+  assert.match(admin, /Lưu thay đổi/);
+  assert.match(admin, /Các phân ca đang dùng mẫu ca này cũng sẽ bị xóa/u);
+});
+
+
+test("v2.10.0 cho sua xoa ca va phan ca da xep, bo STAFF OPERATIONS", () => {
+  const controller = readFileSync("apps/api/src/quan-tri/quan-tri.controller.ts", "utf8");
+  const service = readFileSync("apps/api/src/quan-tri/quan-tri.service.ts", "utf8");
+  const dto = readFileSync("apps/api/src/quan-tri/dto/cap-nhat-phan-ca.dto.ts", "utf8");
+  const admin = readFileSync("apps/web/app/quan-tri/page.tsx", "utf8");
+  const lib = readFileSync("apps/web/lib/quan-tri.ts", "utf8");
+  assert.doesNotMatch(admin, /STAFF OPERATIONS/);
+  assert.match(controller, /@Post\("ca-lam\/:id\/xoa"\)/);
+  assert.match(controller, /@Post\("phan-ca\/:id\/xoa"\)/);
+  assert.match(service, /so_phan_ca_bi_anh_huong/);
+  assert.match(service, /id: \{ not: id \}, nhan_vien_id, ca_lam_viec_id, ngay_lam/);
+  assert.match(dto, /nhan_vien_id/);
+  assert.match(dto, /ca_lam_viec_id/);
+  assert.match(dto, /ngay_lam/);
+  assert.match(admin, /batDauSuaPhanCa/);
+  assert.match(admin, /pc_dang_sua_id/);
+  assert.match(admin, /Hủy chỉnh sửa/u);
+  assert.match(lib, /ca-lam\/\$\{id\}\/xoa[\s\S]*method: "POST"/);
+  assert.match(lib, /phan-ca\/\$\{id\}\/xoa[\s\S]*method: "POST"/);
 });

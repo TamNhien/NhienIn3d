@@ -27,14 +27,16 @@ export class XacThucController {
 
   @Post("dang-ky")
   async dang_ky(@Body() dto: DangKyDto, @Req() req: FastifyRequest, @Res({ passthrough: true }) reply: FastifyReply) {
-    const kq = await this.service.dang_ky(dto, req.ip, req.headers["user-agent"]);
+    const trinh_duyet = dto.trinh_duyet_hien_thi?.trim() || req.headers["user-agent"];
+    const kq = await this.service.dang_ky(dto, req.ip, trinh_duyet);
     this.ghiCookie(reply, kq);
     return { nguoi_dung: kq.nguoi_dung };
   }
 
   @Post("dang-nhap")
   async dang_nhap(@Body() dto: DangNhapDto, @Req() req: FastifyRequest, @Res({ passthrough: true }) reply: FastifyReply) {
-    const kq = await this.service.dang_nhap(dto, req.ip, req.headers["user-agent"]);
+    const trinh_duyet = dto.trinh_duyet_hien_thi?.trim() || req.headers["user-agent"];
+    const kq = await this.service.dang_nhap(dto, req.ip, trinh_duyet);
     this.ghiCookie(reply, kq);
     return { nguoi_dung: kq.nguoi_dung };
   }
@@ -60,12 +62,18 @@ export class XacThucController {
 
   @Post("dang-xuat")
   @HttpCode(200)
-  async dang_xuat(@Req() req: YeuCauCoNguoiDung, @Res({ passthrough: true }) reply: FastifyReply) {
-    await this.service.dang_xuat(req.cookies?.nhienin3d_lam_moi, req.nguoi_dung_xac_thuc?.id, req.ip);
-    reply.clearCookie("nhienin3d_phien", { path: "/" });
-    reply.clearCookie("nhienin3d_lam_moi", { path: "/api/v1/xac-thuc" });
-    reply.clearCookie("nhienin3d_lam_moi", { path: "/" });
-    return { thong_bao: "Đã đăng xuất" };
+  async dang_xuat(@Req() req: FastifyRequest, @Res({ passthrough: true }) reply: FastifyReply) {
+    await this.service.dang_xuat(req.cookies?.nhienin3d_lam_moi, req.cookies?.nhienin3d_phien, req.ip);
+    const bao_mat = process.env.NODE_ENV === "production";
+    const het_han = new Date(0);
+    reply.setCookie("nhienin3d_phien", "", { httpOnly: true, secure: bao_mat, sameSite: "lax", path: "/", maxAge: 0, expires: het_han });
+    reply.setCookie("nhienin3d_lam_moi", "", { httpOnly: true, secure: bao_mat, sameSite: "strict", path: "/api/v1/xac-thuc", maxAge: 0, expires: het_han });
+    reply.clearCookie("nhienin3d_phien", { httpOnly: true, secure: bao_mat, sameSite: "lax", path: "/" });
+    reply.clearCookie("nhienin3d_lam_moi", { httpOnly: true, secure: bao_mat, sameSite: "strict", path: "/api/v1/xac-thuc" });
+    // Dọn cookie refresh legacy từng dùng path=/ ở các bản cũ.
+    reply.setCookie("nhienin3d_lam_moi", "", { httpOnly: true, secure: bao_mat, sameSite: "strict", path: "/", maxAge: 0, expires: het_han });
+    reply.clearCookie("nhienin3d_lam_moi", { httpOnly: true, secure: bao_mat, sameSite: "strict", path: "/" });
+    return { thong_bao: "Đã đăng xuất hoàn toàn" };
   }
 
   @Get("toi")
@@ -77,7 +85,7 @@ export class XacThucController {
 
   @Get("quan-tri/kiem-tra")
   @UseGuards(JwtGuard, VaiTroGuard)
-  @VaiTroChoPhep(VaiTro.QUAN_TRI, VaiTro.SIEU_QUAN_TRI)
+  @VaiTroChoPhep(VaiTro.ADMIN)
   @ApiCookieAuth("nhienin3d_phien")
   kiem_tra_quan_tri(@Req() req: YeuCauCoNguoiDung) {
     return { duoc_phep: true, nguoi_dung: req.nguoi_dung_xac_thuc };
