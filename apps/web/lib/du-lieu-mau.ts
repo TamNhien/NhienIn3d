@@ -29,7 +29,9 @@ const DU_LIEU_SAN_PHAM = [
   ["N3D-TOY-007","Khối lập phương bánh răng","khoi-lap-phuong-banh-rang","Mô hình cơ khí cầm tay với nhiều bánh răng liên kết.",199000,"82 × 82 × 82 mm",6.4,135,"/images/khoi-lap-phuong-banh-rang.jpg"],
   ["N3D-ORG-008","Khay Gridfinity đa năng","khay-gridfinity-da-nang","Khay mô-đun để sắp xếp linh kiện và dụng cụ nhỏ.",129000,"84 × 84 × 56 mm",3.4,88,"https://media.printables.com/media/prints/522794/images/4228859_4b44b288-f1e0-4da0-b6f8-ce4908f3836f/thumbs/inside/1280x960/jpg/20230708_102805.webp"],
   ["N3D-GIFT-009","Đèn Lithophane theo ảnh","den-lithophane-theo-anh","Đèn ảnh nổi cá nhân hóa từ ảnh khách hàng.",449000,"150 × 150 × 180 mm",12.8,240,"https://media.printables.com/media/prints/884768/images/6779132_4696d008-34b2-401d-9c0b-321bff0f3ee9_25123318-9076-4c07-ae56-aa7fa0e01af1/2023-11-25_0b926c2790b63.webp"],
-  ["N3D-MAKER-010","Vỏ Raspberry Pi 5 thoáng khí","vo-raspberry-pi-5-thoang-khi","Vỏ Raspberry Pi 5 có khe thông gió và đủ cổng kết nối.",249000,"100 × 72 × 40 mm",4.8,105,"https://media.printables.com/media/prints/742926/images/5800894_5fd750c3-9554-4676-904f-102be0b36c87_8d786ac5-674f-450b-bd34-081f4410b4c6/rpi-5-render-10.jpg"]
+  ["N3D-MAKER-010","Vỏ Raspberry Pi 5 thoáng khí","vo-raspberry-pi-5-thoang-khi","Vỏ Raspberry Pi 5 có khe thông gió và đủ cổng kết nối.",249000,"100 × 72 × 40 mm",4.8,105,"https://media.printables.com/media/prints/742926/images/5800894_5fd750c3-9554-4676-904f-102be0b36c87_8d786ac5-674f-450b-bd34-081f4410b4c6/rpi-5-render-10.jpg"],
+  ["N3D-ORG-011","Khay Gridfinity 2×3 có ngăn bút","khay-gridfinity-2x3-co-ngan-but","Khay Gridfinity mở rộng với khu vực cắm bút và ngăn linh kiện nhỏ.",169000,"126 × 84 × 70 mm",4.6,118,"https://media.printables.com/media/prints/522794/images/4228859_4b44b288-f1e0-4da0-b6f8-ce4908f3836f/thumbs/inside/1280x960/jpg/20230708_102805.webp"],
+  ["N3D-MAKER-012","Vỏ Raspberry Pi 5 gắn quạt 40 mm","vo-raspberry-pi-5-gan-quat-40mm","Vỏ Raspberry Pi 5 bản mở rộng có vị trí quạt 40 mm và khe thoát nhiệt lớn.",289000,"108 × 78 × 48 mm",5.6,128,"https://media.printables.com/media/prints/742926/images/5800894_5fd750c3-9554-4676-904f-102be0b36c87_8d786ac5-674f-450b-bd34-081f4410b4c6/rpi-5-render-10.jpg"]
 ];
 
 const BO_MAU_FALLBACK = [
@@ -42,10 +44,12 @@ const BO_MAU_FALLBACK = [
   [["Tím", "#9333EA"], ["Xanh dương", "#2563EB"], ["Hồng", "#EC4899"]],
   [["Xanh dương", "#2563EB"], ["Đen", "#111827"], ["Cam", "#F97316"]],
   [["Trắng", "#F8FAFC"], ["Vàng", "#EAB308"], ["Hồng", "#EC4899"]],
-  [["Đen", "#111827"], ["Xám", "#6B7280"], ["Đỏ", "#DC2626"]]
+  [["Đen", "#111827"], ["Xám", "#6B7280"], ["Đỏ", "#DC2626"]],
+  [["Xanh dương", "#2563EB"], ["Đen", "#111827"], ["Cam", "#F97316"]],
+  [["Đen", "#111827"], ["Xám", "#6B7280"], ["Trắng", "#F8FAFC"]]
 ] as const;
 
-const VAT_LIEU_FALLBACK = ["PETG", "PLA", "PETG", "PETG", "PLA", "PLA", "PLA", "PETG", "PLA", "PETG"] as const;
+const VAT_LIEU_FALLBACK = ["PETG", "PLA", "PETG", "PETG", "PLA", "PLA", "PLA", "PETG", "PLA", "PETG", "PETG", "PETG"] as const;
 
 export const DU_LIEU_MAU: SanPham[] = DU_LIEU_SAN_PHAM.map(([ma_san_pham,ten_san_pham,duong_dan,mo_ta_ngan,gia_ban,kich_thuoc,thoi_gian_in_gio,khoi_luong_gam,anh], chi_so) => ({
   ma_san_pham,

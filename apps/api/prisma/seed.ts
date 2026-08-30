@@ -36,7 +36,7 @@ function taoDatabaseUrl(): string {
 const adapter = new PrismaPg({ connectionString: taoDatabaseUrl() });
 const db = new PrismaClient({ adapter });
 
-const PHIEN_BAN_HIEN_TAI = "SEED_V2120_DON_HANG_SAN_PHAM_AUDIT";
+const PHIEN_BAN_HIEN_TAI = "SEED_V2122_SAN_PHAM_12_GRID_6";
 
 const danh_muc = [
   ["HOBBY_RC", "Mô hình & RC", "mo-hinh-rc", "Mô hình cơ khí, xe điều khiển và sản phẩm lắp ráp."],
@@ -137,6 +137,18 @@ const san_pham = [
     mo_ta_ngan: "Vỏ bảo vệ Raspberry Pi 5 với khe thông gió và vị trí cổng kết nối đầy đủ.", gia_ban: 249000, gia_von: 105000, khoi_luong_gam: 105, thoi_gian_in_gio: 4.8, kich_thuoc: "100 × 72 × 40 mm", ma_danh_muc: "MAKER",
     anh: "https://media.printables.com/media/prints/742926/images/5800894_5fd750c3-9554-4676-904f-102be0b36c87_8d786ac5-674f-450b-bd34-081f4410b4c6/rpi-5-render-10.jpg",
     nguon: "https://www.printables.com/", thong_so: { vat_lieu_goi_y: "PETG", tuong_thich: "Raspberry Pi 5" }
+  },
+  {
+    ma_san_pham: "N3D-ORG-011", ten_san_pham: "Khay Gridfinity 2×3 có ngăn bút", duong_dan: "khay-gridfinity-2x3-co-ngan-but",
+    mo_ta_ngan: "Khay Gridfinity mở rộng với khu vực cắm bút và ngăn linh kiện nhỏ.", gia_ban: 169000, gia_von: 72000, khoi_luong_gam: 118, thoi_gian_in_gio: 4.6, kich_thuoc: "126 × 84 × 70 mm", ma_danh_muc: "BAN_LAM_VIEC",
+    anh: "https://media.printables.com/media/prints/522794/images/4228859_4b44b288-f1e0-4da0-b6f8-ce4908f3836f/thumbs/inside/1280x960/jpg/20230708_102805.webp",
+    nguon: "https://www.printables.com/model/522794", thong_so: { vat_lieu_goi_y: "PETG/PLA", he_gridfinity: "3×2", cong_dung: "Bút và linh kiện nhỏ" }
+  },
+  {
+    ma_san_pham: "N3D-MAKER-012", ten_san_pham: "Vỏ Raspberry Pi 5 gắn quạt 40 mm", duong_dan: "vo-raspberry-pi-5-gan-quat-40mm",
+    mo_ta_ngan: "Vỏ Raspberry Pi 5 bản mở rộng có vị trí quạt 40 mm và khe thoát nhiệt lớn.", gia_ban: 289000, gia_von: 124000, khoi_luong_gam: 128, thoi_gian_in_gio: 5.6, kich_thuoc: "108 × 78 × 48 mm", ma_danh_muc: "MAKER",
+    anh: "https://media.printables.com/media/prints/742926/images/5800894_5fd750c3-9554-4676-904f-102be0b36c87_8d786ac5-674f-450b-bd34-081f4410b4c6/rpi-5-render-10.jpg",
+    nguon: "https://www.printables.com/model/742926", thong_so: { vat_lieu_goi_y: "PETG", tuong_thich: "Raspberry Pi 5", quat: "40 mm" }
   }
 ];
 
@@ -239,7 +251,8 @@ const phien_ban_seed = [
   ["SEED_V285_DU_LIEU_NGUOI_DUNG_HO_SO_LOGOUT", "NhienIn3d v2.8.5 chuẩn hóa dữ liệu người dùng mẫu, cho sửa email hồ sơ, sửa logout session và đổi màu trực tiếp trên ảnh sản phẩm."],
   ["SEED_V286_TAI_KHOAN_MAT_KHAU_BRAVE", "NhienIn3d v2.8.6 nhận diện Brave, lưu hồ sơ bền vững và đổi mật khẩu ngay trong trang Tài khoản."],
   ["SEED_V294_PERSIST_TAI_KHOAN_HO_SO", "NhienIn3d v2.9.4 không reset hồ sơ/trạng thái kích hoạt/địa chỉ/nhân viên đã chỉnh khi chạy lại seed."],
-  [PHIEN_BAN_HIEN_TAI, "NhienIn3d v2.12.0 bổ sung quản trị đơn hàng, lịch sử trạng thái, sản phẩm/tồn kho và audit Admin."]
+  ["SEED_V2120_DON_HANG_SAN_PHAM_AUDIT", "NhienIn3d v2.12.0 bổ sung quản trị đơn hàng, lịch sử trạng thái, sản phẩm/tồn kho và audit Admin."],
+  [PHIEN_BAN_HIEN_TAI, "NhienIn3d v2.12.2 bổ sung đủ 12 sản phẩm mẫu để storefront hiển thị 2 hàng × 6 sản phẩm."]
 ] as const;
 
 async function main() {
@@ -375,7 +388,7 @@ async function main() {
 
   // v2.6.1: mỗi sản phẩm có 3 lựa chọn màu thật trong PostgreSQL.
   // Giữ BT01 để không phá giỏ hàng/đơn mẫu cũ, bổ sung BT02 và BT03 idempotent.
-  const ma_vat_lieu = ["PETG", "PLA", "PETG", "PETG", "PLA", "PLA", "PLA", "PETG", "PLA", "PETG"];
+  const ma_vat_lieu = ["PETG", "PLA", "PETG", "PETG", "PLA", "PLA", "PLA", "PETG", "PLA", "PETG", "PETG", "PETG"];
   const bo_mau_san_pham = [
     ["DEN", "CAM", "TRANG"],
     ["TRANG", "DEN", "XANH_DUONG"],
@@ -386,7 +399,9 @@ async function main() {
     ["TIM", "XANH_DUONG", "HONG"],
     ["XANH_DUONG", "DEN", "CAM"],
     ["TRANG", "VANG", "HONG"],
-    ["DEN", "XAM", "DO"]
+    ["DEN", "XAM", "DO"],
+    ["XANH_DUONG", "DEN", "CAM"],
+    ["DEN", "XAM", "TRANG"]
   ] as const;
   const bien_the_map = new Map<string, { id: string; ma_bien_the: string; so_luong_ton: number; gia_chenh_lech: unknown }>();
   for (let i = 0; i < san_pham.length; i++) {
@@ -431,7 +446,7 @@ async function main() {
   }
 
 
-  // v2.5.0: 10 đánh giá mẫu đã duyệt, mỗi sản phẩm một đánh giá để bảng mới luôn có dữ liệu thật dễ kiểm tra.
+  // v2.12.2: 12 đánh giá mẫu đã duyệt, mỗi sản phẩm một đánh giá để dữ liệu 12 sản phẩm luôn đầy đủ.
   const danh_gia_mau = [
     ["Nguyễn Minh Anh", 5, "Chi tiết in sắc nét, lắp ráp chắc chắn và đóng gói cẩn thận."],
     ["Trần Hoàng Nam", 4, "Thiết kế hữu ích, bề mặt đẹp và đúng mô tả sản phẩm."],
@@ -442,7 +457,9 @@ async function main() {
     ["Bùi Khánh Vy", 5, "Bánh răng quay mượt, màu phối nổi bật và thú vị."],
     ["Hoàng Đức Anh", 4, "Khay chắc chắn, sắp xếp linh kiện rất tiện."],
     ["Đỗ Mai Phương", 5, "Ảnh lithophane lên rõ, phù hợp làm quà tặng cá nhân hóa."],
-    ["Lê Minh Quân", 5, "Vỏ vừa Raspberry Pi 5, thoáng khí và bố trí cổng hợp lý."]
+    ["Lê Minh Quân", 5, "Vỏ vừa Raspberry Pi 5, thoáng khí và bố trí cổng hợp lý."],
+    ["Nguyễn Minh Anh", 5, "Khay Gridfinity gọn, ngăn bút tiện và khớp hệ mô-đun."],
+    ["Trần Hoàng Nam", 5, "Vỏ gắn quạt chắc chắn, thông thoáng và dễ lắp Raspberry Pi 5."]
   ] as const;
   for (let i = 0; i < san_pham.length; i++) {
     const sp = san_pham[i];

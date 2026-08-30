@@ -36,7 +36,7 @@ export default function TrangChu() {
           <Link className="secondary" href="/gio-hang">Mở giỏ hàng</Link>
         </div>
         <div className="stats">
-          <div><b>10</b><span>Sản phẩm mẫu</span></div>
+          <div><b>12</b><span>Sản phẩm mẫu</span></div>
           <div><b>19+</b><span>Bảng nghiệp vụ</span></div>
           <div><b>Local</b><span>Thanh toán giả lập</span></div>
         </div>

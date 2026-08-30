@@ -626,3 +626,15 @@ test("v2.12.1 san pham ton kho chon bang dropdown va chi mo mot san pham", () =>
   assert.match(admin, /cine-product-single-v2121/);
   assert.match(css, /cine-product-picker-v2121/);
 });
+
+
+test("v2.12.2 storefront hien thi 6 san pham moi hang va co du 12 san pham mau", () => {
+  const home = readFileSync("app/page.tsx", "utf8");
+  const data = readFileSync("lib/du-lieu-mau.ts", "utf8");
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.match(home, /<b>12<\/b><span>Sản phẩm mẫu<\/span>/u);
+  assert.match(data, /N3D-ORG-011/);
+  assert.match(data, /N3D-MAKER-012/);
+  assert.match(css, /v2\.12\.2 - storefront 6 sản phẩm mỗi hàng/u);
+  assert.match(css, /repeat\(6,minmax\(0,1fr\)\)/);
+});

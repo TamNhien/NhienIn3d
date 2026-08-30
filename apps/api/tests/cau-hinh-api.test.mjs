@@ -57,18 +57,18 @@ test("seed v2.12.0 theo doi 24 bang va cho phep du lieu van hanh bi xoa", () => 
     assert.match(seed, new RegExp(`${bang}: await db\\.`));
   }
   assert.match(seed, /so_luong < 10/);
-  assert.match(seed, /PHIEN_BAN_HIEN_TAI = "SEED_V2120_DON_HANG_SAN_PHAM_AUDIT"/);
+  assert.match(seed, /PHIEN_BAN_HIEN_TAI = "SEED_V2122_SAN_PHAM_12_GRID_6"/);
   assert.match(seed, /bang_bien_dong/);
   assert.match(seed, /SEED_V286_TAI_KHOAN_MAT_KHAU_BRAVE/);
   assert.match(seed, /\/images\/khoi-lap-phuong-banh-rang\.jpg/);
 });
 
 
-test("API hien thi dung version v2.12.1 o health va OpenAPI", () => {
+test("API hien thi dung version v2.12.2 o health va OpenAPI", () => {
   const health = readFileSync("src/suc-khoe/suc-khoe.controller.ts", "utf8");
   const main = readFileSync("src/main.ts", "utf8");
-  assert.match(health, /phien_ban: "v2\.12\.1"/);
-  assert.match(main, /setVersion\("2\.12\.1"\)/);
+  assert.match(health, /phien_ban: "v2\.12\.2"/);
+  assert.match(main, /setVersion\("2\.12\.2"\)/);
 });
 
 test("V2 co migration gio hang, thanh toan va dia chi", () => {
