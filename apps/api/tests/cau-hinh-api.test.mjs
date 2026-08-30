@@ -64,11 +64,11 @@ test("seed v2.9.9 giu 23 bang va cho phep du lieu van hanh bi xoa", () => {
 });
 
 
-test("API hien thi dung version v2.10.2 o health va OpenAPI", () => {
+test("API hien thi dung version v2.11.0 o health va OpenAPI", () => {
   const health = readFileSync("src/suc-khoe/suc-khoe.controller.ts", "utf8");
   const main = readFileSync("src/main.ts", "utf8");
-  assert.match(health, /phien_ban: "v2\.10\.2"/);
-  assert.match(main, /setVersion\("2\.10\.2"\)/);
+  assert.match(health, /phien_ban: "v2\.11\.0"/);
+  assert.match(main, /setVersion\("2\.11\.0"\)/);
 });
 
 test("V2 co migration gio hang, thanh toan va dia chi", () => {
@@ -480,4 +480,19 @@ test("v2.10.2 API sua CORS profile va doi mat khau", () => {
   assert.match(controller, /xu_ly_doi_mat_khau/);
   assert.match(seed, /admin_theo_email/);
   assert.match(seed, /ADMIN_PASSWORD chỉ dùng khi tạo tài khoản lần đầu/u);
+});
+
+test("v2.11.0 API tong quan co dashboard kinh doanh chi danh cho Admin", () => {
+  const controller = readFileSync("src/quan-tri/quan-tri.controller.ts", "utf8");
+  const service = readFileSync("src/quan-tri/quan-tri.service.ts", "utf8");
+  assert.match(controller, /@VaiTroChoPhep\(VaiTro\.ADMIN\)/);
+  assert.match(controller, /@Get\("tong-quan"\)/);
+  assert.match(service, /MUI_GIO_VIET_NAM/);
+  assert.match(service, /TrangThaiDonHang\.HOAN_TAT/);
+  assert.match(service, /doanh_thu_hom_nay/);
+  assert.match(service, /doanh_thu_7_ngay/);
+  assert.match(service, /doanh_thu_30_ngay/);
+  assert.match(service, /gia_tri_don_trung_binh_30_ngay/);
+  assert.match(service, /top_san_pham_30_ngay/);
+  assert.match(service, /so_luong_ton: \{ lte: 5 \}/);
 });

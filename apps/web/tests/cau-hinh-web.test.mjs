@@ -577,3 +577,19 @@ test("v2.10.2 ho so va doi mat khau gui POST on dinh", () => {
   assert.match(account, /setDiaChi\(da_luu\.dia_chi\?\.\[0\]\?\.dia_chi_cu_the \|\| ""\)/);
   assert.match(account, /window\.location\.replace\("\/dang-nhap\?doi_mat_khau=thanh_cong"\)/);
 });
+
+test("v2.11.0 web co tab tong quan va dashboard CineBooking", () => {
+  const admin = readFileSync("app/quan-tri/page.tsx", "utf8");
+  const lib = readFileSync("lib/quan-tri.ts", "utf8");
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.match(admin, /type TabQuanTri = "tong-quan"/);
+  assert.match(admin, /useState<TabQuanTri>\("tong-quan"\)/);
+  assert.match(admin, /Doanh thu hôm nay/u);
+  assert.match(admin, /Trạng thái đơn hàng/u);
+  assert.match(admin, /Đơn hàng gần đây/u);
+  assert.match(lib, /doanh_thu_theo_ngay/);
+  assert.match(lib, /top_san_pham_30_ngay/);
+  assert.match(lib, /ton_kho_thap/);
+  assert.match(css, /cine-dashboard-period-cards/);
+  assert.match(css, /cine-revenue-track/);
+});

@@ -7,6 +7,7 @@ import { layTaiKhoan, TaiKhoan } from "../../lib/xac-thuc";
 import {
   AdminNhanVien,
   AdminNguoiDung,
+  AdminTongQuan,
   CaLam,
   capNhatCaLam,
   capNhatNguoiDung,
@@ -36,18 +37,27 @@ const sauNgay = (so_ngay: number) => {
 };
 const ngayTuIso = (gia_tri: string) => gia_tri.slice(0, 10);
 const dinhDangNgay = (gia_tri: string) => new Intl.DateTimeFormat("vi-VN", { dateStyle: "full" }).format(new Date(`${ngayTuIso(gia_tri)}T00:00:00`));
+const dinhDangTien = (gia_tri: number) => new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND", maximumFractionDigits: 0 }).format(gia_tri || 0);
+const nhanTrangThaiDon = (trang_thai: string) => ({
+  CHO_XAC_NHAN: "Chờ xác nhận",
+  DA_XAC_NHAN: "Đã xác nhận",
+  DANG_SAN_XUAT: "Đang sản xuất",
+  DANG_GIAO: "Đang giao",
+  HOAN_TAT: "Hoàn tất",
+  DA_HUY: "Đã hủy"
+}[trang_thai] || trang_thai);
 
-type TabQuanTri = "khach-hang" | "nhan-vien" | "tao-nhan-vien" | "ca-lam" | "xep-ca";
+type TabQuanTri = "tong-quan" | "khach-hang" | "nhan-vien" | "tao-nhan-vien" | "ca-lam" | "xep-ca";
 
 export default function QuanTriPage() {
   const [tai_khoan, setTaiKhoan] = useState<TaiKhoan | null | undefined>(undefined);
-  const [tong_quan, setTongQuan] = useState<Record<string, number>>({});
+  const [tong_quan, setTongQuan] = useState<AdminTongQuan | null>(null);
   const [nguoi_dung, setNguoiDung] = useState<AdminNguoiDung[]>([]);
   const [nhan_vien, setNhanVien] = useState<AdminNhanVien[]>([]);
   const [ca_lam, setCaLam] = useState<CaLam[]>([]);
   const [phan_ca, setPhanCa] = useState<PhanCa[]>([]);
   const [thong_bao, setThongBao] = useState("");
-  const [tab, setTab] = useState<TabQuanTri>("khach-hang");
+  const [tab, setTab] = useState<TabQuanTri>("tong-quan");
   const [dang_xu_ly, setDangXuLy] = useState<string | null>(null);
   const [tu_ngay, setTuNgay] = useState(homNay());
   const [den_ngay, setDenNgay] = useState(sauNgay(14));
@@ -321,12 +331,12 @@ export default function QuanTriPage() {
   const khachHang = useMemo(() => nguoi_dung.filter(x => x.vai_tro === "KHACH_HANG"), [nguoi_dung]);
 
   const thongKe = useMemo(() => [
-    ["Khách hàng", tong_quan.khach_hang || 0],
-    ["NV bán hàng", tong_quan.nhan_vien || 0],
-    ["Ca làm", tong_quan.ca_lam_viec || 0],
-    ["Phân ca", tong_quan.phan_ca || 0],
-    ["Đơn hàng", tong_quan.don_hang || 0],
-    ["Sản phẩm", tong_quan.san_pham || 0]
+    ["Khách hàng", tong_quan?.khach_hang || 0],
+    ["NV bán hàng", tong_quan?.nhan_vien || 0],
+    ["Ca làm", tong_quan?.ca_lam_viec || 0],
+    ["Phân ca", tong_quan?.phan_ca || 0],
+    ["Đơn hàng", tong_quan?.don_hang || 0],
+    ["Sản phẩm", tong_quan?.san_pham || 0]
   ] as const, [tong_quan]);
 
   const phanCaTrongKhoang = useMemo(() => phan_ca.filter(x => {
@@ -345,11 +355,14 @@ export default function QuanTriPage() {
     return Array.from(nhom.entries()).sort(([a], [b]) => a.localeCompare(b));
   }, [phanCaTrongKhoang]);
 
+  const maxDoanhThu7Ngay = useMemo(() => Math.max(1, ...(tong_quan?.doanh_thu_theo_ngay.map(x => x.doanh_thu) || [1])), [tong_quan]);
+
   if (tai_khoan === undefined) return <main className="auth-shell"><div className="auth-card"><p>Đang xác minh quyền Admin...</p></div></main>;
   if (!tai_khoan) return <main className="auth-shell"><section className="auth-card"><h1>Cần đăng nhập</h1><Link className="primary auth-primary-link" href="/dang-nhap?chuyen_den=/quan-tri">Đăng nhập</Link></section></main>;
   if (tai_khoan.vai_tro !== "ADMIN") return <main className="auth-shell"><section className="auth-card"><h1>Không có quyền truy cập</h1><p>Khu vực này chỉ dành cho Admin.</p><Link className="primary auth-primary-link" href="/tai-khoan">Về tài khoản</Link></section></main>;
 
   const tabs: Array<[TabQuanTri, string]> = [
+    ["tong-quan", "Tổng quan"],
     ["khach-hang", "Khách hàng"],
     ["nhan-vien", "Nhân viên bán hàng"],
     ["tao-nhan-vien", "Tạo nhân viên bán hàng"],
@@ -368,6 +381,56 @@ export default function QuanTriPage() {
     <div className="cine-admin-stats">{thongKe.map(([ten, gia_tri]) => <div className="cine-card cine-stat-card" key={ten}><span>{ten}</span><b>{gia_tri}</b></div>)}</div>
 
     <nav className="cine-admin-tabs" aria-label="Chức năng quản trị">{tabs.map(([ma, ten]) => <button type="button" key={ma} className={`cine-btn ${tab === ma ? "cine-btn-primary" : "cine-btn-secondary"}`} onClick={() => setTab(ma)}>{ten}</button>)}</nav>
+
+    {tab === "tong-quan" && <section className="cine-dashboard-v211">
+      {!tong_quan ? <div className="cine-card cine-admin-section">Đang tải thống kê quản trị…</div> : <>
+        <div className="cine-dashboard-period-cards">
+          <article className="cine-card cine-dashboard-kpi"><span>Doanh thu hôm nay</span><strong>{dinhDangTien(tong_quan.doanh_thu.hom_nay)}</strong><small>{tong_quan.don_hang_theo_ky.hom_nay} đơn phát sinh · doanh thu tính trên đơn hoàn tất</small></article>
+          <article className="cine-card cine-dashboard-kpi"><span>Doanh thu 7 ngày</span><strong>{dinhDangTien(tong_quan.doanh_thu.bay_ngay)}</strong><small>{tong_quan.don_hang_theo_ky.bay_ngay} đơn từ {new Date(`${tong_quan.ky_bao_cao.tu_7_ngay}T00:00:00`).toLocaleDateString("vi-VN")}</small></article>
+          <article className="cine-card cine-dashboard-kpi"><span>Doanh thu 30 ngày</span><strong>{dinhDangTien(tong_quan.doanh_thu.ba_muoi_ngay)}</strong><small>{tong_quan.don_hang_theo_ky.ba_muoi_ngay} đơn · trung bình {dinhDangTien(tong_quan.doanh_thu.gia_tri_don_trung_binh_30_ngay)}/đơn hoàn tất</small></article>
+          <article className="cine-card cine-dashboard-kpi"><span>Khách hàng mới</span><strong>{tong_quan.khach_hang_moi.ba_muoi_ngay}</strong><small>Hôm nay {tong_quan.khach_hang_moi.hom_nay} · 7 ngày {tong_quan.khach_hang_moi.bay_ngay}</small></article>
+        </div>
+
+        <div className="cine-dashboard-grid">
+          <article className="cine-card cine-dashboard-panel cine-dashboard-revenue">
+            <div className="cine-dashboard-panel-head"><div><h2>Doanh thu 7 ngày</h2><p>Đơn hoàn tất theo ngày, múi giờ Việt Nam.</p></div><strong>{dinhDangTien(tong_quan.doanh_thu.bay_ngay)}</strong></div>
+            <div className="cine-revenue-bars">{tong_quan.doanh_thu_theo_ngay.map(item => <div className="cine-revenue-row" key={item.ngay}>
+              <div><b>{new Date(`${item.ngay}T00:00:00`).toLocaleDateString("vi-VN", { weekday: "short" })}</b><span>{new Date(`${item.ngay}T00:00:00`).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" })}</span></div>
+              <div className="cine-revenue-track"><i style={{ width: `${Math.max(3, (item.doanh_thu / maxDoanhThu7Ngay) * 100)}%` }} /></div>
+              <div><strong>{dinhDangTien(item.doanh_thu)}</strong><small>{item.so_don} đơn</small></div>
+            </div>)}</div>
+          </article>
+
+          <article className="cine-card cine-dashboard-panel">
+            <div className="cine-dashboard-panel-head"><div><h2>Trạng thái đơn hàng</h2><p>Toàn bộ đơn đang có trong hệ thống.</p></div><strong>{tong_quan.don_hang}</strong></div>
+            <div className="cine-order-status-grid">{Object.entries(tong_quan.trang_thai_don_hang).map(([status, count]) => <div className="cine-order-status" key={status} data-status={status}><span>{nhanTrangThaiDon(status)}</span><b>{count}</b></div>)}</div>
+          </article>
+        </div>
+
+        <div className="cine-dashboard-grid">
+          <article className="cine-card cine-dashboard-panel">
+            <div className="cine-dashboard-panel-head"><div><h2>Top sản phẩm 30 ngày</h2><p>Xếp theo số lượng bán, bỏ đơn đã hủy.</p></div></div>
+            <div className="cine-dashboard-table">
+              <div className="cine-dashboard-table-head"><span>Sản phẩm</span><span>Số lượng</span><span>Giá trị</span></div>
+              {tong_quan.top_san_pham_30_ngay.map((item, index) => <div className="cine-dashboard-table-row" key={item.ma_san_pham}><span><b>#{index + 1} · {item.ten_san_pham}</b><small>{item.ma_san_pham}</small></span><strong>{item.so_luong}</strong><strong>{dinhDangTien(item.doanh_thu)}</strong></div>)}
+              {tong_quan.top_san_pham_30_ngay.length === 0 && <div className="cine-dashboard-empty">Chưa có dữ liệu bán hàng trong 30 ngày.</div>}
+            </div>
+          </article>
+
+          <article className="cine-card cine-dashboard-panel">
+            <div className="cine-dashboard-panel-head"><div><h2>Tồn kho thấp</h2><p>Biến thể đang bán có tồn kho ≤ 5.</p></div><strong>{tong_quan.ton_kho_thap.length}</strong></div>
+            <div className="cine-low-stock-list">{tong_quan.ton_kho_thap.map(item => <div className="cine-low-stock-row" key={item.id}><span><b>{item.ten_san_pham}</b><small>{item.ma_bien_the} · {item.vat_lieu} · {item.mau_sac}</small></span><strong className={item.so_luong_ton <= 1 ? "critical" : ""}>{item.so_luong_ton}</strong></div>)}
+            {tong_quan.ton_kho_thap.length === 0 && <div className="cine-dashboard-empty">Không có biến thể tồn kho thấp.</div>}</div>
+          </article>
+        </div>
+
+        <article className="cine-card cine-dashboard-panel">
+          <div className="cine-dashboard-panel-head"><div><h2>Đơn hàng gần đây</h2><p>8 đơn mới nhất để Admin theo dõi nhanh.</p></div></div>
+          <div className="cine-recent-orders">{tong_quan.don_gan_day.map(item => <div className="cine-recent-order" key={item.id}><span><b>{item.ma_don_hang}</b><small>{item.ho_ten_nguoi_nhan}</small></span><span><b>{dinhDangTien(item.tong_tien)}</b><small>{new Date(item.ngay_tao).toLocaleString("vi-VN")}</small></span><span className="cine-order-state" data-status={item.trang_thai}>{nhanTrangThaiDon(item.trang_thai)}</span></div>)}
+          {tong_quan.don_gan_day.length === 0 && <div className="cine-dashboard-empty">Chưa có đơn hàng.</div>}</div>
+        </article>
+      </>}
+    </section>}
 
     {tab === "khach-hang" && <section className="cine-card cine-admin-section">
       <div className="cine-section-heading"><div><h2>Tài khoản khách hàng</h2><p>Khách hàng được quản lý riêng với nhân viên. Admin có thể sửa họ tên, email, số điện thoại, địa chỉ, khóa/kích hoạt hoặc xóa tài khoản.</p></div><span>{khachHang.length} khách hàng</span></div>

@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import * as argon2 from "argon2";
 import { CoSoDuLieuService } from "../co-so-du-lieu/co-so-du-lieu.service.js";
-import { TrangThaiNhanVien, TrangThaiPhanCa, VaiTro } from "../generated/prisma/client.js";
+import { TrangThaiDonHang, TrangThaiNhanVien, TrangThaiPhanCa, TrangThaiSanPham, VaiTro } from "../generated/prisma/client.js";
 import type { NguoiDungXacThuc } from "../xac-thuc/jwt.guard.js";
 import { CapNhatNguoiDungDto } from "./dto/cap-nhat-nguoi-dung.dto.js";
 import { CapNhatNhanVienDto } from "./dto/cap-nhat-nhan-vien.dto.js";
@@ -16,16 +16,145 @@ export class QuanTriService {
   constructor(private readonly db: CoSoDuLieuService) {}
 
   async tong_quan() {
-    const [nguoi_dung, khach_hang, nhan_vien, ca_lam_viec, phan_ca, don_hang, san_pham] = await Promise.all([
+    const MUI_GIO_VIET_NAM = 7 * 60 * 60 * 1000;
+    const now = new Date();
+    const ngayVietNam = (date: Date) => new Date(date.getTime() + MUI_GIO_VIET_NAM).toISOString().slice(0, 10);
+    const batDauNgay = (yyyyMmDd: string) => new Date(`${yyyyMmDd}T00:00:00+07:00`);
+    const truNgay = (soNgay: number) => {
+      const local = new Date(now.getTime() + MUI_GIO_VIET_NAM);
+      local.setUTCDate(local.getUTCDate() - soNgay);
+      return local.toISOString().slice(0, 10);
+    };
+
+    const hom_nay = ngayVietNam(now);
+    const tu_7_ngay = truNgay(6);
+    const tu_30_ngay = truNgay(29);
+    const bat_dau_hom_nay = batDauNgay(hom_nay);
+    const bat_dau_7_ngay = batDauNgay(tu_7_ngay);
+    const bat_dau_30_ngay = batDauNgay(tu_30_ngay);
+
+    const [nguoi_dung, khach_hang, nhan_vien, ca_lam_viec, phan_ca, don_hang, san_pham, don_30_ngay, trang_thai_don, khach_hang_30_ngay, ton_kho_thap, don_gan_day] = await Promise.all([
       this.db.nguoiDung.count(),
       this.db.nguoiDung.count({ where: { vai_tro: VaiTro.KHACH_HANG } }),
       this.db.nhanVien.count(),
       this.db.caLamViec.count(),
       this.db.phanCa.count(),
       this.db.donHang.count(),
-      this.db.sanPham.count()
+      this.db.sanPham.count(),
+      this.db.donHang.findMany({
+        where: { ngay_tao: { gte: bat_dau_30_ngay } },
+        orderBy: { ngay_tao: "asc" },
+        select: {
+          id: true,
+          ma_don_hang: true,
+          tong_tien: true,
+          trang_thai: true,
+          ngay_tao: true,
+          chi_tiet: { select: { ma_san_pham: true, ten_san_pham: true, so_luong: true, thanh_tien: true } }
+        }
+      }),
+      this.db.donHang.groupBy({ by: ["trang_thai"], _count: { _all: true } }),
+      this.db.nguoiDung.findMany({
+        where: { vai_tro: VaiTro.KHACH_HANG, ngay_tao: { gte: bat_dau_30_ngay } },
+        select: { ngay_tao: true }
+      }),
+      this.db.bienTheSanPham.findMany({
+        where: { dang_hien_thi: true, so_luong_ton: { lte: 5 }, san_pham: { trang_thai: TrangThaiSanPham.DANG_BAN } },
+        orderBy: [{ so_luong_ton: "asc" }, { ma_bien_the: "asc" }],
+        take: 10,
+        select: {
+          id: true,
+          ma_bien_the: true,
+          so_luong_ton: true,
+          san_pham: { select: { id: true, ma_san_pham: true, ten_san_pham: true } },
+          mau_sac: { select: { ten_mau: true } },
+          vat_lieu: { select: { ten_vat_lieu: true } }
+        }
+      }),
+      this.db.donHang.findMany({
+        orderBy: { ngay_tao: "desc" },
+        take: 8,
+        select: {
+          id: true,
+          ma_don_hang: true,
+          ho_ten_nguoi_nhan: true,
+          tong_tien: true,
+          trang_thai: true,
+          ngay_tao: true
+        }
+      })
     ]);
-    return { nguoi_dung, khach_hang, nhan_vien, ca_lam_viec, phan_ca, don_hang, san_pham };
+
+    const hoanTat = don_30_ngay.filter(d => d.trang_thai === TrangThaiDonHang.HOAN_TAT);
+    const trongKhoang = (date: Date, batDau: Date) => date >= batDau;
+    const tongTien = (ds: typeof hoanTat) => ds.reduce((sum, item) => sum + Number(item.tong_tien), 0);
+    const doanh_thu_hom_nay = tongTien(hoanTat.filter(d => trongKhoang(d.ngay_tao, bat_dau_hom_nay)));
+    const doanh_thu_7_ngay = tongTien(hoanTat.filter(d => trongKhoang(d.ngay_tao, bat_dau_7_ngay)));
+    const doanh_thu_30_ngay = tongTien(hoanTat);
+    const don_hom_nay = don_30_ngay.filter(d => trongKhoang(d.ngay_tao, bat_dau_hom_nay)).length;
+    const don_7_ngay = don_30_ngay.filter(d => trongKhoang(d.ngay_tao, bat_dau_7_ngay)).length;
+    const don_30_ngay_count = don_30_ngay.length;
+    const gia_tri_don_trung_binh_30_ngay = hoanTat.length ? Math.round(doanh_thu_30_ngay / hoanTat.length) : 0;
+
+    const doanh_thu_theo_ngay = Array.from({ length: 7 }, (_, index) => {
+      const dateKey = truNgay(6 - index);
+      const doanh_thu = hoanTat
+        .filter(d => ngayVietNam(d.ngay_tao) === dateKey)
+        .reduce((sum, item) => sum + Number(item.tong_tien), 0);
+      const so_don = don_30_ngay.filter(d => ngayVietNam(d.ngay_tao) === dateKey).length;
+      return { ngay: dateKey, doanh_thu, so_don };
+    });
+
+    const topMap = new Map<string, { ma_san_pham: string; ten_san_pham: string; so_luong: number; doanh_thu: number }>();
+    for (const order of don_30_ngay) {
+      if (order.trang_thai === TrangThaiDonHang.DA_HUY) continue;
+      for (const ct of order.chi_tiet) {
+        const current = topMap.get(ct.ma_san_pham) || { ma_san_pham: ct.ma_san_pham, ten_san_pham: ct.ten_san_pham, so_luong: 0, doanh_thu: 0 };
+        current.so_luong += ct.so_luong;
+        current.doanh_thu += Number(ct.thanh_tien);
+        topMap.set(ct.ma_san_pham, current);
+      }
+    }
+    const top_san_pham_30_ngay = Array.from(topMap.values()).sort((a, b) => b.so_luong - a.so_luong || b.doanh_thu - a.doanh_thu).slice(0, 5);
+
+    const khach_hang_moi_hom_nay = khach_hang_30_ngay.filter(x => x.ngay_tao >= bat_dau_hom_nay).length;
+    const khach_hang_moi_7_ngay = khach_hang_30_ngay.filter(x => x.ngay_tao >= bat_dau_7_ngay).length;
+    const khach_hang_moi_30_ngay = khach_hang_30_ngay.length;
+
+    const trang_thai = Object.fromEntries(Object.values(TrangThaiDonHang).map(status => [status, 0])) as Record<string, number>;
+    for (const item of trang_thai_don) trang_thai[item.trang_thai] = item._count._all;
+
+    return {
+      nguoi_dung,
+      khach_hang,
+      nhan_vien,
+      ca_lam_viec,
+      phan_ca,
+      don_hang,
+      san_pham,
+      ky_bao_cao: { hom_nay, tu_7_ngay, tu_30_ngay },
+      doanh_thu: {
+        hom_nay: doanh_thu_hom_nay,
+        bay_ngay: doanh_thu_7_ngay,
+        ba_muoi_ngay: doanh_thu_30_ngay,
+        gia_tri_don_trung_binh_30_ngay
+      },
+      don_hang_theo_ky: { hom_nay: don_hom_nay, bay_ngay: don_7_ngay, ba_muoi_ngay: don_30_ngay_count },
+      khach_hang_moi: { hom_nay: khach_hang_moi_hom_nay, bay_ngay: khach_hang_moi_7_ngay, ba_muoi_ngay: khach_hang_moi_30_ngay },
+      trang_thai_don_hang: trang_thai,
+      doanh_thu_theo_ngay,
+      top_san_pham_30_ngay,
+      ton_kho_thap: ton_kho_thap.map(item => ({
+        id: item.id,
+        ma_bien_the: item.ma_bien_the,
+        so_luong_ton: item.so_luong_ton,
+        ma_san_pham: item.san_pham.ma_san_pham,
+        ten_san_pham: item.san_pham.ten_san_pham,
+        mau_sac: item.mau_sac?.ten_mau || "Mặc định",
+        vat_lieu: item.vat_lieu?.ten_vat_lieu || "Mặc định"
+      })),
+      don_gan_day: don_gan_day.map(item => ({ ...item, tong_tien: Number(item.tong_tien) }))
+    };
   }
 
   async danh_sach_nguoi_dung() {

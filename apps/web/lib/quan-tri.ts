@@ -23,7 +23,26 @@ export type AdminNhanVien = { id: string; ma_nhan_vien: string; chuc_danh: strin
 export type CaLam = { id: string; ma_ca: string; ten_ca: string; gio_bat_dau: string; gio_ket_thuc: string; mau_hien_thi?: string | null; dang_hoat_dong: boolean };
 export type PhanCa = { id: string; ngay_lam: string; trang_thai: string; ghi_chu?: string | null; nhan_vien: AdminNhanVien; ca_lam_viec: CaLam };
 
-export const layTongQuan = () => goi<Record<string, number>>("/quan-tri/tong-quan");
+export type AdminTongQuan = {
+  nguoi_dung: number;
+  khach_hang: number;
+  nhan_vien: number;
+  ca_lam_viec: number;
+  phan_ca: number;
+  don_hang: number;
+  san_pham: number;
+  ky_bao_cao: { hom_nay: string; tu_7_ngay: string; tu_30_ngay: string };
+  doanh_thu: { hom_nay: number; bay_ngay: number; ba_muoi_ngay: number; gia_tri_don_trung_binh_30_ngay: number };
+  don_hang_theo_ky: { hom_nay: number; bay_ngay: number; ba_muoi_ngay: number };
+  khach_hang_moi: { hom_nay: number; bay_ngay: number; ba_muoi_ngay: number };
+  trang_thai_don_hang: Record<string, number>;
+  doanh_thu_theo_ngay: Array<{ ngay: string; doanh_thu: number; so_don: number }>;
+  top_san_pham_30_ngay: Array<{ ma_san_pham: string; ten_san_pham: string; so_luong: number; doanh_thu: number }>;
+  ton_kho_thap: Array<{ id: string; ma_bien_the: string; so_luong_ton: number; ma_san_pham: string; ten_san_pham: string; mau_sac: string; vat_lieu: string }>;
+  don_gan_day: Array<{ id: string; ma_don_hang: string; ho_ten_nguoi_nhan: string; tong_tien: number; trang_thai: string; ngay_tao: string }>;
+};
+
+export const layTongQuan = () => goi<AdminTongQuan>("/quan-tri/tong-quan");
 export const layNguoiDung = () => goi<AdminNguoiDung[]>("/quan-tri/nguoi-dung");
 export const capNhatNguoiDung = (id: string, payload: Partial<Pick<AdminNguoiDung, "thu_dien_tu" | "ho_ten" | "so_dien_thoai" | "dia_chi_mac_dinh" | "da_kich_hoat">>) => goi<AdminNguoiDung>(`/quan-tri/nguoi-dung/${id}/cap-nhat`, { method: "POST", body: JSON.stringify(payload) });
 export const kichHoatNguoiDung = (id: string) => goi<{ id: string; da_kich_hoat: boolean; thong_bao: string }>(`/quan-tri/nguoi-dung/${id}/kich-hoat`, { method: "POST" });

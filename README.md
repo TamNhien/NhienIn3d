@@ -1,6 +1,6 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v2.10.2** — 30/08/2026
+> Phiên bản hiện tại: **v2.11.0** — 30/08/2026
 
 NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **frontend Next.js** và **backend NestJS/Fastify** kết nối **PostgreSQL qua Prisma**.
 
@@ -19,7 +19,7 @@ NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **fro
 
 ## Giao diện dựng lại theo bố cục CineBooking Pro
 
-Bản source v2.10.2 tiếp tục dùng **frontend layout** theo cấu trúc CineBooking Pro, giữ nguyên nghiệp vụ NhienIn3d và làm lại đồng bộ các màn hình tài khoản/quản trị:
+Bản source v2.11.0 tiếp tục dùng **frontend layout** theo cấu trúc CineBooking Pro, giữ nguyên nghiệp vụ NhienIn3d và làm lại đồng bộ các màn hình tài khoản/quản trị:
 
 - Dùng `RootLayout` chung với **header sticky**, vùng nội dung `max-w-7xl`, **footer dùng chung** và menu drawer responsive; không còn lặp navbar ở từng route.
 - Bổ sung **Tailwind CSS 4 + `@tailwindcss/postcss`** giống lớp công nghệ frontend tham chiếu, đồng thời giữ toàn bộ CSS/logic nghiệp vụ cũ để tránh phá luồng sản phẩm, giỏ hàng, tài khoản và quản trị.
@@ -29,6 +29,7 @@ Bản source v2.10.2 tiếp tục dùng **frontend layout** theo cấu trúc Cin
 
 ## Điểm chính bản hiện tại
 
+- v2.11.0 bổ sung **Dashboard quản trị nâng cao** theo roadmap: doanh thu hôm nay/7 ngày/30 ngày, số đơn theo kỳ, giá trị đơn trung bình, khách hàng mới, trạng thái đơn, biểu đồ doanh thu 7 ngày, top sản phẩm 30 ngày, tồn kho thấp và 8 đơn hàng gần nhất. Toàn bộ endpoint tổng quan tiếp tục nằm sau `JwtGuard + VaiTroGuard` và chỉ `ADMIN` truy cập được.
 - v2.10.0 cho phép **chỉnh sửa/xóa phân ca đã xếp** ngay trên lịch: đổi nhân viên, ngày làm, mẫu ca, ghi chú; mỗi dòng lịch có nút **Chỉnh sửa** và **Xóa**.
 - v2.10.1 tách **Khách hàng** và **Nhân viên bán hàng** thành hai khu quản trị riêng; khách hàng được sửa họ tên/email/SĐT/địa chỉ, đồng thời ca làm và phân ca chuyển sang endpoint POST cập nhật ổn định và xác minh lại PostgreSQL sau khi lưu.
 - v2.10.2 sửa lỗi **Lưu thay đổi hồ sơ/địa chỉ** và **Đổi mật khẩu** báo `Failed to fetch`: Fastify CORS cho phép tường minh `GET/HEAD/POST/PUT/PATCH/DELETE/OPTIONS`, frontend tài khoản chuyển hai thao tác này sang POST alias ổn định; PATCH cũ vẫn giữ tương thích.
@@ -767,17 +768,27 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 - Không có migration database mới.
 - Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm test` → `npm run typecheck` → `npm run build` → Docker Compose → `.\scripts\release.ps1 v2.10.2`.
 
+## v2.11.0 — 30/08/2026
+
+- Thêm tab **Tổng quan** làm màn hình mặc định của Admin Dashboard, giữ phong cách dark glass/CineBooking Pro và responsive cho desktop/mobile.
+- `GET /api/v1/quan-tri/tong-quan` mở rộng thống kê doanh thu **hôm nay / 7 ngày / 30 ngày**; doanh thu chỉ tính đơn `HOAN_TAT` để không tính nhầm đơn đang xử lý hoặc đã hủy.
+- Bổ sung số đơn theo kỳ, giá trị đơn hoàn tất trung bình 30 ngày, khách hàng mới hôm nay/7 ngày/30 ngày và thống kê toàn bộ trạng thái đơn hàng.
+- Bổ sung chuỗi **doanh thu 7 ngày theo múi giờ Việt Nam (+07:00)** để dashboard hiển thị bar chart không cần thêm thư viện chart.
+- Bổ sung **Top 5 sản phẩm 30 ngày** theo số lượng bán (loại đơn đã hủy), **tồn kho thấp ≤ 5** cho biến thể đang hiển thị và **8 đơn hàng gần nhất**.
+- Dashboard tiếp tục được bảo vệ ở controller bằng `JwtGuard`, `VaiTroGuard` và `@VaiTroChoPhep(VaiTro.ADMIN)`; hiện tại chỉ Admin có quyền xem số liệu kinh doanh.
+- Không có migration database mới; toàn bộ số liệu được tổng hợp trực tiếp từ PostgreSQL hiện có.
+- Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm test` → `npm run typecheck` → `npm run build` → Docker Compose → `.\scripts\release.ps1 v2.11.0`.
+
 ---
 
 # Lộ trình tiếp theo
 
-## v2.11.0
+## v2.12.0
 
-- Dashboard thống kê quản trị nâng cao.
-- Doanh thu theo ngày/7 ngày/30 ngày.
-- Số đơn, trạng thái đơn, giá trị đơn trung bình.
-- Top sản phẩm, tồn kho thấp, khách hàng mới.
-- Phân quyền dashboard theo vai trò.
+- Quản trị đơn hàng chi tiết: lọc, xem, cập nhật trạng thái và lịch sử xử lý.
+- Quản trị sản phẩm/tồn kho ở mức thao tác cơ bản.
+- Audit log thao tác Admin trên khách hàng, nhân viên, ca làm và đơn hàng.
+- Bổ sung E2E regression cho các luồng cập nhật dữ liệu đã từng phát sinh lỗi.
 
 ## v3.0.0
 
