@@ -1,7 +1,7 @@
 {
   "name": "nhienin3d",
   "private": true,
-  "version": "2.12.2",
+  "version": "2.14.0",
   "description": "NhienIn3d - cửa hàng sản phẩm in 3D hiện đại",
   "engines": {
     "node": ">=24.0.0"

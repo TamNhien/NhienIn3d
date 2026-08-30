@@ -1,6 +1,6 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v2.12.2** — 30/08/2026
+> Phiên bản hiện tại: **v2.14.0** — 30/08/2026
 
 NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **frontend Next.js** và **backend NestJS/Fastify** kết nối **PostgreSQL qua Prisma**.
 
@@ -19,7 +19,7 @@ NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **fro
 
 ## Giao diện dựng lại theo bố cục CineBooking Pro
 
-Bản source v2.12.2 tiếp tục dùng **frontend layout** theo cấu trúc CineBooking Pro, giữ nguyên nghiệp vụ NhienIn3d và làm lại đồng bộ các màn hình tài khoản/quản trị:
+Bản source v2.14.0 tiếp tục dùng **frontend layout** theo cấu trúc CineBooking Pro, giữ nguyên nghiệp vụ NhienIn3d và tách rõ quản lý **Sản phẩm** với **Kho** trong Admin:
 
 - Dùng `RootLayout` chung với **header sticky**, vùng nội dung `max-w-7xl`, **footer dùng chung** và menu drawer responsive; không còn lặp navbar ở từng route.
 - Bổ sung **Tailwind CSS 4 + `@tailwindcss/postcss`** giống lớp công nghệ frontend tham chiếu, đồng thời giữ toàn bộ CSS/logic nghiệp vụ cũ để tránh phá luồng sản phẩm, giỏ hàng, tài khoản và quản trị.
@@ -29,6 +29,10 @@ Bản source v2.12.2 tiếp tục dùng **frontend layout** theo cấu trúc Cin
 
 ## Điểm chính bản hiện tại
 
+- v2.14.0 tách tab **Sản phẩm** và **Kho**: Sản phẩm chỉ phụ trách thêm/sửa/xóa, ảnh và thông tin bán hàng; Kho chỉ phụ trách tồn kho/hiển thị từng biến thể.
+- Admin có thể **chọn ảnh JPEG/PNG/WebP trực tiếp từ máy**. Frontend crop/căn giữa và chuẩn hóa ảnh thành **1000 × 800 (tỉ lệ 5:4)** trước khi lưu, đồng bộ đúng khung ảnh product card; ảnh tải lên được lưu cùng dữ liệu sản phẩm trong PostgreSQL dưới dạng data URL nên không phụ thuộc đường dẫn file tạm trên máy người dùng.
+- Hai sản phẩm `N3D-ORG-011` và `N3D-MAKER-012` chuyển sang **ảnh chụp sản phẩm thật** từ trang tham khảo MakerWorld thay cho SVG minh họa v2.12.3.
+- Seed sản phẩm/biến thể vẫn **bootstrap-only**: không ghi đè ảnh, giá, tồn kho, trạng thái hoặc nội dung Admin đã chỉnh; sản phẩm mẫu bị Admin xóa cũng không tự xuất hiện lại sau khi restart Docker/chạy seed.
 - v2.12.0 bổ sung **Quản trị đơn hàng**: tìm kiếm/lọc, xem chi tiết, cập nhật trạng thái theo luồng hợp lệ và xem lịch sử xử lý; khi hủy đơn hệ thống hoàn tồn kho các biến thể có mã được lưu trong `tuy_chon`.
 - v2.12.0 bổ sung **Quản trị sản phẩm & tồn kho** ở mức cơ bản: sửa tên, mô tả ngắn, giá bán, trạng thái sản phẩm; sửa tồn kho và bật/tắt hiển thị từng biến thể.
 - v2.12.1 tinh gọn tab **Sản phẩm & kho**: danh sách sản phẩm chuyển thành **ô chọn xổ xuống**, chỉ hiển thị một sản phẩm được chọn để chỉnh sửa; tìm kiếm vẫn lọc danh sách lựa chọn.
@@ -815,16 +819,50 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 - Cập nhật thống kê trang chủ từ `10` thành `12 Sản phẩm mẫu`; không có migration database mới, seed idempotent tự tạo hai sản phẩm mới khi chạy lại.
 - Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm test` → `npm run typecheck` → `npm run build` → Docker Compose → `.\scripts\release.ps1 v2.12.2`.
 
+## v2.12.3 — 30/08/2026
+
+- Sửa hai sản phẩm mới của v2.12.2 bị dùng lại ảnh của sản phẩm cũ: `N3D-ORG-011` không còn trùng ảnh `N3D-ORG-008`, `N3D-MAKER-012` không còn trùng ảnh `N3D-MAKER-010`.
+- Thêm hai ảnh minh họa local riêng trong `apps/web/public/images`: `gridfinity-2x3-pen-holder.svg` và `raspberry-pi-5-40mm-fan-case.svg`, giúp storefront hiển thị đúng hai thiết kế khác nhau và không phụ thuộc remote image cho hai sản phẩm này.
+- Seed PostgreSQL tiếp tục idempotent: chạy lại seed sẽ cập nhật `hinh_anh_san_pham` của hai mã sản phẩm mới sang ảnh riêng mà không tạo bản ghi sản phẩm trùng.
+- Thêm regression test ngăn 12 sản phẩm mẫu tái sử dụng đường dẫn ảnh chính; storefront vẫn giữ 6 sản phẩm/hàng và 2 hàng trên desktop.
+- Không có migration database mới.
+- Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm test` → `npm run typecheck` → `npm run build` → Docker Compose → `.\scripts\release.ps1 v2.12.3`.
+
+## v2.13.0 — 30/08/2026
+
+- Nâng **Sản phẩm & tồn kho** thành CRUD sản phẩm đầy đủ cho Admin: `POST /api/v1/quan-tri/san-pham` để tạo, `POST /api/v1/quan-tri/san-pham/:id/cap-nhat` để sửa và `POST /api/v1/quan-tri/san-pham/:id/xoa` (kèm DELETE alias) để xóa.
+- Form tạo sản phẩm cho phép chọn mã sản phẩm, tên, danh mục, mô tả, giá, kích thước, khối lượng, thời gian in, trạng thái và tồn kho ban đầu; backend tự tạo một biến thể mặc định để sản phẩm có thể dùng ngay trong luồng tồn kho/giỏ hàng.
+- Thêm **tải ảnh từ máy** cho cả tạo mới và chỉnh sửa. Chỉ nhận JPEG/PNG/WebP; frontend dùng Canvas crop/căn giữa về **1000 × 800**, nén JPEG và giới hạn kích thước payload trước khi gửi API.
+- Ảnh Admin tải lên được lưu trong `hinh_anh_san_pham` dưới dạng data URL, vì vậy F5/restart Web không làm mất ảnh và card storefront luôn render cùng tỉ lệ 5:4 với sản phẩm hiện có.
+- Khi xóa sản phẩm do Admin tự tạo, backend dọn các dòng giỏ hàng liên quan rồi xóa sản phẩm/ảnh/biến thể bằng transaction. Với sản phẩm mẫu seed, hệ thống đánh dấu xóa mềm để giữ tham chiếu lịch sử và bảo đảm seed không khôi phục lại.
+- Seed sản phẩm và biến thể chuyển sang **bootstrap-only (`update: {}`)**, không ghi đè giá/tồn kho/ảnh/trạng thái đã được Admin chỉnh. Hai ảnh SVG minh họa của `N3D-ORG-011` và `N3D-MAKER-012` được nâng một lần sang **ảnh sản phẩm thật từ MakerWorld**; nếu Admin đã tải ảnh riêng thì seed không thay thế.
+- Bổ sung audit `ADMIN_TAO_SAN_PHAM`, `ADMIN_CAP_NHAT_SAN_PHAM`, `ADMIN_XOA_SAN_PHAM`; tăng Fastify `bodyLimit` lên 3 MB để nhận ảnh đã chuẩn hóa an toàn.
+- Không thay đổi Prisma schema nên **không có migration database mới**.
+- Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm test` → `npm run typecheck` → `npm run build` → Docker Compose → `.\scripts\release.ps1 v2.13.0`.
+
+---
+
+## v2.14.0 — 30/08/2026
+
+- Tách khu vực **Sản phẩm** và **Kho** thành hai tab độc lập trong Admin Dashboard.
+- Tab **Sản phẩm** chỉ còn nghiệp vụ catalog: thêm sản phẩm, chỉnh sửa thông tin/ảnh, xóa sản phẩm; không còn bảng tồn kho nằm lẫn dưới form sản phẩm.
+- Form tạo sản phẩm không còn trường `Tồn kho ban đầu`; sản phẩm mới tạo một biến thể mặc định với tồn kho **0** và Admin nhập số lượng tại tab Kho.
+- Tab **Kho** hiển thị toàn bộ biến thể theo dạng bảng riêng với tìm kiếm theo mã sản phẩm/tên/mã biến thể/vật liệu/màu, chỉnh số lượng, bật/tắt hiển thị và lưu từng dòng.
+- Bổ sung KPI kho: tổng biến thể, tổng số lượng tồn, số biến thể sắp hết (1–5) và hết hàng (0), kèm badge tình trạng `CÒN HÀNG / SẮP HẾT / HẾT HÀNG`.
+- Từ form sản phẩm có nút **Mở tồn kho** để chuyển sang Kho và tự lọc đúng mã sản phẩm đang chỉnh; từ Kho có nút quay lại **Quản lý sản phẩm**.
+- Không thay đổi Prisma schema/API tồn kho hiện có nên **không có migration database mới**.
+- Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm test` → `npm run typecheck` → `npm run build` → Docker Compose → `.\scripts\release.ps1 v2.14.0`.
+
 ---
 
 # Lộ trình tiếp theo
 
-## v2.13.0
+## v2.15.0
 
-- CRUD danh mục/sản phẩm mở rộng, quản lý hình ảnh và biến thể đầy đủ.
+- CRUD danh mục và quản lý biến thể nâng cao (vật liệu/màu/mã biến thể).
 - Duyệt/ẩn đánh giá sản phẩm trong Admin.
 - Xuất báo cáo đơn hàng/doanh thu/tồn kho theo CSV.
-- Mở rộng regression test cho luồng quản trị thương mại điện tử.
+- Mở rộng regression test/E2E cho luồng quản trị thương mại điện tử.
 
 ## v3.0.0
 

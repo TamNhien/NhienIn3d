@@ -54,6 +54,7 @@ apps/api/src/quan-tri/dto/cap-nhat-trang-thai-don-hang.dto.ts
 apps/api/src/quan-tri/dto/tao-ca-lam.dto.ts
 apps/api/src/quan-tri/dto/tao-nhan-vien.dto.ts
 apps/api/src/quan-tri/dto/tao-phan-ca.dto.ts
+apps/api/src/quan-tri/dto/tao-san-pham-quan-tri.dto.ts
 apps/api/src/quan-tri/quan-tri.controller.ts
 apps/api/src/quan-tri/quan-tri.module.ts
 apps/api/src/quan-tri/quan-tri.service.ts

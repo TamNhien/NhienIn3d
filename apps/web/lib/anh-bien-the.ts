@@ -12,7 +12,7 @@ const MAT_NA_THEO_SLUG: Record<string, string> = {
 };
 
 export function anhBienTheUrl(duong_dan: string, anh_goc: string, ma_hex?: string) {
-  if (!anh_goc || !ma_hex) return anh_goc;
+  if (!anh_goc || !ma_hex || anh_goc.startsWith("data:image/")) return anh_goc;
   const points = MAT_NA_THEO_SLUG[duong_dan] || "8,84 8,24 24,10 76,10 92,24 92,84 76,94 24,94";
   const q = new URLSearchParams({ src: anh_goc, mau: ma_hex, points });
   return `/api/anh-bien-the?${q.toString()}`;

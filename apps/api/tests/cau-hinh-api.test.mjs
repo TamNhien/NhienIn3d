@@ -57,18 +57,18 @@ test("seed v2.12.0 theo doi 24 bang va cho phep du lieu van hanh bi xoa", () => 
     assert.match(seed, new RegExp(`${bang}: await db\\.`));
   }
   assert.match(seed, /so_luong < 10/);
-  assert.match(seed, /PHIEN_BAN_HIEN_TAI = "SEED_V2122_SAN_PHAM_12_GRID_6"/);
+  assert.match(seed, /PHIEN_BAN_HIEN_TAI = "SEED_V2140_TACH_SAN_PHAM_KHO"/);
   assert.match(seed, /bang_bien_dong/);
   assert.match(seed, /SEED_V286_TAI_KHOAN_MAT_KHAU_BRAVE/);
   assert.match(seed, /\/images\/khoi-lap-phuong-banh-rang\.jpg/);
 });
 
 
-test("API hien thi dung version v2.12.2 o health va OpenAPI", () => {
+test("API hien thi dung version v2.14.0 o health va OpenAPI", () => {
   const health = readFileSync("src/suc-khoe/suc-khoe.controller.ts", "utf8");
   const main = readFileSync("src/main.ts", "utf8");
-  assert.match(health, /phien_ban: "v2\.12\.2"/);
-  assert.match(main, /setVersion\("2\.12\.2"\)/);
+  assert.match(health, /phien_ban: "v2\.14\.0"/);
+  assert.match(main, /setVersion\("2\.14\.0"\)/);
 });
 
 test("V2 co migration gio hang, thanh toan va dia chi", () => {
@@ -520,4 +520,24 @@ test("v2.12.0 API co lich su don hang quan tri san pham ton kho va audit", () =>
   assert.match(service, /startsWith: "ADMIN_"/);
   assert.match(checkout, /Khách hàng tạo đơn hàng/u);
   assert.match(seed, /Khởi tạo lịch sử đơn hàng mẫu v2\.12\.0/u);
+});
+
+
+test("v2.13.0 API cho Admin tao sua xoa san pham va luu anh local", () => {
+  const controller = readFileSync("src/quan-tri/quan-tri.controller.ts", "utf8");
+  const service = readFileSync("src/quan-tri/quan-tri.service.ts", "utf8");
+  const dto = readFileSync("src/quan-tri/dto/tao-san-pham-quan-tri.dto.ts", "utf8");
+  const seed = readFileSync("prisma/seed.ts", "utf8");
+  const main = readFileSync("src/main.ts", "utf8");
+  assert.match(controller, /@Post\("san-pham"\)/);
+  assert.match(controller, /@Post\("san-pham\/:id\/cap-nhat"\)/);
+  assert.match(controller, /@Post\("san-pham\/:id\/xoa"\)/);
+  assert.match(dto, /anh_chinh_data_url/);
+  assert.match(service, /data:image/);
+  assert.match(service, /jpeg\|png\|webp/);
+  assert.match(service, /ADMIN_TAO_SAN_PHAM/);
+  assert.match(service, /ADMIN_XOA_SAN_PHAM/);
+  assert.match(service, /__ADMIN_DELETED__:/);
+  assert.match(seed, /update: \{\}/);
+  assert.match(main, /bodyLimit: 3 \* 1024 \* 1024/);
 });

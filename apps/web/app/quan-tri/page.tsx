@@ -11,6 +11,7 @@ import {
   AdminDonHang,
   AdminDonHangChiTiet,
   AdminSanPham,
+  AdminDanhMuc,
   NhatKyAdmin,
   CaLam,
   capNhatCaLam,
@@ -30,11 +31,14 @@ import {
   layDonHangAdmin,
   layChiTietDonHangAdmin,
   laySanPhamAdmin,
+  layDanhMucAdmin,
   layNhatKyAdmin,
   PhanCa,
   taoCaLam,
   taoNhanVien,
   taoPhanCa,
+  taoSanPhamAdmin,
+  xoaSanPhamAdmin,
   xoaCaLam,
   xoaNguoiDung,
   xoaPhanCa
@@ -63,10 +67,44 @@ const nhanSuKienAudit = (loai: string) => ({
   ADMIN_CAP_NHAT_NGUOI_DUNG: "Cập nhật khách hàng", ADMIN_KICH_HOAT_NGUOI_DUNG: "Kích hoạt tài khoản", ADMIN_KHOA_NGUOI_DUNG: "Khóa tài khoản", ADMIN_XOA_NGUOI_DUNG: "Xóa tài khoản",
   ADMIN_TAO_NHAN_VIEN: "Tạo nhân viên", ADMIN_CAP_NHAT_NHAN_VIEN: "Cập nhật nhân viên", ADMIN_TAO_CA_LAM: "Tạo ca", ADMIN_CAP_NHAT_CA_LAM: "Cập nhật ca", ADMIN_XOA_CA_LAM: "Xóa ca",
   ADMIN_TAO_PHAN_CA: "Tạo phân ca", ADMIN_CAP_NHAT_PHAN_CA: "Cập nhật phân ca", ADMIN_XOA_PHAN_CA: "Xóa phân ca", ADMIN_CAP_NHAT_DON_HANG: "Cập nhật đơn hàng",
-  ADMIN_CAP_NHAT_SAN_PHAM: "Cập nhật sản phẩm", ADMIN_CAP_NHAT_TON_KHO: "Cập nhật tồn kho"
+  ADMIN_TAO_SAN_PHAM: "Tạo sản phẩm", ADMIN_CAP_NHAT_SAN_PHAM: "Cập nhật sản phẩm", ADMIN_XOA_SAN_PHAM: "Xóa sản phẩm", ADMIN_CAP_NHAT_TON_KHO: "Cập nhật tồn kho"
 }[loai] || loai.replaceAll("_", " "));
 
-type TabQuanTri = "tong-quan" | "don-hang" | "san-pham" | "khach-hang" | "nhan-vien" | "tao-nhan-vien" | "ca-lam" | "xep-ca" | "nhat-ky";
+async function chuanHoaAnhSanPham(file: File) {
+  if (!file.type.startsWith("image/")) throw new Error("Vui lòng chọn tệp ảnh JPEG, PNG hoặc WebP.");
+  if (file.size > 15 * 1024 * 1024) throw new Error("Ảnh gốc phải nhỏ hơn 15 MB.");
+  const src = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("Không đọc được ảnh từ máy."));
+    reader.readAsDataURL(file);
+  });
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const element = new Image();
+    element.onload = () => resolve(element);
+    element.onerror = () => reject(new Error("Tệp ảnh không hợp lệ."));
+    element.src = src;
+  });
+  const canvas = document.createElement("canvas");
+  canvas.width = 1000;
+  canvas.height = 800;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Trình duyệt không hỗ trợ xử lý ảnh.");
+  ctx.fillStyle = "#eef2f7";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const scale = Math.max(canvas.width / img.naturalWidth, canvas.height / img.naturalHeight);
+  const w = img.naturalWidth * scale;
+  const h = img.naturalHeight * scale;
+  ctx.drawImage(img, (canvas.width - w) / 2, (canvas.height - h) / 2, w, h);
+  let quality = 0.88;
+  let data = canvas.toDataURL("image/jpeg", quality);
+  while (data.length > 1500000 && quality > 0.58) { quality -= 0.08; data = canvas.toDataURL("image/jpeg", quality); }
+  if (data.length > 1750000) throw new Error("Ảnh vẫn quá lớn sau khi chuẩn hóa. Hãy chọn ảnh khác.");
+  return data;
+}
+
+
+type TabQuanTri = "tong-quan" | "don-hang" | "san-pham" | "kho" | "khach-hang" | "nhan-vien" | "tao-nhan-vien" | "ca-lam" | "xep-ca" | "nhat-ky";
 
 export default function QuanTriPage() {
   const [tai_khoan, setTaiKhoan] = useState<TaiKhoan | null | undefined>(undefined);
@@ -78,6 +116,7 @@ export default function QuanTriPage() {
   const [don_hang, setDonHang] = useState<AdminDonHang[]>([]);
   const [don_chon, setDonChon] = useState<AdminDonHangChiTiet | null>(null);
   const [san_pham_qt, setSanPhamQt] = useState<AdminSanPham[]>([]);
+  const [danh_muc_qt, setDanhMucQt] = useState<AdminDanhMuc[]>([]);
   const [nhat_ky, setNhatKy] = useState<NhatKyAdmin[]>([]);
   const [thong_bao, setThongBao] = useState("");
   const [tab, setTab] = useState<TabQuanTri>("tong-quan");
@@ -89,7 +128,12 @@ export default function QuanTriPage() {
   const [don_trang_thai_moi, setDonTrangThaiMoi] = useState("");
   const [don_ghi_chu, setDonGhiChu] = useState("");
   const [san_pham_tim_kiem, setSanPhamTimKiem] = useState("");
+  const [kho_tim_kiem, setKhoTimKiem] = useState("");
   const [san_pham_chon_id, setSanPhamChonId] = useState("");
+  const [tao_san_pham_mo, setTaoSanPhamMo] = useState(false);
+  const [anh_sp_cho_luu, setAnhSpChoLuu] = useState<Record<string, string>>({});
+  const [anh_sp_moi, setAnhSpMoi] = useState("");
+  const [sp_moi, setSpMoi] = useState({ ma_san_pham: "", ten_san_pham: "", danh_muc_id: "", mo_ta_ngan: "", gia_ban: 0, kich_thuoc: "", khoi_luong_gam: 0, thoi_gian_in_gio: 0, trang_thai: "DANG_BAN" });
   const [nhat_ky_tim_kiem, setNhatKyTimKiem] = useState("");
 
   const [nv, setNv] = useState({ thu_dien_tu: "", ho_ten: "", so_dien_thoai: "", mat_khau: "", xac_nhan_mat_khau: "", ma_nhan_vien: "", ngay_vao_lam: homNay() });
@@ -102,7 +146,7 @@ export default function QuanTriPage() {
     const tk = await layTaiKhoan();
     setTaiKhoan(tk);
     if (!tk || tk.vai_tro !== "ADMIN") return;
-    const [tq, nd, nvData, caData, pcData, donData, spData, nkData] = await Promise.all([layTongQuan(), layNguoiDung(), layNhanVien(), layCaLam(), layPhanCa(), layDonHangAdmin(), laySanPhamAdmin(), layNhatKyAdmin()]);
+    const [tq, nd, nvData, caData, pcData, donData, spData, dmData, nkData] = await Promise.all([layTongQuan(), layNguoiDung(), layNhanVien(), layCaLam(), layPhanCa(), layDonHangAdmin(), laySanPhamAdmin(), layDanhMucAdmin(), layNhatKyAdmin()]);
     setTongQuan(tq);
     setNguoiDung(nd);
     setNhanVien(nvData);
@@ -110,6 +154,8 @@ export default function QuanTriPage() {
     setPhanCa(pcData);
     setDonHang(donData);
     setSanPhamQt(spData);
+    setDanhMucQt(dmData);
+    setSpMoi(x => ({ ...x, danh_muc_id: x.danh_muc_id || dmData[0]?.id || "" }));
     setNhatKy(nkData);
     setPc(x => ({ ...x, nhan_vien_id: x.nhan_vien_id || nvData[0]?.id || "", ca_lam_viec_id: x.ca_lam_viec_id || caData[0]?.id || "" }));
   }, []);
@@ -402,14 +448,70 @@ export default function QuanTriPage() {
     setSanPhamQt(ds => ds.map(sp => sp.id === san_pham_id ? { ...sp, bien_the: sp.bien_the.map(bt => bt.id === bien_the_id ? { ...bt, ...patch } : bt) } : sp));
   }
 
+  async function chonAnhSanPhamMoi(file?: File) {
+    if (!file) return;
+    setDangXuLy("anh-sp-moi"); setThongBao("");
+    try { setAnhSpMoi(await chuanHoaAnhSanPham(file)); }
+    catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể xử lý ảnh"); }
+    finally { setDangXuLy(null); }
+  }
+
+  async function chonAnhSanPhamCoSan(id: string, file?: File) {
+    if (!file) return;
+    setDangXuLy(`anh-${id}`); setThongBao("");
+    try {
+      const data = await chuanHoaAnhSanPham(file);
+      setAnhSpChoLuu(x => ({ ...x, [id]: data }));
+    } catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể xử lý ảnh"); }
+    finally { setDangXuLy(null); }
+  }
+
+  async function taoSanPhamMoi(e: FormEvent) {
+    e.preventDefault();
+    if (!sp_moi.danh_muc_id) { setThongBao("Hãy chọn danh mục sản phẩm."); return; }
+    if (!anh_sp_moi) { setThongBao("Hãy chọn một ảnh sản phẩm từ máy."); return; }
+    setDangXuLy("tao-san-pham"); setThongBao("");
+    try {
+      const da_tao = await taoSanPhamAdmin({
+        ma_san_pham: sp_moi.ma_san_pham.trim(), ten_san_pham: sp_moi.ten_san_pham.trim(), danh_muc_id: sp_moi.danh_muc_id,
+        mo_ta_ngan: sp_moi.mo_ta_ngan.trim(), gia_ban: Number(sp_moi.gia_ban), kich_thuoc: sp_moi.kich_thuoc.trim(),
+        khoi_luong_gam: Number(sp_moi.khoi_luong_gam) || 0, thoi_gian_in_gio: Number(sp_moi.thoi_gian_in_gio) || 0,
+        trang_thai: sp_moi.trang_thai, so_luong_ton: 0, anh_chinh_data_url: anh_sp_moi
+      });
+      const [ds, tq, nk] = await Promise.all([laySanPhamAdmin(), layTongQuan(), layNhatKyAdmin()]);
+      setSanPhamQt(ds); setTongQuan(tq); setNhatKy(nk); setSanPhamChonId(da_tao.id);
+      setSpMoi(x => ({ ma_san_pham: "", ten_san_pham: "", danh_muc_id: x.danh_muc_id || danh_muc_qt[0]?.id || "", mo_ta_ngan: "", gia_ban: 0, kich_thuoc: "", khoi_luong_gam: 0, thoi_gian_in_gio: 0, trang_thai: "DANG_BAN" }));
+      setAnhSpMoi(""); setTaoSanPhamMo(false);
+      setThongBao(`Đã tạo sản phẩm ${da_tao.ma_san_pham}. Ảnh đã được chuẩn hóa 1000×800. Tồn kho khởi tạo 0; cập nhật tại tab Kho.`);
+    } catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể tạo sản phẩm"); }
+    finally { setDangXuLy(null); }
+  }
+
   async function luuSanPham(item: AdminSanPham) {
     setDangXuLy(`sp-${item.id}`); setThongBao("");
     try {
-      await capNhatSanPhamAdmin(item.id, { ten_san_pham: item.ten_san_pham.trim(), mo_ta_ngan: item.mo_ta_ngan?.trim() || "", gia_ban: Number(item.gia_ban), trang_thai: item.trang_thai });
+      await capNhatSanPhamAdmin(item.id, {
+        ten_san_pham: item.ten_san_pham.trim(), danh_muc_id: item.danh_muc.id, mo_ta_ngan: item.mo_ta_ngan?.trim() || "",
+        gia_ban: Number(item.gia_ban), kich_thuoc: item.kich_thuoc?.trim() || "", khoi_luong_gam: Number(item.khoi_luong_gam) || 0,
+        thoi_gian_in_gio: Number(item.thoi_gian_in_gio) || 0, trang_thai: item.trang_thai, anh_chinh_data_url: anh_sp_cho_luu[item.id]
+      });
       const [ds, tq, nk] = await Promise.all([laySanPhamAdmin(), layTongQuan(), layNhatKyAdmin()]);
       setSanPhamQt(ds); setTongQuan(tq); setNhatKy(nk);
-      setThongBao(`Đã lưu sản phẩm ${item.ma_san_pham}.`);
+      setAnhSpChoLuu(x => { const next = { ...x }; delete next[item.id]; return next; });
+      setThongBao(`Đã lưu sản phẩm ${item.ma_san_pham}${anh_sp_cho_luu[item.id] ? " và ảnh mới" : ""}.`);
     } catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể cập nhật sản phẩm"); }
+    finally { setDangXuLy(null); }
+  }
+
+  async function xoaSanPham(item: AdminSanPham) {
+    if (!window.confirm(`Xóa sản phẩm ${item.ma_san_pham} · ${item.ten_san_pham}? Sản phẩm sẽ không còn hiển thị trên cửa hàng.`)) return;
+    setDangXuLy(`xoa-sp-${item.id}`); setThongBao("");
+    try {
+      const kq = await xoaSanPhamAdmin(item.id);
+      const [ds, tq, nk] = await Promise.all([laySanPhamAdmin(), layTongQuan(), layNhatKyAdmin()]);
+      setSanPhamQt(ds); setTongQuan(tq); setNhatKy(nk); setSanPhamChonId(ds[0]?.id || "");
+      setThongBao(kq.thong_bao);
+    } catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể xóa sản phẩm"); }
     finally { setDangXuLy(null); }
   }
 
@@ -436,6 +538,21 @@ export default function QuanTriPage() {
   const khachHang = useMemo(() => nguoi_dung.filter(x => x.vai_tro === "KHACH_HANG"), [nguoi_dung]);
   const sanPhamDaLoc = useMemo(() => { const q = san_pham_tim_kiem.trim().toLocaleLowerCase("vi"); return q ? san_pham_qt.filter(x => `${x.ma_san_pham} ${x.ten_san_pham} ${x.danh_muc.ten_danh_muc}`.toLocaleLowerCase("vi").includes(q)) : san_pham_qt; }, [san_pham_qt, san_pham_tim_kiem]);
   const sanPhamDangChon = useMemo(() => sanPhamDaLoc.find(x => x.id === san_pham_chon_id) || sanPhamDaLoc[0] || null, [sanPhamDaLoc, san_pham_chon_id]);
+  const danhSachKho = useMemo(() => {
+    const q = kho_tim_kiem.trim().toLocaleLowerCase("vi");
+    const ds = san_pham_qt.flatMap(sp => sp.bien_the.map(bt => ({ san_pham: sp, bien_the: bt })));
+    return (q ? ds.filter(item => `${item.san_pham.ma_san_pham} ${item.san_pham.ten_san_pham} ${item.bien_the.ma_bien_the} ${item.bien_the.vat_lieu?.ten_vat_lieu || ""} ${item.bien_the.mau_sac?.ten_mau || ""}`.toLocaleLowerCase("vi").includes(q)) : ds)
+      .sort((a, b) => `${a.san_pham.ma_san_pham}-${a.bien_the.ma_bien_the}`.localeCompare(`${b.san_pham.ma_san_pham}-${b.bien_the.ma_bien_the}`, "vi"));
+  }, [san_pham_qt, kho_tim_kiem]);
+  const thongKeKho = useMemo(() => {
+    const ds = san_pham_qt.flatMap(sp => sp.bien_the);
+    return {
+      bien_the: ds.length,
+      tong_ton: ds.reduce((tong, bt) => tong + Number(bt.so_luong_ton || 0), 0),
+      sap_het: ds.filter(bt => bt.so_luong_ton > 0 && bt.so_luong_ton <= 5).length,
+      het_hang: ds.filter(bt => bt.so_luong_ton <= 0).length
+    };
+  }, [san_pham_qt]);
   const nhatKyDaLoc = useMemo(() => { const q = nhat_ky_tim_kiem.trim().toLocaleLowerCase("vi"); return q ? nhat_ky.filter(x => `${x.loai_su_kien} ${x.nguoi_thuc_hien?.ho_ten || ""} ${x.nguoi_thuc_hien?.thu_dien_tu || ""} ${JSON.stringify(x.chi_tiet)}`.toLocaleLowerCase("vi").includes(q)) : nhat_ky; }, [nhat_ky, nhat_ky_tim_kiem]);
 
   const thongKe = useMemo(() => [
@@ -472,7 +589,8 @@ export default function QuanTriPage() {
   const tabs: Array<[TabQuanTri, string]> = [
     ["tong-quan", "Tổng quan"],
     ["don-hang", "Đơn hàng"],
-    ["san-pham", "Sản phẩm & kho"],
+    ["san-pham", "Sản phẩm"],
+    ["kho", "Kho"],
     ["khach-hang", "Khách hàng"],
     ["nhan-vien", "Nhân viên bán hàng"],
     ["tao-nhan-vien", "Tạo nhân viên bán hàng"],
@@ -483,7 +601,7 @@ export default function QuanTriPage() {
 
   return <main className="cine-admin-shell page-shell">
     <div className="cine-admin-heading">
-      <div><h1>Admin Dashboard</h1><p>Admin có toàn quyền hệ thống: quản trị đơn hàng, sản phẩm, tồn kho, khách hàng, nhân sự và lịch làm việc.</p></div>
+      <div><h1>Admin Dashboard</h1><p>Admin có toàn quyền hệ thống. Sản phẩm và kho được tách thành hai khu vực quản lý riêng để thao tác rõ ràng hơn.</p></div>
       <div className="cine-admin-heading-actions"><span>{tai_khoan.ho_ten} · Admin</span><Link className="cine-btn cine-btn-secondary" href="/tai-khoan">Tài khoản của tôi</Link></div>
     </div>
 
@@ -572,18 +690,93 @@ export default function QuanTriPage() {
     </section>}
 
     {tab === "san-pham" && <section className="cine-admin-operations cine-commerce-admin-v212">
-      <div className="cine-operations-heading"><div><h2>Sản phẩm & tồn kho</h2><p>Chọn một sản phẩm từ danh sách xổ xuống rồi chỉnh thông tin và tồn kho, không mở đồng thời toàn bộ sản phẩm.</p></div><span className="cine-admin-count">{san_pham_qt.length} sản phẩm</span></div>
+      <div className="cine-operations-heading"><div><h2>Quản lý sản phẩm</h2><p>Thêm, sửa, xóa sản phẩm và ảnh hiển thị. Tồn kho được quản lý riêng trong tab Kho.</p></div><div className="cine-product-heading-actions-v213"><span className="cine-admin-count">{san_pham_qt.length} sản phẩm</span><button type="button" className="cine-btn cine-btn-secondary" onClick={() => setTab("kho")}>Mở kho</button><button type="button" className="cine-btn cine-btn-primary" onClick={() => setTaoSanPhamMo(x => !x)}>{tao_san_pham_mo ? "Đóng form" : "+ Thêm sản phẩm"}</button></div></div>
+
+      {tao_san_pham_mo && <form className="cine-card cine-product-create-v213" onSubmit={taoSanPhamMoi}>
+        <div className="cine-product-create-title-v213"><div><h3>Thêm sản phẩm mới</h3><p>Tạo thông tin bán hàng và ảnh sản phẩm. Biến thể mặc định được tạo với tồn kho 0; nhập kho tại tab Kho.</p></div><span>Ảnh 1000×800</span></div>
+        <div className="cine-product-create-layout-v213">
+          <div className="cine-product-image-editor-v213">
+            <div className="cine-product-image-preview-v213">{anh_sp_moi ? <img src={anh_sp_moi} alt="Ảnh sản phẩm mới"/> : <span>Chưa chọn ảnh</span>}</div>
+            <label className="cine-file-picker-v213"><b>Chọn ảnh thật từ máy</b><small>JPEG / PNG / WebP · tối đa 15 MB. Hệ thống tự cắt và nén về 1000×800.</small><input type="file" accept="image/jpeg,image/png,image/webp" onChange={e => void chonAnhSanPhamMoi(e.target.files?.[0])}/></label>
+          </div>
+          <div className="cine-product-create-fields-v213">
+            <label><span>Mã sản phẩm</span><input required value={sp_moi.ma_san_pham} onChange={e => setSpMoi(x => ({ ...x, ma_san_pham: e.target.value }))} placeholder="VD: N3D-NEW-013"/></label>
+            <label><span>Tên sản phẩm</span><input required value={sp_moi.ten_san_pham} onChange={e => setSpMoi(x => ({ ...x, ten_san_pham: e.target.value }))} placeholder="Tên sản phẩm"/></label>
+            <label><span>Danh mục</span><select required value={sp_moi.danh_muc_id} onChange={e => setSpMoi(x => ({ ...x, danh_muc_id: e.target.value }))}>{danh_muc_qt.map(dm => <option key={dm.id} value={dm.id}>{dm.ten_danh_muc}</option>)}</select></label>
+            <label><span>Giá bán</span><input required type="number" min="0" step="1000" value={sp_moi.gia_ban} onChange={e => setSpMoi(x => ({ ...x, gia_ban: Number(e.target.value) }))}/></label>
+            <label><span>Trạng thái</span><select value={sp_moi.trang_thai} onChange={e => setSpMoi(x => ({ ...x, trang_thai: e.target.value }))}><option value="NHAP">Nháp</option><option value="DANG_BAN">Đang bán</option><option value="TAM_AN">Tạm ẩn</option><option value="NGUNG_BAN">Ngừng bán</option></select></label>
+            <label><span>Kích thước</span><input value={sp_moi.kich_thuoc} onChange={e => setSpMoi(x => ({ ...x, kich_thuoc: e.target.value }))} placeholder="VD: 120 × 80 × 45 mm"/></label>
+            <label><span>Khối lượng (g)</span><input type="number" min="0" step="1" value={sp_moi.khoi_luong_gam} onChange={e => setSpMoi(x => ({ ...x, khoi_luong_gam: Number(e.target.value) }))}/></label>
+            <label><span>Thời gian in (giờ)</span><input type="number" min="0" step="0.1" value={sp_moi.thoi_gian_in_gio} onChange={e => setSpMoi(x => ({ ...x, thoi_gian_in_gio: Number(e.target.value) }))}/></label>
+            <label className="wide"><span>Mô tả ngắn</span><textarea maxLength={700} value={sp_moi.mo_ta_ngan} onChange={e => setSpMoi(x => ({ ...x, mo_ta_ngan: e.target.value }))} placeholder="Mô tả ngắn hiển thị trên card sản phẩm"/></label>
+          </div>
+        </div>
+        <div className="cine-product-create-actions-v213"><button type="submit" className="cine-btn cine-btn-primary" disabled={dang_xu_ly === "tao-san-pham" || dang_xu_ly === "anh-sp-moi"}>{dang_xu_ly === "tao-san-pham" ? "Đang tạo…" : "Tạo sản phẩm"}</button><button type="button" className="cine-btn cine-btn-secondary" onClick={() => { setTaoSanPhamMo(false); setAnhSpMoi(""); }}>Hủy</button></div>
+      </form>}
+
       <div className="cine-card cine-product-filter-v212 cine-product-picker-v2121">
         <label><span>Tìm sản phẩm</span><input value={san_pham_tim_kiem} onChange={e => setSanPhamTimKiem(e.target.value)} placeholder="Mã, tên hoặc danh mục..."/></label>
         <label><span>Chọn sản phẩm</span><select value={sanPhamDangChon?.id || ""} onChange={e => setSanPhamChonId(e.target.value)} disabled={sanPhamDaLoc.length === 0}><option value="" disabled>{sanPhamDaLoc.length ? "Chọn sản phẩm cần chỉnh" : "Không có sản phẩm phù hợp"}</option>{sanPhamDaLoc.map(sp => <option key={sp.id} value={sp.id}>{sp.ma_san_pham} · {sp.ten_san_pham} · {sp.danh_muc.ten_danh_muc}</option>)}</select></label>
         <div><b>{sanPhamDaLoc.length}</b><span>kết quả</span></div>
       </div>
+
       {sanPhamDangChon ? <div className="cine-product-admin-list-v212 cine-product-single-v2121"><article className="cine-card cine-product-admin-card-v212" key={sanPhamDangChon.id}>
         <div className="cine-product-admin-head-v212"><div><span>{sanPhamDangChon.ma_san_pham} · {sanPhamDangChon.danh_muc.ten_danh_muc}</span><h3>{sanPhamDangChon.ten_san_pham}</h3></div><span className="cine-order-state" data-status={sanPhamDangChon.trang_thai}>{sanPhamDangChon.trang_thai.replaceAll("_", " ")}</span></div>
-        <div className="cine-product-form-v212"><label><span>Tên sản phẩm</span><input value={sanPhamDangChon.ten_san_pham} onChange={e => suaSanPhamLocal(sanPhamDangChon.id, { ten_san_pham: e.target.value })}/></label><label><span>Giá bán</span><input type="number" min="0" step="1000" value={sanPhamDangChon.gia_ban} onChange={e => suaSanPhamLocal(sanPhamDangChon.id, { gia_ban: Number(e.target.value) })}/></label><label><span>Trạng thái</span><select value={sanPhamDangChon.trang_thai} onChange={e => suaSanPhamLocal(sanPhamDangChon.id, { trang_thai: e.target.value })}><option value="NHAP">Nháp</option><option value="DANG_BAN">Đang bán</option><option value="TAM_AN">Tạm ẩn</option><option value="NGUNG_BAN">Ngừng bán</option></select></label><label className="wide"><span>Mô tả ngắn</span><textarea value={sanPhamDangChon.mo_ta_ngan || ""} onChange={e => suaSanPhamLocal(sanPhamDangChon.id, { mo_ta_ngan: e.target.value })}/></label></div>
-        <button type="button" className="cine-btn cine-btn-primary" onClick={() => luuSanPham(sanPhamDangChon)} disabled={dang_xu_ly === `sp-${sanPhamDangChon.id}`}>{dang_xu_ly === `sp-${sanPhamDangChon.id}` ? "Đang lưu…" : "Lưu sản phẩm"}</button>
-        <div className="cine-variant-table-v212"><div className="cine-variant-head-v212"><span>Biến thể</span><span>Vật liệu / màu</span><span>Tồn kho</span><span>Hiển thị</span><span>Thao tác</span></div>{sanPhamDangChon.bien_the.map(bt => <div className="cine-variant-row-v212" key={bt.id}><b>{bt.ma_bien_the}</b><span>{bt.vat_lieu?.ten_vat_lieu || "Mặc định"} · {bt.mau_sac?.ten_mau || "Mặc định"}</span><input type="number" min="0" max="1000000" value={bt.so_luong_ton} onChange={e => suaBienTheLocal(sanPhamDangChon.id, bt.id, { so_luong_ton: Math.max(0, Number(e.target.value)) })}/><label className="cine-stock-toggle-v212"><input type="checkbox" checked={bt.dang_hien_thi} onChange={e => suaBienTheLocal(sanPhamDangChon.id, bt.id, { dang_hien_thi: e.target.checked })}/><span>{bt.dang_hien_thi ? "Đang hiện" : "Đang ẩn"}</span></label><button type="button" className="cine-btn cine-btn-secondary" onClick={() => luuTonKho(sanPhamDangChon.id, bt.id)} disabled={dang_xu_ly === `kho-${bt.id}`}>{dang_xu_ly === `kho-${bt.id}` ? "Đang lưu…" : "Lưu kho"}</button></div>)}</div>
+        <div className="cine-product-edit-layout-v213">
+          <div className="cine-product-image-editor-v213">
+            <div className="cine-product-image-preview-v213">{(anh_sp_cho_luu[sanPhamDangChon.id] || sanPhamDangChon.hinh_anh?.[0]?.duong_dan_anh) ? <img src={anh_sp_cho_luu[sanPhamDangChon.id] || sanPhamDangChon.hinh_anh[0].duong_dan_anh} alt={sanPhamDangChon.ten_san_pham} referrerPolicy="no-referrer"/> : <span>Chưa có ảnh</span>}</div>
+            <label className="cine-file-picker-v213"><b>Thay ảnh từ máy</b><small>Ảnh mới chỉ được ghi khi bấm Lưu sản phẩm. Tự chuẩn hóa 1000×800.</small><input type="file" accept="image/jpeg,image/png,image/webp" onChange={e => void chonAnhSanPhamCoSan(sanPhamDangChon.id, e.target.files?.[0])}/></label>
+          </div>
+          <div className="cine-product-form-v212 cine-product-form-v213">
+            <label><span>Mã sản phẩm</span><input value={sanPhamDangChon.ma_san_pham} disabled/></label>
+            <label><span>Tên sản phẩm</span><input value={sanPhamDangChon.ten_san_pham} onChange={e => suaSanPhamLocal(sanPhamDangChon.id, { ten_san_pham: e.target.value })}/></label>
+            <label><span>Danh mục</span><select value={sanPhamDangChon.danh_muc.id} onChange={e => { const dm = danh_muc_qt.find(x => x.id === e.target.value); if (dm) suaSanPhamLocal(sanPhamDangChon.id, { danh_muc: { id: dm.id, ma_danh_muc: dm.ma_danh_muc, ten_danh_muc: dm.ten_danh_muc } }); }}>{danh_muc_qt.map(dm => <option key={dm.id} value={dm.id}>{dm.ten_danh_muc}</option>)}</select></label>
+            <label><span>Giá bán</span><input type="number" min="0" step="1000" value={sanPhamDangChon.gia_ban} onChange={e => suaSanPhamLocal(sanPhamDangChon.id, { gia_ban: Number(e.target.value) })}/></label>
+            <label><span>Trạng thái</span><select value={sanPhamDangChon.trang_thai} onChange={e => suaSanPhamLocal(sanPhamDangChon.id, { trang_thai: e.target.value })}><option value="NHAP">Nháp</option><option value="DANG_BAN">Đang bán</option><option value="TAM_AN">Tạm ẩn</option><option value="NGUNG_BAN">Ngừng bán</option></select></label>
+            <label><span>Kích thước</span><input value={sanPhamDangChon.kich_thuoc || ""} onChange={e => suaSanPhamLocal(sanPhamDangChon.id, { kich_thuoc: e.target.value })}/></label>
+            <label><span>Khối lượng (g)</span><input type="number" min="0" value={sanPhamDangChon.khoi_luong_gam || 0} onChange={e => suaSanPhamLocal(sanPhamDangChon.id, { khoi_luong_gam: Number(e.target.value) })}/></label>
+            <label><span>Thời gian in (giờ)</span><input type="number" min="0" step="0.1" value={sanPhamDangChon.thoi_gian_in_gio || 0} onChange={e => suaSanPhamLocal(sanPhamDangChon.id, { thoi_gian_in_gio: Number(e.target.value) })}/></label>
+            <label className="wide"><span>Mô tả ngắn</span><textarea value={sanPhamDangChon.mo_ta_ngan || ""} onChange={e => suaSanPhamLocal(sanPhamDangChon.id, { mo_ta_ngan: e.target.value })}/></label>
+          </div>
+        </div>
+        <div className="cine-product-edit-actions-v213"><button type="button" className="cine-btn cine-btn-primary" onClick={() => luuSanPham(sanPhamDangChon)} disabled={dang_xu_ly === `sp-${sanPhamDangChon.id}` || dang_xu_ly === `anh-${sanPhamDangChon.id}`}>{dang_xu_ly === `sp-${sanPhamDangChon.id}` ? "Đang lưu…" : "Lưu sản phẩm"}</button><button type="button" className="cine-btn cine-btn-secondary" onClick={() => { setKhoTimKiem(sanPhamDangChon.ma_san_pham); setTab("kho"); }}>Mở tồn kho</button><button type="button" className="cine-btn cine-btn-danger-outline" onClick={() => xoaSanPham(sanPhamDangChon)} disabled={dang_xu_ly === `xoa-sp-${sanPhamDangChon.id}`}>{dang_xu_ly === `xoa-sp-${sanPhamDangChon.id}` ? "Đang xóa…" : "Xóa sản phẩm"}</button></div>
       </article></div> : <div className="cine-card cine-dashboard-empty cine-product-empty-v2121">Không có sản phẩm phù hợp bộ lọc.</div>}
+    </section>}
+
+    {tab === "kho" && <section className="cine-admin-operations cine-commerce-admin-v212 cine-inventory-admin-v214">
+      <div className="cine-operations-heading"><div><h2>Kho hàng</h2><p>Quản lý số lượng tồn và trạng thái hiển thị của từng biến thể. Thông tin sản phẩm được chỉnh riêng ở tab Sản phẩm.</p></div><div className="cine-product-heading-actions-v213"><span className="cine-admin-count">{thongKeKho.bien_the} biến thể</span><button type="button" className="cine-btn cine-btn-secondary" onClick={() => setTab("san-pham")}>Quản lý sản phẩm</button></div></div>
+
+      <div className="cine-inventory-stats-v214">
+        <article className="cine-card cine-inventory-stat-v214"><span>Tổng biến thể</span><b>{thongKeKho.bien_the}</b><small>Đang theo dõi trong kho</small></article>
+        <article className="cine-card cine-inventory-stat-v214"><span>Tổng tồn</span><b>{thongKeKho.tong_ton}</b><small>Tổng số lượng khả dụng</small></article>
+        <article className="cine-card cine-inventory-stat-v214 warning"><span>Sắp hết</span><b>{thongKeKho.sap_het}</b><small>Từ 1 đến 5 sản phẩm</small></article>
+        <article className="cine-card cine-inventory-stat-v214 critical"><span>Hết hàng</span><b>{thongKeKho.het_hang}</b><small>Tồn kho bằng 0</small></article>
+      </div>
+
+      <div className="cine-card cine-inventory-toolbar-v214">
+        <label><span>Tìm trong kho</span><input value={kho_tim_kiem} onChange={e => setKhoTimKiem(e.target.value)} placeholder="Mã sản phẩm, tên, biến thể, vật liệu, màu..."/></label>
+        <div><b>{danhSachKho.length}</b><span>kết quả</span></div>
+      </div>
+
+      <div className="cine-card cine-inventory-table-card-v214">
+        <div className="cine-inventory-scroll-v214">
+          <div className="cine-inventory-head-v214"><span>Sản phẩm</span><span>Biến thể</span><span>Vật liệu / màu</span><span>Tồn kho</span><span>Tình trạng</span><span>Hiển thị</span><span>Thao tác</span></div>
+          {danhSachKho.map(({ san_pham, bien_the }) => {
+            const trang_thai_kho = bien_the.so_luong_ton <= 0 ? "HẾT HÀNG" : bien_the.so_luong_ton <= 5 ? "SẮP HẾT" : "CÒN HÀNG";
+            const stock_key = bien_the.so_luong_ton <= 0 ? "out" : bien_the.so_luong_ton <= 5 ? "low" : "ok";
+            return <div className="cine-inventory-row-v214" key={bien_the.id}>
+              <span className="cine-inventory-product-v214"><b>{san_pham.ten_san_pham}</b><small>{san_pham.ma_san_pham}</small></span>
+              <b>{bien_the.ma_bien_the}</b>
+              <span>{bien_the.vat_lieu?.ten_vat_lieu || "Mặc định"} · {bien_the.mau_sac?.ten_mau || "Mặc định"}</span>
+              <input aria-label={`Tồn kho ${bien_the.ma_bien_the}`} type="number" min="0" max="1000000" value={bien_the.so_luong_ton} onChange={e => suaBienTheLocal(san_pham.id, bien_the.id, { so_luong_ton: Math.max(0, Number(e.target.value)) })}/>
+              <span className="cine-stock-state-v214" data-stock={stock_key}>{trang_thai_kho}</span>
+              <label className="cine-stock-toggle-v212"><input type="checkbox" checked={bien_the.dang_hien_thi} onChange={e => suaBienTheLocal(san_pham.id, bien_the.id, { dang_hien_thi: e.target.checked })}/><span>{bien_the.dang_hien_thi ? "Đang hiện" : "Đang ẩn"}</span></label>
+              <button type="button" className="cine-btn cine-btn-secondary" onClick={() => luuTonKho(san_pham.id, bien_the.id)} disabled={dang_xu_ly === `kho-${bien_the.id}`}>{dang_xu_ly === `kho-${bien_the.id}` ? "Đang lưu…" : "Lưu kho"}</button>
+            </div>;
+          })}
+          {danhSachKho.length === 0 && <div className="cine-dashboard-empty">Không có biến thể phù hợp bộ lọc kho.</div>}
+        </div>
+      </div>
     </section>}
 
     {tab === "nhat-ky" && <section className="cine-admin-operations cine-commerce-admin-v212">

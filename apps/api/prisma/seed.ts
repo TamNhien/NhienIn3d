@@ -36,7 +36,7 @@ function taoDatabaseUrl(): string {
 const adapter = new PrismaPg({ connectionString: taoDatabaseUrl() });
 const db = new PrismaClient({ adapter });
 
-const PHIEN_BAN_HIEN_TAI = "SEED_V2122_SAN_PHAM_12_GRID_6";
+const PHIEN_BAN_HIEN_TAI = "SEED_V2140_TACH_SAN_PHAM_KHO";
 
 const danh_muc = [
   ["HOBBY_RC", "Mô hình & RC", "mo-hinh-rc", "Mô hình cơ khí, xe điều khiển và sản phẩm lắp ráp."],
@@ -141,14 +141,14 @@ const san_pham = [
   {
     ma_san_pham: "N3D-ORG-011", ten_san_pham: "Khay Gridfinity 2×3 có ngăn bút", duong_dan: "khay-gridfinity-2x3-co-ngan-but",
     mo_ta_ngan: "Khay Gridfinity mở rộng với khu vực cắm bút và ngăn linh kiện nhỏ.", gia_ban: 169000, gia_von: 72000, khoi_luong_gam: 118, thoi_gian_in_gio: 4.6, kich_thuoc: "126 × 84 × 70 mm", ma_danh_muc: "BAN_LAM_VIEC",
-    anh: "https://media.printables.com/media/prints/522794/images/4228859_4b44b288-f1e0-4da0-b6f8-ce4908f3836f/thumbs/inside/1280x960/jpg/20230708_102805.webp",
-    nguon: "https://www.printables.com/model/522794", thong_so: { vat_lieu_goi_y: "PETG/PLA", he_gridfinity: "3×2", cong_dung: "Bút và linh kiện nhỏ" }
+    anh: "https://makerworld.bblmw.com/makerworld/model/USd15fedca5591f3/design/2025-02-20_bd9f2c846e3fd8.jpg?x-oss-process=image%2Fresize%2Cw_1000%2Fformat%2Cwebp",
+    nguon: "https://makerworld.com/en/models/1130364-gridfinity-pencil-sharpie-holder", thong_so: { vat_lieu_goi_y: "PETG/PLA", he_gridfinity: "3×2", cong_dung: "Bút và linh kiện nhỏ" }
   },
   {
     ma_san_pham: "N3D-MAKER-012", ten_san_pham: "Vỏ Raspberry Pi 5 gắn quạt 40 mm", duong_dan: "vo-raspberry-pi-5-gan-quat-40mm",
     mo_ta_ngan: "Vỏ Raspberry Pi 5 bản mở rộng có vị trí quạt 40 mm và khe thoát nhiệt lớn.", gia_ban: 289000, gia_von: 124000, khoi_luong_gam: 128, thoi_gian_in_gio: 5.6, kich_thuoc: "108 × 78 × 48 mm", ma_danh_muc: "MAKER",
-    anh: "https://media.printables.com/media/prints/742926/images/5800894_5fd750c3-9554-4676-904f-102be0b36c87_8d786ac5-674f-450b-bd34-081f4410b4c6/rpi-5-render-10.jpg",
-    nguon: "https://www.printables.com/model/742926", thong_so: { vat_lieu_goi_y: "PETG", tuong_thich: "Raspberry Pi 5", quat: "40 mm" }
+    anh: "https://makerworld.bblmw.com/makerworld/model/USd971c27ce7a1e3/design/2024-03-21_6cae4efafc2be.jpg?x-oss-process=image%2Fresize%2Cw_1000%2Fformat%2Cwebp",
+    nguon: "https://makerworld.com/en/models/385831-raspberry-pi-5-case-with-logo-snap-fit", thong_so: { vat_lieu_goi_y: "PETG", tuong_thich: "Raspberry Pi 5", quat: "40 mm" }
   }
 ];
 
@@ -252,7 +252,9 @@ const phien_ban_seed = [
   ["SEED_V286_TAI_KHOAN_MAT_KHAU_BRAVE", "NhienIn3d v2.8.6 nhận diện Brave, lưu hồ sơ bền vững và đổi mật khẩu ngay trong trang Tài khoản."],
   ["SEED_V294_PERSIST_TAI_KHOAN_HO_SO", "NhienIn3d v2.9.4 không reset hồ sơ/trạng thái kích hoạt/địa chỉ/nhân viên đã chỉnh khi chạy lại seed."],
   ["SEED_V2120_DON_HANG_SAN_PHAM_AUDIT", "NhienIn3d v2.12.0 bổ sung quản trị đơn hàng, lịch sử trạng thái, sản phẩm/tồn kho và audit Admin."],
-  [PHIEN_BAN_HIEN_TAI, "NhienIn3d v2.12.2 bổ sung đủ 12 sản phẩm mẫu để storefront hiển thị 2 hàng × 6 sản phẩm."]
+  ["SEED_V2122_SAN_PHAM_12_GRID_6", "NhienIn3d v2.12.2 bổ sung đủ 12 sản phẩm mẫu để storefront hiển thị 2 hàng × 6 sản phẩm."],
+  ["SEED_V2130_QUAN_TRI_SAN_PHAM_ANH_LOCAL", "NhienIn3d v2.13.0 cho Admin CRUD sản phẩm, ảnh tải từ máy chuẩn hóa 1000x800 và seed không ghi đè dữ liệu quản trị."],
+  [PHIEN_BAN_HIEN_TAI, "NhienIn3d v2.14.0 tách quản lý sản phẩm và kho thành hai khu vực Admin riêng; CRUD sản phẩm và tồn kho tiếp tục lưu bền vững."]
 ] as const;
 
 async function main() {
@@ -291,13 +293,9 @@ async function main() {
     const { ma_danh_muc, anh, nguon, ...du_lieu } = item;
     const da_tao = await db.sanPham.upsert({
       where: { ma_san_pham: item.ma_san_pham },
-      update: {
-        ...du_lieu,
-        danh_muc_id: danh_muc_map.get(ma_danh_muc)!,
-        trang_thai: TrangThaiSanPham.DANG_BAN,
-        trang_thai_nguon: TrangThaiNguon.MAU_THAM_KHAO,
-        nguon_tham_khao: nguon
-      },
+      // v2.13.0: catalog seed chỉ bootstrap. Không ghi đè tên/giá/trạng thái/ảnh
+      // do Admin đã sửa và không hồi sinh sản phẩm mẫu đã xóa.
+      update: {},
       create: {
         ...du_lieu,
         danh_muc_id: danh_muc_map.get(ma_danh_muc)!,
@@ -308,15 +306,21 @@ async function main() {
     });
 
     san_pham_map.set(item.ma_san_pham, da_tao);
-    await db.hinhAnhSanPham.deleteMany({ where: { san_pham_id: da_tao.id } });
-    await db.hinhAnhSanPham.create({
-      data: {
-        san_pham_id: da_tao.id,
-        duong_dan_anh: anh,
-        mo_ta_anh: `Ảnh tham khảo cho ${item.ten_san_pham}`,
-        la_anh_chinh: true
-      }
+    const anh_hien_tai = await db.hinhAnhSanPham.findFirst({
+      where: { san_pham_id: da_tao.id, la_anh_chinh: true },
+      orderBy: { thu_tu: "asc" }
     });
+    if (!anh_hien_tai) {
+      await db.hinhAnhSanPham.create({
+        data: { san_pham_id: da_tao.id, duong_dan_anh: anh, mo_ta_anh: `Ảnh tham khảo cho ${item.ten_san_pham}`, la_anh_chinh: true }
+      });
+    } else {
+      // Nâng ảnh minh họa SVG cũ lên ảnh sản phẩm thực một lần; ảnh Admin tải từ máy sẽ không bị seed ghi đè.
+      const la_anh_svg_v2123 = ["/images/gridfinity-2x3-pen-holder.svg", "/images/raspberry-pi-5-40mm-fan-case.svg"].includes(anh_hien_tai.duong_dan_anh);
+      if (la_anh_svg_v2123 && ["N3D-ORG-011", "N3D-MAKER-012"].includes(item.ma_san_pham)) {
+        await db.hinhAnhSanPham.update({ where: { id: anh_hien_tai.id }, data: { duong_dan_anh: anh, mo_ta_anh: `Ảnh thực cho ${item.ten_san_pham}` } });
+      }
+    }
   }
 
   // 10 người dùng: 1 Admin + 9 tài khoản mẫu bị vô hiệu hóa.
@@ -412,14 +416,8 @@ async function main() {
       const gia_chenh_lech = i % 3 === 0 ? 20000 : 0;
       const bien_the = await db.bienTheSanPham.upsert({
         where: { ma_bien_the },
-        update: {
-          san_pham_id: san_pham_map.get(sp.ma_san_pham)!.id,
-          vat_lieu_id: vat_lieu_map.get(ma_vat_lieu[i])!,
-          mau_sac_id: mau_sac_map.get(bo_mau_san_pham[i][j])!,
-          gia_chenh_lech,
-          so_luong_ton,
-          dang_hien_thi: true
-        },
+        // v2.13.0: tồn kho và hiển thị do Admin quản lý, seed không reset khi Docker restart.
+        update: {},
         create: {
           ma_bien_the,
           san_pham_id: san_pham_map.get(sp.ma_san_pham)!.id,

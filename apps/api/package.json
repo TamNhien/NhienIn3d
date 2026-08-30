@@ -1,7 +1,7 @@
 {
   "name": "@nhienin3d/api",
   "private": true,
-  "version": "2.12.2",
+  "version": "2.14.0",
   "type": "module",
   "engines": {
     "node": ">=24.0.0"

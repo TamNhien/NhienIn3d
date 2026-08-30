@@ -15,7 +15,7 @@ async function khoi_dong() {
   if (!jwt_secret || jwt_secret.length < 32) throw new Error("JWT_SECRET phải có ít nhất 32 ký tự");
   if (!cookie_secret || cookie_secret.length < 32) throw new Error("COOKIE_SECRET phải có ít nhất 32 ký tự");
 
-  const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter({ trustProxy: true }), { bufferLogs: true });
+  const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter({ trustProxy: true, bodyLimit: 3 * 1024 * 1024 }), { bufferLogs: true });
   const fastify = app.getHttpAdapter().getInstance();
 
   await fastify.register(cookie, { secret: cookie_secret });
@@ -32,7 +32,7 @@ async function khoi_dong() {
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
   app.enableShutdownHooks();
 
-  const cau_hinh_openapi = new DocumentBuilder().setTitle("NhienIn3d API").setDescription("API v2.12.2 cho cửa hàng sản phẩm in 3D NhienIn3d").setVersion("2.12.2").addCookieAuth("nhienin3d_phien").build();
+  const cau_hinh_openapi = new DocumentBuilder().setTitle("NhienIn3d API").setDescription("API v2.14.0 cho cửa hàng sản phẩm in 3D NhienIn3d").setVersion("2.14.0").addCookieAuth("nhienin3d_phien").build();
   const tai_lieu = SwaggerModule.createDocument(app, cau_hinh_openapi);
   SwaggerModule.setup("tai-lieu", app, tai_lieu);
 

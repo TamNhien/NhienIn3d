@@ -53,6 +53,21 @@ test("PostgreSQL 18 mount volume dung thu muc /var/lib/postgresql", () => {
   assert.doesNotMatch(compose, /nhienin3d-postgres-data:\/var\/lib\/postgresql\/data/);
 });
 
+test("v2.14.0 tach rieng khu vuc san pham va kho", () => {
+  const admin = readFileSync("apps/web/app/quan-tri/page.tsx", "utf8");
+  const css = readFileSync("apps/web/app/globals.css", "utf8");
+  assert.match(admin, /\["san-pham", "Sản phẩm"\]/u);
+  assert.match(admin, /\["kho", "Kho"\]/u);
+  assert.match(admin, /Quản lý sản phẩm/u);
+  assert.match(admin, /Kho hàng/u);
+  assert.match(admin, /so_luong_ton: 0/);
+  assert.doesNotMatch(admin, /Tồn kho ban đầu/u);
+  assert.match(admin, /cine-inventory-row-v214/);
+  assert.match(admin, /Lưu kho/u);
+  assert.match(css, /cine-inventory-head-v214/);
+  assert.match(css, /cine-inventory-row-v214/);
+});
+
 test("root co lenh kiem tra so dong du lieu database", () => {
   const pkg = docJson("package.json");
   assert.equal(typeof pkg.scripts?.["db:kiem-tra-du-lieu"], "string");
@@ -63,16 +78,16 @@ test("V2 co migration nang cap khong ghi de migration V1", () => {
   assert.equal(existsSync("apps/api/prisma/migrations/202608290002_v002_gio_hang_thanh_toan/migration.sql"), true);
 });
 
-test("version v2.12.2 dong bo root API va Web", () => {
-  assert.equal(readFileSync("VERSION", "utf8").trim(), "2.12.2");
-  assert.equal(docJson("package.json").version, "2.12.2");
-  assert.equal(docJson("apps/api/package.json").version, "2.12.2");
-  assert.equal(docJson("apps/web/package.json").version, "2.12.2");
+test("version v2.14.0 dong bo root API va Web", () => {
+  assert.equal(readFileSync("VERSION", "utf8").trim(), "2.14.0");
+  assert.equal(docJson("package.json").version, "2.14.0");
+  assert.equal(docJson("apps/api/package.json").version, "2.14.0");
+  assert.equal(docJson("apps/web/package.json").version, "2.14.0");
 });
 
-test("README co lich su phien ban tang dan den v2.12.2", () => {
+test("README co lich su phien ban tang dan den v2.14.0", () => {
   const readme = readFileSync("README.md", "utf8");
-  const viTri = ["## v1.0.0", "## v1.0.1", "## v1.0.2", "## v1.0.3", "## v1.0.4", "## v1.0.5", "## v1.0.6", "## v1.0.7", "## v2.0.0", "## v2.1.0", "## v2.1.1", "## v2.2.0", "## v2.2.1", "## v2.3.0", "## v2.4.0", "## v2.4.1", "## v2.5.0", "## v2.6.0", "## v2.6.1", "## v2.7.0", "## v2.8.0", "## v2.8.1", "## v2.8.2", "## v2.8.3", "## v2.8.4", "## v2.8.5", "## v2.8.6", "## v2.8.7", "## v2.8.8", "## v2.8.9", "## v2.9.0", "## v2.9.1", "## v2.9.2", "## v2.9.3", "## v2.9.4", "## v2.9.5", "## v2.9.6", "## v2.9.7", "## v2.9.8", "## v2.9.9", "## v2.10.0", "## v2.10.1", "## v2.10.2", "## v2.11.0", "## v2.12.0", "## v2.12.1", "## v2.12.2"].map(x => readme.indexOf(x));
+  const viTri = ["## v1.0.0", "## v1.0.1", "## v1.0.2", "## v1.0.3", "## v1.0.4", "## v1.0.5", "## v1.0.6", "## v1.0.7", "## v2.0.0", "## v2.1.0", "## v2.1.1", "## v2.2.0", "## v2.2.1", "## v2.3.0", "## v2.4.0", "## v2.4.1", "## v2.5.0", "## v2.6.0", "## v2.6.1", "## v2.7.0", "## v2.8.0", "## v2.8.1", "## v2.8.2", "## v2.8.3", "## v2.8.4", "## v2.8.5", "## v2.8.6", "## v2.8.7", "## v2.8.8", "## v2.8.9", "## v2.9.0", "## v2.9.1", "## v2.9.2", "## v2.9.3", "## v2.9.4", "## v2.9.5", "## v2.9.6", "## v2.9.7", "## v2.9.8", "## v2.9.9", "## v2.10.0", "## v2.10.1", "## v2.10.2", "## v2.11.0", "## v2.12.0", "## v2.12.1", "## v2.12.2", "## v2.12.3", "## v2.13.0", "## v2.14.0"].map(x => readme.indexOf(x));
   assert.ok(viTri.every(x => x >= 0));
   assert.deepEqual([...viTri].sort((a,b)=>a-b), viTri);
 });
@@ -682,7 +697,8 @@ test("v2.12.0 quan tri don hang san pham ton kho va audit Admin", () => {
   assert.match(service, /so_luong_ton: \{ increment: ct\.so_luong \}/);
   assert.match(checkout, /lichSuDonHang\.create/);
   assert.match(admin, /\["don-hang", "Đơn hàng"\]/u);
-  assert.match(admin, /\["san-pham", "Sản phẩm & kho"\]/u);
+  assert.match(admin, /\["san-pham", "Sản phẩm"\]/u);
+  assert.match(admin, /\["kho", "Kho"\]/u);
   assert.match(admin, /\["nhat-ky", "Nhật ký Admin"\]/u);
   assert.match(lib, /layDonHangAdmin/);
   assert.match(lib, /capNhatTrangThaiDonHangAdmin/);
@@ -717,4 +733,43 @@ test("v2.12.2 storefront co 12 san pham va 6 san pham moi hang desktop", () => {
   assert.match(seed, /N3D-ORG-011/);
   assert.match(seed, /N3D-MAKER-012/);
   assert.match(css, /grid-template-columns:repeat\(6,minmax\(0,1fr\)\)/);
+});
+
+
+test("v2.13.0 hai san pham moi dung anh san pham that", () => {
+  const seed = readFileSync("apps/api/prisma/seed.ts", "utf8");
+  const data = readFileSync("apps/web/lib/du-lieu-mau.ts", "utf8");
+  for (const noiDung of [seed, data]) {
+    assert.match(noiDung, /makerworld\.bblmw\.com/);
+    assert.match(noiDung, /USd15fedca5591f3/);
+    assert.match(noiDung, /USd971c27ce7a1e3/);
+  }
+  assert.doesNotMatch(data, /gridfinity-2x3-pen-holder\.svg/);
+  assert.doesNotMatch(data, /raspberry-pi-5-40mm-fan-case\.svg/);
+});
+
+test("v2.13.0 admin CRUD san pham va upload anh tu may", () => {
+  const controller = readFileSync("apps/api/src/quan-tri/quan-tri.controller.ts", "utf8");
+  const service = readFileSync("apps/api/src/quan-tri/quan-tri.service.ts", "utf8");
+  const dto = readFileSync("apps/api/src/quan-tri/dto/tao-san-pham-quan-tri.dto.ts", "utf8");
+  const admin = readFileSync("apps/web/app/quan-tri/page.tsx", "utf8");
+  const lib = readFileSync("apps/web/lib/quan-tri.ts", "utf8");
+  const main = readFileSync("apps/api/src/main.ts", "utf8");
+  const seed = readFileSync("apps/api/prisma/seed.ts", "utf8");
+  assert.match(controller, /@Post\("san-pham"\)/);
+  assert.match(controller, /@Post\("san-pham\/:id\/xoa"\)/);
+  assert.match(service, /tao_san_pham_quan_tri/);
+  assert.match(service, /xoa_san_pham_quan_tri/);
+  assert.match(service, /ADMIN_TAO_SAN_PHAM/);
+  assert.match(service, /ADMIN_XOA_SAN_PHAM/);
+  assert.match(dto, /anh_chinh_data_url/);
+  assert.match(admin, /chuanHoaAnhSanPham/);
+  assert.match(admin, /canvas\.width = 1000/);
+  assert.match(admin, /canvas\.height = 800/);
+  assert.match(admin, /\+ Thêm sản phẩm/u);
+  assert.match(lib, /taoSanPhamAdmin/);
+  assert.match(lib, /xoaSanPhamAdmin/);
+  assert.match(main, /bodyLimit: 3 \* 1024 \* 1024/);
+  assert.match(seed, /SEED_V2130_QUAN_TRI_SAN_PHAM_ANH_LOCAL/);
+  assert.match(seed, /update: \{\}/);
 });

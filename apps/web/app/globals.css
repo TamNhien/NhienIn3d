@@ -635,3 +635,47 @@ footer{border-top:1px solid var(--line);max-width:1240px;margin:auto;padding:30p
 }
 @media (min-width:901px) and (max-width:1200px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media (min-width:601px) and (max-width:900px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+/* v2.13.0 - CRUD sản phẩm + ảnh tải từ máy, chuẩn hóa 1000x800. */
+.cine-product-heading-actions-v213{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+.cine-product-create-v213{padding:20px;display:grid;gap:18px;border-color:rgba(139,92,246,.34);background:linear-gradient(145deg,rgba(139,92,246,.07),rgba(8,14,24,.92))}
+.cine-product-create-title-v213{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.cine-product-create-title-v213 h3{margin:0;font-size:21px}.cine-product-create-title-v213 p{margin:5px 0 0;color:#8c99ac;font-size:12px;line-height:1.55}.cine-product-create-title-v213>span{border:1px solid #334155;border-radius:999px;padding:7px 10px;color:#aeb9c8;font-size:11px;font-weight:800;white-space:nowrap}
+.cine-product-create-layout-v213,.cine-product-edit-layout-v213{display:grid;grid-template-columns:minmax(260px,320px) minmax(0,1fr);gap:18px;align-items:start}
+.cine-product-image-editor-v213{display:grid;gap:11px}
+.cine-product-image-preview-v213{aspect-ratio:5/4;border:1px solid #334155;border-radius:16px;overflow:hidden;background:#eef2f7;display:grid;place-items:center;color:#64748b;font-size:13px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.04)}
+.cine-product-image-preview-v213 img{width:100%;height:100%;object-fit:cover;display:block}
+.cine-file-picker-v213{display:grid;gap:5px;border:1px dashed #475569;border-radius:13px;padding:12px;background:rgba(7,13,23,.6);cursor:pointer}
+.cine-file-picker-v213 b{font-size:13px;color:#e2e8f0}.cine-file-picker-v213 small{font-size:11px;line-height:1.5;color:#8b98aa}.cine-file-picker-v213 input{width:100%;font-size:12px;color:#cbd5e1;margin-top:4px}
+.cine-product-create-fields-v213{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.cine-product-create-fields-v213 label{display:grid;gap:7px}.cine-product-create-fields-v213 label.wide{grid-column:1/-1}.cine-product-create-fields-v213 label>span{font-size:13px;font-weight:800;color:#cbd5e1}
+.cine-product-create-fields-v213 input,.cine-product-create-fields-v213 select,.cine-product-create-fields-v213 textarea{min-height:48px;border:1px solid #334155;border-radius:12px;background:#0b1322;color:#f8fafc;padding:10px 13px;font-size:15px;outline:none}.cine-product-create-fields-v213 textarea{min-height:92px;resize:vertical}.cine-product-create-fields-v213 input:focus,.cine-product-create-fields-v213 select:focus,.cine-product-create-fields-v213 textarea:focus{border-color:#8b5cf6;box-shadow:0 0 0 3px rgba(139,92,246,.11)}
+.cine-product-create-actions-v213,.cine-product-edit-actions-v213{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.cine-product-form-v213{grid-template-columns:repeat(2,minmax(0,1fr));align-content:start}.cine-product-form-v213 input:disabled{opacity:.66;cursor:not-allowed;background:#0a101c}
+@media(max-width:900px){.cine-product-create-layout-v213,.cine-product-edit-layout-v213{grid-template-columns:1fr}.cine-product-image-editor-v213{max-width:520px}.cine-product-create-fields-v213{grid-template-columns:1fr}.cine-product-create-fields-v213 label.wide{grid-column:auto}.cine-product-form-v213{grid-template-columns:1fr}.cine-product-heading-actions-v213{justify-content:flex-start}}
+
+/* v2.14.0 - tách quản lý sản phẩm và kho */
+.cine-inventory-admin-v214{display:grid;gap:16px}
+.cine-inventory-stats-v214{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.cine-inventory-stat-v214{padding:17px 18px;display:grid;gap:5px;min-height:105px;align-content:center}
+.cine-inventory-stat-v214>span{font-size:12px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.7px}
+.cine-inventory-stat-v214>b{font-size:28px;line-height:1.05;color:#f8fafc}
+.cine-inventory-stat-v214>small{font-size:11px;color:#8491a3}
+.cine-inventory-stat-v214.warning{border-color:rgba(245,158,11,.38);background:linear-gradient(145deg,rgba(245,158,11,.08),rgba(15,23,42,.94))}
+.cine-inventory-stat-v214.warning>b{color:#fbbf24}
+.cine-inventory-stat-v214.critical{border-color:rgba(244,63,94,.4);background:linear-gradient(145deg,rgba(244,63,94,.08),rgba(15,23,42,.94))}
+.cine-inventory-stat-v214.critical>b{color:#fb7185}
+.cine-inventory-toolbar-v214{padding:15px 17px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:end}
+.cine-inventory-toolbar-v214 label{display:grid;gap:7px}.cine-inventory-toolbar-v214 label>span{font-size:13px;font-weight:800;color:#cbd5e1}
+.cine-inventory-toolbar-v214 input{min-height:48px;border:1px solid #334155;border-radius:12px;background:#0b1322;color:#f8fafc;padding:10px 13px;font-size:15px;outline:none}
+.cine-inventory-toolbar-v214 input:focus{border-color:#8b5cf6;box-shadow:0 0 0 3px rgba(139,92,246,.11)}
+.cine-inventory-toolbar-v214>div{min-width:78px;display:grid;text-align:center;gap:1px}.cine-inventory-toolbar-v214>div b{font-size:22px}.cine-inventory-toolbar-v214>div span{font-size:10px;color:#94a3b8}
+.cine-inventory-table-card-v214{padding:0;overflow:hidden}.cine-inventory-scroll-v214{overflow-x:auto}
+.cine-inventory-head-v214,.cine-inventory-row-v214{min-width:1020px;display:grid;grid-template-columns:minmax(210px,1.55fr) minmax(135px,.9fr) minmax(170px,1.05fr) 118px 112px 142px 118px;gap:12px;align-items:center}
+.cine-inventory-head-v214{padding:13px 16px;background:rgba(30,41,59,.82);border-bottom:1px solid #334155;color:#aeb9c8;font-size:10px;font-weight:850;text-transform:uppercase;letter-spacing:.65px}
+.cine-inventory-row-v214{padding:14px 16px;border-bottom:1px solid #253246;color:#dbe4ef;font-size:13px}.cine-inventory-row-v214:last-child{border-bottom:0}.cine-inventory-row-v214:hover{background:rgba(139,92,246,.035)}
+.cine-inventory-product-v214{display:grid;gap:3px;min-width:0}.cine-inventory-product-v214 b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cine-inventory-product-v214 small{font-size:10px;color:#8491a3;letter-spacing:.4px}
+.cine-inventory-row-v214>input{width:100%;min-height:43px;border:1px solid #3a4a61;border-radius:11px;background:#0b1322;color:#fff;padding:8px 10px;font-size:15px;font-weight:750;outline:none}.cine-inventory-row-v214>input:focus{border-color:#8b5cf6;box-shadow:0 0 0 3px rgba(139,92,246,.1)}
+.cine-stock-state-v214{display:inline-flex;justify-content:center;align-items:center;min-height:32px;border:1px solid #334155;border-radius:999px;padding:5px 9px;font-size:10px;font-weight:900;white-space:nowrap}.cine-stock-state-v214[data-stock="ok"]{border-color:#16a34a;color:#86efac;background:rgba(22,163,74,.08)}.cine-stock-state-v214[data-stock="low"]{border-color:#d97706;color:#fbbf24;background:rgba(217,119,6,.08)}.cine-stock-state-v214[data-stock="out"]{border-color:#be3455;color:#fda4af;background:rgba(190,52,85,.08)}
+.cine-inventory-row-v214 .cine-stock-toggle-v212{min-height:38px;display:flex;align-items:center;gap:8px}.cine-inventory-row-v214 .cine-stock-toggle-v212 input{width:18px;height:18px}.cine-inventory-row-v214 .cine-btn{min-height:42px;padding:9px 12px}
+@media(max-width:900px){.cine-inventory-stats-v214{grid-template-columns:repeat(2,minmax(0,1fr))}.cine-inventory-toolbar-v214{grid-template-columns:1fr}.cine-inventory-toolbar-v214>div{text-align:left;grid-template-columns:auto auto;justify-content:start;align-items:baseline;gap:7px}}
+@media(max-width:520px){.cine-inventory-stats-v214{grid-template-columns:1fr}}

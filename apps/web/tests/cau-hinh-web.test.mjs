@@ -600,10 +600,12 @@ test("v2.12.0 web co quan tri don hang san pham ton kho va nhat ky Admin", () =>
   const lib = readFileSync("lib/quan-tri.ts", "utf8");
   const css = readFileSync("app/globals.css", "utf8");
   assert.match(admin, /\["don-hang", "Đơn hàng"\]/u);
-  assert.match(admin, /\["san-pham", "Sản phẩm & kho"\]/u);
+  assert.match(admin, /\["san-pham", "Sản phẩm"\]/u);
+  assert.match(admin, /\["kho", "Kho"\]/u);
   assert.match(admin, /\["nhat-ky", "Nhật ký Admin"\]/u);
   assert.match(admin, /Quản trị đơn hàng/u);
-  assert.match(admin, /Sản phẩm & tồn kho/u);
+  assert.match(admin, /Quản lý sản phẩm/u);
+  assert.match(admin, /Kho hàng/u);
   assert.match(admin, /Lịch sử xử lý/u);
   assert.match(lib, /export type AdminDonHang/);
   assert.match(lib, /layChiTietDonHangAdmin/);
@@ -637,4 +639,49 @@ test("v2.12.2 storefront hien thi 6 san pham moi hang va co du 12 san pham mau",
   assert.match(data, /N3D-MAKER-012/);
   assert.match(css, /v2\.12\.2 - storefront 6 sản phẩm mỗi hàng/u);
   assert.match(css, /repeat\(6,minmax\(0,1fr\)\)/);
+});
+
+
+test("v2.13.0 hai san pham bo sung dung anh san pham that", () => {
+  const data = readFileSync("lib/du-lieu-mau.ts", "utf8");
+  assert.match(data, /N3D-ORG-011[\s\S]*USd15fedca5591f3/u);
+  assert.match(data, /N3D-MAKER-012[\s\S]*USd971c27ce7a1e3/u);
+  assert.doesNotMatch(data, /gridfinity-2x3-pen-holder\.svg/u);
+  assert.doesNotMatch(data, /raspberry-pi-5-40mm-fan-case\.svg/u);
+});
+
+test("v2.13.0 web CRUD san pham va chuan hoa anh 1000x800", () => {
+  const admin = readFileSync("app/quan-tri/page.tsx", "utf8");
+  const lib = readFileSync("lib/quan-tri.ts", "utf8");
+  const anh = readFileSync("lib/anh-bien-the.ts", "utf8");
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.match(admin, /chuanHoaAnhSanPham/);
+  assert.match(admin, /canvas\.width = 1000/);
+  assert.match(admin, /canvas\.height = 800/);
+  assert.match(admin, /accept="image\/jpeg,image\/png,image\/webp"/);
+  assert.match(admin, /Thêm sản phẩm mới/u);
+  assert.match(admin, /Xóa sản phẩm/u);
+  assert.match(lib, /taoSanPhamAdmin/);
+  assert.match(lib, /xoaSanPhamAdmin/);
+  assert.match(anh, /startsWith\("data:image\/"\)/);
+  assert.match(css, /cine-product-image-preview-v213/);
+});
+
+
+test("v2.14.0 tach rieng san pham va kho trong Admin", () => {
+  const admin = readFileSync("app/quan-tri/page.tsx", "utf8");
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.match(admin, /type TabQuanTri = [^;]*"san-pham" \| "kho"/);
+  assert.match(admin, /\["san-pham", "Sản phẩm"\]/u);
+  assert.match(admin, /\["kho", "Kho"\]/u);
+  assert.match(admin, /<h2>Quản lý sản phẩm<\/h2>/u);
+  assert.match(admin, /<h2>Kho hàng<\/h2>/u);
+  assert.match(admin, /Tồn kho khởi tạo 0; cập nhật tại tab Kho/u);
+  assert.doesNotMatch(admin, /<span>Tồn kho ban đầu<\/span>/u);
+  assert.match(admin, /danhSachKho/);
+  assert.match(admin, /thongKeKho/);
+  assert.match(admin, /cine-inventory-table-card-v214/);
+  assert.match(css, /v2\.14\.0 - tách quản lý sản phẩm và kho/u);
+  assert.match(css, /cine-inventory-stats-v214/);
+  assert.match(css, /cine-stock-state-v214/);
 });

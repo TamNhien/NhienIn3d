@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" role="img" aria-labelledby="title desc">
+  <title id="title">Khay Gridfinity 2x3 có ngăn bút</title>
+  <desc id="desc">Minh họa khay tổ chức màu xanh cyan với sáu mô đun và cụm cắm bút cao.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f7fbff"/>
+      <stop offset="1" stop-color="#dfe7f1"/>
+    </linearGradient>
+    <linearGradient id="tray" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#26d7ef"/>
+      <stop offset="1" stop-color="#0a84b8"/>
+    </linearGradient>
+    <linearGradient id="side" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0874a7"/>
+      <stop offset="1" stop-color="#044b72"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="800" fill="url(#bg)"/>
+  <ellipse cx="603" cy="660" rx="430" ry="70" fill="#15283d" opacity=".15"/>
+  <g transform="translate(150 120)">
+    <path d="M90 180 635 110 900 250 355 325Z" fill="url(#tray)"/>
+    <path d="m355 325 545-75v210l-545 88z" fill="url(#side)"/>
+    <path d="M90 180 355 325v223L90 390Z" fill="#0a5f8d"/>
+    <g fill="#09344c" opacity=".9">
+      <path d="m170 214 132-18 71 38-132 19z"/>
+      <path d="m329 193 132-17 72 37-133 19z"/>
+      <path d="m489 173 132-18 72 38-133 18z"/>
+      <path d="m206 282 132-18 72 38-133 19z"/>
+      <path d="m366 261 132-18 72 38-133 18z"/>
+      <path d="m526 241 132-18 72 38-133 19z"/>
+    </g>
+    <g fill="#14293a" stroke="#38e6ff" stroke-width="6">
+      <path d="m720 58 116 62v241l-116 18z"/>
+      <path d="m720 58 80-11 116 61-80 12z" fill="#1f4058"/>
+      <path d="m836 120 80-12v242l-80 11z" fill="#102d42"/>
+    </g>
+    <g stroke-linecap="round" stroke-width="20">
+      <path d="M754 102v177" stroke="#ff6b35"/>
+      <path d="M792 93v173" stroke="#ffd23f"/>
+      <path d="M830 109v151" stroke="#8d5cff"/>
+      <path d="M868 122v128" stroke="#f3f7fb"/>
+    </g>
+    <g fill="#eaf8ff" opacity=".88">
+      <circle cx="201" cy="373" r="15"/><circle cx="268" cy="408" r="15"/><circle cx="335" cy="444" r="15"/>
+    </g>
+  </g>
+  <g font-family="Arial, Helvetica, sans-serif">
+    <rect x="56" y="52" width="245" height="72" rx="36" fill="#111827" opacity=".92"/>
+    <text x="178" y="98" text-anchor="middle" fill="#fff" font-size="31" font-weight="700">GRIDFINITY 2×3</text>
+  </g>
+</svg>

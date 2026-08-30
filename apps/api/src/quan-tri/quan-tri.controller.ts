@@ -13,6 +13,7 @@ import { TaoNhanVienDto } from "./dto/tao-nhan-vien.dto.js";
 import { TaoPhanCaDto } from "./dto/tao-phan-ca.dto.js";
 import { CapNhatTrangThaiDonHangDto } from "./dto/cap-nhat-trang-thai-don-hang.dto.js";
 import { CapNhatSanPhamQuanTriDto } from "./dto/cap-nhat-san-pham-quan-tri.dto.js";
+import { TaoSanPhamQuanTriDto } from "./dto/tao-san-pham-quan-tri.dto.js";
 import { CapNhatTonKhoDto } from "./dto/cap-nhat-ton-kho.dto.js";
 import { QuanTriService } from "./quan-tri.service.js";
 
@@ -57,7 +58,10 @@ export class QuanTriController {
   @Post("don-hang/:id/trang-thai") cap_nhat_trang_thai_don_hang(@Req() req: YeuCauCoNguoiDung, @Param("id") id: string, @Body() dto: CapNhatTrangThaiDonHangDto) { return this.service.cap_nhat_trang_thai_don_hang(req.nguoi_dung_xac_thuc!, id, dto); }
 
   @Get("san-pham") san_pham_quan_tri() { return this.service.danh_sach_san_pham_quan_tri(); }
+  @Post("san-pham") tao_san_pham_quan_tri(@Req() req: YeuCauCoNguoiDung, @Body() dto: TaoSanPhamQuanTriDto) { return this.service.tao_san_pham_quan_tri(req.nguoi_dung_xac_thuc!, dto); }
   @Post("san-pham/:id/cap-nhat") cap_nhat_san_pham_quan_tri(@Req() req: YeuCauCoNguoiDung, @Param("id") id: string, @Body() dto: CapNhatSanPhamQuanTriDto) { return this.service.cap_nhat_san_pham_quan_tri(req.nguoi_dung_xac_thuc!, id, dto); }
+  @Post("san-pham/:id/xoa") xoa_san_pham_quan_tri(@Req() req: YeuCauCoNguoiDung, @Param("id") id: string) { return this.service.xoa_san_pham_quan_tri(req.nguoi_dung_xac_thuc!, id); }
+  @Delete("san-pham/:id") xoa_san_pham_quan_tri_delete(@Req() req: YeuCauCoNguoiDung, @Param("id") id: string) { return this.service.xoa_san_pham_quan_tri(req.nguoi_dung_xac_thuc!, id); }
   @Post("bien-the/:id/ton-kho") cap_nhat_ton_kho(@Req() req: YeuCauCoNguoiDung, @Param("id") id: string, @Body() dto: CapNhatTonKhoDto) { return this.service.cap_nhat_ton_kho(req.nguoi_dung_xac_thuc!, id, dto); }
 
   @Get("nhat-ky") nhat_ky_admin() { return this.service.danh_sach_nhat_ky_admin(); }
