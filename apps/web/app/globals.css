@@ -704,3 +704,16 @@ footer{border-top:1px solid var(--line);max-width:1240px;margin:auto;padding:30p
 
 @media(max-width:1180px){.cine-category-layout-v215{grid-template-columns:1fr}.cine-category-create-v215{position:static}.cine-category-row-v215{grid-template-columns:1fr 1fr}.cine-category-code-v215,.cine-category-row-v215 .cine-row-actions-v215{grid-column:1/-1}.cine-variant-create-v215{grid-template-columns:repeat(2,minmax(0,1fr))}.cine-report-grid-v215{grid-template-columns:1fr}.cine-review-row-v215{grid-template-columns:1fr 130px}.cine-review-product-v215,.cine-review-content-v215{grid-column:1/-1}}
 @media(max-width:680px){.cine-category-row-v215,.cine-variant-create-v215,.cine-report-period-v215{grid-template-columns:1fr}.cine-two-fields-v215{grid-template-columns:1fr}.cine-review-filter-v215{align-items:stretch;flex-direction:column}.cine-review-filter-v215 label{min-width:0}.cine-review-row-v215{grid-template-columns:1fr}.cine-review-row-v215 .cine-row-actions-v215{justify-content:flex-start}}
+
+/* v2.15.1 - thanh toán và ghi nhận doanh thu theo thời điểm thu tiền. */
+.cine-order-payment-v2151{border:1px solid rgba(34,211,238,.24);border-radius:14px;background:linear-gradient(145deg,rgba(34,211,238,.055),rgba(7,13,23,.68));padding:15px;display:grid;gap:12px}
+.cine-order-payment-v2151>div:first-child{display:grid;gap:4px}.cine-order-payment-v2151 h4{margin:0;font-size:16px}.cine-order-payment-v2151 p{margin:0;color:#91a0b4;font-size:12px;line-height:1.55}
+.cine-payment-grid-v2151{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}.cine-payment-grid-v2151>span{border:1px solid #29364b;border-radius:11px;background:rgba(7,13,23,.55);padding:10px;display:grid;gap:4px}.cine-payment-grid-v2151 small{font-size:10px;color:#7f8da2;text-transform:uppercase;letter-spacing:.05em}.cine-payment-grid-v2151 b{font-size:12px;overflow-wrap:anywhere}
+.revenue-ok-v2151{color:#86efac}.revenue-wait-v2151{color:#fbbf24}
+@media(max-width:900px){.cine-payment-grid-v2151{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.cine-payment-grid-v2151{grid-template-columns:1fr}}
+
+
+/* v2.15.2 - xuất Excel và tinh gọn footer. */
+.cine-report-actions-v2152 { display:flex; gap:10px; flex-wrap:wrap; margin-top:14px; }
+.cine-report-actions-v2152 .cine-btn { flex:1 1 140px; }

@@ -57,18 +57,18 @@ test("seed v2.12.0 theo doi 24 bang va cho phep du lieu van hanh bi xoa", () => 
     assert.match(seed, new RegExp(`${bang}: await db\\.`));
   }
   assert.match(seed, /so_luong < 10/);
-  assert.match(seed, /PHIEN_BAN_HIEN_TAI = "SEED_V2150_DANH_MUC_BIEN_THE_DANH_GIA_BAO_CAO"/);
+  assert.match(seed, /PHIEN_BAN_HIEN_TAI = "SEED_V2151_DOANH_THU_THEO_THANH_TOAN"/);
   assert.match(seed, /bang_bien_dong/);
   assert.match(seed, /SEED_V286_TAI_KHOAN_MAT_KHAU_BRAVE/);
   assert.match(seed, /\/images\/khoi-lap-phuong-banh-rang\.jpg/);
 });
 
 
-test("API hien thi dung version v2.15.0 o health va OpenAPI", () => {
+test("API hien thi dung version v2.15.2 o health va OpenAPI", () => {
   const health = readFileSync("src/suc-khoe/suc-khoe.controller.ts", "utf8");
   const main = readFileSync("src/main.ts", "utf8");
-  assert.match(health, /phien_ban: "v2\.15\.0"/);
-  assert.match(main, /setVersion\("2\.15\.0"\)/);
+  assert.match(health, /phien_ban: "v2\.15\.2"/);
+  assert.match(main, /setVersion\("2\.15\.2"\)/);
 });
 
 test("V2 co migration gio hang, thanh toan va dia chi", () => {
@@ -555,10 +555,40 @@ test("v2.15.0 API CRUD danh muc bien the duyet danh gia va xuat CSV", () => {
   assert.match(service, /ADMIN_TAO_DANH_MUC/);
   assert.match(service, /ADMIN_TAO_BIEN_THE/);
   assert.match(service, /ADMIN_DUYET_DANH_GIA/);
-  assert.match(service, /don-hang_\$\{tu\}_\$\{den\}\.csv/);
-  assert.match(service, /doanh-thu_\$\{tu\}_\$\{den\}\.csv/);
-  assert.match(service, /ton-kho_\$\{den\}\.csv/);
+  assert.match(service, /ten_goc: `don-hang_\$\{tu\}_\$\{den\}`/);
+  assert.match(service, /ten_goc: `doanh-thu_\$\{tu\}_\$\{den\}`/);
+  assert.match(service, /ten_goc: `ton-kho_\$\{den\}`/);
+  assert.match(service, /ten_file: `\$\{ten_goc\}\.csv`/);
   assert.match(service, /\/\^\[=\+\\-@\]\//);
   assert.match(reviews, /const da_duyet = false/);
   assert.match(reviews, /đang chờ Admin duyệt/u);
+});
+
+
+test("v2.15.1 API ghi nhan non-COD ngay va COD khi Admin xac nhan da giao", () => {
+  const checkout = readFileSync("src/thanh-toan/thanh-toan.service.ts", "utf8");
+  const admin = readFileSync("src/quan-tri/quan-tri.service.ts", "utf8");
+  const seed = readFileSync("prisma/seed.ts", "utf8");
+  assert.match(checkout, /const thanh_toan_ngay = phuong_thuc\.ma_phuong_thuc !== "COD"/);
+  assert.match(checkout, /ngay_thanh_toan: da_thanh_toan \? new Date\(\) : null/);
+  assert.match(admin, /thanh_toan_duoc_ghi_nhan/);
+  assert.match(admin, /chi_xac_nhan_doanh_thu/);
+  assert.match(admin, /trang_thai_moi === TrangThaiDonHang\.HOAN_TAT/);
+  assert.match(admin, /doanhThuDaGhiNhan/);
+  assert.match(admin, /Ngày ghi nhận/);
+  assert.match(seed, /ma_phuong_thuc !== "COD" \|\| don\.trang_thai === TrangThaiDonHang\.HOAN_TAT/);
+  assert.match(seed, /thanh_toan_truoc_can_chot/);
+});
+
+
+test("v2.15.2 API fix typecheck seed va xuat XLSX khong can thu vien ngoai", () => {
+  const controller = readFileSync("src/quan-tri/quan-tri.controller.ts", "utf8");
+  const service = readFileSync("src/quan-tri/quan-tri.service.ts", "utf8");
+  const seed = readFileSync("prisma/seed.ts", "utf8");
+  assert.match(controller, /@Get\("bao-cao\/:loai\/excel"\)/);
+  assert.match(service, /private tao_xlsx/);
+  assert.match(service, /0x04034b50/);
+  assert.match(service, /xuat_bao_cao_excel/);
+  assert.match(service, /\.xlsx/);
+  assert.match(seed, /new Map<string, \{ id: string; tong_tien: unknown; trang_thai: TrangThaiDonHang \}>/);
 });

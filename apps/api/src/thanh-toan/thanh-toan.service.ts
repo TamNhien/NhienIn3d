@@ -99,19 +99,24 @@ export class ThanhToanService {
         }
       });
 
+      // V2.15.1: COD chỉ ghi nhận tiền khi Admin xác nhận đơn đã giao/hoàn tất.
+      // Các phương thức không phải COD được coi là đã thanh toán tại thời điểm tạo đơn
+      // để doanh thu cập nhật ngay theo yêu cầu vận hành của NhienIn3d.
+      const thanh_toan_ngay = phuong_thuc.ma_phuong_thuc !== "COD";
+      const da_thanh_toan = la_gia_lap || thanh_toan_ngay;
       const thanh_toan = await tx.thanhToan.create({
         data: {
           don_hang_id: don_hang.id,
           phuong_thuc_id: phuong_thuc.id,
           ma_giao_dich,
           so_tien: tong_tien,
-          trang_thai: la_gia_lap ? TrangThaiThanhToan.DA_THANH_TOAN : TrangThaiThanhToan.CHO_THANH_TOAN,
-          ngay_thanh_toan: la_gia_lap ? new Date() : null,
+          trang_thai: da_thanh_toan ? TrangThaiThanhToan.DA_THANH_TOAN : TrangThaiThanhToan.CHO_THANH_TOAN,
+          ngay_thanh_toan: da_thanh_toan ? new Date() : null,
           noi_dung: la_gia_lap
             ? `Thanh toán giả lập local bằng ${phuong_thuc.ten_phuong_thuc} cho ${ma_don_hang}`
             : phuong_thuc.ma_phuong_thuc === "COD"
               ? `Thanh toán khi nhận hàng cho ${ma_don_hang}`
-              : `Chuyển khoản cho ${ma_don_hang}`
+              : `Đã thanh toán bằng ${phuong_thuc.ten_phuong_thuc} cho ${ma_don_hang}`
         }
       });
 
@@ -126,9 +131,9 @@ export class ThanhToanService {
           la_gia_lap,
           huong_dan: la_gia_lap
             ? `Thanh toán giả lập ${phuong_thuc.ten_phuong_thuc} đã thành công trong môi trường local. Không có giao dịch tiền thật.`
-            : phuong_thuc.ma_phuong_thuc === "CHUYEN_KHOAN"
-              ? `Vui lòng chuyển khoản với nội dung ${ma_don_hang}.`
-              : "Bạn sẽ thanh toán khi nhận hàng."
+            : phuong_thuc.ma_phuong_thuc === "COD"
+              ? "Bạn sẽ thanh toán khi nhận hàng. Doanh thu được ghi nhận khi Admin xác nhận đơn đã giao/hoàn tất."
+              : `Thanh toán ${phuong_thuc.ten_phuong_thuc} đã được ghi nhận. Doanh thu được cập nhật ngay vào hệ thống.`
         }
       };
     });

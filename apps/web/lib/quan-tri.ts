@@ -110,4 +110,10 @@ export const layBaoCaoCsvAdmin = (loai: "don-hang" | "doanh-thu" | "ton-kho", tu
   if (den_ngay) q.set("den_ngay", den_ngay);
   return goi<{ ten_file: string; csv: string }>(`/quan-tri/bao-cao/${loai}${q.size ? `?${q}` : ""}`);
 };
+export const layBaoCaoExcelAdmin = (loai: "don-hang" | "doanh-thu" | "ton-kho", tu_ngay = "", den_ngay = "") => {
+  const q = new URLSearchParams();
+  if (tu_ngay) q.set("tu_ngay", tu_ngay);
+  if (den_ngay) q.set("den_ngay", den_ngay);
+  return goi<{ ten_file: string; mime_type: string; base64: string }>(`/quan-tri/bao-cao/${loai}/excel${q.size ? `?${q}` : ""}`);
+};
 export const layNhatKyAdmin = () => goi<NhatKyAdmin[]>("/quan-tri/nhat-ky");

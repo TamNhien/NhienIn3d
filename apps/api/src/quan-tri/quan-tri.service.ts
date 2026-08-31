@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import * as argon2 from "argon2";
 import { CoSoDuLieuService } from "../co-so-du-lieu/co-so-du-lieu.service.js";
-import { TrangThaiDonHang, TrangThaiNhanVien, TrangThaiNguon, TrangThaiPhanCa, TrangThaiSanPham, VaiTro } from "../generated/prisma/client.js";
+import { TrangThaiDonHang, TrangThaiNhanVien, TrangThaiNguon, TrangThaiPhanCa, TrangThaiSanPham, TrangThaiThanhToan, VaiTro } from "../generated/prisma/client.js";
 import type { NguoiDungXacThuc } from "../xac-thuc/jwt.guard.js";
 import { CapNhatNguoiDungDto } from "./dto/cap-nhat-nguoi-dung.dto.js";
 import { CapNhatNhanVienDto } from "./dto/cap-nhat-nhan-vien.dto.js";
@@ -66,7 +66,7 @@ export class QuanTriService {
     const bat_dau_7_ngay = batDauNgay(tu_7_ngay);
     const bat_dau_30_ngay = batDauNgay(tu_30_ngay);
 
-    const [nguoi_dung, khach_hang, nhan_vien, ca_lam_viec, phan_ca, don_hang, san_pham, don_30_ngay, trang_thai_don, khach_hang_30_ngay, ton_kho_thap, don_gan_day] = await Promise.all([
+    const [nguoi_dung, khach_hang, nhan_vien, ca_lam_viec, phan_ca, don_hang, san_pham, don_30_ngay, don_doanh_thu_30_ngay, trang_thai_don, khach_hang_30_ngay, ton_kho_thap, don_gan_day] = await Promise.all([
       this.db.nguoiDung.count(),
       this.db.nguoiDung.count({ where: { vai_tro: VaiTro.KHACH_HANG } }),
       this.db.nhanVien.count(),
@@ -84,6 +84,23 @@ export class QuanTriService {
           trang_thai: true,
           ngay_tao: true,
           chi_tiet: { select: { ma_san_pham: true, ten_san_pham: true, so_luong: true, thanh_tien: true } }
+        }
+      }),
+      this.db.donHang.findMany({
+        where: {
+          trang_thai: { not: TrangThaiDonHang.DA_HUY },
+          OR: [
+            { thanh_toan: { some: { trang_thai: TrangThaiThanhToan.DA_THANH_TOAN, ngay_thanh_toan: { gte: bat_dau_30_ngay } } } },
+            { trang_thai: TrangThaiDonHang.HOAN_TAT, ngay_cap_nhat: { gte: bat_dau_30_ngay } }
+          ]
+        },
+        select: {
+          id: true, ma_don_hang: true, tong_tien: true, trang_thai: true, ngay_tao: true, ngay_cap_nhat: true,
+          thanh_toan: {
+            orderBy: { ngay_tao: "desc" },
+            take: 1,
+            select: { so_tien: true, ngay_thanh_toan: true, trang_thai: true, phuong_thuc: { select: { ma_phuong_thuc: true } } }
+          }
         }
       }),
       this.db.donHang.groupBy({ by: ["trang_thai"], _count: { _all: true } }),
@@ -118,22 +135,33 @@ export class QuanTriService {
       })
     ]);
 
-    const hoanTat = don_30_ngay.filter(d => d.trang_thai === TrangThaiDonHang.HOAN_TAT);
+    // V2.15.1: doanh thu được ghi nhận theo thời điểm tiền thực sự được xác nhận.
+    // - Đơn không COD: thanh toán được xác nhận ngay khi checkout => doanh thu vào ngay.
+    // - COD: khi Admin chuyển đơn sang HOAN_TAT (đã giao), giao dịch được xác nhận đã thanh toán.
+    // - Đơn HOAN_TAT cũ chưa có bản ghi thanh toán hợp lệ vẫn được giữ tương thích theo ngay_cap_nhat.
+    const doanhThuDaGhiNhan = don_doanh_thu_30_ngay.map(d => {
+      const tt = d.thanh_toan[0];
+      const da_thanh_toan = tt?.trang_thai === TrangThaiThanhToan.DA_THANH_TOAN;
+      const fallback_legacy = !tt && d.trang_thai === TrangThaiDonHang.HOAN_TAT;
+      const ngay_ghi_nhan = da_thanh_toan ? (tt.ngay_thanh_toan || d.ngay_cap_nhat) : (fallback_legacy ? d.ngay_cap_nhat : null);
+      if (!ngay_ghi_nhan) return null;
+      return { id: d.id, ngay_ghi_nhan, so_tien: da_thanh_toan ? Number(tt.so_tien) : Number(d.tong_tien) };
+    }).filter((x): x is { id: string; ngay_ghi_nhan: Date; so_tien: number } => Boolean(x));
     const trongKhoang = (date: Date, batDau: Date) => date >= batDau;
-    const tongTien = (ds: typeof hoanTat) => ds.reduce((sum, item) => sum + Number(item.tong_tien), 0);
-    const doanh_thu_hom_nay = tongTien(hoanTat.filter(d => trongKhoang(d.ngay_tao, bat_dau_hom_nay)));
-    const doanh_thu_7_ngay = tongTien(hoanTat.filter(d => trongKhoang(d.ngay_tao, bat_dau_7_ngay)));
-    const doanh_thu_30_ngay = tongTien(hoanTat);
+    const tongTienDoanhThu = (ds: typeof doanhThuDaGhiNhan) => ds.reduce((sum, item) => sum + item.so_tien, 0);
+    const doanh_thu_hom_nay = tongTienDoanhThu(doanhThuDaGhiNhan.filter(d => trongKhoang(d.ngay_ghi_nhan, bat_dau_hom_nay)));
+    const doanh_thu_7_ngay = tongTienDoanhThu(doanhThuDaGhiNhan.filter(d => trongKhoang(d.ngay_ghi_nhan, bat_dau_7_ngay)));
+    const doanh_thu_30_ngay = tongTienDoanhThu(doanhThuDaGhiNhan);
     const don_hom_nay = don_30_ngay.filter(d => trongKhoang(d.ngay_tao, bat_dau_hom_nay)).length;
     const don_7_ngay = don_30_ngay.filter(d => trongKhoang(d.ngay_tao, bat_dau_7_ngay)).length;
     const don_30_ngay_count = don_30_ngay.length;
-    const gia_tri_don_trung_binh_30_ngay = hoanTat.length ? Math.round(doanh_thu_30_ngay / hoanTat.length) : 0;
+    const gia_tri_don_trung_binh_30_ngay = doanhThuDaGhiNhan.length ? Math.round(doanh_thu_30_ngay / doanhThuDaGhiNhan.length) : 0;
 
     const doanh_thu_theo_ngay = Array.from({ length: 7 }, (_, index) => {
       const dateKey = truNgay(6 - index);
-      const doanh_thu = hoanTat
-        .filter(d => ngayVietNam(d.ngay_tao) === dateKey)
-        .reduce((sum, item) => sum + Number(item.tong_tien), 0);
+      const doanh_thu = doanhThuDaGhiNhan
+        .filter(d => ngayVietNam(d.ngay_ghi_nhan) === dateKey)
+        .reduce((sum, item) => sum + item.so_tien, 0);
       const so_don = don_30_ngay.filter(d => ngayVietNam(d.ngay_tao) === dateKey).length;
       return { ngay: dateKey, doanh_thu, so_don };
     });
@@ -714,10 +742,22 @@ export class QuanTriService {
   }
 
   async cap_nhat_trang_thai_don_hang(actor: NguoiDungXacThuc, id: string, dto: CapNhatTrangThaiDonHangDto) {
-    const hien_tai = await this.db.donHang.findUnique({ where: { id }, include: { chi_tiet: true } });
+    const hien_tai = await this.db.donHang.findUnique({
+      where: { id },
+      include: {
+        chi_tiet: true,
+        thanh_toan: { include: { phuong_thuc: true }, orderBy: { ngay_tao: "desc" }, take: 1 }
+      }
+    });
     if (!hien_tai) throw new NotFoundException("Không tìm thấy đơn hàng");
     const trang_thai_moi = dto.trang_thai as TrangThaiDonHang;
-    if (hien_tai.trang_thai === trang_thai_moi) return this.chi_tiet_don_hang(id);
+    const thanh_toan_hien_tai = hien_tai.thanh_toan[0] || null;
+    // Cho phép Admin bấm lưu lại đơn đã giao/hoàn tất cũ nếu giao dịch vẫn CHO_THANH_TOAN.
+    // Trường hợp này không đổi trạng thái đơn, chỉ chốt thanh toán để doanh thu được ghi nhận.
+    const chi_xac_nhan_doanh_thu = hien_tai.trang_thai === trang_thai_moi
+      && trang_thai_moi === TrangThaiDonHang.HOAN_TAT
+      && thanh_toan_hien_tai?.trang_thai === TrangThaiThanhToan.CHO_THANH_TOAN;
+    if (hien_tai.trang_thai === trang_thai_moi && !chi_xac_nhan_doanh_thu) return this.chi_tiet_don_hang(id);
 
     const chuyenHopLe: Record<TrangThaiDonHang, TrangThaiDonHang[]> = {
       CHO_XAC_NHAN: [TrangThaiDonHang.DA_XAC_NHAN, TrangThaiDonHang.DA_HUY],
@@ -727,10 +767,11 @@ export class QuanTriService {
       HOAN_TAT: [],
       DA_HUY: []
     };
-    if (!chuyenHopLe[hien_tai.trang_thai].includes(trang_thai_moi)) {
+    if (!chi_xac_nhan_doanh_thu && !chuyenHopLe[hien_tai.trang_thai].includes(trang_thai_moi)) {
       throw new BadRequestException(`Không thể chuyển đơn từ ${hien_tai.trang_thai} sang ${trang_thai_moi}`);
     }
 
+    let thanh_toan_duoc_ghi_nhan = false;
     await this.db.$transaction(async tx => {
       if (trang_thai_moi === TrangThaiDonHang.DA_HUY && hien_tai.trang_thai !== TrangThaiDonHang.DA_HUY) {
         for (const ct of hien_tai.chi_tiet) {
@@ -741,18 +782,35 @@ export class QuanTriService {
           }
         }
       }
-      await tx.donHang.update({ where: { id }, data: { trang_thai: trang_thai_moi } });
+      // Khi Admin xác nhận đơn đã giao/hoàn tất, mọi giao dịch còn CHO_THANH_TOAN
+      // được chốt DA_THANH_TOAN. Với COD đây chính là thời điểm thu tiền và ghi nhận doanh thu.
+      if (trang_thai_moi === TrangThaiDonHang.HOAN_TAT && thanh_toan_hien_tai?.trang_thai === TrangThaiThanhToan.CHO_THANH_TOAN) {
+        await tx.thanhToan.update({
+          where: { id: thanh_toan_hien_tai.id },
+          data: {
+            trang_thai: TrangThaiThanhToan.DA_THANH_TOAN,
+            ngay_thanh_toan: new Date(),
+            noi_dung: `${thanh_toan_hien_tai.noi_dung || hien_tai.ma_don_hang} · Admin xác nhận đã giao/hoàn tất`
+          }
+        });
+        thanh_toan_duoc_ghi_nhan = true;
+      }
+      if (hien_tai.trang_thai !== trang_thai_moi) {
+        await tx.donHang.update({ where: { id }, data: { trang_thai: trang_thai_moi } });
+      }
       await tx.lichSuDonHang.create({
         data: {
           don_hang_id: id,
           nguoi_thuc_hien_id: actor.id,
           trang_thai_cu: hien_tai.trang_thai,
           trang_thai_moi,
-          ghi_chu: dto.ghi_chu?.trim() || null
+          ghi_chu: dto.ghi_chu?.trim() || (thanh_toan_duoc_ghi_nhan
+            ? (chi_xac_nhan_doanh_thu ? "Xác nhận thanh toán cho đơn đã giao; doanh thu được ghi nhận." : "Đã giao/hoàn tất; hệ thống xác nhận thanh toán và ghi nhận doanh thu.")
+            : null)
         }
       });
     });
-    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_CAP_NHAT_DON_HANG", nguoi_dung_id: actor.id, chi_tiet: { don_hang_id: id, ma_don_hang: hien_tai.ma_don_hang, trang_thai_cu: hien_tai.trang_thai, trang_thai_moi, ghi_chu: dto.ghi_chu?.trim() || null } } });
+    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_CAP_NHAT_DON_HANG", nguoi_dung_id: actor.id, chi_tiet: { don_hang_id: id, ma_don_hang: hien_tai.ma_don_hang, trang_thai_cu: hien_tai.trang_thai, trang_thai_moi, ghi_chu: dto.ghi_chu?.trim() || null, thanh_toan_duoc_ghi_nhan, chi_xac_nhan_doanh_thu, phuong_thuc: thanh_toan_hien_tai?.phuong_thuc.ma_phuong_thuc || null } } });
     return this.chi_tiet_don_hang(id);
   }
 
@@ -1015,7 +1073,7 @@ export class QuanTriService {
     return { thong_bao: "Đã xóa đánh giá", id };
   }
 
-  async xuat_bao_cao_csv(loai: string, tu_ngay?: string, den_ngay?: string) {
+  private khoang_bao_cao(tu_ngay?: string, den_ngay?: string) {
     const hopLe = (v?: string) => Boolean(v && /^\d{4}-\d{2}-\d{2}$/.test(v));
     const nowVn = new Date(Date.now() + 7 * 60 * 60 * 1000);
     const den = hopLe(den_ngay) ? den_ngay! : nowVn.toISOString().slice(0, 10);
@@ -1024,25 +1082,108 @@ export class QuanTriService {
     if (tu > den) throw new BadRequestException("Từ ngày không được lớn hơn đến ngày");
     const start = new Date(`${tu}T00:00:00+07:00`);
     const end = new Date(`${den}T00:00:00+07:00`); end.setDate(end.getDate() + 1);
-    const esc = (v: unknown) => { const raw = String(v ?? ""); const safe = /^[=+\-@]/.test(raw) ? `'${raw}` : raw; return `"${safe.replaceAll('"', '""')}"`; };
-    const csv = (rows: unknown[][]) => rows.map(row => row.map(esc).join(",")).join("\r\n");
+    return { tu, den, start, end };
+  }
 
+  private async du_lieu_bao_cao(loai: string, tu_ngay?: string, den_ngay?: string) {
+    const { tu, den, start, end } = this.khoang_bao_cao(tu_ngay, den_ngay);
     if (loai === "don-hang") {
       const ds = await this.db.donHang.findMany({ where: { ngay_tao: { gte: start, lt: end } }, orderBy: { ngay_tao: "asc" } });
-      return { ten_file: `don-hang_${tu}_${den}.csv`, csv: csv([["Ngày", "Mã đơn", "Người nhận", "Số điện thoại", "Địa chỉ", "Trạng thái", "Tổng tiền"], ...ds.map(x => [x.ngay_tao.toISOString(), x.ma_don_hang, x.ho_ten_nguoi_nhan, x.so_dien_thoai, x.dia_chi_giao_hang, x.trang_thai, Number(x.tong_tien)])]) };
+      return {
+        ten_goc: `don-hang_${tu}_${den}`,
+        ten_sheet: "Đơn hàng",
+        rows: [["Ngày", "Mã đơn", "Người nhận", "Số điện thoại", "Địa chỉ", "Trạng thái", "Tổng tiền"], ...ds.map(x => [x.ngay_tao.toISOString(), x.ma_don_hang, x.ho_ten_nguoi_nhan, x.so_dien_thoai, x.dia_chi_giao_hang, x.trang_thai, Number(x.tong_tien)])] as unknown[][]
+      };
     }
     if (loai === "doanh-thu") {
-      const ds = await this.db.donHang.findMany({ where: { ngay_tao: { gte: start, lt: end }, trang_thai: TrangThaiDonHang.HOAN_TAT }, orderBy: { ngay_tao: "asc" }, select: { ngay_tao: true, tong_tien: true } });
+      const ds = await this.db.donHang.findMany({
+        where: {
+          trang_thai: { not: TrangThaiDonHang.DA_HUY },
+          OR: [
+            { thanh_toan: { some: { trang_thai: TrangThaiThanhToan.DA_THANH_TOAN, ngay_thanh_toan: { gte: start, lt: end } } } },
+            { trang_thai: TrangThaiDonHang.HOAN_TAT, ngay_cap_nhat: { gte: start, lt: end } }
+          ]
+        },
+        orderBy: { ngay_tao: "asc" },
+        select: {
+          id: true, tong_tien: true, trang_thai: true, ngay_cap_nhat: true,
+          thanh_toan: { orderBy: { ngay_tao: "desc" }, take: 1, select: { so_tien: true, ngay_thanh_toan: true, trang_thai: true } }
+        }
+      });
       const map = new Map<string, { so_don: number; doanh_thu: number }>();
-      for (const x of ds) { const key = new Date(x.ngay_tao.getTime() + 7 * 60 * 60 * 1000).toISOString().slice(0, 10); const cur = map.get(key) || { so_don: 0, doanh_thu: 0 }; cur.so_don++; cur.doanh_thu += Number(x.tong_tien); map.set(key, cur); }
+      for (const x of ds) {
+        const tt = x.thanh_toan[0];
+        const daThanhToan = tt?.trang_thai === TrangThaiThanhToan.DA_THANH_TOAN;
+        const fallbackLegacy = !tt && x.trang_thai === TrangThaiDonHang.HOAN_TAT;
+        const ngayGhiNhan = daThanhToan ? (tt.ngay_thanh_toan || x.ngay_cap_nhat) : (fallbackLegacy ? x.ngay_cap_nhat : null);
+        if (!ngayGhiNhan || ngayGhiNhan < start || ngayGhiNhan >= end) continue;
+        const key = new Date(ngayGhiNhan.getTime() + 7 * 60 * 60 * 1000).toISOString().slice(0, 10);
+        const cur = map.get(key) || { so_don: 0, doanh_thu: 0 };
+        cur.so_don++; cur.doanh_thu += daThanhToan ? Number(tt.so_tien) : Number(x.tong_tien); map.set(key, cur);
+      }
       const rows = Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b)).map(([ngay, x]) => [ngay, x.so_don, x.doanh_thu]);
-      return { ten_file: `doanh-thu_${tu}_${den}.csv`, csv: csv([["Ngày", "Số đơn hoàn tất", "Doanh thu"], ...rows]) };
+      return { ten_goc: `doanh-thu_${tu}_${den}`, ten_sheet: "Doanh thu", rows: [["Ngày ghi nhận", "Số đơn ghi nhận doanh thu", "Doanh thu"], ...rows] as unknown[][] };
     }
     if (loai === "ton-kho") {
       const ds = await this.db.bienTheSanPham.findMany({ include: { san_pham: { select: { ma_san_pham: true, ten_san_pham: true } }, vat_lieu: { select: { ten_vat_lieu: true } }, mau_sac: { select: { ten_mau: true } } }, orderBy: { ma_bien_the: "asc" } });
-      return { ten_file: `ton-kho_${den}.csv`, csv: csv([["Mã sản phẩm", "Tên sản phẩm", "Mã biến thể", "Vật liệu", "Màu", "Tồn kho", "Hiển thị", "Chênh lệch giá"], ...ds.map(x => [x.san_pham.ma_san_pham, x.san_pham.ten_san_pham, x.ma_bien_the, x.vat_lieu?.ten_vat_lieu || "Mặc định", x.mau_sac?.ten_mau || "Mặc định", x.so_luong_ton, x.dang_hien_thi ? "Có" : "Không", Number(x.gia_chenh_lech)])]) };
+      return {
+        ten_goc: `ton-kho_${den}`,
+        ten_sheet: "Tồn kho",
+        rows: [["Mã sản phẩm", "Tên sản phẩm", "Mã biến thể", "Vật liệu", "Màu", "Tồn kho", "Hiển thị", "Chênh lệch giá"], ...ds.map(x => [x.san_pham.ma_san_pham, x.san_pham.ten_san_pham, x.ma_bien_the, x.vat_lieu?.ten_vat_lieu || "Mặc định", x.mau_sac?.ten_mau || "Mặc định", x.so_luong_ton, x.dang_hien_thi ? "Có" : "Không", Number(x.gia_chenh_lech)])] as unknown[][]
+      };
     }
     throw new BadRequestException("Loại báo cáo không hợp lệ");
+  }
+
+  private tao_xlsx(rows: unknown[][], ten_sheet: string) {
+    const xmlEsc = (v: unknown) => String(v ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&apos;");
+    const colName = (index: number) => { let n = index + 1, out = ""; while (n > 0) { n--; out = String.fromCharCode(65 + (n % 26)) + out; n = Math.floor(n / 26); } return out; };
+    const maxCols = Math.max(1, ...rows.map(r => r.length));
+    const widths = Array.from({ length: maxCols }, (_, c) => Math.min(48, Math.max(12, ...rows.slice(0, 300).map(r => String(r[c] ?? "").length + 2))));
+    const colsXml = widths.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join("");
+    const bodyXml = rows.map((row, ri) => `<row r="${ri + 1}">${row.map((value, ci) => {
+      const ref = `${colName(ci)}${ri + 1}`;
+      const style = ri === 0 ? 1 : (typeof value === "number" ? 2 : 0);
+      if (typeof value === "number" && Number.isFinite(value)) return `<c r="${ref}" s="${style}"><v>${value}</v></c>`;
+      return `<c r="${ref}" s="${style}" t="inlineStr"><is><t xml:space="preserve">${xmlEsc(value)}</t></is></c>`;
+    }).join("")}</row>`).join("");
+    const lastRef = `${colName(maxCols - 1)}${Math.max(1, rows.length)}`;
+    const sheetXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols>${colsXml}</cols><sheetData>${bodyXml}</sheetData><autoFilter ref="A1:${lastRef}"/></worksheet>`;
+    const workbookXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="${xmlEsc(ten_sheet.slice(0, 31))}" sheetId="1" r:id="rId1"/></sheets></workbook>`;
+    const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="1"><numFmt numFmtId="164" formatCode="#,##0"/></numFmts><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><color rgb="FFFFFFFF"/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF1F4E78"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
+    const files: Array<[string, string]> = [
+      ["[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`],
+      ["_rels/.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`],
+      ["xl/workbook.xml", workbookXml],
+      ["xl/_rels/workbook.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`],
+      ["xl/styles.xml", stylesXml],
+      ["xl/worksheets/sheet1.xml", sheetXml]
+    ];
+    const crcTable = Array.from({ length: 256 }, (_, n) => { let c = n; for (let k = 0; k < 8; k++) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1); return c >>> 0; });
+    const crc32 = (buf: Buffer) => { let c = 0xffffffff; for (const b of buf) c = crcTable[(c ^ b) & 0xff] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
+    const local: Buffer[] = [], central: Buffer[] = []; let offset = 0;
+    for (const [name, text] of files) {
+      const nameBuf = Buffer.from(name, "utf8"), data = Buffer.from(text, "utf8"), crc = crc32(data);
+      const lh = Buffer.alloc(30); lh.writeUInt32LE(0x04034b50, 0); lh.writeUInt16LE(20, 4); lh.writeUInt16LE(0, 6); lh.writeUInt16LE(0, 8); lh.writeUInt16LE(0, 10); lh.writeUInt16LE(0, 12); lh.writeUInt32LE(crc, 14); lh.writeUInt32LE(data.length, 18); lh.writeUInt32LE(data.length, 22); lh.writeUInt16LE(nameBuf.length, 26); lh.writeUInt16LE(0, 28);
+      local.push(lh, nameBuf, data);
+      const ch = Buffer.alloc(46); ch.writeUInt32LE(0x02014b50, 0); ch.writeUInt16LE(20, 4); ch.writeUInt16LE(20, 6); ch.writeUInt16LE(0, 8); ch.writeUInt16LE(0, 10); ch.writeUInt16LE(0, 12); ch.writeUInt16LE(0, 14); ch.writeUInt32LE(crc, 16); ch.writeUInt32LE(data.length, 20); ch.writeUInt32LE(data.length, 24); ch.writeUInt16LE(nameBuf.length, 28); ch.writeUInt16LE(0, 30); ch.writeUInt16LE(0, 32); ch.writeUInt16LE(0, 34); ch.writeUInt16LE(0, 36); ch.writeUInt32LE(0, 38); ch.writeUInt32LE(offset, 42);
+      central.push(ch, nameBuf); offset += lh.length + nameBuf.length + data.length;
+    }
+    const centralBuf = Buffer.concat(central); const eocd = Buffer.alloc(22); eocd.writeUInt32LE(0x06054b50, 0); eocd.writeUInt16LE(0, 4); eocd.writeUInt16LE(0, 6); eocd.writeUInt16LE(files.length, 8); eocd.writeUInt16LE(files.length, 10); eocd.writeUInt32LE(centralBuf.length, 12); eocd.writeUInt32LE(offset, 16); eocd.writeUInt16LE(0, 20);
+    return Buffer.concat([...local, centralBuf, eocd]);
+  }
+
+  async xuat_bao_cao_csv(loai: string, tu_ngay?: string, den_ngay?: string) {
+    const { ten_goc, rows } = await this.du_lieu_bao_cao(loai, tu_ngay, den_ngay);
+    const esc = (v: unknown) => { const raw = String(v ?? ""); const safe = /^[=+\-@]/.test(raw) ? `'${raw}` : raw; return `"${safe.replaceAll('"', '""')}"`; };
+    const csv = rows.map(row => row.map(esc).join(",")).join("\r\n");
+    return { ten_file: `${ten_goc}.csv`, csv };
+  }
+
+  async xuat_bao_cao_excel(loai: string, tu_ngay?: string, den_ngay?: string) {
+    const { ten_goc, ten_sheet, rows } = await this.du_lieu_bao_cao(loai, tu_ngay, den_ngay);
+    const buffer = this.tao_xlsx(rows, ten_sheet);
+    return { ten_file: `${ten_goc}.xlsx`, mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", base64: buffer.toString("base64") };
   }
 
   async danh_sach_nhat_ky_admin() {

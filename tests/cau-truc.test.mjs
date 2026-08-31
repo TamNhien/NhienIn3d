@@ -79,7 +79,37 @@ test("v2.15.0 co danh muc bien the danh gia va bao cao CSV", () => {
   assert.match(controller, /@Get\("bao-cao\/:loai"\)/);
   assert.match(admin, /\["danh-muc", "Danh mục"\]/u);
   assert.match(admin, /\["danh-gia", "Đánh giá"\]/u);
-  assert.match(admin, /\["bao-cao", "Báo cáo CSV"\]/u);
+  assert.match(admin, /\["bao-cao", "Báo cáo"\]/u);
+});
+
+
+test("v2.15.1 ghi nhan doanh thu theo thanh toan va COD khi da giao", () => {
+  const checkout = readFileSync("apps/api/src/thanh-toan/thanh-toan.service.ts", "utf8");
+  const service = readFileSync("apps/api/src/quan-tri/quan-tri.service.ts", "utf8");
+  const admin = readFileSync("apps/web/app/quan-tri/page.tsx", "utf8");
+  assert.match(checkout, /phuong_thuc\.ma_phuong_thuc !== "COD"/);
+  assert.match(checkout, /da_thanh_toan \? TrangThaiThanhToan\.DA_THANH_TOAN/);
+  assert.match(service, /trang_thai_moi === TrangThaiDonHang\.HOAN_TAT/);
+  assert.match(service, /TrangThaiThanhToan\.DA_THANH_TOAN/);
+  assert.match(service, /doanhThuDaGhiNhan/);
+  assert.match(admin, /Xác nhận đã giao & ghi doanh thu/u);
+  assert.match(admin, /Thanh toán & doanh thu/u);
+});
+
+
+
+test("v2.15.2 fix typecheck seed, xuat Excel va bo ghi chu nen footer", () => {
+  const seed = readFileSync("apps/api/prisma/seed.ts", "utf8");
+  const controller = readFileSync("apps/api/src/quan-tri/quan-tri.controller.ts", "utf8");
+  const service = readFileSync("apps/api/src/quan-tri/quan-tri.service.ts", "utf8");
+  const admin = readFileSync("apps/web/app/quan-tri/page.tsx", "utf8");
+  const footer = readFileSync("apps/web/components/chan-trang.tsx", "utf8");
+  assert.match(seed, /tong_tien: unknown; trang_thai: TrangThaiDonHang/);
+  assert.match(controller, /@Get\("bao-cao\/:loai\/excel"\)/);
+  assert.match(service, /xuat_bao_cao_excel/);
+  assert.match(service, /application\/vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet/);
+  assert.match(admin, /Xuất Excel/u);
+  assert.doesNotMatch(footer, /Nền giao diện dùng ảnh 3D do người dùng cung cấp/u);
 });
 
 test("root co lenh kiem tra so dong du lieu database", () => {
@@ -92,16 +122,16 @@ test("V2 co migration nang cap khong ghi de migration V1", () => {
   assert.equal(existsSync("apps/api/prisma/migrations/202608290002_v002_gio_hang_thanh_toan/migration.sql"), true);
 });
 
-test("version v2.15.0 dong bo root API va Web", () => {
-  assert.equal(readFileSync("VERSION", "utf8").trim(), "2.15.0");
-  assert.equal(docJson("package.json").version, "2.15.0");
-  assert.equal(docJson("apps/api/package.json").version, "2.15.0");
-  assert.equal(docJson("apps/web/package.json").version, "2.15.0");
+test("version v2.15.2 dong bo root API va Web", () => {
+  assert.equal(readFileSync("VERSION", "utf8").trim(), "2.15.2");
+  assert.equal(docJson("package.json").version, "2.15.2");
+  assert.equal(docJson("apps/api/package.json").version, "2.15.2");
+  assert.equal(docJson("apps/web/package.json").version, "2.15.2");
 });
 
-test("README co lich su phien ban tang dan den v2.15.0", () => {
+test("README co lich su phien ban tang dan den v2.15.2", () => {
   const readme = readFileSync("README.md", "utf8");
-  const viTri = ["## v1.0.0", "## v1.0.1", "## v1.0.2", "## v1.0.3", "## v1.0.4", "## v1.0.5", "## v1.0.6", "## v1.0.7", "## v2.0.0", "## v2.1.0", "## v2.1.1", "## v2.2.0", "## v2.2.1", "## v2.3.0", "## v2.4.0", "## v2.4.1", "## v2.5.0", "## v2.6.0", "## v2.6.1", "## v2.7.0", "## v2.8.0", "## v2.8.1", "## v2.8.2", "## v2.8.3", "## v2.8.4", "## v2.8.5", "## v2.8.6", "## v2.8.7", "## v2.8.8", "## v2.8.9", "## v2.9.0", "## v2.9.1", "## v2.9.2", "## v2.9.3", "## v2.9.4", "## v2.9.5", "## v2.9.6", "## v2.9.7", "## v2.9.8", "## v2.9.9", "## v2.10.0", "## v2.10.1", "## v2.10.2", "## v2.11.0", "## v2.12.0", "## v2.12.1", "## v2.12.2", "## v2.12.3", "## v2.13.0", "## v2.14.0", "## v2.15.0"].map(x => readme.indexOf(x));
+  const viTri = ["## v1.0.0", "## v1.0.1", "## v1.0.2", "## v1.0.3", "## v1.0.4", "## v1.0.5", "## v1.0.6", "## v1.0.7", "## v2.0.0", "## v2.1.0", "## v2.1.1", "## v2.2.0", "## v2.2.1", "## v2.3.0", "## v2.4.0", "## v2.4.1", "## v2.5.0", "## v2.6.0", "## v2.6.1", "## v2.7.0", "## v2.8.0", "## v2.8.1", "## v2.8.2", "## v2.8.3", "## v2.8.4", "## v2.8.5", "## v2.8.6", "## v2.8.7", "## v2.8.8", "## v2.8.9", "## v2.9.0", "## v2.9.1", "## v2.9.2", "## v2.9.3", "## v2.9.4", "## v2.9.5", "## v2.9.6", "## v2.9.7", "## v2.9.8", "## v2.9.9", "## v2.10.0", "## v2.10.1", "## v2.10.2", "## v2.11.0", "## v2.12.0", "## v2.12.1", "## v2.12.2", "## v2.12.3", "## v2.13.0", "## v2.14.0", "## v2.15.0", "## v2.15.1", "## v2.15.2"].map(x => readme.indexOf(x));
   assert.ok(viTri.every(x => x >= 0));
   assert.deepEqual([...viTri].sort((a,b)=>a-b), viTri);
 });

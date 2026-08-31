@@ -1,6 +1,6 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v2.15.0** — 30/08/2026
+> Phiên bản hiện tại: **v2.15.2** — 31/08/2026
 
 NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **frontend Next.js** và **backend NestJS/Fastify** kết nối **PostgreSQL qua Prisma**.
 
@@ -19,7 +19,7 @@ NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **fro
 
 ## Giao diện dựng lại theo bố cục CineBooking Pro
 
-Bản source v2.15.0 tiếp tục dùng **frontend layout** theo cấu trúc CineBooking Pro, giữ nguyên nghiệp vụ NhienIn3d và mở rộng quản trị **Danh mục / Sản phẩm / Kho & biến thể / Đánh giá / Báo cáo**:
+Bản source v2.15.2 tiếp tục dùng **frontend layout** theo cấu trúc CineBooking Pro, giữ nguyên nghiệp vụ NhienIn3d, sửa lỗi typecheck seed và bổ sung **xuất báo cáo Excel (.xlsx)** bên cạnh CSV:
 
 - Dùng `RootLayout` chung với **header sticky**, vùng nội dung `max-w-7xl`, **footer dùng chung** và menu drawer responsive; không còn lặp navbar ở từng route.
 - Bổ sung **Tailwind CSS 4 + `@tailwindcss/postcss`** giống lớp công nghệ frontend tham chiếu, đồng thời giữ toàn bộ CSS/logic nghiệp vụ cũ để tránh phá luồng sản phẩm, giỏ hàng, tài khoản và quản trị.
@@ -29,10 +29,12 @@ Bản source v2.15.0 tiếp tục dùng **frontend layout** theo cấu trúc Cin
 
 ## Điểm chính bản hiện tại
 
+- v2.15.2 sửa lỗi `npm run typecheck` tại `prisma/seed.ts` do kiểu `don_hang_map` thiếu trường `trang_thai`, đồng thời bổ sung xuất **Excel (.xlsx)** cho Đơn hàng/Doanh thu/Tồn kho và bỏ ghi chú nền ảnh khỏi footer.
+- v2.15.1 sửa **ghi nhận doanh thu theo thanh toán**: non-COD đã thanh toán được cộng doanh thu ngay; COD chỉ cộng khi Admin xác nhận **Đã giao / hoàn tất**, lúc đó giao dịch tự chuyển sang `DA_THANH_TOAN`.
 - v2.15.0 bổ sung **CRUD Danh mục**: tạo, sửa tên/mô tả/thứ tự/hiển thị và xóa danh mục trống; không cho xóa khi vẫn còn sản phẩm để tránh mất liên kết dữ liệu.
 - Tab **Kho** được nâng thành quản lý biến thể đầy đủ: tạo/sửa/xóa mã biến thể, chọn vật liệu, màu sắc, giá chênh lệch, tồn kho và trạng thái hiển thị; sản phẩm luôn phải còn ít nhất một biến thể.
 - Thêm tab **Đánh giá**: đánh giá mới ở trạng thái chờ duyệt; Admin có thể Duyệt, Ẩn hoặc Xóa. Storefront chỉ đọc đánh giá đã duyệt.
-- Thêm tab **Báo cáo CSV** với khoảng ngày tùy chọn: Đơn hàng, Doanh thu đơn hoàn tất và snapshot Tồn kho. File xuất UTF-8 có BOM ở frontend để mở trực tiếp trong Excel mà không lỗi dấu tiếng Việt; dữ liệu bắt đầu bằng ký tự công thức Excel được trung hòa để hạn chế CSV injection.
+- Tab **Báo cáo** hỗ trợ song song **Excel (.xlsx)** và **CSV UTF-8** cho Đơn hàng, Doanh thu theo thời điểm ghi nhận thanh toán và snapshot Tồn kho. File XLSX được backend tạo trực tiếp, có header định dạng, freeze hàng đầu, auto-filter và độ rộng cột phù hợp; CSV vẫn có BOM để mở đúng tiếng Việt trong Excel.
 - Các thao tác Danh mục/Biến thể/Đánh giá được ghi vào `nhat_ky_bao_mat` dưới nhóm sự kiện `ADMIN_*`.
 - v2.14.0 tách tab **Sản phẩm** và **Kho**: Sản phẩm chỉ phụ trách thêm/sửa/xóa, ảnh và thông tin bán hàng; Kho chỉ phụ trách tồn kho/hiển thị từng biến thể.
 - Admin có thể **chọn ảnh JPEG/PNG/WebP trực tiếp từ máy**. Frontend crop/căn giữa và chuẩn hóa ảnh thành **1000 × 800 (tỉ lệ 5:4)** trước khi lưu, đồng bộ đúng khung ảnh product card; ảnh tải lên được lưu cùng dữ liệu sản phẩm trong PostgreSQL dưới dạng data URL nên không phụ thuộc đường dẫn file tạm trên máy người dùng.
@@ -243,7 +245,7 @@ V2.8.0 hoàn thiện khu vực tài khoản và quản trị nhân sự:
 - `SIEU_QUAN_TRI` bypass mọi `VaiTroGuard`; `QUAN_TRI` có toàn quyền trên các module quản trị hiện có nhưng không được tự cấp/đụng tài khoản `SIEU_QUAN_TRI`.
 - Các bảng dữ liệu mẫu tĩnh tiếp tục có tối thiểu 10 dòng seed; tài khoản/nhân sự/ca/phân ca là dữ liệu vận hành và được phép thay đổi số lượng.
 
-### Backend hiện tại — v2.15.0
+### Backend hiện tại — v2.15.1
 
 Backend **đã có và đang dùng thật** trong project, không phải mock frontend.
 
@@ -893,6 +895,33 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 - Bổ sung audit trail cho tạo/sửa/xóa danh mục, tạo/sửa/xóa biến thể và duyệt/ẩn/xóa đánh giá.
 - Không thay đổi Prisma schema nên **không có migration database mới**.
 - Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm test` → `npm run typecheck` → `npm run build` → Docker Compose → `.\scripts\release.ps1 v2.15.0`.
+
+---
+
+## v2.15.1 — 31/08/2026
+
+- Sửa luồng doanh thu theo **trạng thái thanh toán thực tế** thay vì chỉ nhìn trạng thái đơn hàng. Đơn không phải COD khi checkout được xác nhận `DA_THANH_TOAN` và ghi nhận doanh thu ngay.
+- Đơn **COD** vẫn ở `CHO_THANH_TOAN` trong quá trình xử lý; khi Admin chuyển từ `ĐANG_GIAO` sang `HOAN_TAT` (UI hiển thị **Đã giao / hoàn tất**), backend tự chuyển giao dịch sang `DA_THANH_TOAN`, ghi `ngay_thanh_toan` và cập nhật doanh thu.
+- Tab Đơn hàng hiển thị thêm khối **Thanh toán & doanh thu**: phương thức, trạng thái thanh toán, số tiền, thời điểm thanh toán và trạng thái đã/chưa ghi nhận doanh thu.
+- Nút hoàn tất đơn đổi thành **Xác nhận đã giao & ghi doanh thu** để Admin biết rõ tác động kế toán của thao tác.
+- Dashboard doanh thu hôm nay/7 ngày/30 ngày và biểu đồ 7 ngày sử dụng **ngày ghi nhận thanh toán**; vẫn có fallback cho đơn `HOAN_TAT` cũ chưa có bản ghi thanh toán hợp lệ.
+- Báo cáo CSV doanh thu chuyển sang tính theo **ngày ghi nhận doanh thu**; đơn đã thanh toán non-COD được đưa vào báo cáo ngay cả khi chưa giao, còn COD chỉ vào báo cáo sau khi xác nhận đã giao/hoàn tất.
+- Dữ liệu seed thanh toán được chuẩn hóa: phương thức không COD mặc định `DA_THANH_TOAN`; COD chỉ `DA_THANH_TOAN` khi đơn đã hoàn tất.
+- Không thay đổi Prisma schema nên **không có migration database mới**.
+- Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm test` → `npm run typecheck` → `npm run build` → Docker Compose → `.\scripts\release.ps1 v2.15.1`.
+
+---
+
+
+## v2.15.2 — 31/08/2026
+
+- Sửa lỗi `npm run typecheck` ở `apps/api/prisma/seed.ts`: kiểu dữ liệu của `don_hang_map` giờ có `trang_thai: TrangThaiDonHang`, khớp đúng dữ liệu Prisma trả về và không còn lỗi `TS2339: Property 'trang_thai' does not exist`.
+- Bổ sung **xuất Excel (.xlsx)** cho 3 báo cáo Admin: Đơn hàng, Doanh thu và Tồn kho; giữ nguyên lựa chọn khoảng ngày hiện có.
+- File Excel có header nổi bật, freeze hàng tiêu đề, auto-filter, số được lưu dạng numeric và độ rộng cột tự điều chỉnh; không cần thêm thư viện npm mới.
+- Giữ **CSV** làm định dạng xuất thứ hai để tương thích workflow cũ.
+- Bỏ dòng `Nền giao diện dùng ảnh 3D do người dùng cung cấp.` khỏi footer; footer chỉ còn copyright NhienIn3d.
+- Không thay đổi Prisma schema nên **không có migration database mới**.
+- Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm test` → `npm run typecheck` → `npm run build` → Docker Compose → `.\scripts\release.ps1 v2.15.2`.
 
 ---
 

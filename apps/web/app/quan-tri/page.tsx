@@ -46,6 +46,7 @@ import {
   capNhatDanhGiaAdmin,
   xoaDanhGiaAdmin,
   layBaoCaoCsvAdmin,
+  layBaoCaoExcelAdmin,
   layNhatKyAdmin,
   PhanCa,
   taoCaLam,
@@ -72,11 +73,14 @@ const nhanTrangThaiDon = (trang_thai: string) => ({
   DA_XAC_NHAN: "Đã xác nhận",
   DANG_SAN_XUAT: "Đang sản xuất",
   DANG_GIAO: "Đang giao",
-  HOAN_TAT: "Hoàn tất",
+  HOAN_TAT: "Đã giao / hoàn tất",
   DA_HUY: "Đã hủy"
 }[trang_thai] || trang_thai);
 const TRANG_THAI_DON = ["CHO_XAC_NHAN", "DA_XAC_NHAN", "DANG_SAN_XUAT", "DANG_GIAO", "HOAN_TAT", "DA_HUY"] as const;
+const nhanTrangThaiThanhToan = (trang_thai: string) => ({ CHO_THANH_TOAN: "Chờ thanh toán", DA_THANH_TOAN: "Đã thanh toán", THAT_BAI: "Thất bại", DA_HOAN_TIEN: "Đã hoàn tiền" }[trang_thai] || trang_thai);
 const TRANG_THAI_TIEP_THEO: Record<string, string[]> = { CHO_XAC_NHAN: ["DA_XAC_NHAN", "DA_HUY"], DA_XAC_NHAN: ["DANG_SAN_XUAT", "DA_HUY"], DANG_SAN_XUAT: ["DANG_GIAO", "DA_HUY"], DANG_GIAO: ["HOAN_TAT"], HOAN_TAT: [], DA_HUY: [] };
+const canGhiNhanDoanhThuDonDaGiao = (don: AdminDonHangChiTiet | null) => Boolean(don && don.trang_thai === "HOAN_TAT" && don.thanh_toan[0]?.trang_thai === "CHO_THANH_TOAN");
+const daGhiNhanDoanhThu = (don: AdminDonHangChiTiet | null) => Boolean(don && don.trang_thai !== "DA_HUY" && (don.thanh_toan[0]?.trang_thai === "DA_THANH_TOAN" || (!don.thanh_toan[0] && don.trang_thai === "HOAN_TAT")));
 const nhanSuKienAudit = (loai: string) => ({
   ADMIN_CAP_NHAT_NGUOI_DUNG: "Cập nhật khách hàng", ADMIN_KICH_HOAT_NGUOI_DUNG: "Kích hoạt tài khoản", ADMIN_KHOA_NGUOI_DUNG: "Khóa tài khoản", ADMIN_XOA_NGUOI_DUNG: "Xóa tài khoản",
   ADMIN_TAO_NHAN_VIEN: "Tạo nhân viên", ADMIN_CAP_NHAT_NHAN_VIEN: "Cập nhật nhân viên", ADMIN_TAO_CA_LAM: "Tạo ca", ADMIN_CAP_NHAT_CA_LAM: "Cập nhật ca", ADMIN_XOA_CA_LAM: "Xóa ca",
@@ -625,6 +629,18 @@ export default function QuanTriPage() {
     } catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể xuất báo cáo"); } finally { setDangXuLy(null); }
   }
 
+  async function taiBaoCaoExcel(loai: "don-hang" | "doanh-thu" | "ton-kho") {
+    setDangXuLy(`bao-cao-excel-${loai}`); setThongBao("");
+    try {
+      const kq = await layBaoCaoExcelAdmin(loai, bao_cao_tu_ngay, bao_cao_den_ngay);
+      const binary = atob(kq.base64); const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const blob = new Blob([bytes], { type: kq.mime_type }); const url = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href = url; a.download = kq.ten_file; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      setThongBao(`Đã xuất Excel ${kq.ten_file}.`);
+    } catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể xuất Excel"); } finally { setDangXuLy(null); }
+  }
+
   const soPhanCaCuaCa = useMemo(() => {
     const dem = new Map<string, number>();
     for (const item of phan_ca) dem.set(item.ca_lam_viec.id, (dem.get(item.ca_lam_viec.id) || 0) + 1);
@@ -690,7 +706,7 @@ export default function QuanTriPage() {
     ["danh-muc", "Danh mục"],
     ["kho", "Kho"],
     ["danh-gia", "Đánh giá"],
-    ["bao-cao", "Báo cáo CSV"],
+    ["bao-cao", "Báo cáo"],
     ["khach-hang", "Khách hàng"],
     ["nhan-vien", "Nhân viên bán hàng"],
     ["tao-nhan-vien", "Tạo nhân viên bán hàng"],
@@ -714,15 +730,15 @@ export default function QuanTriPage() {
     {tab === "tong-quan" && <section className="cine-dashboard-v211">
       {!tong_quan ? <div className="cine-card cine-admin-section">Đang tải thống kê quản trị…</div> : <>
         <div className="cine-dashboard-period-cards">
-          <article className="cine-card cine-dashboard-kpi"><span>Doanh thu hôm nay</span><strong>{dinhDangTien(tong_quan.doanh_thu.hom_nay)}</strong><small>{tong_quan.don_hang_theo_ky.hom_nay} đơn phát sinh · doanh thu tính trên đơn hoàn tất</small></article>
+          <article className="cine-card cine-dashboard-kpi"><span>Doanh thu hôm nay</span><strong>{dinhDangTien(tong_quan.doanh_thu.hom_nay)}</strong><small>{tong_quan.don_hang_theo_ky.hom_nay} đơn phát sinh · doanh thu theo thanh toán đã xác nhận</small></article>
           <article className="cine-card cine-dashboard-kpi"><span>Doanh thu 7 ngày</span><strong>{dinhDangTien(tong_quan.doanh_thu.bay_ngay)}</strong><small>{tong_quan.don_hang_theo_ky.bay_ngay} đơn từ {new Date(`${tong_quan.ky_bao_cao.tu_7_ngay}T00:00:00`).toLocaleDateString("vi-VN")}</small></article>
-          <article className="cine-card cine-dashboard-kpi"><span>Doanh thu 30 ngày</span><strong>{dinhDangTien(tong_quan.doanh_thu.ba_muoi_ngay)}</strong><small>{tong_quan.don_hang_theo_ky.ba_muoi_ngay} đơn · trung bình {dinhDangTien(tong_quan.doanh_thu.gia_tri_don_trung_binh_30_ngay)}/đơn hoàn tất</small></article>
+          <article className="cine-card cine-dashboard-kpi"><span>Doanh thu 30 ngày</span><strong>{dinhDangTien(tong_quan.doanh_thu.ba_muoi_ngay)}</strong><small>{tong_quan.don_hang_theo_ky.ba_muoi_ngay} đơn · trung bình {dinhDangTien(tong_quan.doanh_thu.gia_tri_don_trung_binh_30_ngay)}/đơn ghi nhận doanh thu</small></article>
           <article className="cine-card cine-dashboard-kpi"><span>Khách hàng mới</span><strong>{tong_quan.khach_hang_moi.ba_muoi_ngay}</strong><small>Hôm nay {tong_quan.khach_hang_moi.hom_nay} · 7 ngày {tong_quan.khach_hang_moi.bay_ngay}</small></article>
         </div>
 
         <div className="cine-dashboard-grid">
           <article className="cine-card cine-dashboard-panel cine-dashboard-revenue">
-            <div className="cine-dashboard-panel-head"><div><h2>Doanh thu 7 ngày</h2><p>Đơn hoàn tất theo ngày, múi giờ Việt Nam.</p></div><strong>{dinhDangTien(tong_quan.doanh_thu.bay_ngay)}</strong></div>
+            <div className="cine-dashboard-panel-head"><div><h2>Doanh thu 7 ngày</h2><p>Theo thời điểm thanh toán/ghi nhận, múi giờ Việt Nam.</p></div><strong>{dinhDangTien(tong_quan.doanh_thu.bay_ngay)}</strong></div>
             <div className="cine-revenue-bars">{tong_quan.doanh_thu_theo_ngay.map(item => <div className="cine-revenue-row" key={item.ngay}>
               <div><b>{new Date(`${item.ngay}T00:00:00`).toLocaleDateString("vi-VN", { weekday: "short" })}</b><span>{new Date(`${item.ngay}T00:00:00`).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" })}</span></div>
               <div className="cine-revenue-track"><i style={{ width: `${Math.max(3, (item.doanh_thu / maxDoanhThu7Ngay) * 100)}%` }} /></div>
@@ -782,7 +798,8 @@ export default function QuanTriPage() {
             <div className="cine-order-detail-head-v212"><div><span>Mã đơn</span><h3>{don_chon.ma_don_hang}</h3><small>{new Date(don_chon.ngay_tao).toLocaleString("vi-VN")}</small></div><strong>{dinhDangTien(don_chon.tong_tien)}</strong></div>
             <div className="cine-order-recipient-v212"><div><span>Người nhận</span><b>{don_chon.ho_ten_nguoi_nhan}</b><small>{don_chon.so_dien_thoai}</small></div><div><span>Địa chỉ giao hàng</span><b>{don_chon.dia_chi_giao_hang}</b>{don_chon.khach_hang?.thu_dien_tu && <small>{don_chon.khach_hang.thu_dien_tu}</small>}</div></div>
             <div className="cine-order-lines-v212"><h4>Sản phẩm</h4>{don_chon.chi_tiet.map(ct => <div className="cine-order-line-v212" key={ct.id}><span><b>{ct.ten_san_pham}</b><small>{ct.ma_san_pham} · {String(ct.tuy_chon?.ma_bien_the || "Cấu hình mặc định")}</small></span><span>{ct.so_luong} × {dinhDangTien(ct.don_gia)}</span><strong>{dinhDangTien(ct.thanh_tien)}</strong></div>)}</div>
-            <div className="cine-order-update-v212"><h4>Cập nhật trạng thái</h4><div className="cine-order-update-fields-v212"><label><span>Trạng thái mới</span><select value={don_trang_thai_moi} onChange={e => setDonTrangThaiMoi(e.target.value)}><option value={don_chon.trang_thai}>{nhanTrangThaiDon(don_chon.trang_thai)} (hiện tại)</option>{(TRANG_THAI_TIEP_THEO[don_chon.trang_thai] || []).map(x => <option key={x} value={x}>{nhanTrangThaiDon(x)}</option>)}</select></label><label><span>Ghi chú xử lý</span><input value={don_ghi_chu} onChange={e => setDonGhiChu(e.target.value)} placeholder="VD: Đã xác nhận với khách hàng"/></label></div><button type="button" className="cine-btn cine-btn-primary" onClick={luuTrangThaiDon} disabled={dang_xu_ly === `don-${don_chon.id}` || don_trang_thai_moi === don_chon.trang_thai}>{dang_xu_ly === `don-${don_chon.id}` ? "Đang lưu…" : "Lưu trạng thái"}</button>{TRANG_THAI_TIEP_THEO[don_chon.trang_thai]?.length === 0 && <small className="cine-terminal-note-v212">Đơn đã ở trạng thái kết thúc, không chuyển tiếp.</small>}</div>
+            <div className="cine-order-payment-v2151"><div><h4>Thanh toán & doanh thu</h4><p>Non-COD đã thanh toán được ghi nhận doanh thu ngay. COD ghi nhận khi Admin xác nhận đơn đã giao / hoàn tất.</p></div>{don_chon.thanh_toan[0] ? <div className="cine-payment-grid-v2151"><span><small>Phương thức</small><b>{don_chon.thanh_toan[0].phuong_thuc.ten_phuong_thuc}</b></span><span><small>Trạng thái</small><b>{nhanTrangThaiThanhToan(don_chon.thanh_toan[0].trang_thai)}</b></span><span><small>Số tiền</small><b>{dinhDangTien(don_chon.thanh_toan[0].so_tien)}</b></span><span><small>Ghi nhận doanh thu</small><b className={daGhiNhanDoanhThu(don_chon) ? "revenue-ok-v2151" : "revenue-wait-v2151"}>{daGhiNhanDoanhThu(don_chon) ? "Đã ghi nhận" : "Chưa ghi nhận"}</b></span>{don_chon.thanh_toan[0].ngay_thanh_toan && <span><small>Thanh toán lúc</small><b>{new Date(don_chon.thanh_toan[0].ngay_thanh_toan!).toLocaleString("vi-VN")}</b></span>}</div> : <small>Đơn chưa có giao dịch thanh toán.</small>}</div>
+            <div className="cine-order-update-v212"><h4>Cập nhật trạng thái</h4><div className="cine-order-update-fields-v212"><label><span>Trạng thái mới</span><select value={don_trang_thai_moi} onChange={e => setDonTrangThaiMoi(e.target.value)}><option value={don_chon.trang_thai}>{nhanTrangThaiDon(don_chon.trang_thai)} (hiện tại)</option>{(TRANG_THAI_TIEP_THEO[don_chon.trang_thai] || []).map(x => <option key={x} value={x}>{nhanTrangThaiDon(x)}{x === "HOAN_TAT" ? " · ghi doanh thu COD" : ""}</option>)}</select></label><label><span>Ghi chú xử lý</span><input value={don_ghi_chu} onChange={e => setDonGhiChu(e.target.value)} placeholder="VD: Đã giao hàng cho khách"/></label></div><button type="button" className="cine-btn cine-btn-primary" onClick={luuTrangThaiDon} disabled={dang_xu_ly === `don-${don_chon.id}` || (don_trang_thai_moi === don_chon.trang_thai && !canGhiNhanDoanhThuDonDaGiao(don_chon))}>{dang_xu_ly === `don-${don_chon.id}` ? "Đang lưu…" : canGhiNhanDoanhThuDonDaGiao(don_chon) && don_trang_thai_moi === don_chon.trang_thai ? "Ghi nhận thanh toán & doanh thu" : don_trang_thai_moi === "HOAN_TAT" ? "Xác nhận đã giao & ghi doanh thu" : "Lưu trạng thái"}</button>{canGhiNhanDoanhThuDonDaGiao(don_chon) ? <small className="cine-terminal-note-v212 revenue-wait-v2151">Đơn đã giao nhưng giao dịch vẫn chờ thanh toán. Bấm Ghi nhận thanh toán & doanh thu để chốt doanh thu.</small> : TRANG_THAI_TIEP_THEO[don_chon.trang_thai]?.length === 0 && <small className="cine-terminal-note-v212">Đơn đã ở trạng thái kết thúc, không chuyển tiếp.</small>}</div>
             <div className="cine-order-history-v212"><h4>Lịch sử xử lý</h4>{don_chon.lich_su.map(ls => <div key={ls.id} className="cine-order-history-item-v212"><i/><span><b>{nhanTrangThaiDon(ls.trang_thai_moi)}</b><small>{new Date(ls.ngay_tao).toLocaleString("vi-VN")} · {ls.nguoi_thuc_hien?.ho_ten || "Hệ thống/khách hàng"}</small>{ls.ghi_chu && <em>{ls.ghi_chu}</em>}</span></div>)}</div>
           </>}
         </div>
@@ -918,12 +935,12 @@ export default function QuanTriPage() {
     </section>}
 
     {tab === "bao-cao" && <section className="cine-admin-operations cine-report-admin-v215">
-      <div className="cine-operations-heading"><div><h2>Xuất báo cáo CSV</h2><p>Xuất UTF-8 có dấu để mở trực tiếp bằng Excel: đơn hàng, doanh thu hoàn tất và tồn kho.</p></div></div>
+      <div className="cine-operations-heading"><div><h2>Xuất báo cáo</h2><p>Hỗ trợ Excel (.xlsx) và CSV UTF-8: đơn hàng, doanh thu đã ghi nhận và tồn kho.</p></div></div>
       <div className="cine-card cine-report-period-v215"><label><span>Từ ngày</span><input type="date" value={bao_cao_tu_ngay} onChange={e=>setBaoCaoTuNgay(e.target.value)}/></label><label><span>Đến ngày</span><input type="date" value={bao_cao_den_ngay} onChange={e=>setBaoCaoDenNgay(e.target.value)}/></label></div>
       <div className="cine-report-grid-v215">
-        <article className="cine-card"><h3>Đơn hàng</h3><p>Ngày, mã đơn, người nhận, địa chỉ, trạng thái và tổng tiền.</p><button type="button" className="cine-btn cine-btn-primary" onClick={()=>taiBaoCao("don-hang")} disabled={dang_xu_ly==="bao-cao-don-hang"}>Xuất đơn hàng CSV</button></article>
-        <article className="cine-card"><h3>Doanh thu</h3><p>Tổng hợp theo ngày, chỉ tính các đơn đã hoàn tất.</p><button type="button" className="cine-btn cine-btn-primary" onClick={()=>taiBaoCao("doanh-thu")} disabled={dang_xu_ly==="bao-cao-doanh-thu"}>Xuất doanh thu CSV</button></article>
-        <article className="cine-card"><h3>Tồn kho</h3><p>Snapshot hiện tại của toàn bộ biến thể, vật liệu, màu và số lượng.</p><button type="button" className="cine-btn cine-btn-primary" onClick={()=>taiBaoCao("ton-kho")} disabled={dang_xu_ly==="bao-cao-ton-kho"}>Xuất tồn kho CSV</button></article>
+        <article className="cine-card"><h3>Đơn hàng</h3><p>Ngày, mã đơn, người nhận, địa chỉ, trạng thái và tổng tiền.</p><div className="cine-report-actions-v2152"><button type="button" className="cine-btn cine-btn-primary" onClick={()=>taiBaoCaoExcel("don-hang")} disabled={dang_xu_ly==="bao-cao-excel-don-hang"}>Xuất Excel</button><button type="button" className="cine-btn cine-btn-secondary" onClick={()=>taiBaoCao("don-hang")} disabled={dang_xu_ly==="bao-cao-don-hang"}>Xuất CSV</button></div></article>
+        <article className="cine-card"><h3>Doanh thu</h3><p>Tổng hợp theo ngày ghi nhận: non-COD đã thanh toán tính ngay; COD tính khi đã giao/hoàn tất.</p><div className="cine-report-actions-v2152"><button type="button" className="cine-btn cine-btn-primary" onClick={()=>taiBaoCaoExcel("doanh-thu")} disabled={dang_xu_ly==="bao-cao-excel-doanh-thu"}>Xuất Excel</button><button type="button" className="cine-btn cine-btn-secondary" onClick={()=>taiBaoCao("doanh-thu")} disabled={dang_xu_ly==="bao-cao-doanh-thu"}>Xuất CSV</button></div></article>
+        <article className="cine-card"><h3>Tồn kho</h3><p>Snapshot hiện tại của toàn bộ biến thể, vật liệu, màu và số lượng.</p><div className="cine-report-actions-v2152"><button type="button" className="cine-btn cine-btn-primary" onClick={()=>taiBaoCaoExcel("ton-kho")} disabled={dang_xu_ly==="bao-cao-excel-ton-kho"}>Xuất Excel</button><button type="button" className="cine-btn cine-btn-secondary" onClick={()=>taiBaoCao("ton-kho")} disabled={dang_xu_ly==="bao-cao-ton-kho"}>Xuất CSV</button></div></article>
       </div>
     </section>}
 

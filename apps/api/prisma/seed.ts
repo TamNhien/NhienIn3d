@@ -36,7 +36,7 @@ function taoDatabaseUrl(): string {
 const adapter = new PrismaPg({ connectionString: taoDatabaseUrl() });
 const db = new PrismaClient({ adapter });
 
-const PHIEN_BAN_HIEN_TAI = "SEED_V2150_DANH_MUC_BIEN_THE_DANH_GIA_BAO_CAO";
+const PHIEN_BAN_HIEN_TAI = "SEED_V2151_DOANH_THU_THEO_THANH_TOAN";
 
 const danh_muc = [
   ["HOBBY_RC", "Mô hình & RC", "mo-hinh-rc", "Mô hình cơ khí, xe điều khiển và sản phẩm lắp ráp."],
@@ -254,7 +254,7 @@ const phien_ban_seed = [
   ["SEED_V2120_DON_HANG_SAN_PHAM_AUDIT", "NhienIn3d v2.12.0 bổ sung quản trị đơn hàng, lịch sử trạng thái, sản phẩm/tồn kho và audit Admin."],
   ["SEED_V2122_SAN_PHAM_12_GRID_6", "NhienIn3d v2.12.2 bổ sung đủ 12 sản phẩm mẫu để storefront hiển thị 2 hàng × 6 sản phẩm."],
   ["SEED_V2130_QUAN_TRI_SAN_PHAM_ANH_LOCAL", "NhienIn3d v2.13.0 cho Admin CRUD sản phẩm, ảnh tải từ máy chuẩn hóa 1000x800 và seed không ghi đè dữ liệu quản trị."],
-  [PHIEN_BAN_HIEN_TAI, "NhienIn3d v2.15.0 bổ sung CRUD danh mục, quản lý biến thể nâng cao, duyệt đánh giá và xuất báo cáo CSV; dữ liệu vận hành tiếp tục lưu bền vững."]
+  [PHIEN_BAN_HIEN_TAI, "NhienIn3d v2.15.1 ghi nhận doanh thu theo thanh toán: non-COD thanh toán trước ghi nhận ngay, COD ghi nhận khi Admin xác nhận đã giao/hoàn tất."]
 ] as const;
 
 async function main() {
@@ -513,6 +513,28 @@ async function main() {
     phuong_thuc_map.set(ma_phuong_thuc, item.id);
   }
 
+  // V2.15.1: chuẩn hóa giao dịch thanh toán trước đã tồn tại.
+  // Theo quy ước vận hành hiện tại, mọi phương thức khác COD là khách đã thanh toán trước,
+  // vì vậy các giao dịch non-COD còn CHO_THANH_TOAN (hoặc đã thanh toán nhưng thiếu ngày)
+  // được ghi nhận theo ngày tạo giao dịch. COD đã giao cũ vẫn để Admin chủ động xác nhận doanh thu.
+  const thanh_toan_truoc_can_chot = await db.thanhToan.findMany({
+    where: {
+      phuong_thuc: { ma_phuong_thuc: { not: "COD" } },
+      don_hang: { trang_thai: { not: TrangThaiDonHang.DA_HUY } },
+      OR: [
+        { trang_thai: TrangThaiThanhToan.CHO_THANH_TOAN },
+        { trang_thai: TrangThaiThanhToan.DA_THANH_TOAN, ngay_thanh_toan: null }
+      ]
+    },
+    select: { id: true, ngay_tao: true }
+  });
+  for (const tt of thanh_toan_truoc_can_chot) {
+    await db.thanhToan.update({
+      where: { id: tt.id },
+      data: { trang_thai: TrangThaiThanhToan.DA_THANH_TOAN, ngay_thanh_toan: tt.ngay_tao }
+    });
+  }
+
   // V2: 10 giỏ hàng mẫu + 10 chi tiết, idempotent.
   for (let i = 0; i < 10; i++) {
     const sp = san_pham[i];
@@ -539,7 +561,7 @@ async function main() {
   }
 
   // 10 đơn hàng + 10 chi tiết đơn hàng (mỗi đơn 1 dòng chi tiết để dữ liệu dễ quan sát).
-  const don_hang_map = new Map<string, { id: string; tong_tien: unknown }>();
+  const don_hang_map = new Map<string, { id: string; tong_tien: unknown; trang_thai: TrangThaiDonHang }>();
   for (let i = 0; i < don_hang_mau.length; i++) {
     const [ma_don_hang, chi_so_user, chi_so_sp, so_luong, so_dien_thoai, dia_chi_giao_hang, trang_thai] = don_hang_mau[i];
     const sp = san_pham[chi_so_sp];
@@ -607,7 +629,11 @@ async function main() {
     const [ma_don_hang] = don_hang_mau[i];
     const don = don_hang_map.get(ma_don_hang)!;
     const ma_phuong_thuc = i % 2 === 0 ? "COD" : "CHUYEN_KHOAN";
-    const trang_thai = i % 4 === 0 ? TrangThaiThanhToan.DA_THANH_TOAN : TrangThaiThanhToan.CHO_THANH_TOAN;
+    // V2.15.1: phương thức không COD là thanh toán trước nên ghi nhận ngay;
+    // COD chỉ được xem là đã thanh toán khi đơn đã giao/hoàn tất.
+    const trang_thai = ma_phuong_thuc !== "COD" || don.trang_thai === TrangThaiDonHang.HOAN_TAT
+      ? TrangThaiThanhToan.DA_THANH_TOAN
+      : TrangThaiThanhToan.CHO_THANH_TOAN;
     await db.thanhToan.upsert({
       where: { ma_giao_dich: `N3D-TT-MAU-${String(i + 1).padStart(4, "0")}` },
       update: {

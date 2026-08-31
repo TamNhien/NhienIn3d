@@ -104,7 +104,7 @@ export default function ThanhToanPage() {
 
             {thong_bao && <div className="inline-message error-message">{thong_bao}</div>}
             <button className="checkout-button checkout-submit" disabled={dang_dat_hang}>{dang_dat_hang ? "Đang tạo đơn…" : `Đặt hàng • ${vnd.format(Number(gio_hang.tam_tinh))}`}</button>
-            <small className="checkout-note">{phuong_thuc.find(pt => pt.ma_phuong_thuc === form.ma_phuong_thuc)?.la_gia_lap ? "Chế độ local: giao dịch online được mô phỏng và đánh dấu đã thanh toán. Không gọi cổng thanh toán thật." : "Server sẽ đọc lại đơn giá, kiểm tra tồn kho và tạo đơn trong transaction."}</small>
+            <small className="checkout-note">{phuong_thuc.find(pt => pt.ma_phuong_thuc === form.ma_phuong_thuc)?.la_gia_lap ? "Chế độ local: giao dịch online được mô phỏng và đánh dấu đã thanh toán. Không gọi cổng thanh toán thật." : form.ma_phuong_thuc !== "COD" ? "Thanh toán trước: sau khi đặt hàng, giao dịch được xác nhận đã thanh toán và doanh thu được ghi nhận ngay." : "COD: doanh thu chỉ được ghi nhận khi Admin xác nhận đơn đã giao / hoàn tất."}</small>
           </form>
 
           <aside className="checkout-summary">
