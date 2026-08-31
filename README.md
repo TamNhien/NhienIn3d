@@ -1,6 +1,6 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v2.17.0** — 31/08/2026
+> Phiên bản hiện tại: **v2.17.1** — 31/08/2026
 
 NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **frontend Next.js** và **backend NestJS/Fastify** kết nối **PostgreSQL qua Prisma**.
 
@@ -20,6 +20,7 @@ NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **fro
 
 ## Điểm chính bản hiện tại
 
+- v2.17.1 sửa form **Tạo biến thể mới** trong tab Kho: chia lại grid desktop 4 cột, field co đúng chiều rộng, nhãn không bị che và responsive 2/1 cột để không còn hiện tượng chữ/ô nhập chồng lên nhau.
 - v2.17.0 bổ sung **cảnh báo tồn kho theo ngưỡng cấu hình**: Admin chỉnh ngưỡng ngay trong tab Kho, Dashboard cảnh báo số biến thể sắp hết/hết hàng; lịch sử kho phân loại Nhập/Xuất/Điều chỉnh, lưu nguyên nhân, chênh lệch và người thao tác.
 - v2.16.0 bổ sung **CRUD Vật liệu & Màu sắc** trong Admin, chặn xóa dữ liệu tham chiếu đang được biến thể sử dụng; tab Kho có bộ lọc nâng cao theo tồn/vật liệu/màu/hiển thị và lịch sử điều chỉnh tồn gần nhất.
 - v2.15.5 chỉnh thanh chức năng Admin để **mọi hàng tự giãn kín 100% chiều ngang**, không còn khoảng trống lớn bên phải khi các nút xuống hàng; desktop dùng flex-wrap có flex-grow, mobile chuyển dần về nút toàn hàng.
@@ -948,7 +949,7 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 - Chuyển layout tab sang `flex-wrap: wrap` và cho từng nút `flex-grow`, nhờ đó **hàng cuối cũng tự giãn kín toàn bộ chiều ngang** thay vì dồn nút về bên trái.
 - Desktop dùng basis 150px để phân bố số nút cân đối theo chiều rộng; màn hình nhỏ giảm basis và mobile cho nút chiếm toàn hàng để tránh chữ bị ép/tràn.
 - Không thay đổi nghiệp vụ, API hoặc Prisma schema nên **không có migration database mới**.
-- Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm test` → `npm run typecheck` → `npm run build` → Docker Compose → `.\scripts\release.ps1 v2.17.0`.
+- Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm test` → `npm run typecheck` → `npm run build` → Docker Compose → `.\scripts\release.ps1 v2.15.5`.
 
 ---
 
@@ -975,6 +976,18 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 - Panel lịch sử kho được nâng thành **Lịch sử nhập / xuất / điều chỉnh kho**, có lọc loại biến động, hiển thị lý do, người thao tác, chênh lệch và thời gian; API lịch sử hỗ trợ query `?loai=` và trả tối đa 80 biến động gần nhất.
 - Mở rộng regression test cho migration/cấu hình kho, Dashboard cảnh báo động, lý do điều chỉnh và phân loại biến động.
 - Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm test` → `npm run typecheck` → `npm run build` → `docker compose up -d --build` → `docker compose ps` → `docker compose logs migrate --tail 150` → `docker compose logs api --tail 150` → `.\scripts\release.ps1 v2.17.0`.
+
+---
+
+
+## v2.17.1 — 31/08/2026
+
+- Sửa form **Tạo biến thể mới** trong tab Kho bị thiếu chỗ ngang ở desktop, làm nhãn chữ nằm dưới control và các ô nhập/select chồng lên nhau.
+- Chuyển form desktop sang **4 cột cân đối** trong khung nội dung 1180px; các trường sản phẩm/mã biến thể/vật liệu/màu ở hàng đầu và chênh lệch giá/tồn ban đầu/hiển thị/nút thêm ở hàng kế tiếp.
+- Ép `min-width: 0`, `max-width: 100%` và `box-sizing: border-box` cho label/input/select để nội dung dài co đúng trong grid, không đẩy sang cột kế bên.
+- Nhãn trường cho phép xuống dòng tự nhiên, không bị che; responsive chuyển **2 cột dưới 980px** và **1 cột dưới 620px**.
+- Không thay đổi nghiệp vụ, API dữ liệu hay Prisma schema nên **không có migration database mới**.
+- Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm test` → `npm run typecheck` → `npm run build` → `docker compose up -d --build` → `docker compose ps` → `.\scripts\release.ps1 v2.17.1`.
 
 ---
 

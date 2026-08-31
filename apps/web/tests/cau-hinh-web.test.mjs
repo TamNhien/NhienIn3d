@@ -804,3 +804,15 @@ test("v2.17.0 web lich su kho co loai nguyen nhan va nguoi thao tac", () => {
   assert.match(lib, /loai_bien_dong/);
   assert.match(lib, /chenh_lech/);
 });
+
+
+test("v2.17.1 form tao bien the khong chong o nhap va khong che nhan", () => {
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.match(css, /v2\.17\.1 - sửa form Tạo biến thể/u);
+  assert.match(css, /grid-template-columns:minmax\(0,1\.4fr\) minmax\(0,1\.15fr\) minmax\(0,1fr\) minmax\(0,1fr\)/);
+  assert.match(css, /cine-variant-create-v215 label\{[\s\S]*min-width:0/);
+  assert.match(css, /cine-variant-create-v215 input:not\(\[type="checkbox"\]\),[\s\S]*box-sizing:border-box/);
+  assert.match(css, /white-space:normal/);
+  assert.match(css, /@media\(max-width:980px\)[\s\S]*repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(css, /@media\(max-width:620px\)[\s\S]*grid-template-columns:1fr/);
+});
