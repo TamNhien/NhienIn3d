@@ -1,6 +1,6 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v2.19.3** — 31/08/2026
+> Phiên bản hiện tại: **v3.2.1** — 31/08/2026
 
 NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **frontend Next.js** và **backend NestJS/Fastify** kết nối **PostgreSQL qua Prisma**.
 
@@ -20,6 +20,18 @@ NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **fro
 
 ## Điểm chính bản hiện tại
 
+- v3.2.1 sửa các lỗi `npm run typecheck` của v3.2.0 ở Prisma JSON audit/operation history: chuẩn hóa `chi_tiet` về `Prisma.InputJsonObject`, diff trước/sau có kiểu JSON tương thích Prisma và tách hai nhánh truy vấn audit phân trang để TypeScript không suy luận literal `take: 5000` sai kiểu.
+- Admin có thể chọn **Đã giao / hoàn tất** trực tiếp từ mọi trạng thái đơn hàng, kể cả đơn đang chờ xác nhận, đã xác nhận, đang sản xuất hoặc đã hủy. Các chuyển trạng thái khác vẫn giữ quy trình tuyến tính. Khi khôi phục đơn đã hủy sang hoàn tất, hệ thống trừ lại phần tồn kho đã hoàn trước đó và chặn nếu không đủ tồn; giao dịch còn `CHO_THANH_TOAN` tiếp tục được chốt `DA_THANH_TOAN` và ghi nhận doanh thu theo logic hiện có.
+- Giao diện Đơn hàng hiển thị tùy chọn **Đã giao / hoàn tất** cho mọi đơn chưa hoàn tất và có ghi chú rõ quyền xác nhận trực tiếp của Admin. Không có migration database mới ở v3.2.1.
+- v3.2.0 sửa lỗi release khi nâng cấp theo kiểu **chép source mới đè lên thư mục cũ**: `scripts/don-dep-legacy.mjs` chủ động xóa hai file MFA v3.0.x còn sót trước khi chạy test, nên regression “MFA runtime phải được gỡ” không còn fail vì file legacy ngoài gói source.
+- Giao diện **Nhà cung cấp** làm gọn checkbox `Đang hoạt động`: checkbox 16px, nhãn một dòng, không còn khối tick lớn chiếm gần hết cột như style checkbox dùng chung.
+- Nhật ký Admin v3.2.0 có **phân trang phía server**, bộ lọc dữ liệu lớn, hiển thị diff `trước → sau` cho các thao tác nhạy cảm và xuất Excel bên cạnh CSV. Diff đã được thêm cho cập nhật khách hàng/người dùng, nhà cung cấp, sản phẩm, biến thể, tồn kho và trạng thái đơn hàng/thanh toán.
+- Thêm bảng `lich_su_van_hanh` và tab **Hệ thống** mở rộng: lưu health check, kết quả backup/restore và email cảnh báo; có lọc loại/trạng thái + phân trang trực tiếp trong Admin.
+- Cảnh báo vận hành qua email dùng `SYSTEM_HEALTH_EMAIL_*`: theo dõi PostgreSQL mất kết nối, backup quá hạn/chưa có backup và SMTP lỗi; chống gửi lặp theo chữ ký tập vấn đề.
+- `backup-db.ps1`/`restore-db.ps1` ghi kết quả thành công/thất bại vào PostgreSQL theo cơ chế best-effort. Thêm `scripts/e2e-runtime-v320.ps1` kiểm tra runtime backup → SHA-256 → restore trên **database tạm cô lập**, không ghi đè database vận hành.
+- v3.1.0 **loại bỏ hoàn toàn MFA/TOTP khỏi runtime** theo yêu cầu: đăng nhập quay về một bước email + mật khẩu, không còn challenge 6 số, setup key, route MFA, biến `MFA_ENCRYPTION_KEY` hay tab Bảo mật. Migration `202608310005_v310_remove_mfa_system_health` xóa ba cột MFA khỏi `nguoi_dung`; migration v3.0.0 vẫn được giữ nguyên trong lịch sử để các database nâng cấp tuần tự an toàn.
+- Admin có tab **Hệ thống** mới hiển thị sức khỏe API, PostgreSQL, SMTP, backup gần nhất và lịch cảnh báo tồn kho. API chỉ đọc thư mục `backups/` qua volume read-only, không expose password SMTP hay secret cấu hình.
+- Backup PostgreSQL được nâng thành cơ chế vận hành thực tế: daily backup, snapshot weekly vào Chủ nhật, retention 14 ngày/8 tuần, SHA-256 sidecar, script kiểm tra toàn bộ checksum và script Windows Scheduled Task chạy tự động lúc 02:00. Restore vẫn bắt buộc `-XacNhan`.
 - v2.19.3 hợp nhất Docker local theo **HTTPS mặc định**: `docker compose up -d --build` giờ khởi động Caddy cùng stack, Web chỉ `expose` cổng 3000 nội bộ và **chỉ Caddy bind `127.0.0.1:3000`**, loại bỏ lỗi `Bind for 127.0.0.1:3000 failed: port is already allocated` khi chuyển qua lại giữa compose thường và HTTPS.
 - Frontend Docker dùng API cùng origin `/api/v1`, tránh mixed-content; `WEB_PUBLIC_URL` mặc định chuyển sang `https://localhost:3000`. `docker-compose.https.yml` được đồng bộ cùng topology để file cũ không còn tạo orphan `nhienin3d-https`.
 - `scripts/https-local.ps1` chạy `docker compose up -d --build --remove-orphans`, tự dọn service legacy/orphan, cài CA CurrentUser như trước và báo lệnh kiểm tra cổng khi 3000 bị một chương trình ngoài Docker chiếm.
@@ -518,7 +530,7 @@ Sau khi test/build/Docker PASS:
 
 ```powershell
 cd D:\LienThongDH\DoAn\NhienIn3d
-.\scripts\release.ps1 v2.9.1
+.\scripts\release.ps1 v3.1.0
 ```
 
 ---
@@ -1163,12 +1175,51 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 
 ---
 
+## v3.1.0 — 31/08/2026
+
+- Theo yêu cầu vận hành mới, **gỡ hoàn toàn MFA/TOTP** khỏi backend, frontend và cấu hình môi trường. Đăng nhập Admin quay về luồng một bước email + mật khẩu; cookie HttpOnly/Secure, Argon2id, session refresh, lockout đăng nhập sai và audit bảo mật vẫn được giữ nguyên.
+- Migration `202608310005_v310_remove_mfa_system_health` xóa `mfa_totp_bat`, `mfa_totp_secret_ma_hoa`, `mfa_totp_xac_nhan_luc` và index liên quan khỏi `nguoi_dung`. Migration v3.0.0 không bị sửa/xóa để database đã từng nâng cấp qua v3.0.x vẫn migrate tuần tự được; dữ liệu secret MFA cũ sẽ bị xóa khi áp dụng migration mới.
+- Xóa runtime MFA: không còn `mfa-totp.ts`, DTO xác nhận MFA, API `/dang-nhap/mfa`/`/mfa/*`, challenge 6 số, setup key/URI Authenticator, UI tab Bảo mật hay `MFA_ENCRYPTION_KEY` trong `.env.example`/Docker.
+- Thêm tab **Hệ thống** trong Admin và endpoint `GET /api/v1/quan-tri/he-thong/suc-khoe`: tổng hợp uptime/memory của API, kết nối + latency + dung lượng PostgreSQL + migration gần nhất, trạng thái SMTP không lộ mật khẩu, backup gần nhất/dung lượng/số bản daily-weekly và trạng thái lịch cảnh báo tồn kho.
+- API mount `./backups:/app/backups:ro` nên dashboard chỉ có quyền **đọc metadata backup**, không thể tự ghi/xóa file từ HTTP request. Khi DB mất kết nối, trạng thái tổng chuyển `LOI`; khi backup quá 36 giờ hoặc SMTP đã bật nhưng chưa sẵn sàng, trạng thái chuyển `CANH_BAO`.
+- Nâng `scripts/backup-db.ps1`: tạo `nhienin3d-daily-*.dump`, tự tạo SHA-256 sidecar, mỗi Chủ nhật giữ thêm `nhienin3d-weekly-*.dump`, mặc định giữ daily 14 ngày và weekly 8 tuần rồi dọn bản cũ.
+- Thêm `scripts/backup-schedule.ps1` đăng ký Windows Scheduled Task chạy backup mỗi ngày (mặc định 02:00), `scripts/backup-schedule-remove.ps1` gỡ lịch và `scripts/backup-verify.ps1` kiểm tra checksum toàn bộ backup. Restore tiếp tục yêu cầu `-XacNhan` và dùng `pg_restore --clean --if-exists`.
+- Nhật ký Admin vẫn hỗ trợ lọc server + CSV UTF-8 chống formula injection; bộ lọc sự kiện dùng nhóm `ADMIN_*` và `DANG_NHAP_*`, nhờ đó các audit MFA lịch sử vẫn có thể xem dù MFA runtime đã bị gỡ.
+- Bổ sung regression test cho việc gỡ MFA, migration cleanup, đăng nhập một bước, health API/UI, backup retention/schedule/checksum và volume backup read-only. Đồng bộ Root/API/Web/Health/OpenAPI lên **v3.1.0**.
+- Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm install` → `npm test` → `npm run typecheck` → `npm run build` → `./scripts/backup-db.ps1` → `docker compose up -d --build --remove-orphans` → `docker compose ps` → `docker compose logs migrate --tail 150` → `docker compose logs api --tail 150` → `.\scripts\release.ps1 v3.1.0`.
+
+---
+
+## v3.2.0 — 31/08/2026
+
+- Sửa regression release thực tế khi source mới được chép đè lên thư mục dự án cũ: cleanup legacy giờ xóa `apps/api/src/xac-thuc/mfa-totp.ts` và `apps/api/src/xac-thuc/dto/xac-nhan-mfa.dto.ts` trước test. Nhờ đó file MFA còn sót từ v3.0.x không làm test v3.1+ báo sai rằng MFA vẫn tồn tại.
+- Tinh gọn checkbox **Đang hoạt động** trong CRUD Nhà cung cấp bằng class riêng v3.2.0; giữ checkbox dùng chung ở các màn hình khác để tránh regression giao diện.
+- Migration `202608310006_v320_audit_ops_history` tạo `lich_su_van_hanh` cho sự kiện `HEALTH`, `BACKUP`, `RESTORE`, `ALERT`, trạng thái, mô tả, JSON chi tiết và thời gian bắt đầu/kết thúc.
+- Health API ghi lịch sử best-effort và bổ sung API phân trang/lọc lịch sử vận hành. Tab Hệ thống hiển thị lịch sử, trạng thái cảnh báo email, backup/restore và nút kiểm tra/gửi cảnh báo vận hành thủ công.
+- Thêm cảnh báo email hệ thống qua `SYSTEM_HEALTH_EMAIL_ENABLED`, `SYSTEM_HEALTH_EMAIL_INTERVAL_MINUTES`, `SYSTEM_HEALTH_EMAIL_TO`, `SYSTEM_HEALTH_BACKUP_MAX_AGE_HOURS`. Hệ thống cảnh báo DB mất kết nối, backup quá cũ/chưa có và SMTP đã bật nhưng chưa sẵn sàng; chữ ký SHA-256 chống gửi lặp khi tập vấn đề không đổi.
+- Nhật ký Admin bổ sung endpoint phân trang và **Excel**, giao diện có nút Trước/Sau, tổng số sự kiện và diff trước/sau. Các thay đổi nhạy cảm trên người dùng, nhà cung cấp, sản phẩm, biến thể, tồn kho và trạng thái đơn hàng lưu `truoc`, `sau`, `thay_doi` trong audit detail.
+- `backup-db.ps1` và `restore-db.ps1` ghi job thành công/thất bại vào `lich_su_van_hanh`; việc ghi lịch sử là best-effort để backup vẫn chạy được nếu migration mới chưa áp dụng.
+- Thêm `scripts/e2e-runtime-v320.ps1`: tạo database PostgreSQL tạm theo timestamp, seed sentinel, `pg_dump -Fc`, kiểm tra SHA-256, drop/recreate, `pg_restore`, xác minh sentinel và luôn xóa database tạm trong `finally`. Script không đụng database `nhienin3d` chính.
+- Đồng bộ Root/API/Web/Health/OpenAPI lên **v3.2.0**. Quy trình release: `npm install` → `npm test` → `npm run typecheck` → `npm run build` → `docker compose up -d --build --remove-orphans` → `docker compose ps` → `./scripts/e2e-runtime-v320.ps1` → `./scripts/release.ps1 v3.2.0`.
+
+---
+
+## v3.2.1 — 31/08/2026
+
+- Fix 8 lỗi TypeScript được phát hiện khi chạy `npm run typecheck` trên Windows: `Record<string, unknown>` không tương thích Prisma JSON và lỗi suy luận kiểu `take: 5000` trong audit pagination.
+- Thêm helper chuẩn hóa JSON cho Prisma, đổi `tao_diff` trả về `Prisma.InputJsonObject` và tách truy vấn có/không có từ khóa tìm kiếm thành hai nhánh rõ kiểu.
+- Cho phép Admin xác nhận **Đã giao / hoàn tất** trực tiếp từ mọi trạng thái đơn. Tùy chọn `HOAN_TAT` xuất hiện trong dropdown cho cả `CHO_XAC_NHAN`, `DA_XAC_NHAN`, `DANG_SAN_XUAT`, `DANG_GIAO` và `DA_HUY`; đơn khôi phục từ `DA_HUY` sẽ trừ lại tồn kho đã hoàn và không cho âm kho.
+- Giữ logic chốt thanh toán/doanh thu hiện có khi đơn được xác nhận hoàn tất; audit vẫn lưu trước/sau và diff. Không có migration mới.
+- Đồng bộ Root/API/Web/Health/OpenAPI lên **v3.2.1**. Quy trình release: `npm install` → `npm test` → `npm run typecheck` → `npm run build` → `docker compose up -d --build --remove-orphans` → `docker compose ps` → `./scripts/release.ps1 v3.2.1`.
+
+---
+
 # Lộ trình tiếp theo
 
-## v3.1.0
+## v3.3.0
 
-- Mã khôi phục MFA dùng một lần và luồng reset MFA có kiểm soát.
-- Lịch backup tự động + chính sách giữ bản sao theo ngày/tuần.
-- Dashboard sức khỏe hệ thống: DB, API, SMTP, backup gần nhất và dung lượng dữ liệu.
-- Audit diff trước/sau cho các thay đổi quan trọng và xuất Excel.
-- E2E runtime cho luồng MFA + restore trên môi trường Docker test.
+- Mở rộng audit diff cho danh mục, vật liệu/màu, ca làm và phân ca; thêm bộ lọc theo người thao tác.
+- Xuất Excel lịch sử vận hành và thống kê tỷ lệ health/backup thành công theo 7/30 ngày.
+- Chính sách cảnh báo có thời gian im lặng/escalation để tránh spam khi sự cố kéo dài.
+- Kiểm thử runtime Docker tự động cho API + migration + backup/restore trong CI khi runner hỗ trợ Docker.
+- Tối ưu truy vấn dashboard Admin và index audit khi dữ liệu vận hành tăng lớn.

@@ -31,6 +31,22 @@ export class ThuDienTuService {
     this.logger.log(`SMTP đã bật: ${cau_hinh.tuy_chon.host}:${cau_hinh.tuy_chon.port}`);
   }
 
+  trangThaiCauHinh() {
+    try {
+      const cau_hinh = docCauHinhSmtp();
+      if (!cau_hinh.bat) return { bat: false, san_sang: false, host: null, port: null, from: cau_hinh.from };
+      return {
+        bat: true,
+        san_sang: Boolean(this.truyen),
+        host: cau_hinh.tuy_chon.host,
+        port: cau_hinh.tuy_chon.port,
+        from: cau_hinh.from
+      };
+    } catch (error) {
+      return { bat: true, san_sang: false, host: null, port: null, from: this.from, loi: error instanceof Error ? error.message : String(error) };
+    }
+  }
+
   async guiCanhBaoTonKho(input: {
     thu_dien_tu: string[];
     nguong_sap_het: number;
@@ -64,6 +80,25 @@ export class ThuDienTuService {
           <table style="width:100%;border-collapse:collapse;margin-top:18px"><thead><tr><th style="text-align:left;padding:8px">Biến thể</th><th style="text-align:left;padding:8px">Sản phẩm</th><th style="text-align:left;padding:8px">Tên</th><th style="text-align:right;padding:8px">Tồn</th></tr></thead><tbody>${rowsHtml}</tbody></table>
           <p style="font-size:12px;color:#64748b;margin-top:20px">Hệ thống chống gửi lặp: email chỉ gửi lại khi danh sách/tồn kho cảnh báo thay đổi.</p>
         </div>`
+    });
+  }
+
+  async guiCanhBaoHeThong(input: {
+    thu_dien_tu: string[];
+    trang_thai: string;
+    van_de: string[];
+    thoi_gian: string;
+  }) {
+    if (!this.truyen) throw new Error("Dịch vụ email chưa sẵn sàng để gửi cảnh báo hệ thống.");
+    if (!input.thu_dien_tu.length) throw new Error("Không có địa chỉ nhận cảnh báo hệ thống.");
+    const listText = input.van_de.map(x => `- ${x}`).join("\n");
+    const listHtml = input.van_de.map(x => `<li style="margin:6px 0">${thoatHtml(x)}</li>`).join("");
+    await this.truyen.sendMail({
+      from: this.from,
+      to: input.thu_dien_tu,
+      subject: `[NhienIn3d] Cảnh báo vận hành: ${input.trang_thai}`,
+      text: ["Cảnh báo vận hành NhienIn3d", `Trạng thái: ${input.trang_thai}`, `Thời gian: ${input.thoi_gian}`, "", listText, "", "Hệ thống chỉ gửi lại khi tập vấn đề thay đổi."].join("\n"),
+      html: `<div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;max-width:680px;margin:auto;padding:28px;color:#111827"><h1 style="font-size:24px;margin:0 0 10px">Cảnh báo vận hành NhienIn3d</h1><p>Trạng thái: <strong>${thoatHtml(input.trang_thai)}</strong></p><p>Thời gian: ${thoatHtml(input.thoi_gian)}</p><ul>${listHtml}</ul><p style="font-size:12px;color:#64748b;margin-top:20px">Chống gửi lặp: email chỉ gửi lại khi tập vấn đề thay đổi.</p></div>`
     });
   }
 

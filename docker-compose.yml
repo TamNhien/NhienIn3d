@@ -58,7 +58,6 @@ services:
       API_PORT: 3001
       JWT_SECRET: ${JWT_SECRET}
       COOKIE_SECRET: ${COOKIE_SECRET}
-      MFA_ENCRYPTION_KEY: ${MFA_ENCRYPTION_KEY:-}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@nhienin3d.local}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
       ADMIN_NAME: ${ADMIN_NAME:-System Admin}
@@ -82,8 +81,15 @@ services:
       LOW_STOCK_EMAIL_ENABLED: ${LOW_STOCK_EMAIL_ENABLED:-false}
       LOW_STOCK_EMAIL_INTERVAL_MINUTES: ${LOW_STOCK_EMAIL_INTERVAL_MINUTES:-60}
       LOW_STOCK_EMAIL_TO: ${LOW_STOCK_EMAIL_TO:-}
+      BACKUP_DIRECTORY: /app/backups
+      SYSTEM_HEALTH_EMAIL_ENABLED: ${SYSTEM_HEALTH_EMAIL_ENABLED:-false}
+      SYSTEM_HEALTH_EMAIL_INTERVAL_MINUTES: ${SYSTEM_HEALTH_EMAIL_INTERVAL_MINUTES:-30}
+      SYSTEM_HEALTH_EMAIL_TO: ${SYSTEM_HEALTH_EMAIL_TO:-}
+      SYSTEM_HEALTH_BACKUP_MAX_AGE_HOURS: ${SYSTEM_HEALTH_BACKUP_MAX_AGE_HOURS:-36}
     ports:
       - "${API_PORT:-3001}:3001"
+    volumes:
+      - ./backups:/app/backups:ro
     depends_on:
       migrate:
         condition: service_completed_successfully

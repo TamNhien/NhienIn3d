@@ -915,12 +915,45 @@ footer{border-top:1px solid var(--line);max-width:1240px;margin:auto;padding:30p
 .cine-auth-form .password-input-wrap{background:#091321;border-radius:11px}
 .cine-auth-form .password-toggle{position:relative;z-index:2;color:#cbd5e1!important}
 
-/* v3.0.0 - MFA/TOTP, audit nâng cao và khu vực bảo mật Admin. */
+/* v3.0.0 - audit nâng cao; v3.1.0 bổ sung dashboard hệ thống. */
 .cine-audit-filter-v300{grid-template-columns:minmax(240px,1.5fr) minmax(220px,1.1fr) 150px 150px auto auto;align-items:end}
 .cine-audit-filter-v300 label{display:grid;gap:6px;min-width:0}
-.cine-audit-filter-v300 label>span,.cine-security-admin-v300 label>span{font-size:11px;font-weight:850;color:#aeb9c8;text-transform:uppercase;letter-spacing:.05em}
-.cine-audit-filter-v300 input,.cine-security-admin-v300 input,.cine-security-admin-v300 textarea{box-sizing:border-box;width:100%;min-width:0;min-height:44px;border:1px solid #334155;border-radius:11px;background:#0b1322;color:#f8fafc;padding:8px 11px;outline:none}
-.cine-audit-filter-v300 input:focus,.cine-security-admin-v300 input:focus,.cine-security-admin-v300 textarea:focus{border-color:#8b5cf6;box-shadow:0 0 0 3px rgba(139,92,246,.1)}
-.cine-security-admin-v300{display:grid;gap:16px}.cine-security-card-v300{padding:18px;display:grid;gap:16px}.cine-security-card-v300 h3{margin:0 0 5px;font-size:19px}.cine-security-card-v300 p{margin:0;color:#94a3b8;line-height:1.55}.cine-security-card-v300>code{display:block;overflow:auto;padding:10px 12px;border:1px solid #28384f;border-radius:10px;background:#07111f;color:#c4b5fd;white-space:nowrap}.cine-security-setup-v300{display:grid;gap:12px}.cine-security-setup-v300 label,.cine-security-disable-v300 label,.cine-security-code-v300 label{display:grid;gap:6px;min-width:0}.cine-security-setup-v300 textarea{min-height:82px;resize:vertical;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}.cine-security-code-v300{display:grid;grid-template-columns:minmax(180px,260px) auto;gap:12px;align-items:end}.cine-security-disable-v300{display:grid;grid-template-columns:minmax(220px,1fr) minmax(180px,260px) auto;gap:12px;align-items:end}
-@media(max-width:1180px){.cine-audit-filter-v300{grid-template-columns:repeat(2,minmax(0,1fr))}.cine-audit-filter-v300 .cine-btn{width:100%}.cine-security-disable-v300{grid-template-columns:1fr 1fr}.cine-security-disable-v300 .cine-btn{grid-column:1/-1}}
-@media(max-width:720px){.cine-audit-filter-v300,.cine-security-code-v300,.cine-security-disable-v300{grid-template-columns:1fr}.cine-security-disable-v300 .cine-btn{grid-column:auto}}
+.cine-audit-filter-v300 label>span{font-size:11px;font-weight:850;color:#aeb9c8;text-transform:uppercase;letter-spacing:.05em}
+.cine-audit-filter-v300 input{box-sizing:border-box;width:100%;min-width:0;min-height:44px;border:1px solid #334155;border-radius:11px;background:#0b1322;color:#f8fafc;padding:8px 11px;outline:none}
+.cine-audit-filter-v300 input:focus{border-color:#8b5cf6;box-shadow:0 0 0 3px rgba(139,92,246,.1)}
+@media(max-width:1180px){.cine-audit-filter-v300{grid-template-columns:repeat(2,minmax(0,1fr))}.cine-audit-filter-v300 .cine-btn{width:100%}}
+@media(max-width:720px){.cine-audit-filter-v300{grid-template-columns:1fr}}
+
+
+/* v3.1.0 - System health + backup automation */
+.cine-system-heading-actions-v310{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.cine-system-grid-v310{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}
+.cine-system-grid-v310 .cine-card{display:flex;flex-direction:column;gap:8px;min-height:150px;padding:18px}
+.cine-system-grid-v310 .cine-card>span{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted,#94a3b8)}
+.cine-system-grid-v310 .cine-card>b{font-size:21px;line-height:1.15}
+.cine-system-grid-v310 .cine-card p,.cine-system-grid-v310 .cine-card small{margin:0;color:var(--muted,#94a3b8)}
+.cine-backup-ops-v310{display:grid;grid-template-columns:minmax(240px,.85fr) minmax(0,1.4fr);gap:22px;align-items:start;margin-top:16px;padding:20px}
+.cine-backup-ops-v310 h3{margin:0 0 8px}.cine-backup-ops-v310 p{margin:0;color:var(--muted,#94a3b8);line-height:1.6}
+.cine-backup-command-v310{display:grid;gap:10px}.cine-backup-command-v310 code{display:block;padding:12px 14px;border:1px solid #30415d;border-radius:10px;background:#08111f;color:#dbeafe;overflow:auto;white-space:nowrap}
+@media(max-width:1180px){.cine-system-grid-v310{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:760px){.cine-system-grid-v310{grid-template-columns:1fr}.cine-backup-ops-v310{grid-template-columns:1fr}.cine-system-heading-actions-v310{width:100%}.cine-system-heading-actions-v310 .cine-btn{width:100%}}
+
+/* v3.2.0 - trạng thái nhà cung cấp gọn, không chiếm cả ô như checkbox dùng chung. */
+.cine-supplier-active-check-v320{display:inline-flex!important;width:max-content!important;max-width:100%;min-height:32px!important;padding:5px 9px!important;gap:6px!important;border-radius:10px!important;justify-self:start;align-self:start}.cine-supplier-active-check-v320 input{width:15px!important;height:15px!important;min-width:15px!important;margin:0}.cine-supplier-active-check-v320 span{font-size:12px!important;font-weight:750!important;line-height:1!important;white-space:nowrap}
+
+/* v3.2.0 - audit diff/pagination + operational history. */
+.cine-audit-filter-v320{grid-template-columns:minmax(220px,1.45fr) minmax(210px,1.1fr) 145px 145px auto auto auto}
+.cine-audit-row-v320>div{min-width:0}.cine-audit-diff-v320{display:grid;gap:6px;margin-top:8px}.cine-audit-diff-v320>div{display:grid;grid-template-columns:minmax(110px,.6fr) minmax(120px,1fr) 24px minmax(120px,1fr);gap:8px;align-items:center;padding:7px 9px;border:1px solid #29384d;border-radius:9px;background:rgba(8,17,31,.7);font-size:11px}.cine-audit-diff-v320 strong{text-transform:capitalize;color:#c4b5fd}.cine-audit-diff-v320 span{overflow-wrap:anywhere;color:#dbe4ef}.cine-audit-diff-v320 em{font-style:normal;text-align:center;color:#64748b;font-weight:900}
+.cine-pagination-v320{display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-top:12px}.cine-pagination-v320>span{color:#94a3b8;font-size:12px}.cine-pagination-v320>span b{color:#f8fafc}
+.cine-system-grid-v320{grid-template-columns:repeat(3,minmax(0,1fr))}.cine-system-alert-card-v320 .cine-btn{margin-top:auto;align-self:flex-start}.cine-ops-history-v320{margin-top:16px;padding:0;overflow:hidden}.cine-ops-history-head-v320{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;padding:18px;border-bottom:1px solid #26354a}.cine-ops-history-head-v320 h3{margin:0 0 5px}.cine-ops-history-head-v320 p{margin:0;color:#94a3b8;font-size:12px}.cine-ops-history-head-v320>span{font-size:12px;font-weight:850;color:#c4b5fd}.cine-ops-filter-v320{display:grid;grid-template-columns:190px 190px auto;gap:12px;align-items:end;padding:14px 18px;border-bottom:1px solid #26354a}.cine-ops-filter-v320 label{display:grid;gap:6px}.cine-ops-filter-v320 label>span{font-size:10px;font-weight:850;text-transform:uppercase;color:#aeb9c8}.cine-ops-filter-v320 select{min-height:42px;border:1px solid #334155;border-radius:10px;background:#0b1322;color:#f8fafc;padding:7px 10px}.cine-ops-list-v320{display:grid}.cine-ops-list-v320 article{display:grid;grid-template-columns:105px minmax(0,1fr);gap:13px;align-items:start;padding:13px 18px;border-top:1px solid #202d40}.cine-ops-list-v320 article:first-child{border-top:0}.cine-ops-list-v320 article>div{display:grid;gap:5px;min-width:0}.cine-ops-list-v320 b{font-size:12px}.cine-ops-list-v320 small{color:#7f8da3}.cine-ops-list-v320 code{display:block;max-width:100%;overflow:auto;color:#b8c3d3;font-size:10px;white-space:pre-wrap;overflow-wrap:anywhere}.cine-ops-history-v320>.cine-pagination-v320{padding:0 18px 16px}
+@media(max-width:1180px){.cine-audit-filter-v320{grid-template-columns:repeat(2,minmax(0,1fr))}.cine-system-grid-v320{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:720px){.cine-audit-filter-v320,.cine-system-grid-v320,.cine-ops-filter-v320{grid-template-columns:1fr}.cine-audit-diff-v320>div{grid-template-columns:1fr}.cine-audit-diff-v320 em{text-align:left}.cine-pagination-v320{justify-content:space-between;flex-wrap:wrap}.cine-ops-history-head-v320{flex-direction:column}.cine-ops-list-v320 article{grid-template-columns:1fr}.cine-system-alert-card-v320 .cine-btn{width:100%}}
+
+/* v3.2.1 - Admin override giao hang */
+.cine-order-admin-override-v321 {
+  margin: -2px 0 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted, #9aa8bd);
+}
+.cine-order-admin-override-v321 b { color: #dfe9f7; }

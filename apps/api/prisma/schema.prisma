@@ -62,9 +62,6 @@ model NguoiDung {
   khoa_den         DateTime? @db.Timestamptz(6)
   lan_dang_nhap_cuoi DateTime? @db.Timestamptz(6)
   phien_ban_mat_khau Int @default(1)
-  mfa_totp_bat    Boolean  @default(false)
-  mfa_totp_secret_ma_hoa String? @db.Text
-  mfa_totp_xac_nhan_luc DateTime? @db.Timestamptz(6)
   ngay_tao        DateTime @default(now()) @db.Timestamptz(6)
   ngay_cap_nhat   DateTime @updatedAt @db.Timestamptz(6)
   don_hang        DonHang[]
@@ -387,6 +384,22 @@ model NhatKyBaoMat {
   @@index([loai_su_kien])
   @@index([ngay_tao])
   @@map("nhat_ky_bao_mat")
+}
+
+
+model LichSuVanHanh {
+  id          BigInt   @id @default(autoincrement())
+  loai        String   @db.VarChar(30)
+  trang_thai  String   @db.VarChar(30)
+  mo_ta       String?  @db.VarChar(500)
+  chi_tiet    Json     @default("{}") @db.JsonB
+  ngay_bat_dau DateTime? @db.Timestamptz(6)
+  ngay_ket_thuc DateTime? @db.Timestamptz(6)
+  ngay_tao    DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([loai, ngay_tao])
+  @@index([trang_thai, ngay_tao])
+  @@map("lich_su_van_hanh")
 }
 
 model PhienBanSeed {

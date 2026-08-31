@@ -9,6 +9,20 @@ if (-not $XacNhan) {
   throw "Restore sẽ ghi đè dữ liệu hiện tại. Chạy lại với -XacNhan sau khi đã kiểm tra đúng file backup."
 }
 
+
+function Write-OpsHistory {
+  param([string]$Type, [string]$Status, [string]$Description, [hashtable]$Detail = @{})
+  try {
+    $descSql = $Description.Replace("'", "''")
+    $jsonSql = ($Detail | ConvertTo-Json -Compress -Depth 8).Replace("'", "''")
+    $sql = "INSERT INTO lich_su_van_hanh (loai,trang_thai,mo_ta,chi_tiet,ngay_bat_dau,ngay_ket_thuc) VALUES ('$Type','$Status','$descSql','$jsonSql'::jsonb,NOW(),NOW());"
+    $sql | docker compose exec -T postgres sh -lc 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1' 2>$null | Out-Null
+    if ($LASTEXITCODE -ne 0) { Write-Warning "Không ghi được lịch sử vận hành (có thể migration v3.2.0 chưa được áp dụng)." }
+  } catch {
+    Write-Warning "Không ghi được lịch sử vận hành: $($_.Exception.Message)"
+  }
+}
+
 $Root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $Backup = (Resolve-Path $File).Path
 Push-Location $Root
@@ -35,6 +49,10 @@ try {
   docker compose up -d api web https
   if ($LASTEXITCODE -ne 0) { throw "Restore xong nhưng không thể khởi động lại API/Web/HTTPS." }
   docker compose ps
+  Write-OpsHistory -Type "RESTORE" -Status "THANH_CONG" -Description "Restore PostgreSQL hoàn tất" -Detail @{ file = [System.IO.Path]::GetFileName($Backup) }
+} catch {
+  Write-OpsHistory -Type "RESTORE" -Status "THAT_BAI" -Description "Restore PostgreSQL thất bại" -Detail @{ file = [System.IO.Path]::GetFileName($Backup); error = $_.Exception.Message }
+  throw
 } finally {
   docker compose exec -T postgres rm -f $remoteFile 2>$null | Out-Null
   Pop-Location

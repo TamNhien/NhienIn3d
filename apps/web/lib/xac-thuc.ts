@@ -13,8 +13,6 @@ export type TaiKhoan = {
   da_kich_hoat?: boolean;
   ngay_tao?: string;
   lan_dang_nhap_cuoi?: string | null;
-  mfa_totp_bat?: boolean;
-  mfa_totp_xac_nhan_luc?: string | null;
   ngay_cap_nhat?: string;
   nhan_vien?: { id: string; ma_nhan_vien: string; chuc_danh: string; bo_phan: string; trang_thai: string } | null;
 };
@@ -51,57 +49,14 @@ export async function dangKy(payload: { thu_dien_tu: string; ho_ten: string; so_
   return data.nguoi_dung;
 }
 
-export type KetQuaDangNhap =
-  | { can_mfa: true; thu_thach: string; nguoi_dung: TaiKhoan }
-  | { can_mfa: false; nguoi_dung: TaiKhoan };
-
-export async function dangNhap(payload: { thu_dien_tu: string; mat_khau: string }): Promise<KetQuaDangNhap> {
+export async function dangNhap(payload: { thu_dien_tu: string; mat_khau: string }): Promise<TaiKhoan> {
   const trinh_duyet_hien_thi = await nhanDangTrinhDuyet();
   const res = await goi("/xac-thuc/dang-nhap", { method: "POST", body: JSON.stringify({ ...payload, trinh_duyet_hien_thi }) });
-  if (!res.ok) throw new Error(await docLoi(res));
-  const data = await res.json() as KetQuaDangNhap;
-  if (!data.can_mfa) {
-    localStorage.removeItem(KHOA_DA_DANG_XUAT);
-    window.dispatchEvent(new Event(SU_KIEN_XAC_THUC));
-  }
-  return data;
-}
-
-export async function xacNhanDangNhapMfa(thu_thach: string, ma_otp: string) {
-  const trinh_duyet_hien_thi = await nhanDangTrinhDuyet();
-  const res = await goi("/xac-thuc/dang-nhap/mfa", { method: "POST", body: JSON.stringify({ thu_thach, ma_otp, trinh_duyet_hien_thi }) });
   if (!res.ok) throw new Error(await docLoi(res));
   const data = await res.json() as { nguoi_dung: TaiKhoan };
   localStorage.removeItem(KHOA_DA_DANG_XUAT);
   window.dispatchEvent(new Event(SU_KIEN_XAC_THUC));
   return data.nguoi_dung;
-}
-
-export type TrangThaiMfa = { bat: boolean; xac_nhan_luc?: string | null };
-export type KhoiTaoMfa = { secret: string; uri: string; huong_dan: string };
-
-export async function layTrangThaiMfa() {
-  const res = await goi("/xac-thuc/mfa/trang-thai");
-  if (!res.ok) throw new Error(await docLoi(res));
-  return res.json() as Promise<TrangThaiMfa>;
-}
-
-export async function khoiTaoMfa() {
-  const res = await goi("/xac-thuc/mfa/khoi-tao", { method: "POST" });
-  if (!res.ok) throw new Error(await docLoi(res));
-  return res.json() as Promise<KhoiTaoMfa>;
-}
-
-export async function xacNhanBatMfa(ma_otp: string) {
-  const res = await goi("/xac-thuc/mfa/xac-nhan", { method: "POST", body: JSON.stringify({ ma_otp }) });
-  if (!res.ok) throw new Error(await docLoi(res));
-  return res.json() as Promise<TrangThaiMfa & { thong_bao: string }>;
-}
-
-export async function tatMfa(mat_khau: string, ma_otp: string) {
-  const res = await goi("/xac-thuc/mfa/tat", { method: "POST", body: JSON.stringify({ mat_khau, ma_otp }) });
-  if (!res.ok) throw new Error(await docLoi(res));
-  return res.json() as Promise<TrangThaiMfa & { thong_bao: string }>;
 }
 
 export async function lamMoiPhien() {

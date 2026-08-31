@@ -9,17 +9,12 @@ import { DangKyDto } from "./dto/dang-ky.dto.js";
 import { DangNhapDto } from "./dto/dang-nhap.dto.js";
 import { DatLaiMatKhauDto } from "./dto/dat-lai-mat-khau.dto.js";
 import { QuenMatKhauDto } from "./dto/quen-mat-khau.dto.js";
-import { MaOtpMfaDto, TatMfaDto, XacNhanDangNhapMfaDto } from "./dto/xac-nhan-mfa.dto.js";
-import { giaiMaBiMatTotp, maHoaBiMatTotp, taoBiMatTotp, taoUriTotp, xacThucTotp } from "./mfa-totp.js";
 
 const SO_LAN_THAT_BAI_TOI_DA = 5;
 const THOI_GIAN_KHOA_MS = 15 * 60 * 1000;
 const THOI_GIAN_REFRESH_GIAY = 7 * 24 * 60 * 60;
 const SO_YEU_CAU_DAT_LAI_TOI_DA = 3;
 const CUA_SO_GIOI_HAN_DAT_LAI_MS = 15 * 60 * 1000;
-const THOI_GIAN_THU_THACH_MFA = "5m";
-const SO_LAN_MFA_THAT_BAI_TOI_DA = 5;
-const CUA_SO_MFA_MS = 10 * 60 * 1000;
 
 function thoiGianDatLaiPhut() {
   const gia_tri = Number(process.env.RESET_PASSWORD_EXPIRES_MINUTES || 15);
@@ -125,92 +120,9 @@ export class XacThucService {
       data: { so_lan_dang_nhap_that_bai: 0, khoa_den: null }
     });
 
-    if (da_cap_nhat.vai_tro === VaiTro.ADMIN && da_cap_nhat.mfa_totp_bat) {
-      const jwt_secret = process.env.JWT_SECRET;
-      if (!jwt_secret || jwt_secret.length < 32) throw new Error("JWT_SECRET chưa an toàn");
-      const thu_thach = await this.jwt.signAsync(
-        { sub: da_cap_nhat.id, loai: "MFA_DANG_NHAP", phien_ban_mat_khau: da_cap_nhat.phien_ban_mat_khau },
-        { secret: jwt_secret, expiresIn: THOI_GIAN_THU_THACH_MFA, issuer: "NhienIn3d", audience: "NhienIn3d-MFA" }
-      );
-      await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "DANG_NHAP_CHO_MFA", nguoi_dung_id: da_cap_nhat.id, dia_chi_ip } });
-      return { can_mfa: true as const, thu_thach, nguoi_dung: this.thongTinNguoiDung(da_cap_nhat) };
-    }
-
     await this.db.nguoiDung.update({ where: { id: da_cap_nhat.id }, data: { lan_dang_nhap_cuoi: bay_gio } });
     await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "DANG_NHAP_THANH_CONG", nguoi_dung_id: da_cap_nhat.id, dia_chi_ip } });
     return this.taoPhien(da_cap_nhat, dia_chi_ip, trinh_duyet);
-  }
-
-  async dang_nhap_mfa(dto: XacNhanDangNhapMfaDto, dia_chi_ip?: string, trinh_duyet?: string) {
-    const jwt_secret = process.env.JWT_SECRET;
-    if (!jwt_secret || jwt_secret.length < 32) throw new Error("JWT_SECRET chưa an toàn");
-    let payload: { sub: string; loai: string; phien_ban_mat_khau: number };
-    try {
-      payload = await this.jwt.verifyAsync(dto.thu_thach, { secret: jwt_secret, issuer: "NhienIn3d", audience: "NhienIn3d-MFA" });
-    } catch {
-      throw new UnauthorizedException("Phiên xác minh MFA đã hết hạn. Vui lòng đăng nhập lại.");
-    }
-    if (payload.loai !== "MFA_DANG_NHAP") throw new UnauthorizedException("Phiên xác minh MFA không hợp lệ");
-    const nguoi_dung = await this.db.nguoiDung.findUnique({ where: { id: payload.sub } });
-    if (!nguoi_dung || !nguoi_dung.da_kich_hoat || nguoi_dung.vai_tro !== VaiTro.ADMIN || !nguoi_dung.mfa_totp_bat || !nguoi_dung.mfa_totp_secret_ma_hoa || nguoi_dung.phien_ban_mat_khau !== payload.phien_ban_mat_khau) {
-      throw new UnauthorizedException("MFA không còn hợp lệ. Vui lòng đăng nhập lại.");
-    }
-    const tu_luc = new Date(Date.now() - CUA_SO_MFA_MS);
-    const so_lan_sai = await this.db.nhatKyBaoMat.count({ where: { nguoi_dung_id: nguoi_dung.id, loai_su_kien: "DANG_NHAP_MFA_THAT_BAI", ngay_tao: { gte: tu_luc } } });
-    if (so_lan_sai >= SO_LAN_MFA_THAT_BAI_TOI_DA) throw new UnauthorizedException("MFA tạm giới hạn do nhập sai nhiều lần. Vui lòng thử lại sau.");
-    const secret = giaiMaBiMatTotp(nguoi_dung.mfa_totp_secret_ma_hoa);
-    if (!xacThucTotp(secret, dto.ma_otp)) {
-      await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "DANG_NHAP_MFA_THAT_BAI", nguoi_dung_id: nguoi_dung.id, dia_chi_ip } });
-      throw new UnauthorizedException("Mã xác minh 6 số không đúng hoặc đã hết hạn");
-    }
-    const da_cap_nhat = await this.db.nguoiDung.update({ where: { id: nguoi_dung.id }, data: { lan_dang_nhap_cuoi: new Date() } });
-    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "DANG_NHAP_MFA_THANH_CONG", nguoi_dung_id: nguoi_dung.id, dia_chi_ip } });
-    return this.taoPhien(da_cap_nhat, dia_chi_ip, dto.trinh_duyet_hien_thi?.trim() || trinh_duyet);
-  }
-
-  async trang_thai_mfa(nguoi_dung_id: string) {
-    const nguoi_dung = await this.db.nguoiDung.findUnique({ where: { id: nguoi_dung_id }, select: { vai_tro: true, mfa_totp_bat: true, mfa_totp_xac_nhan_luc: true } });
-    if (!nguoi_dung || nguoi_dung.vai_tro !== VaiTro.ADMIN) throw new UnauthorizedException("Chỉ Admin được cấu hình MFA");
-    return { bat: nguoi_dung.mfa_totp_bat, xac_nhan_luc: nguoi_dung.mfa_totp_xac_nhan_luc };
-  }
-
-  async khoi_tao_mfa(nguoi_dung_id: string, dia_chi_ip?: string) {
-    const nguoi_dung = await this.db.nguoiDung.findUnique({ where: { id: nguoi_dung_id } });
-    if (!nguoi_dung || nguoi_dung.vai_tro !== VaiTro.ADMIN) throw new UnauthorizedException("Chỉ Admin được cấu hình MFA");
-    if (nguoi_dung.mfa_totp_bat) throw new BadRequestException("MFA đang được bật. Hãy tắt MFA bằng mật khẩu và mã TOTP trước khi thiết lập lại.");
-    const secret = taoBiMatTotp();
-    await this.db.$transaction([
-      this.db.nguoiDung.update({ where: { id: nguoi_dung.id }, data: { mfa_totp_bat: false, mfa_totp_secret_ma_hoa: maHoaBiMatTotp(secret), mfa_totp_xac_nhan_luc: null } }),
-      this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_MFA_KHOI_TAO", nguoi_dung_id: nguoi_dung.id, dia_chi_ip } })
-    ]);
-    return { secret, uri: taoUriTotp(secret, nguoi_dung.thu_dien_tu), huong_dan: "Thêm secret hoặc URI vào ứng dụng Authenticator, sau đó nhập mã 6 số để xác nhận." };
-  }
-
-  async xac_nhan_mfa(nguoi_dung_id: string, phien_id: string | undefined, dto: MaOtpMfaDto, dia_chi_ip?: string) {
-    const nguoi_dung = await this.db.nguoiDung.findUnique({ where: { id: nguoi_dung_id } });
-    if (!nguoi_dung || nguoi_dung.vai_tro !== VaiTro.ADMIN || !nguoi_dung.mfa_totp_secret_ma_hoa) throw new BadRequestException("Chưa khởi tạo MFA");
-    const secret = giaiMaBiMatTotp(nguoi_dung.mfa_totp_secret_ma_hoa);
-    if (!xacThucTotp(secret, dto.ma_otp)) throw new BadRequestException("Mã xác minh 6 số không đúng hoặc đã hết hạn");
-    const bay_gio = new Date();
-    await this.db.$transaction([
-      this.db.nguoiDung.update({ where: { id: nguoi_dung.id }, data: { mfa_totp_bat: true, mfa_totp_xac_nhan_luc: bay_gio } }),
-      this.db.phienDangNhap.updateMany({ where: { nguoi_dung_id: nguoi_dung.id, da_thu_hoi: false, ...(phien_id ? { id: { not: phien_id } } : {}) }, data: { da_thu_hoi: true } }),
-      this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_MFA_BAT", nguoi_dung_id: nguoi_dung.id, dia_chi_ip, chi_tiet: { thu_hoi_phien_khac: true } } })
-    ]);
-    return { bat: true, xac_nhan_luc: bay_gio, thong_bao: "Đã bật MFA/TOTP cho tài khoản Admin." };
-  }
-
-  async tat_mfa(nguoi_dung_id: string, phien_id: string | undefined, dto: TatMfaDto, dia_chi_ip?: string) {
-    const nguoi_dung = await this.db.nguoiDung.findUnique({ where: { id: nguoi_dung_id } });
-    if (!nguoi_dung || nguoi_dung.vai_tro !== VaiTro.ADMIN || !nguoi_dung.mfa_totp_bat || !nguoi_dung.mfa_totp_secret_ma_hoa) throw new BadRequestException("MFA chưa được bật");
-    if (!await argon2.verify(nguoi_dung.mat_khau_bam, dto.mat_khau)) throw new UnauthorizedException("Mật khẩu hiện tại không đúng");
-    if (!xacThucTotp(giaiMaBiMatTotp(nguoi_dung.mfa_totp_secret_ma_hoa), dto.ma_otp)) throw new BadRequestException("Mã MFA không đúng hoặc đã hết hạn");
-    await this.db.$transaction([
-      this.db.nguoiDung.update({ where: { id: nguoi_dung.id }, data: { mfa_totp_bat: false, mfa_totp_secret_ma_hoa: null, mfa_totp_xac_nhan_luc: null } }),
-      this.db.phienDangNhap.updateMany({ where: { nguoi_dung_id: nguoi_dung.id, da_thu_hoi: false, ...(phien_id ? { id: { not: phien_id } } : {}) }, data: { da_thu_hoi: true } }),
-      this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_MFA_TAT", nguoi_dung_id: nguoi_dung.id, dia_chi_ip, chi_tiet: { thu_hoi_phien_khac: true } } })
-    ]);
-    return { bat: false, thong_bao: "Đã tắt MFA/TOTP. Các phiên Admin khác đã được thu hồi." };
   }
 
   async lam_moi(ma_lam_moi: string | undefined, dia_chi_ip?: string, trinh_duyet?: string) {
@@ -413,8 +325,6 @@ export class XacThucService {
         ngay_tao: true,
         ngay_cap_nhat: true,
         lan_dang_nhap_cuoi: true,
-        mfa_totp_bat: true,
-        mfa_totp_xac_nhan_luc: true,
         nhan_vien: { select: { id: true, ma_nhan_vien: true, chuc_danh: true, bo_phan: true, trang_thai: true } }
       }
     });

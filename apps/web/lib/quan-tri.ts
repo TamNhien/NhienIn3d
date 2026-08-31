@@ -41,6 +41,9 @@ export type AdminMauSac = { id: string; ma_mau: string; ten_mau: string; ma_hex:
 export type AdminDanhGia = { id: string; ho_ten: string; so_sao: number; noi_dung: string; da_duyet: boolean; ngay_tao: string; ngay_cap_nhat: string; san_pham: { id: string; ma_san_pham: string; ten_san_pham: string } };
 export type AdminSanPham = { id: string; ma_san_pham: string; ten_san_pham: string; mo_ta_ngan?: string | null; gia_ban: number; gia_von?: number | null; kich_thuoc?: string | null; khoi_luong_gam?: number | null; thoi_gian_in_gio?: number | null; trang_thai: string; danh_muc: { id: string; ma_danh_muc: string; ten_danh_muc: string }; bien_the: AdminBienThe[]; hinh_anh: Array<{ duong_dan_anh: string }> };
 export type NhatKyAdmin = { id: string; loai_su_kien: string; nguoi_dung_id?: string | null; nguoi_thuc_hien?: { id: string; ho_ten: string; thu_dien_tu: string } | null; dia_chi_ip?: string | null; chi_tiet: Record<string, unknown>; ngay_tao: string };
+export type PhanTrang = { trang: number; kich_thuoc: number; tong: number; tong_trang: number; gioi_han_tim_kiem?: number };
+export type KetQuaPhanTrang<T> = { du_lieu: T[]; phan_trang: PhanTrang };
+export type LichSuVanHanhAdmin = { id: string; loai: "HEALTH" | "BACKUP" | "RESTORE" | "ALERT" | string; trang_thai: "TOT" | "CANH_BAO" | "LOI" | "THANH_CONG" | "THAT_BAI" | string; mo_ta?: string | null; chi_tiet: Record<string, unknown>; ngay_bat_dau?: string | null; ngay_ket_thuc?: string | null; ngay_tao: string };
 export type LichSuKhoAdmin = { id: string; loai_su_kien: string; loai_bien_dong: "NHAP_KHO" | "XUAT_KHO" | "DIEU_CHINH" | string; ton_cu: number; ton_moi: number; chenh_lech: number; ly_do: string; ma_bien_the: string; ma_san_pham: string; nguoi_thuc_hien?: { id: string; ho_ten: string; thu_dien_tu?: string } | null; chi_tiet: Record<string, unknown>; ngay_tao: string };
 export type AdminCauHinhKho = { nguong_sap_het: number; ngay_cap_nhat?: string | null };
 export type DongImportKhoAdmin = { dong: number; ma_bien_the: string; so_luong_nhap: number; ly_do: string; hop_le: boolean; loi: string[]; bien_the_id?: string | null; ma_san_pham: string; ten_san_pham: string; ton_hien_tai: number | null; ton_sau_nhap: number | null };
@@ -48,6 +51,17 @@ export type KiemTraImportKhoAdmin = { ten_file: string; tong_dong: number; hop_l
 export type NhaCungCapAdmin = { id: string; ma_nha_cung_cap: string; ten_nha_cung_cap: string; nguoi_lien_he?: string | null; so_dien_thoai?: string | null; thu_dien_tu?: string | null; dia_chi?: string | null; ghi_chu?: string | null; dang_hoat_dong: boolean; so_phieu_nhap: number; ngay_tao: string; ngay_cap_nhat: string };
 export type PhieuNhapKhoAdmin = { id: string; ma_phieu: string; ma_lo?: string | null; nha_cung_cap?: string | null; nha_cung_cap_id?: string | null; nha_cung_cap_ref?: { id: string; ma_nha_cung_cap: string; ten_nha_cung_cap: string } | null; ghi_chu?: string | null; nguoi_tao_id?: string | null; so_dong: number; tong_so_luong: number; ngay_tao: string; chi_tiet: Array<{ id?: string; ma_bien_the: string; so_luong_nhap: number; ton_truoc: number; ton_sau: number; ly_do?: string | null; ma_san_pham?: string; ten_san_pham?: string; vat_lieu?: string; mau_sac?: string }> };
 export type TrangThaiCanhBaoKhoEmailAdmin = { bat: boolean; chu_ky_phut: number; so_nguoi_nhan: number; lan_gui_cuoi?: string | null; tong_canh_bao_lan_cuoi: number; trang_thai_lan_cuoi: string };
+export type AdminSucKhoeHeThong = {
+  trang_thai: "TOT" | "CANH_BAO" | "LOI";
+  phien_ban: string;
+  thoi_gian: string;
+  api: { uptime_giay: number; node: string; pid: number; rss_bytes: number; heap_used_bytes: number; heap_total_bytes: number };
+  database: { ket_noi: boolean; do_tre_ms: number | null; dung_luong_bytes: number | null; migration_gan_nhat: { ten: string; hoan_tat_luc?: string | null } | null; loi?: string };
+  smtp: { bat: boolean; san_sang: boolean; host?: string | null; port?: number | null; from: string; loi?: string };
+  backup: { thu_muc: string; so_ban_sao: number; so_daily: number; so_weekly: number; tong_dung_luong_bytes: number; gan_nhat: { ten_file: string; kich_thuoc_bytes: number; ngay_sua: string; tuoi_gio: number } | null; loi?: string };
+  canh_bao_kho: { bat: boolean; chu_ky_phut: number };
+  canh_bao_he_thong: { bat: boolean; chu_ky_phut: number; backup_qua_han_gio: number };
+};
 
 export type AdminTongQuan = {
   nguoi_dung: number;
@@ -71,6 +85,9 @@ export type AdminTongQuan = {
 };
 
 export const layTongQuan = () => goi<AdminTongQuan>("/quan-tri/tong-quan");
+export const laySucKhoeHeThongAdmin = () => goi<AdminSucKhoeHeThong>("/quan-tri/he-thong/suc-khoe");
+export const layLichSuVanHanhAdmin = (bo_loc: { loai?: string; trang_thai?: string; tu_ngay?: string; den_ngay?: string; trang?: number; kich_thuoc?: number } = {}) => { const q = new URLSearchParams(); if (bo_loc.loai) q.set("loai", bo_loc.loai); if (bo_loc.trang_thai) q.set("trang_thai", bo_loc.trang_thai); if (bo_loc.tu_ngay) q.set("tu_ngay", bo_loc.tu_ngay); if (bo_loc.den_ngay) q.set("den_ngay", bo_loc.den_ngay); if (bo_loc.trang) q.set("trang", String(bo_loc.trang)); if (bo_loc.kich_thuoc) q.set("kich_thuoc", String(bo_loc.kich_thuoc)); return goi<KetQuaPhanTrang<LichSuVanHanhAdmin>>(`/quan-tri/he-thong/lich-su${q.size ? `?${q}` : ""}`); };
+export const guiCanhBaoHeThongAdmin = () => goi<{ da_gui: boolean; ly_do?: string; van_de: string[]; so_nguoi_nhan?: number }>("/quan-tri/he-thong/canh-bao-email/gui", { method: "POST" });
 export const layNguoiDung = () => goi<AdminNguoiDung[]>("/quan-tri/nguoi-dung");
 export const capNhatNguoiDung = (id: string, payload: Partial<Pick<AdminNguoiDung, "thu_dien_tu" | "ho_ten" | "so_dien_thoai" | "dia_chi_mac_dinh" | "da_kich_hoat">>) => goi<AdminNguoiDung>(`/quan-tri/nguoi-dung/${id}/cap-nhat`, { method: "POST", body: JSON.stringify(payload) });
 export const kichHoatNguoiDung = (id: string) => goi<{ id: string; da_kich_hoat: boolean; thong_bao: string }>(`/quan-tri/nguoi-dung/${id}/kich-hoat`, { method: "POST" });
@@ -154,6 +171,26 @@ export const layNhatKyAdmin = (bo_loc: { tim_kiem?: string; loai?: string; nguoi
   if (bo_loc.den_ngay) q.set("den_ngay", bo_loc.den_ngay);
   if (bo_loc.gioi_han) q.set("gioi_han", String(bo_loc.gioi_han));
   return goi<NhatKyAdmin[]>(`/quan-tri/nhat-ky${q.size ? `?${q}` : ""}`);
+};
+export const layNhatKyPhanTrangAdmin = (bo_loc: { tim_kiem?: string; loai?: string; nguoi_dung_id?: string; tu_ngay?: string; den_ngay?: string; trang?: number; kich_thuoc?: number } = {}) => {
+  const q = new URLSearchParams();
+  if (bo_loc.tim_kiem?.trim()) q.set("tim_kiem", bo_loc.tim_kiem.trim());
+  if (bo_loc.loai) q.set("loai", bo_loc.loai);
+  if (bo_loc.nguoi_dung_id) q.set("nguoi_dung_id", bo_loc.nguoi_dung_id);
+  if (bo_loc.tu_ngay) q.set("tu_ngay", bo_loc.tu_ngay);
+  if (bo_loc.den_ngay) q.set("den_ngay", bo_loc.den_ngay);
+  if (bo_loc.trang) q.set("trang", String(bo_loc.trang));
+  if (bo_loc.kich_thuoc) q.set("kich_thuoc", String(bo_loc.kich_thuoc));
+  return goi<KetQuaPhanTrang<NhatKyAdmin>>(`/quan-tri/nhat-ky/phan-trang${q.size ? `?${q}` : ""}`);
+};
+export const xuatNhatKyExcelAdmin = (bo_loc: { tim_kiem?: string; loai?: string; nguoi_dung_id?: string; tu_ngay?: string; den_ngay?: string } = {}) => {
+  const q = new URLSearchParams();
+  if (bo_loc.tim_kiem?.trim()) q.set("tim_kiem", bo_loc.tim_kiem.trim());
+  if (bo_loc.loai) q.set("loai", bo_loc.loai);
+  if (bo_loc.nguoi_dung_id) q.set("nguoi_dung_id", bo_loc.nguoi_dung_id);
+  if (bo_loc.tu_ngay) q.set("tu_ngay", bo_loc.tu_ngay);
+  if (bo_loc.den_ngay) q.set("den_ngay", bo_loc.den_ngay);
+  return goi<{ ten_file: string; mime_type: string; base64: string }>(`/quan-tri/nhat-ky/excel${q.size ? `?${q}` : ""}`);
 };
 export const xuatNhatKyCsvAdmin = (bo_loc: { tim_kiem?: string; loai?: string; nguoi_dung_id?: string; tu_ngay?: string; den_ngay?: string } = {}) => {
   const q = new URLSearchParams();

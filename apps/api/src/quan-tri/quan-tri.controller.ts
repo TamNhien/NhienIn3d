@@ -40,6 +40,9 @@ export class QuanTriController {
   constructor(private readonly service: QuanTriService) {}
 
   @Get("tong-quan") tong_quan() { return this.service.tong_quan(); }
+  @Get("he-thong/suc-khoe") suc_khoe_he_thong() { return this.service.suc_khoe_he_thong(); }
+  @Get("he-thong/lich-su") lich_su_he_thong(@Query("loai") loai?: string, @Query("trang_thai") trang_thai?: string, @Query("tu_ngay") tu_ngay?: string, @Query("den_ngay") den_ngay?: string, @Query("trang") trang?: string, @Query("kich_thuoc") kich_thuoc?: string) { return this.service.danh_sach_lich_su_van_hanh(loai, trang_thai, tu_ngay, den_ngay, trang, kich_thuoc); }
+  @Post("he-thong/canh-bao-email/gui") gui_canh_bao_he_thong() { return this.service.kiem_tra_gui_canh_bao_he_thong_email(true); }
   @Get("nguoi-dung") nguoi_dung() { return this.service.danh_sach_nguoi_dung(); }
   @Patch("nguoi-dung/:id") cap_nhat_nguoi_dung(@Req() req: YeuCauCoNguoiDung, @Param("id") id: string, @Body() dto: CapNhatNguoiDungDto) { return this.service.cap_nhat_nguoi_dung(req.nguoi_dung_xac_thuc!, id, dto); }
   @Post("nguoi-dung/:id/cap-nhat") cap_nhat_nguoi_dung_post(@Req() req: YeuCauCoNguoiDung, @Param("id") id: string, @Body() dto: CapNhatNguoiDungDto) { return this.service.cap_nhat_nguoi_dung(req.nguoi_dung_xac_thuc!, id, dto); }
@@ -118,5 +121,7 @@ export class QuanTriController {
   @Get("bao-cao/:loai/excel") bao_cao_excel(@Param("loai") loai: string, @Query("tu_ngay") tu_ngay?: string, @Query("den_ngay") den_ngay?: string) { return this.service.xuat_bao_cao_excel(loai, tu_ngay, den_ngay); }
 
   @Get("nhat-ky") nhat_ky_admin(@Query("tim_kiem") tim_kiem?: string, @Query("loai") loai?: string, @Query("nguoi_dung_id") nguoi_dung_id?: string, @Query("tu_ngay") tu_ngay?: string, @Query("den_ngay") den_ngay?: string, @Query("gioi_han") gioi_han?: string) { return this.service.danh_sach_nhat_ky_admin(tim_kiem, loai, nguoi_dung_id, tu_ngay, den_ngay, gioi_han); }
+  @Get("nhat-ky/phan-trang") nhat_ky_admin_phan_trang(@Query("tim_kiem") tim_kiem?: string, @Query("loai") loai?: string, @Query("nguoi_dung_id") nguoi_dung_id?: string, @Query("tu_ngay") tu_ngay?: string, @Query("den_ngay") den_ngay?: string, @Query("trang") trang?: string, @Query("kich_thuoc") kich_thuoc?: string) { return this.service.danh_sach_nhat_ky_admin_phan_trang(tim_kiem, loai, nguoi_dung_id, tu_ngay, den_ngay, trang, kich_thuoc); }
   @Get("nhat-ky/csv") nhat_ky_admin_csv(@Query("tim_kiem") tim_kiem?: string, @Query("loai") loai?: string, @Query("nguoi_dung_id") nguoi_dung_id?: string, @Query("tu_ngay") tu_ngay?: string, @Query("den_ngay") den_ngay?: string) { return this.service.xuat_nhat_ky_admin_csv(tim_kiem, loai, nguoi_dung_id, tu_ngay, den_ngay); }
+  @Get("nhat-ky/excel") nhat_ky_admin_excel(@Query("tim_kiem") tim_kiem?: string, @Query("loai") loai?: string, @Query("nguoi_dung_id") nguoi_dung_id?: string, @Query("tu_ngay") tu_ngay?: string, @Query("den_ngay") den_ngay?: string) { return this.service.xuat_nhat_ky_admin_excel(tim_kiem, loai, nguoi_dung_id, tu_ngay, den_ngay); }
 }
