@@ -358,7 +358,8 @@ test("v2.9.3 register phone address va mot vai tro Admin", () => {
   assert.match(register, /Số điện thoại/u);
   assert.match(register, /Địa chỉ/u);
   assert.match(account, /Địa chỉ mặc định/u);
-  assert.match(admin, /Admin có toàn quyền/u);
+  assert.match(admin, /Admin Dashboard/u);
+  assert.doesNotMatch(admin, /Admin có toàn quyền hệ thống/u);
   assert.doesNotMatch(admin, /Bảo vệ/u);
   assert.doesNotMatch(auth, /SIEU_QUAN_TRI|QUAN_TRI/);
   assert.match(css, /account-panel-security/u);
@@ -512,7 +513,8 @@ test("v2.9.8 vai tro Admin va Nhan vien la nhan co dinh khong co dropdown", () =
   const css = readFileSync("app/globals.css", "utf8");
   assert.match(admin, /Tài khoản khách hàng/u);
   assert.match(admin, /Nhân viên bán hàng/u);
-  assert.match(admin, /Admin có toàn quyền/u);
+  assert.match(admin, /Admin Dashboard/u);
+  assert.doesNotMatch(admin, /Admin có toàn quyền hệ thống/u);
   assert.doesNotMatch(admin, /<select value=\{u\.vai_tro\}/);
   assert.doesNotMatch(admin, /doiVaiTro/);
   assert.doesNotMatch(lib, /ho_ten" \| "so_dien_thoai" \| "vai_tro"/);
@@ -864,6 +866,12 @@ test("v2.18.2 dropdown vat lieu mau Admin de doc va tuong phan cao", () => {
 
 test("v2.18.3 Next dev co lenh HTTPS local", () => {
   const pkg = JSON.parse(readFileSync("package.json", "utf8"));
-  assert.equal(pkg.version, "2.19.1");
+  assert.equal(pkg.version, "2.19.2");
   assert.match(pkg.scripts["dev:https"], /next dev --experimental-https/);
+});
+
+test("v2.19.2 Admin Dashboard bo dong mo ta quyen dai", () => {
+  const admin = readFileSync("app/quan-tri/page.tsx", "utf8");
+  assert.match(admin, /<h1>Admin Dashboard<\/h1>/u);
+  assert.doesNotMatch(admin, /Admin có toàn quyền hệ thống/u);
 });

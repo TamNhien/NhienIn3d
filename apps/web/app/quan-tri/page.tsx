@@ -973,7 +973,7 @@ export default function QuanTriPage() {
 
   return <main className="cine-admin-shell page-shell">
     <div className="cine-admin-heading">
-      <div><h1>Admin Dashboard</h1><p>Admin có toàn quyền hệ thống: catalog, danh mục, vật liệu/màu, biến thể, kho, đánh giá, đơn hàng, báo cáo và nhân sự.</p></div>
+      <div><h1>Admin Dashboard</h1></div>
       <div className="cine-admin-heading-actions"><span>{tai_khoan.ho_ten} · Admin</span><Link className="cine-btn cine-btn-secondary" href="/tai-khoan">Tài khoản của tôi</Link></div>
     </div>
 

@@ -1114,6 +1114,15 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 
 ---
 
+## v2.19.2 — 31/08/2026
+
+- Bỏ dòng mô tả dài dưới tiêu đề **Admin Dashboard**: `Admin có toàn quyền hệ thống: catalog, danh mục, vật liệu/màu, biến thể, kho, đánh giá, đơn hàng, báo cáo và nhân sự.` theo yêu cầu giao diện gọn hơn.
+- Giữ nguyên tiêu đề **Admin Dashboard**, tên tài khoản Admin, nút **Tài khoản của tôi**, KPI và toàn bộ tab quản trị; không thay đổi quyền truy cập hay nghiệp vụ.
+- Không thay đổi API hoặc Prisma schema nên **không có migration database mới**.
+- Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm test` → `npm run typecheck` → `npm run build` → `docker compose up -d --build` → `docker compose ps` → `docker compose logs api --tail 150` → `.\scripts\release.ps1 v2.19.2`.
+
+---
+
 # Lộ trình tiếp theo
 
 ## v3.0.0
