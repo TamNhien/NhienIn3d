@@ -152,6 +152,12 @@ export class QuanTriService {
     const doanh_thu_hom_nay = tongTienDoanhThu(doanhThuDaGhiNhan.filter(d => trongKhoang(d.ngay_ghi_nhan, bat_dau_hom_nay)));
     const doanh_thu_7_ngay = tongTienDoanhThu(doanhThuDaGhiNhan.filter(d => trongKhoang(d.ngay_ghi_nhan, bat_dau_7_ngay)));
     const doanh_thu_30_ngay = tongTienDoanhThu(doanhThuDaGhiNhan);
+    // V2.15.3: số đơn đi cùng doanh thu phải đếm theo ngày GHI NHẬN doanh thu,
+    // không đếm theo ngày tạo đơn. Một đơn tạo hôm trước nhưng thu tiền hôm nay vẫn là
+    // 1 đơn ghi nhận doanh thu hôm nay; nhờ vậy không còn hiển thị "0 đơn" cạnh doanh thu > 0.
+    const don_ghi_nhan_doanh_thu_hom_nay = doanhThuDaGhiNhan.filter(d => trongKhoang(d.ngay_ghi_nhan, bat_dau_hom_nay)).length;
+    const don_ghi_nhan_doanh_thu_7_ngay = doanhThuDaGhiNhan.filter(d => trongKhoang(d.ngay_ghi_nhan, bat_dau_7_ngay)).length;
+    const don_ghi_nhan_doanh_thu_30_ngay = doanhThuDaGhiNhan.length;
     const don_hom_nay = don_30_ngay.filter(d => trongKhoang(d.ngay_tao, bat_dau_hom_nay)).length;
     const don_7_ngay = don_30_ngay.filter(d => trongKhoang(d.ngay_tao, bat_dau_7_ngay)).length;
     const don_30_ngay_count = don_30_ngay.length;
@@ -162,7 +168,7 @@ export class QuanTriService {
       const doanh_thu = doanhThuDaGhiNhan
         .filter(d => ngayVietNam(d.ngay_ghi_nhan) === dateKey)
         .reduce((sum, item) => sum + item.so_tien, 0);
-      const so_don = don_30_ngay.filter(d => ngayVietNam(d.ngay_tao) === dateKey).length;
+      const so_don = doanhThuDaGhiNhan.filter(d => ngayVietNam(d.ngay_ghi_nhan) === dateKey).length;
       return { ngay: dateKey, doanh_thu, so_don };
     });
 
@@ -201,6 +207,11 @@ export class QuanTriService {
         gia_tri_don_trung_binh_30_ngay
       },
       don_hang_theo_ky: { hom_nay: don_hom_nay, bay_ngay: don_7_ngay, ba_muoi_ngay: don_30_ngay_count },
+      don_ghi_nhan_doanh_thu_theo_ky: {
+        hom_nay: don_ghi_nhan_doanh_thu_hom_nay,
+        bay_ngay: don_ghi_nhan_doanh_thu_7_ngay,
+        ba_muoi_ngay: don_ghi_nhan_doanh_thu_30_ngay
+      },
       khach_hang_moi: { hom_nay: khach_hang_moi_hom_nay, bay_ngay: khach_hang_moi_7_ngay, ba_muoi_ngay: khach_hang_moi_30_ngay },
       trang_thai_don_hang: trang_thai,
       doanh_thu_theo_ngay,

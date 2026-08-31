@@ -592,3 +592,12 @@ test("v2.15.2 API fix typecheck seed va xuat XLSX khong can thu vien ngoai", () 
   assert.match(service, /\.xlsx/);
   assert.match(seed, /new Map<string, \{ id: string; tong_tien: unknown; trang_thai: TrangThaiDonHang \}>/);
 });
+
+
+test("v2.15.3 dashboard dem so don theo ngay ghi nhan doanh thu", () => {
+  const service = readFileSync("src/quan-tri/quan-tri.service.ts", "utf8");
+  assert.match(service, /don_ghi_nhan_doanh_thu_hom_nay/);
+  assert.match(service, /don_ghi_nhan_doanh_thu_theo_ky/);
+  assert.match(service, /const so_don = doanhThuDaGhiNhan\.filter\(d => ngayVietNam\(d\.ngay_ghi_nhan\) === dateKey\)\.length/);
+  assert.doesNotMatch(service, /const so_don = don_30_ngay\.filter\(d => ngayVietNam\(d\.ngay_tao\) === dateKey\)\.length/);
+});

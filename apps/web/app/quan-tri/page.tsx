@@ -730,15 +730,15 @@ export default function QuanTriPage() {
     {tab === "tong-quan" && <section className="cine-dashboard-v211">
       {!tong_quan ? <div className="cine-card cine-admin-section">Đang tải thống kê quản trị…</div> : <>
         <div className="cine-dashboard-period-cards">
-          <article className="cine-card cine-dashboard-kpi"><span>Doanh thu hôm nay</span><strong>{dinhDangTien(tong_quan.doanh_thu.hom_nay)}</strong><small>{tong_quan.don_hang_theo_ky.hom_nay} đơn phát sinh · doanh thu theo thanh toán đã xác nhận</small></article>
-          <article className="cine-card cine-dashboard-kpi"><span>Doanh thu 7 ngày</span><strong>{dinhDangTien(tong_quan.doanh_thu.bay_ngay)}</strong><small>{tong_quan.don_hang_theo_ky.bay_ngay} đơn từ {new Date(`${tong_quan.ky_bao_cao.tu_7_ngay}T00:00:00`).toLocaleDateString("vi-VN")}</small></article>
-          <article className="cine-card cine-dashboard-kpi"><span>Doanh thu 30 ngày</span><strong>{dinhDangTien(tong_quan.doanh_thu.ba_muoi_ngay)}</strong><small>{tong_quan.don_hang_theo_ky.ba_muoi_ngay} đơn · trung bình {dinhDangTien(tong_quan.doanh_thu.gia_tri_don_trung_binh_30_ngay)}/đơn ghi nhận doanh thu</small></article>
+          <article className="cine-card cine-dashboard-kpi"><span>Doanh thu hôm nay</span><strong>{dinhDangTien(tong_quan.doanh_thu.hom_nay)}</strong><small>{tong_quan.don_ghi_nhan_doanh_thu_theo_ky.hom_nay} đơn ghi nhận doanh thu · {tong_quan.don_hang_theo_ky.hom_nay} đơn mới phát sinh</small></article>
+          <article className="cine-card cine-dashboard-kpi"><span>Doanh thu 7 ngày</span><strong>{dinhDangTien(tong_quan.doanh_thu.bay_ngay)}</strong><small>{tong_quan.don_ghi_nhan_doanh_thu_theo_ky.bay_ngay} đơn ghi nhận doanh thu · {tong_quan.don_hang_theo_ky.bay_ngay} đơn mới</small></article>
+          <article className="cine-card cine-dashboard-kpi"><span>Doanh thu 30 ngày</span><strong>{dinhDangTien(tong_quan.doanh_thu.ba_muoi_ngay)}</strong><small>{tong_quan.don_ghi_nhan_doanh_thu_theo_ky.ba_muoi_ngay} đơn ghi nhận doanh thu · trung bình {dinhDangTien(tong_quan.doanh_thu.gia_tri_don_trung_binh_30_ngay)}/đơn</small></article>
           <article className="cine-card cine-dashboard-kpi"><span>Khách hàng mới</span><strong>{tong_quan.khach_hang_moi.ba_muoi_ngay}</strong><small>Hôm nay {tong_quan.khach_hang_moi.hom_nay} · 7 ngày {tong_quan.khach_hang_moi.bay_ngay}</small></article>
         </div>
 
         <div className="cine-dashboard-grid">
           <article className="cine-card cine-dashboard-panel cine-dashboard-revenue">
-            <div className="cine-dashboard-panel-head"><div><h2>Doanh thu 7 ngày</h2><p>Theo thời điểm thanh toán/ghi nhận, múi giờ Việt Nam.</p></div><strong>{dinhDangTien(tong_quan.doanh_thu.bay_ngay)}</strong></div>
+            <div className="cine-dashboard-panel-head"><div><h2>Doanh thu 7 ngày</h2><p>Số đơn và doanh thu đều theo thời điểm thanh toán/ghi nhận, múi giờ Việt Nam.</p></div><strong>{dinhDangTien(tong_quan.doanh_thu.bay_ngay)}</strong></div>
             <div className="cine-revenue-bars">{tong_quan.doanh_thu_theo_ngay.map(item => <div className="cine-revenue-row" key={item.ngay}>
               <div><b>{new Date(`${item.ngay}T00:00:00`).toLocaleDateString("vi-VN", { weekday: "short" })}</b><span>{new Date(`${item.ngay}T00:00:00`).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" })}</span></div>
               <div className="cine-revenue-track"><i style={{ width: `${Math.max(3, (item.doanh_thu / maxDoanhThu7Ngay) * 100)}%` }} /></div>

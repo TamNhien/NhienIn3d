@@ -732,3 +732,14 @@ test("v2.15.2 web co xuat Excel va footer khong con ghi chu nen", () => {
   assert.doesNotMatch(footer, /Nền giao diện dùng ảnh 3D do người dùng cung cấp/u);
   assert.match(css, /v2\.15\.2 - xuất Excel và tinh gọn footer/u);
 });
+
+
+test("v2.15.3 dashboard ghi ro don ghi nhan doanh thu va don moi", () => {
+  const admin = readFileSync("app/quan-tri/page.tsx", "utf8");
+  const lib = readFileSync("lib/quan-tri.ts", "utf8");
+  assert.match(admin, /don_ghi_nhan_doanh_thu_theo_ky\.hom_nay/);
+  assert.match(admin, /đơn ghi nhận doanh thu/u);
+  assert.match(admin, /đơn mới phát sinh/u);
+  assert.match(admin, /Số đơn và doanh thu đều theo thời điểm thanh toán\/ghi nhận/u);
+  assert.match(lib, /don_ghi_nhan_doanh_thu_theo_ky/);
+});

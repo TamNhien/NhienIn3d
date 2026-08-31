@@ -1,6 +1,6 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v2.15.2** — 31/08/2026
+> Phiên bản hiện tại: **v2.15.3** — 31/08/2026
 
 NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **frontend Next.js** và **backend NestJS/Fastify** kết nối **PostgreSQL qua Prisma**.
 
@@ -19,7 +19,7 @@ NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **fro
 
 ## Giao diện dựng lại theo bố cục CineBooking Pro
 
-Bản source v2.15.2 tiếp tục dùng **frontend layout** theo cấu trúc CineBooking Pro, giữ nguyên nghiệp vụ NhienIn3d, sửa lỗi typecheck seed và bổ sung **xuất báo cáo Excel (.xlsx)** bên cạnh CSV:
+Bản source v2.15.3 tiếp tục dùng **frontend layout** theo cấu trúc CineBooking Pro, giữ nguyên nghiệp vụ NhienIn3d và sửa lệch số liệu **số đơn ↔ doanh thu** trên Dashboard khi đơn được ghi nhận thanh toán khác ngày tạo:
 
 - Dùng `RootLayout` chung với **header sticky**, vùng nội dung `max-w-7xl`, **footer dùng chung** và menu drawer responsive; không còn lặp navbar ở từng route.
 - Bổ sung **Tailwind CSS 4 + `@tailwindcss/postcss`** giống lớp công nghệ frontend tham chiếu, đồng thời giữ toàn bộ CSS/logic nghiệp vụ cũ để tránh phá luồng sản phẩm, giỏ hàng, tài khoản và quản trị.
@@ -29,6 +29,7 @@ Bản source v2.15.2 tiếp tục dùng **frontend layout** theo cấu trúc Cin
 
 ## Điểm chính bản hiện tại
 
+- v2.15.3 sửa lệch số liệu dashboard: số **đơn** nằm cạnh doanh thu giờ được đếm theo **ngày ghi nhận doanh thu/thanh toán**, không còn lấy ngày tạo đơn; đồng thời KPI tách rõ **đơn ghi nhận doanh thu** và **đơn mới phát sinh**.
 - v2.15.2 sửa lỗi `npm run typecheck` tại `prisma/seed.ts` do kiểu `don_hang_map` thiếu trường `trang_thai`, đồng thời bổ sung xuất **Excel (.xlsx)** cho Đơn hàng/Doanh thu/Tồn kho và bỏ ghi chú nền ảnh khỏi footer.
 - v2.15.1 sửa **ghi nhận doanh thu theo thanh toán**: non-COD đã thanh toán được cộng doanh thu ngay; COD chỉ cộng khi Admin xác nhận **Đã giao / hoàn tất**, lúc đó giao dịch tự chuyển sang `DA_THANH_TOAN`.
 - v2.15.0 bổ sung **CRUD Danh mục**: tạo, sửa tên/mô tả/thứ tự/hiển thị và xóa danh mục trống; không cho xóa khi vẫn còn sản phẩm để tránh mất liên kết dữ liệu.
@@ -922,6 +923,18 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 - Bỏ dòng `Nền giao diện dùng ảnh 3D do người dùng cung cấp.` khỏi footer; footer chỉ còn copyright NhienIn3d.
 - Không thay đổi Prisma schema nên **không có migration database mới**.
 - Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm test` → `npm run typecheck` → `npm run build` → Docker Compose → `.\scripts\release.ps1 v2.15.2`.
+
+---
+
+
+## v2.15.3 — 31/08/2026
+
+- Sửa lỗi dashboard có thể hiển thị **doanh thu > 0 nhưng 0 đơn** trên cùng một ngày. Nguyên nhân là doanh thu dùng `ngay_thanh_toan/ngay_ghi_nhan`, còn số đơn trên biểu đồ lại dùng `ngay_tao`.
+- Biểu đồ **Doanh thu 7 ngày** giờ đếm `so_don` từ chính tập `doanhThuDaGhiNhan` theo `ngay_ghi_nhan`, nên số tiền và số đơn luôn cùng một cơ sở thời gian.
+- KPI **Doanh thu hôm nay / 7 ngày / 30 ngày** bổ sung `don_ghi_nhan_doanh_thu_theo_ky` và hiển thị tách biệt số đơn đã ghi nhận doanh thu với số đơn mới phát sinh.
+- Ví dụ: đơn tạo ngày 29/08 nhưng Admin xác nhận COD đã giao ngày 31/08 sẽ được tính là **1 đơn ghi nhận doanh thu ngày 31/08**, trong khi vẫn là **0 đơn mới phát sinh ngày 31/08** nếu hôm đó không có đơn mới.
+- Không thay đổi Prisma schema nên **không có migration database mới**.
+- Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm test` → `npm run typecheck` → `npm run build` → Docker Compose → `.\scripts\release.ps1 v2.15.3`.
 
 ---
 

@@ -112,6 +112,19 @@ test("v2.15.2 fix typecheck seed, xuat Excel va bo ghi chu nen footer", () => {
   assert.doesNotMatch(footer, /Nền giao diện dùng ảnh 3D do người dùng cung cấp/u);
 });
 
+
+test("v2.15.3 dong bo so don voi ngay ghi nhan doanh thu", () => {
+  const service = readFileSync("apps/api/src/quan-tri/quan-tri.service.ts", "utf8");
+  const admin = readFileSync("apps/web/app/quan-tri/page.tsx", "utf8");
+  const lib = readFileSync("apps/web/lib/quan-tri.ts", "utf8");
+  assert.match(service, /const so_don = doanhThuDaGhiNhan\.filter\(d => ngayVietNam\(d\.ngay_ghi_nhan\) === dateKey\)\.length/);
+  assert.match(service, /don_ghi_nhan_doanh_thu_theo_ky/);
+  assert.match(admin, /đơn ghi nhận doanh thu/u);
+  assert.match(admin, /đơn mới phát sinh/u);
+  assert.match(admin, /Số đơn và doanh thu đều theo thời điểm thanh toán\/ghi nhận/u);
+  assert.match(lib, /don_ghi_nhan_doanh_thu_theo_ky/);
+});
+
 test("root co lenh kiem tra so dong du lieu database", () => {
   const pkg = docJson("package.json");
   assert.equal(typeof pkg.scripts?.["db:kiem-tra-du-lieu"], "string");
@@ -122,16 +135,16 @@ test("V2 co migration nang cap khong ghi de migration V1", () => {
   assert.equal(existsSync("apps/api/prisma/migrations/202608290002_v002_gio_hang_thanh_toan/migration.sql"), true);
 });
 
-test("version v2.15.2 dong bo root API va Web", () => {
-  assert.equal(readFileSync("VERSION", "utf8").trim(), "2.15.2");
-  assert.equal(docJson("package.json").version, "2.15.2");
-  assert.equal(docJson("apps/api/package.json").version, "2.15.2");
-  assert.equal(docJson("apps/web/package.json").version, "2.15.2");
+test("version v2.15.3 dong bo root API va Web", () => {
+  assert.equal(readFileSync("VERSION", "utf8").trim(), "2.15.3");
+  assert.equal(docJson("package.json").version, "2.15.3");
+  assert.equal(docJson("apps/api/package.json").version, "2.15.3");
+  assert.equal(docJson("apps/web/package.json").version, "2.15.3");
 });
 
-test("README co lich su phien ban tang dan den v2.15.2", () => {
+test("README co lich su phien ban tang dan den v2.15.3", () => {
   const readme = readFileSync("README.md", "utf8");
-  const viTri = ["## v1.0.0", "## v1.0.1", "## v1.0.2", "## v1.0.3", "## v1.0.4", "## v1.0.5", "## v1.0.6", "## v1.0.7", "## v2.0.0", "## v2.1.0", "## v2.1.1", "## v2.2.0", "## v2.2.1", "## v2.3.0", "## v2.4.0", "## v2.4.1", "## v2.5.0", "## v2.6.0", "## v2.6.1", "## v2.7.0", "## v2.8.0", "## v2.8.1", "## v2.8.2", "## v2.8.3", "## v2.8.4", "## v2.8.5", "## v2.8.6", "## v2.8.7", "## v2.8.8", "## v2.8.9", "## v2.9.0", "## v2.9.1", "## v2.9.2", "## v2.9.3", "## v2.9.4", "## v2.9.5", "## v2.9.6", "## v2.9.7", "## v2.9.8", "## v2.9.9", "## v2.10.0", "## v2.10.1", "## v2.10.2", "## v2.11.0", "## v2.12.0", "## v2.12.1", "## v2.12.2", "## v2.12.3", "## v2.13.0", "## v2.14.0", "## v2.15.0", "## v2.15.1", "## v2.15.2"].map(x => readme.indexOf(x));
+  const viTri = ["## v1.0.0", "## v1.0.1", "## v1.0.2", "## v1.0.3", "## v1.0.4", "## v1.0.5", "## v1.0.6", "## v1.0.7", "## v2.0.0", "## v2.1.0", "## v2.1.1", "## v2.2.0", "## v2.2.1", "## v2.3.0", "## v2.4.0", "## v2.4.1", "## v2.5.0", "## v2.6.0", "## v2.6.1", "## v2.7.0", "## v2.8.0", "## v2.8.1", "## v2.8.2", "## v2.8.3", "## v2.8.4", "## v2.8.5", "## v2.8.6", "## v2.8.7", "## v2.8.8", "## v2.8.9", "## v2.9.0", "## v2.9.1", "## v2.9.2", "## v2.9.3", "## v2.9.4", "## v2.9.5", "## v2.9.6", "## v2.9.7", "## v2.9.8", "## v2.9.9", "## v2.10.0", "## v2.10.1", "## v2.10.2", "## v2.11.0", "## v2.12.0", "## v2.12.1", "## v2.12.2", "## v2.12.3", "## v2.13.0", "## v2.14.0", "## v2.15.0", "## v2.15.1", "## v2.15.2", "## v2.15.3"].map(x => readme.indexOf(x));
   assert.ok(viTri.every(x => x >= 0));
   assert.deepEqual([...viTri].sort((a,b)=>a-b), viTri);
 });

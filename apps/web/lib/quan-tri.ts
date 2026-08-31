@@ -53,6 +53,7 @@ export type AdminTongQuan = {
   ky_bao_cao: { hom_nay: string; tu_7_ngay: string; tu_30_ngay: string };
   doanh_thu: { hom_nay: number; bay_ngay: number; ba_muoi_ngay: number; gia_tri_don_trung_binh_30_ngay: number };
   don_hang_theo_ky: { hom_nay: number; bay_ngay: number; ba_muoi_ngay: number };
+  don_ghi_nhan_doanh_thu_theo_ky: { hom_nay: number; bay_ngay: number; ba_muoi_ngay: number };
   khach_hang_moi: { hom_nay: number; bay_ngay: number; ba_muoi_ngay: number };
   trang_thai_don_hang: Record<string, number>;
   doanh_thu_theo_ngay: Array<{ ngay: string; doanh_thu: number; so_don: number }>;
