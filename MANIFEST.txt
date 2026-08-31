@@ -28,6 +28,7 @@ apps/api/prisma/migrations/202608300004_v212_quan_tri_don_hang_audit/migration.s
 apps/api/prisma/migrations/202608310001_v217_canh_bao_kho/migration.sql
 apps/api/prisma/migrations/202608310002_v218_nhap_kho_theo_lo/migration.sql
 apps/api/prisma/migrations/202608310003_v219_nha_cung_cap_dinh_muc_kho/migration.sql
+apps/api/prisma/migrations/202608310004_v300_mfa_admin/migration.sql
 apps/api/prisma/migrations/migration_lock.toml
 apps/api/prisma/schema.prisma
 apps/api/prisma/seed.ts
@@ -96,7 +97,9 @@ apps/api/src/xac-thuc/dto/dang-ky.dto.ts
 apps/api/src/xac-thuc/dto/dang-nhap.dto.ts
 apps/api/src/xac-thuc/dto/dat-lai-mat-khau.dto.ts
 apps/api/src/xac-thuc/dto/quen-mat-khau.dto.ts
+apps/api/src/xac-thuc/dto/xac-nhan-mfa.dto.ts
 apps/api/src/xac-thuc/jwt.guard.ts
+apps/api/src/xac-thuc/mfa-totp.ts
 apps/api/src/xac-thuc/vai-tro.decorator.ts
 apps/api/src/xac-thuc/vai-tro.guard.ts
 apps/api/src/xac-thuc/xac-thuc.controller.ts
@@ -107,6 +110,7 @@ apps/api/src/yeu-thich/yeu-thich.module.ts
 apps/api/src/yeu-thich/yeu-thich.service.ts
 apps/api/tests/cau-hinh-api.test.mjs
 apps/api/tests/v219-nha-cung-cap-kho.test.mjs
+apps/api/tests/v300-mfa-security.test.mjs
 apps/api/tsconfig.build.json
 apps/api/tsconfig.json
 apps/web/.dockerignore
@@ -155,11 +159,13 @@ apps/web/public/images/khoi-lap-phuong-banh-rang.jpg
 apps/web/tests/cau-hinh-web.test.mjs
 apps/web/tests/v219-kho-ncc.test.mjs
 apps/web/tests/v2191-auth-dark.test.mjs
+apps/web/tests/v300-mfa-admin.test.mjs
 apps/web/tsconfig.json
 docker-compose.https.yml
 docker-compose.yml
 infra/caddy/Caddyfile.local-https
 package.json
+scripts/backup-db.ps1
 scripts/cap-nhat.ps1
 scripts/don-dep-legacy.mjs
 scripts/https-local-bo-tin-cay.ps1
@@ -168,6 +174,8 @@ scripts/khoi-tao-github.ps1
 scripts/khoi-tao.ps1
 scripts/kiem-tra.ps1
 scripts/release.ps1
+scripts/restore-db.ps1
 tests/cau-truc.test.mjs
 tests/e2e-admin-v218.test.mjs
 tests/e2e-admin-v219.test.mjs
+tests/v300-security.test.mjs

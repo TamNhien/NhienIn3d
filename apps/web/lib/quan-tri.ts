@@ -40,7 +40,7 @@ export type AdminVatLieu = { id: string; ma_vat_lieu: string; ten_vat_lieu: stri
 export type AdminMauSac = { id: string; ma_mau: string; ten_mau: string; ma_hex: string; so_bien_the: number };
 export type AdminDanhGia = { id: string; ho_ten: string; so_sao: number; noi_dung: string; da_duyet: boolean; ngay_tao: string; ngay_cap_nhat: string; san_pham: { id: string; ma_san_pham: string; ten_san_pham: string } };
 export type AdminSanPham = { id: string; ma_san_pham: string; ten_san_pham: string; mo_ta_ngan?: string | null; gia_ban: number; gia_von?: number | null; kich_thuoc?: string | null; khoi_luong_gam?: number | null; thoi_gian_in_gio?: number | null; trang_thai: string; danh_muc: { id: string; ma_danh_muc: string; ten_danh_muc: string }; bien_the: AdminBienThe[]; hinh_anh: Array<{ duong_dan_anh: string }> };
-export type NhatKyAdmin = { id: string; loai_su_kien: string; nguoi_dung_id?: string | null; nguoi_thuc_hien?: { id: string; ho_ten: string; thu_dien_tu: string } | null; chi_tiet: Record<string, unknown>; ngay_tao: string };
+export type NhatKyAdmin = { id: string; loai_su_kien: string; nguoi_dung_id?: string | null; nguoi_thuc_hien?: { id: string; ho_ten: string; thu_dien_tu: string } | null; dia_chi_ip?: string | null; chi_tiet: Record<string, unknown>; ngay_tao: string };
 export type LichSuKhoAdmin = { id: string; loai_su_kien: string; loai_bien_dong: "NHAP_KHO" | "XUAT_KHO" | "DIEU_CHINH" | string; ton_cu: number; ton_moi: number; chenh_lech: number; ly_do: string; ma_bien_the: string; ma_san_pham: string; nguoi_thuc_hien?: { id: string; ho_ten: string; thu_dien_tu?: string } | null; chi_tiet: Record<string, unknown>; ngay_tao: string };
 export type AdminCauHinhKho = { nguong_sap_het: number; ngay_cap_nhat?: string | null };
 export type DongImportKhoAdmin = { dong: number; ma_bien_the: string; so_luong_nhap: number; ly_do: string; hop_le: boolean; loi: string[]; bien_the_id?: string | null; ma_san_pham: string; ten_san_pham: string; ton_hien_tai: number | null; ton_sau_nhap: number | null };
@@ -145,4 +145,22 @@ export const layBaoCaoExcelAdmin = (loai: "don-hang" | "doanh-thu" | "ton-kho", 
   if (den_ngay) q.set("den_ngay", den_ngay);
   return goi<{ ten_file: string; mime_type: string; base64: string }>(`/quan-tri/bao-cao/${loai}/excel${q.size ? `?${q}` : ""}`);
 };
-export const layNhatKyAdmin = () => goi<NhatKyAdmin[]>("/quan-tri/nhat-ky");
+export const layNhatKyAdmin = (bo_loc: { tim_kiem?: string; loai?: string; nguoi_dung_id?: string; tu_ngay?: string; den_ngay?: string; gioi_han?: number } = {}) => {
+  const q = new URLSearchParams();
+  if (bo_loc.tim_kiem?.trim()) q.set("tim_kiem", bo_loc.tim_kiem.trim());
+  if (bo_loc.loai) q.set("loai", bo_loc.loai);
+  if (bo_loc.nguoi_dung_id) q.set("nguoi_dung_id", bo_loc.nguoi_dung_id);
+  if (bo_loc.tu_ngay) q.set("tu_ngay", bo_loc.tu_ngay);
+  if (bo_loc.den_ngay) q.set("den_ngay", bo_loc.den_ngay);
+  if (bo_loc.gioi_han) q.set("gioi_han", String(bo_loc.gioi_han));
+  return goi<NhatKyAdmin[]>(`/quan-tri/nhat-ky${q.size ? `?${q}` : ""}`);
+};
+export const xuatNhatKyCsvAdmin = (bo_loc: { tim_kiem?: string; loai?: string; nguoi_dung_id?: string; tu_ngay?: string; den_ngay?: string } = {}) => {
+  const q = new URLSearchParams();
+  if (bo_loc.tim_kiem?.trim()) q.set("tim_kiem", bo_loc.tim_kiem.trim());
+  if (bo_loc.loai) q.set("loai", bo_loc.loai);
+  if (bo_loc.nguoi_dung_id) q.set("nguoi_dung_id", bo_loc.nguoi_dung_id);
+  if (bo_loc.tu_ngay) q.set("tu_ngay", bo_loc.tu_ngay);
+  if (bo_loc.den_ngay) q.set("den_ngay", bo_loc.den_ngay);
+  return goi<{ ten_file: string; csv: string }>(`/quan-tri/nhat-ky/csv${q.size ? `?${q}` : ""}`);
+};

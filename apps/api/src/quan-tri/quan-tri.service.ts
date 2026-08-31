@@ -1704,12 +1704,37 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     return { ten_file: `${ten_goc}.xlsx`, mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", base64: buffer.toString("base64") };
   }
 
-  async danh_sach_nhat_ky_admin() {
-    const ds = await this.db.nhatKyBaoMat.findMany({ where: { loai_su_kien: { startsWith: "ADMIN_" } }, orderBy: { ngay_tao: "desc" }, take: 200 });
+  async danh_sach_nhat_ky_admin(tim_kiem?: string, loai?: string, nguoi_dung_id?: string, tu_ngay?: string, den_ngay?: string, gioi_han?: string) {
+    const q = tim_kiem?.trim().toLocaleLowerCase("vi") || "";
+    const limitRaw = Number(gioi_han || 200);
+    const limit = Number.isFinite(limitRaw) ? Math.max(20, Math.min(500, Math.floor(limitRaw))) : 200;
+    const bat_dau = tu_ngay ? new Date(`${tu_ngay}T00:00:00.000Z`) : undefined;
+    const ket_thuc = den_ngay ? new Date(`${den_ngay}T23:59:59.999Z`) : undefined;
+    if (bat_dau && Number.isNaN(bat_dau.getTime())) throw new BadRequestException("Từ ngày không hợp lệ");
+    if (ket_thuc && Number.isNaN(ket_thuc.getTime())) throw new BadRequestException("Đến ngày không hợp lệ");
+    const ds = await this.db.nhatKyBaoMat.findMany({
+      where: {
+        OR: [{ loai_su_kien: { startsWith: "ADMIN_" } }, { loai_su_kien: { startsWith: "DANG_NHAP_MFA" } }, { loai_su_kien: "DANG_NHAP_CHO_MFA" }],
+        ...(loai?.trim() ? { loai_su_kien: loai.trim() } : {}),
+        ...(nguoi_dung_id?.trim() ? { nguoi_dung_id: nguoi_dung_id.trim() } : {}),
+        ...((bat_dau || ket_thuc) ? { ngay_tao: { ...(bat_dau ? { gte: bat_dau } : {}), ...(ket_thuc ? { lte: ket_thuc } : {}) } } : {})
+      },
+      orderBy: { ngay_tao: "desc" },
+      take: q ? 1000 : limit
+    });
     const actorIds = [...new Set(ds.map(x => x.nguoi_dung_id).filter((x): x is string => Boolean(x)))];
     const actors = actorIds.length ? await this.db.nguoiDung.findMany({ where: { id: { in: actorIds } }, select: { id: true, ho_ten: true, thu_dien_tu: true } }) : [];
     const actorMap = new Map(actors.map(x => [x.id, x]));
-    return ds.map(item => ({ id: item.id.toString(), loai_su_kien: item.loai_su_kien, nguoi_dung_id: item.nguoi_dung_id, nguoi_thuc_hien: item.nguoi_dung_id ? actorMap.get(item.nguoi_dung_id) || null : null, chi_tiet: item.chi_tiet, ngay_tao: item.ngay_tao }));
+    const mapped = ds.map(item => ({ id: item.id.toString(), loai_su_kien: item.loai_su_kien, nguoi_dung_id: item.nguoi_dung_id, nguoi_thuc_hien: item.nguoi_dung_id ? actorMap.get(item.nguoi_dung_id) || null : null, dia_chi_ip: item.dia_chi_ip, chi_tiet: item.chi_tiet, ngay_tao: item.ngay_tao }));
+    if (!q) return mapped;
+    return mapped.filter(item => `${item.loai_su_kien} ${item.nguoi_thuc_hien?.ho_ten || ""} ${item.nguoi_thuc_hien?.thu_dien_tu || ""} ${item.dia_chi_ip || ""} ${JSON.stringify(item.chi_tiet)}`.toLocaleLowerCase("vi").includes(q)).slice(0, limit);
+  }
+
+  async xuat_nhat_ky_admin_csv(tim_kiem?: string, loai?: string, nguoi_dung_id?: string, tu_ngay?: string, den_ngay?: string) {
+    const ds = await this.danh_sach_nhat_ky_admin(tim_kiem, loai, nguoi_dung_id, tu_ngay, den_ngay, "500");
+    const esc = (v: unknown) => { const raw = String(v ?? ""); const safe = /^[=+\-@]/.test(raw) ? `'${raw}` : raw; return `"${safe.replaceAll('"', '""')}"`; };
+    const rows = [["Thời gian", "Sự kiện", "Người thực hiện", "Email", "IP", "Chi tiết"], ...ds.map(item => [new Date(item.ngay_tao).toISOString(), item.loai_su_kien, item.nguoi_thuc_hien?.ho_ten || "", item.nguoi_thuc_hien?.thu_dien_tu || "", item.dia_chi_ip || "", JSON.stringify(item.chi_tiet)])];
+    return { ten_file: `nhat-ky-admin-${new Date().toISOString().slice(0, 10)}.csv`, csv: rows.map(row => row.map(esc).join(",")).join("\r\n") };
   }
 
 }

@@ -914,3 +914,13 @@ footer{border-top:1px solid var(--line);max-width:1240px;margin:auto;padding:30p
 }
 .cine-auth-form .password-input-wrap{background:#091321;border-radius:11px}
 .cine-auth-form .password-toggle{position:relative;z-index:2;color:#cbd5e1!important}
+
+/* v3.0.0 - MFA/TOTP, audit nâng cao và khu vực bảo mật Admin. */
+.cine-audit-filter-v300{grid-template-columns:minmax(240px,1.5fr) minmax(220px,1.1fr) 150px 150px auto auto;align-items:end}
+.cine-audit-filter-v300 label{display:grid;gap:6px;min-width:0}
+.cine-audit-filter-v300 label>span,.cine-security-admin-v300 label>span{font-size:11px;font-weight:850;color:#aeb9c8;text-transform:uppercase;letter-spacing:.05em}
+.cine-audit-filter-v300 input,.cine-security-admin-v300 input,.cine-security-admin-v300 textarea{box-sizing:border-box;width:100%;min-width:0;min-height:44px;border:1px solid #334155;border-radius:11px;background:#0b1322;color:#f8fafc;padding:8px 11px;outline:none}
+.cine-audit-filter-v300 input:focus,.cine-security-admin-v300 input:focus,.cine-security-admin-v300 textarea:focus{border-color:#8b5cf6;box-shadow:0 0 0 3px rgba(139,92,246,.1)}
+.cine-security-admin-v300{display:grid;gap:16px}.cine-security-card-v300{padding:18px;display:grid;gap:16px}.cine-security-card-v300 h3{margin:0 0 5px;font-size:19px}.cine-security-card-v300 p{margin:0;color:#94a3b8;line-height:1.55}.cine-security-card-v300>code{display:block;overflow:auto;padding:10px 12px;border:1px solid #28384f;border-radius:10px;background:#07111f;color:#c4b5fd;white-space:nowrap}.cine-security-setup-v300{display:grid;gap:12px}.cine-security-setup-v300 label,.cine-security-disable-v300 label,.cine-security-code-v300 label{display:grid;gap:6px;min-width:0}.cine-security-setup-v300 textarea{min-height:82px;resize:vertical;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}.cine-security-code-v300{display:grid;grid-template-columns:minmax(180px,260px) auto;gap:12px;align-items:end}.cine-security-disable-v300{display:grid;grid-template-columns:minmax(220px,1fr) minmax(180px,260px) auto;gap:12px;align-items:end}
+@media(max-width:1180px){.cine-audit-filter-v300{grid-template-columns:repeat(2,minmax(0,1fr))}.cine-audit-filter-v300 .cine-btn{width:100%}.cine-security-disable-v300{grid-template-columns:1fr 1fr}.cine-security-disable-v300 .cine-btn{grid-column:1/-1}}
+@media(max-width:720px){.cine-audit-filter-v300,.cine-security-code-v300,.cine-security-disable-v300{grid-template-columns:1fr}.cine-security-disable-v300 .cine-btn{grid-column:auto}}

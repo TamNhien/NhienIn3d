@@ -12,3 +12,6 @@ release/
 
 # Chứng thư CA local do Caddy tạo; không commit.
 .local-https/
+
+# Backup PostgreSQL local - không commit/đóng gói.
+backups/

@@ -1138,12 +1138,37 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 
 ---
 
+## v3.0.0 — 31/08/2026
+
+- Nâng nhánh lớn lên **v3.0.0** với trọng tâm bảo mật quản trị, audit và khả năng sao lưu/khôi phục vận hành; giữ nguyên toàn bộ CRUD sản phẩm, danh mục, biến thể, kho, đơn hàng, nhà cung cấp, báo cáo và nhân sự từ v2.x.
+- Bổ sung **MFA/TOTP cho Admin** không phụ thuộc thư viện ngoài: secret Base32 160-bit, TOTP HMAC-SHA1 chu kỳ 30 giây, chấp nhận lệch ±1 bước thời gian. Đăng nhập Admin đã bật MFA sẽ dừng ở challenge JWT 5 phút và chỉ tạo session/cookie sau khi mã 6 số hợp lệ.
+- Secret MFA được mã hóa **AES-256-GCM** trước khi lưu PostgreSQL bằng `MFA_ENCRYPTION_KEY` (fallback `JWT_SECRET` cho môi trường cũ). Migration `202608310004_v300_mfa_admin` bổ sung trạng thái MFA, secret mã hóa và thời điểm xác nhận cho `nguoi_dung`.
+- Thêm tab **Bảo mật** trong Admin để khởi tạo setup key/otpauth URI, xác nhận bật MFA và tắt MFA bằng mật khẩu hiện tại + mã TOTP. Khi bật/tắt, các phiên Admin khác được thu hồi; đăng nhập MFA sai bị giới hạn 5 lần trong 10 phút và được ghi audit.
+- Nâng cấp **Nhật ký Admin**: lọc phía server theo nội dung/IP, loại sự kiện, từ ngày/đến ngày, giới hạn tối đa 500 dòng; hiển thị IP và xuất CSV UTF-8 chống formula injection. Nhật ký cũng theo dõi các sự kiện bật/tắt MFA và đăng nhập MFA.
+- Thêm `scripts/backup-db.ps1` tạo PostgreSQL custom-format backup bằng `pg_dump`, tự sinh SHA-256; thêm `scripts/restore-db.ps1` yêu cầu cờ `-XacNhan`, dừng API/Web/HTTPS, restore bằng `pg_restore --clean --if-exists` rồi khởi động lại stack. Thư mục `backups/` được bỏ qua khỏi Git/Docker build context.
+- Security hardening: cookie auth tự bật `Secure` khi `WEB_PUBLIC_URL` là HTTPS ngay cả ở local development; Web/Caddy bổ sung `nosniff`, `DENY frame`, `strict-origin-when-cross-origin` và Permissions-Policy; giữ Helmet + global rate limit hiện có ở API.
+- `.env.example` bổ sung `MFA_ENCRYPTION_KEY`; Docker Compose truyền biến này vào API. Không commit secret MFA, backup database hoặc chứng thư local vào source.
+- Bổ sung regression contract cho migration MFA, TOTP, login challenge, cookie HTTPS, tab Bảo mật, audit CSV và backup/restore.
+- Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm install` → `npm test` → `npm run typecheck` → `npm run build` → `docker compose up -d --build --remove-orphans` → `docker compose ps` → `docker compose logs migrate --tail 150` → `docker compose logs api --tail 150` → `.\scripts\release.ps1 v3.0.0`.
+
+---
+
+## v3.0.1 — 31/08/2026
+
+- Hotfix lỗi `npm run typecheck` của API sau khi thêm MFA ở v3.0.0: kết quả `dang_nhap()` là union giữa **session thành công** và **MFA challenge**, nhưng controller dùng điều kiện ghép `"can_mfa" in kq && kq.can_mfa` khiến TypeScript 7 không loại trừ nhánh challenge trước khi truyền vào `ghiCookie()`.
+- Đổi guard sang discriminant trực tiếp `if ("can_mfa" in kq) return ...`; sau nhánh return, TypeScript narrow `kq` về đúng kiểu có `ma_truy_cap` + `ma_lam_moi`, nên `ghiCookie(reply, kq)` hợp lệ mà không cần ép kiểu hoặc `any`.
+- Bổ sung regression test để không tái xuất hiện pattern narrowing cũ; không thay đổi logic runtime MFA, cookie, database hay Prisma schema nên **không có migration database mới**.
+- Đồng bộ version Root/API/Web/Health/OpenAPI lên **v3.0.1**.
+- Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm install` → `npm test` → `npm run typecheck` → `npm run build` → `docker compose up -d --build --remove-orphans` → `docker compose ps` → `docker compose logs migrate --tail 150` → `docker compose logs api --tail 150` → `.\scripts\release.ps1 v3.0.1`.
+
+---
+
 # Lộ trình tiếp theo
 
-## v3.0.0
+## v3.1.0
 
-- CRUD quản trị mở rộng cho sản phẩm/danh mục/tồn kho/đơn hàng.
-- MFA/TOTP cho quản trị.
-- Audit nâng cao.
-- Backup/restore.
-- Security hardening và E2E regression.
+- Mã khôi phục MFA dùng một lần và luồng reset MFA có kiểm soát.
+- Lịch backup tự động + chính sách giữ bản sao theo ngày/tuần.
+- Dashboard sức khỏe hệ thống: DB, API, SMTP, backup gần nhất và dung lượng dữ liệu.
+- Audit diff trước/sau cho các thay đổi quan trọng và xuất Excel.
+- E2E runtime cho luồng MFA + restore trên môi trường Docker test.

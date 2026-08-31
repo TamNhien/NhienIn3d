@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { danhGiaMatKhau, TruongMatKhau } from "../../components/truong-mat-khau";
-import { layTaiKhoan, TaiKhoan } from "../../lib/xac-thuc";
+import { khoiTaoMfa, layTaiKhoan, layTrangThaiMfa, TaiKhoan, tatMfa, type KhoiTaoMfa, type TrangThaiMfa, xacNhanBatMfa } from "../../lib/xac-thuc";
 import {
   AdminNhanVien,
   AdminNguoiDung,
@@ -74,6 +74,7 @@ import {
   layBaoCaoCsvAdmin,
   layBaoCaoExcelAdmin,
   layNhatKyAdmin,
+  xuatNhatKyCsvAdmin,
   PhanCa,
   taoCaLam,
   taoNhanVien,
@@ -153,7 +154,7 @@ async function chuanHoaAnhSanPham(file: File) {
 }
 
 
-type TabQuanTri = "tong-quan" | "don-hang" | "san-pham" | "kho" | "nha-cung-cap" | "tham-chieu" | "danh-muc" | "danh-gia" | "bao-cao" | "khach-hang" | "nhan-vien" | "tao-nhan-vien" | "ca-lam" | "xep-ca" | "nhat-ky";
+type TabQuanTri = "tong-quan" | "don-hang" | "san-pham" | "kho" | "nha-cung-cap" | "tham-chieu" | "danh-muc" | "danh-gia" | "bao-cao" | "khach-hang" | "nhan-vien" | "tao-nhan-vien" | "ca-lam" | "xep-ca" | "nhat-ky" | "bao-mat";
 
 export default function QuanTriPage() {
   const [tai_khoan, setTaiKhoan] = useState<TaiKhoan | null | undefined>(undefined);
@@ -215,6 +216,13 @@ export default function QuanTriPage() {
   const [bao_cao_tu_ngay, setBaoCaoTuNgay] = useState(sauNgay(-29));
   const [bao_cao_den_ngay, setBaoCaoDenNgay] = useState(homNay());
   const [nhat_ky_tim_kiem, setNhatKyTimKiem] = useState("");
+  const [nhat_ky_loai, setNhatKyLoai] = useState("");
+  const [nhat_ky_tu_ngay, setNhatKyTuNgay] = useState(sauNgay(-29));
+  const [nhat_ky_den_ngay, setNhatKyDenNgay] = useState(homNay());
+  const [mfa_trang_thai, setMfaTrangThai] = useState<TrangThaiMfa | null>(null);
+  const [mfa_khoi_tao, setMfaKhoiTao] = useState<KhoiTaoMfa | null>(null);
+  const [mfa_ma, setMfaMa] = useState("");
+  const [mfa_mat_khau, setMfaMatKhau] = useState("");
 
   const [nv, setNv] = useState({ thu_dien_tu: "", ho_ten: "", so_dien_thoai: "", mat_khau: "", xac_nhan_mat_khau: "", ma_nhan_vien: "", ngay_vao_lam: homNay() });
   const [ca, setCa] = useState({ ma_ca: "", ten_ca: "", gio_bat_dau: "06:00", gio_ket_thuc: "14:00", mau_hien_thi: "#38BDF8" });
@@ -226,7 +234,7 @@ export default function QuanTriPage() {
     const tk = await layTaiKhoan();
     setTaiKhoan(tk);
     if (!tk || tk.vai_tro !== "ADMIN") return;
-    const [tq, nd, nvData, caData, pcData, donData, spData, dmData, vlData, msData, chKhoData, lsKhoData, phieuNhapData, nccData, emailKhoData, dgData, nkData] = await Promise.all([layTongQuan(), layNguoiDung(), layNhanVien(), layCaLam(), layPhanCa(), layDonHangAdmin(), laySanPhamAdmin(), layDanhMucAdmin(), layVatLieuAdmin(), layMauSacAdmin(), layCauHinhKhoAdmin(), layLichSuKhoAdmin(), layPhieuNhapKhoAdmin(), layNhaCungCapAdmin(), layTrangThaiCanhBaoKhoEmailAdmin(), layDanhGiaAdmin(), layNhatKyAdmin()]);
+    const [tq, nd, nvData, caData, pcData, donData, spData, dmData, vlData, msData, chKhoData, lsKhoData, phieuNhapData, nccData, emailKhoData, dgData, nkData, mfaData] = await Promise.all([layTongQuan(), layNguoiDung(), layNhanVien(), layCaLam(), layPhanCa(), layDonHangAdmin(), laySanPhamAdmin(), layDanhMucAdmin(), layVatLieuAdmin(), layMauSacAdmin(), layCauHinhKhoAdmin(), layLichSuKhoAdmin(), layPhieuNhapKhoAdmin(), layNhaCungCapAdmin(), layTrangThaiCanhBaoKhoEmailAdmin(), layDanhGiaAdmin(), layNhatKyAdmin(), layTrangThaiMfa()]);
     setTongQuan(tq);
     setNguoiDung(nd);
     setNhanVien(nvData);
@@ -246,6 +254,7 @@ export default function QuanTriPage() {
     setSpMoi(x => ({ ...x, danh_muc_id: x.danh_muc_id || dmData[0]?.id || "" }));
     setBtMoi(x => ({ ...x, san_pham_id: x.san_pham_id || spData[0]?.id || "" }));
     setNhatKy(nkData);
+    setMfaTrangThai(mfaData);
     setPc(x => ({ ...x, nhan_vien_id: x.nhan_vien_id || nvData[0]?.id || "", ca_lam_viec_id: x.ca_lam_viec_id || caData[0]?.id || "" }));
   }, []);
 
@@ -880,6 +889,49 @@ export default function QuanTriPage() {
     } catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể xuất Excel"); } finally { setDangXuLy(null); }
   }
 
+  async function taiNhatKyBoLoc() {
+    setDangXuLy("loc-nhat-ky"); setThongBao("");
+    try {
+      const ds = await layNhatKyAdmin({ tim_kiem: nhat_ky_tim_kiem, loai: nhat_ky_loai, tu_ngay: nhat_ky_tu_ngay, den_ngay: nhat_ky_den_ngay, gioi_han: 500 });
+      setNhatKy(ds);
+      setThongBao(`Đã tải ${ds.length} sự kiện nhật ký phù hợp.`);
+    } catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể lọc nhật ký"); }
+    finally { setDangXuLy(null); }
+  }
+
+  async function taiNhatKyCsv() {
+    setDangXuLy("xuat-nhat-ky"); setThongBao("");
+    try {
+      const kq = await xuatNhatKyCsvAdmin({ tim_kiem: nhat_ky_tim_kiem, loai: nhat_ky_loai, tu_ngay: nhat_ky_tu_ngay, den_ngay: nhat_ky_den_ngay });
+      const blob = new Blob(["\uFEFF", kq.csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = kq.ten_file; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      setThongBao(`Đã xuất ${kq.ten_file}.`);
+    } catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể xuất nhật ký"); }
+    finally { setDangXuLy(null); }
+  }
+
+  async function khoiTaoMfaAdmin() {
+    setDangXuLy("mfa-khoi-tao"); setThongBao("");
+    try { const kq = await khoiTaoMfa(); setMfaKhoiTao(kq); setMfaMa(""); setThongBao("Đã tạo secret MFA. Hãy thêm vào Authenticator và xác nhận mã 6 số."); }
+    catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể khởi tạo MFA"); }
+    finally { setDangXuLy(null); }
+  }
+
+  async function xacNhanMfaAdmin() {
+    setDangXuLy("mfa-xac-nhan"); setThongBao("");
+    try { const kq = await xacNhanBatMfa(mfa_ma); setMfaTrangThai(kq); setMfaKhoiTao(null); setMfaMa(""); setThongBao(kq.thong_bao); }
+    catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể bật MFA"); }
+    finally { setDangXuLy(null); }
+  }
+
+  async function tatMfaAdmin() {
+    if (!window.confirm("Tắt MFA/TOTP cho tài khoản Admin? Các phiên Admin khác sẽ bị thu hồi.")) return;
+    setDangXuLy("mfa-tat"); setThongBao("");
+    try { const kq = await tatMfa(mfa_mat_khau, mfa_ma); setMfaTrangThai(kq); setMfaKhoiTao(null); setMfaMa(""); setMfaMatKhau(""); setThongBao(kq.thong_bao); }
+    catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể tắt MFA"); }
+    finally { setDangXuLy(null); }
+  }
+
   const soPhanCaCuaCa = useMemo(() => {
     const dem = new Map<string, number>();
     for (const item of phan_ca) dem.set(item.ca_lam_viec.id, (dem.get(item.ca_lam_viec.id) || 0) + 1);
@@ -968,7 +1020,8 @@ export default function QuanTriPage() {
     ["tao-nhan-vien", "Tạo nhân viên bán hàng"],
     ["ca-lam", "Ca làm"],
     ["xep-ca", "Xếp ca"],
-    ["nhat-ky", "Nhật ký Admin"]
+    ["nhat-ky", "Nhật ký Admin"],
+    ["bao-mat", "Bảo mật"]
   ];
 
   return <main className="cine-admin-shell page-shell">
@@ -1276,9 +1329,34 @@ export default function QuanTriPage() {
     </section>}
 
     {tab === "nhat-ky" && <section className="cine-admin-operations cine-commerce-admin-v212">
-      <div className="cine-operations-heading"><div><h2>Nhật ký thao tác Admin</h2><p>200 sự kiện quản trị gần nhất trên khách hàng, nhân viên, ca làm, phân ca, đơn hàng, sản phẩm và tồn kho.</p></div><span className="cine-admin-count">{nhat_ky.length} sự kiện</span></div>
-      <div className="cine-card cine-product-filter-v212"><label><span>Tìm trong nhật ký</span><input value={nhat_ky_tim_kiem} onChange={e => setNhatKyTimKiem(e.target.value)} placeholder="Loại thao tác, Admin hoặc nội dung..."/></label><div><b>{nhatKyDaLoc.length}</b><span>kết quả</span></div></div>
-      <div className="cine-card cine-audit-list-v212">{nhatKyDaLoc.map(item => <article className="cine-audit-row-v212" key={item.id}><i/><div><b>{nhanSuKienAudit(item.loai_su_kien)}</b><span>{item.nguoi_thuc_hien?.ho_ten || "Admin/hệ thống"} · {new Date(item.ngay_tao).toLocaleString("vi-VN")}</span><code>{JSON.stringify(item.chi_tiet)}</code></div></article>)}{nhatKyDaLoc.length === 0 && <div className="cine-dashboard-empty">Không có sự kiện phù hợp.</div>}</div>
+      <div className="cine-operations-heading"><div><h2>Nhật ký thao tác Admin</h2><p>Lọc theo thời gian, loại sự kiện, nội dung/IP và xuất CSV để đối soát.</p></div><span className="cine-admin-count">{nhat_ky.length} sự kiện</span></div>
+      <div className="cine-card cine-admin-filterbar-v212 cine-audit-filter-v300">
+        <label><span>Tìm trong nhật ký</span><input value={nhat_ky_tim_kiem} onChange={e => setNhatKyTimKiem(e.target.value)} placeholder="Admin, email, IP, nội dung..."/></label>
+        <label><span>Loại sự kiện</span><input value={nhat_ky_loai} onChange={e => setNhatKyLoai(e.target.value.toUpperCase())} placeholder="VD: ADMIN_TAO_SAN_PHAM"/></label>
+        <label><span>Từ ngày</span><input type="date" value={nhat_ky_tu_ngay} onChange={e => setNhatKyTuNgay(e.target.value)}/></label>
+        <label><span>Đến ngày</span><input type="date" value={nhat_ky_den_ngay} onChange={e => setNhatKyDenNgay(e.target.value)}/></label>
+        <button type="button" className="cine-btn cine-btn-primary" onClick={taiNhatKyBoLoc} disabled={dang_xu_ly === "loc-nhat-ky"}>{dang_xu_ly === "loc-nhat-ky" ? "Đang lọc…" : "Lọc nhật ký"}</button>
+        <button type="button" className="cine-btn cine-btn-secondary" onClick={taiNhatKyCsv} disabled={dang_xu_ly === "xuat-nhat-ky"}>{dang_xu_ly === "xuat-nhat-ky" ? "Đang xuất…" : "Xuất CSV"}</button>
+      </div>
+      <div className="cine-card cine-audit-list-v212">{nhatKyDaLoc.map(item => <article className="cine-audit-row-v212" key={item.id}><i/><div><b>{nhanSuKienAudit(item.loai_su_kien)}</b><span>{item.nguoi_thuc_hien?.ho_ten || "Admin/hệ thống"} · {item.dia_chi_ip || "IP không ghi nhận"} · {new Date(item.ngay_tao).toLocaleString("vi-VN")}</span><code>{JSON.stringify(item.chi_tiet)}</code></div></article>)}{nhatKyDaLoc.length === 0 && <div className="cine-dashboard-empty">Không có sự kiện phù hợp.</div>}</div>
+    </section>}
+
+    {tab === "bao-mat" && <section className="cine-admin-operations cine-security-admin-v300">
+      <div className="cine-operations-heading"><div><h2>Bảo mật Admin</h2><p>MFA/TOTP bảo vệ bước đăng nhập quản trị bằng mã 6 số từ ứng dụng Authenticator.</p></div><span className={`status-badge ${mfa_trang_thai?.bat ? "active" : "locked"}`}>{mfa_trang_thai?.bat ? "MFA đang bật" : "MFA đang tắt"}</span></div>
+      <div className="cine-card cine-security-card-v300">
+        {!mfa_trang_thai?.bat ? <>
+          <div><h3>Bật xác thực hai bước</h3><p>Secret chỉ hiển thị trong lúc thiết lập. Sau khi xác nhận, secret được mã hóa AES-256-GCM trước khi lưu PostgreSQL.</p></div>
+          {!mfa_khoi_tao ? <button type="button" className="cine-btn cine-btn-primary" onClick={khoiTaoMfaAdmin} disabled={dang_xu_ly === "mfa-khoi-tao"}>{dang_xu_ly === "mfa-khoi-tao" ? "Đang tạo…" : "Khởi tạo MFA"}</button> : <div className="cine-security-setup-v300">
+            <label><span>Setup key</span><input readOnly value={mfa_khoi_tao.secret}/></label>
+            <label><span>URI Authenticator</span><textarea readOnly value={mfa_khoi_tao.uri}/></label>
+            <div className="cine-security-code-v300"><label><span>Mã 6 số</span><input inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={mfa_ma} onChange={e=>setMfaMa(e.target.value.replace(/\D/g, "").slice(0,6))} placeholder="000000"/></label><button type="button" className="cine-btn cine-btn-success" onClick={xacNhanMfaAdmin} disabled={dang_xu_ly === "mfa-xac-nhan" || mfa_ma.length !== 6}>{dang_xu_ly === "mfa-xac-nhan" ? "Đang xác nhận…" : "Xác nhận & bật MFA"}</button></div>
+          </div>}
+        </> : <>
+          <div><h3>MFA/TOTP đang hoạt động</h3><p>{mfa_trang_thai.xac_nhan_luc ? `Đã bật lúc ${new Date(mfa_trang_thai.xac_nhan_luc).toLocaleString("vi-VN")}.` : "Đã bật MFA."} Mỗi lần đăng nhập Admin mới sẽ yêu cầu mã Authenticator.</p></div>
+          <div className="cine-security-disable-v300"><label><span>Mật khẩu hiện tại</span><input type="password" autoComplete="current-password" value={mfa_mat_khau} onChange={e=>setMfaMatKhau(e.target.value)} placeholder="Nhập mật khẩu Admin"/></label><label><span>Mã MFA 6 số</span><input inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={mfa_ma} onChange={e=>setMfaMa(e.target.value.replace(/\D/g, "").slice(0,6))} placeholder="000000"/></label><button type="button" className="cine-btn cine-btn-danger-outline" onClick={tatMfaAdmin} disabled={dang_xu_ly === "mfa-tat" || !mfa_mat_khau || mfa_ma.length !== 6}>{dang_xu_ly === "mfa-tat" ? "Đang tắt…" : "Tắt MFA"}</button></div>
+        </>}
+      </div>
+      <div className="cine-card cine-security-card-v300"><div><h3>Sao lưu & khôi phục PostgreSQL</h3><p>v3.0.0 kèm script PowerShell tạo backup định dạng custom và restore có bước xác nhận. Tệp backup được lưu trong thư mục <code>backups/</code> và bị Git bỏ qua.</p></div><code>{".\\scripts\\backup-db.ps1"}</code><code>{".\\scripts\\restore-db.ps1 -File .\\backups\\nhienin3d-YYYYMMDD-HHmmss.dump -XacNhan"}</code></div>
     </section>}
 
     {tab === "khach-hang" && <section className="cine-card cine-admin-section">

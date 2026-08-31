@@ -6,6 +6,7 @@ import { DangKyDto } from "./dto/dang-ky.dto.js";
 import { DangNhapDto } from "./dto/dang-nhap.dto.js";
 import { DatLaiMatKhauDto } from "./dto/dat-lai-mat-khau.dto.js";
 import { QuenMatKhauDto } from "./dto/quen-mat-khau.dto.js";
+import { MaOtpMfaDto, TatMfaDto, XacNhanDangNhapMfaDto } from "./dto/xac-nhan-mfa.dto.js";
 import { JwtGuard, type YeuCauCoNguoiDung } from "./jwt.guard.js";
 import { VaiTroChoPhep } from "./vai-tro.decorator.js";
 import { VaiTroGuard } from "./vai-tro.guard.js";
@@ -19,8 +20,12 @@ const REFRESH_GIAY = 7 * 24 * 60 * 60;
 export class XacThucController {
   constructor(private readonly service: XacThucService) {}
 
+  private cookieBaoMat() {
+    return process.env.NODE_ENV === "production" || (process.env.WEB_PUBLIC_URL || "").toLowerCase().startsWith("https://");
+  }
+
   private ghiCookie(reply: FastifyReply, ket_qua: { ma_truy_cap: string; ma_lam_moi: string }) {
-    const bao_mat = process.env.NODE_ENV === "production";
+    const bao_mat = this.cookieBaoMat();
     reply.setCookie("nhienin3d_phien", ket_qua.ma_truy_cap, { httpOnly: true, secure: bao_mat, sameSite: "lax", path: "/", maxAge: ACCESS_GIAY });
     reply.setCookie("nhienin3d_lam_moi", ket_qua.ma_lam_moi, { httpOnly: true, secure: bao_mat, sameSite: "strict", path: "/api/v1/xac-thuc", maxAge: REFRESH_GIAY });
   }
@@ -37,6 +42,15 @@ export class XacThucController {
   async dang_nhap(@Body() dto: DangNhapDto, @Req() req: FastifyRequest, @Res({ passthrough: true }) reply: FastifyReply) {
     const trinh_duyet = dto.trinh_duyet_hien_thi?.trim() || req.headers["user-agent"];
     const kq = await this.service.dang_nhap(dto, req.ip, trinh_duyet);
+    if ("can_mfa" in kq) return { can_mfa: true, thu_thach: kq.thu_thach, nguoi_dung: kq.nguoi_dung };
+    this.ghiCookie(reply, kq);
+    return { can_mfa: false, nguoi_dung: kq.nguoi_dung };
+  }
+
+  @Post("dang-nhap/mfa")
+  @HttpCode(200)
+  async dang_nhap_mfa(@Body() dto: XacNhanDangNhapMfaDto, @Req() req: FastifyRequest, @Res({ passthrough: true }) reply: FastifyReply) {
+    const kq = await this.service.dang_nhap_mfa(dto, req.ip, req.headers["user-agent"]);
     this.ghiCookie(reply, kq);
     return { nguoi_dung: kq.nguoi_dung };
   }
@@ -64,7 +78,7 @@ export class XacThucController {
   @HttpCode(200)
   async dang_xuat(@Req() req: FastifyRequest, @Res({ passthrough: true }) reply: FastifyReply) {
     await this.service.dang_xuat(req.cookies?.nhienin3d_lam_moi, req.cookies?.nhienin3d_phien, req.ip);
-    const bao_mat = process.env.NODE_ENV === "production";
+    const bao_mat = this.cookieBaoMat();
     const het_han = new Date(0);
     reply.setCookie("nhienin3d_phien", "", { httpOnly: true, secure: bao_mat, sameSite: "lax", path: "/", maxAge: 0, expires: het_han });
     reply.setCookie("nhienin3d_lam_moi", "", { httpOnly: true, secure: bao_mat, sameSite: "strict", path: "/api/v1/xac-thuc", maxAge: 0, expires: het_han });
@@ -81,6 +95,38 @@ export class XacThucController {
   @ApiCookieAuth("nhienin3d_phien")
   toi(@Req() req: YeuCauCoNguoiDung) {
     return this.service.thong_tin_tai_khoan(req.nguoi_dung_xac_thuc!.id);
+  }
+
+  @Get("mfa/trang-thai")
+  @UseGuards(JwtGuard, VaiTroGuard)
+  @VaiTroChoPhep(VaiTro.ADMIN)
+  @ApiCookieAuth("nhienin3d_phien")
+  mfa_trang_thai(@Req() req: YeuCauCoNguoiDung) {
+    return this.service.trang_thai_mfa(req.nguoi_dung_xac_thuc!.id);
+  }
+
+  @Post("mfa/khoi-tao")
+  @UseGuards(JwtGuard, VaiTroGuard)
+  @VaiTroChoPhep(VaiTro.ADMIN)
+  @ApiCookieAuth("nhienin3d_phien")
+  mfa_khoi_tao(@Req() req: YeuCauCoNguoiDung) {
+    return this.service.khoi_tao_mfa(req.nguoi_dung_xac_thuc!.id, req.ip);
+  }
+
+  @Post("mfa/xac-nhan")
+  @UseGuards(JwtGuard, VaiTroGuard)
+  @VaiTroChoPhep(VaiTro.ADMIN)
+  @ApiCookieAuth("nhienin3d_phien")
+  mfa_xac_nhan(@Req() req: YeuCauCoNguoiDung, @Body() dto: MaOtpMfaDto) {
+    return this.service.xac_nhan_mfa(req.nguoi_dung_xac_thuc!.id, req.nguoi_dung_xac_thuc!.phien_id, dto, req.ip);
+  }
+
+  @Post("mfa/tat")
+  @UseGuards(JwtGuard, VaiTroGuard)
+  @VaiTroChoPhep(VaiTro.ADMIN)
+  @ApiCookieAuth("nhienin3d_phien")
+  mfa_tat(@Req() req: YeuCauCoNguoiDung, @Body() dto: TatMfaDto) {
+    return this.service.tat_mfa(req.nguoi_dung_xac_thuc!.id, req.nguoi_dung_xac_thuc!.phien_id, dto, req.ip);
   }
 
   @Get("quan-tri/kiem-tra")

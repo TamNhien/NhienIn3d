@@ -12,3 +12,6 @@ node_modules
 *.zip
 
 .local-https/
+
+# Backup PostgreSQL local - không commit/đóng gói.
+backups/

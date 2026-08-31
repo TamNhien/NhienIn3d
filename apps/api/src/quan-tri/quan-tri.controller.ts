@@ -117,5 +117,6 @@ export class QuanTriController {
   @Get("bao-cao/:loai") bao_cao_csv(@Param("loai") loai: string, @Query("tu_ngay") tu_ngay?: string, @Query("den_ngay") den_ngay?: string) { return this.service.xuat_bao_cao_csv(loai, tu_ngay, den_ngay); }
   @Get("bao-cao/:loai/excel") bao_cao_excel(@Param("loai") loai: string, @Query("tu_ngay") tu_ngay?: string, @Query("den_ngay") den_ngay?: string) { return this.service.xuat_bao_cao_excel(loai, tu_ngay, den_ngay); }
 
-  @Get("nhat-ky") nhat_ky_admin() { return this.service.danh_sach_nhat_ky_admin(); }
+  @Get("nhat-ky") nhat_ky_admin(@Query("tim_kiem") tim_kiem?: string, @Query("loai") loai?: string, @Query("nguoi_dung_id") nguoi_dung_id?: string, @Query("tu_ngay") tu_ngay?: string, @Query("den_ngay") den_ngay?: string, @Query("gioi_han") gioi_han?: string) { return this.service.danh_sach_nhat_ky_admin(tim_kiem, loai, nguoi_dung_id, tu_ngay, den_ngay, gioi_han); }
+  @Get("nhat-ky/csv") nhat_ky_admin_csv(@Query("tim_kiem") tim_kiem?: string, @Query("loai") loai?: string, @Query("nguoi_dung_id") nguoi_dung_id?: string, @Query("tu_ngay") tu_ngay?: string, @Query("den_ngay") den_ngay?: string) { return this.service.xuat_nhat_ky_admin_csv(tim_kiem, loai, nguoi_dung_id, tu_ngay, den_ngay); }
 }
