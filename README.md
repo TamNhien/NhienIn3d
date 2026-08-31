@@ -1,6 +1,6 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v2.19.0** — 31/08/2026
+> Phiên bản hiện tại: **v2.19.3** — 31/08/2026
 
 NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **frontend Next.js** và **backend NestJS/Fastify** kết nối **PostgreSQL qua Prisma**.
 
@@ -20,6 +20,9 @@ NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **fro
 
 ## Điểm chính bản hiện tại
 
+- v2.19.3 hợp nhất Docker local theo **HTTPS mặc định**: `docker compose up -d --build` giờ khởi động Caddy cùng stack, Web chỉ `expose` cổng 3000 nội bộ và **chỉ Caddy bind `127.0.0.1:3000`**, loại bỏ lỗi `Bind for 127.0.0.1:3000 failed: port is already allocated` khi chuyển qua lại giữa compose thường và HTTPS.
+- Frontend Docker dùng API cùng origin `/api/v1`, tránh mixed-content; `WEB_PUBLIC_URL` mặc định chuyển sang `https://localhost:3000`. `docker-compose.https.yml` được đồng bộ cùng topology để file cũ không còn tạo orphan `nhienin3d-https`.
+- `scripts/https-local.ps1` chạy `docker compose up -d --build --remove-orphans`, tự dọn service legacy/orphan, cài CA CurrentUser như trước và báo lệnh kiểm tra cổng khi 3000 bị một chương trình ngoài Docker chiếm.
 - v2.19.0 bổ sung **quản lý nhà cung cấp** đầy đủ trong Admin, liên kết nhà cung cấp với phiếu nhập/lô hàng và chặn xóa nhà cung cấp đã có lịch sử nhập kho; có thể chuyển sang trạng thái ngừng hoạt động để giữ nguyên dữ liệu đối soát.
 - Lịch sử **phiếu nhập kho** hỗ trợ tìm kiếm/lọc theo nhà cung cấp và khoảng ngày, xem chi tiết từng dòng tồn trước → tồn sau, đồng thời xuất Excel để đối soát.
 - Mỗi biến thể có **tồn tối thiểu/tối đa**; Kho tự xác định biến thể cần nhập và tính **gợi ý số lượng cần nhập = tồn tối đa - tồn hiện tại** khi tồn chạm ngưỡng tối thiểu. Báo cáo tồn kho Excel/CSV cũng mang theo định mức và gợi ý nhập.
@@ -1120,6 +1123,18 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 - Giữ nguyên tiêu đề **Admin Dashboard**, tên tài khoản Admin, nút **Tài khoản của tôi**, KPI và toàn bộ tab quản trị; không thay đổi quyền truy cập hay nghiệp vụ.
 - Không thay đổi API hoặc Prisma schema nên **không có migration database mới**.
 - Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm test` → `npm run typecheck` → `npm run build` → `docker compose up -d --build` → `docker compose ps` → `docker compose logs api --tail 150` → `.\scripts\release.ps1 v2.19.2`.
+
+---
+
+## v2.19.3 — 31/08/2026
+
+- Sửa dứt điểm lỗi Docker `Bind for 127.0.0.1:3000 failed: port is already allocated` khi container `nhienin3d-https` từ chế độ HTTPS còn chạy và `docker compose up -d --build` cố bind Web trực tiếp vào cùng cổng 3000.
+- Hợp nhất topology local: **Caddy là dịch vụ duy nhất publish cổng `127.0.0.1:${WEB_PORT:-3000}`**, còn `nhienin3d-web` chỉ `expose: 3000` trong network Docker. Vì vậy Web và Caddy không còn tranh cùng host port.
+- `docker-compose.yml` và `docker-compose.https.yml` được đồng bộ cùng stack HTTPS để chạy file nào cũng có cùng service set, không còn `nhienin3d-https` bị xem là orphan khi quay về compose mặc định.
+- Web build dùng `NEXT_PUBLIC_API_URL=/api/v1`; Caddy reverse proxy `/api/*` và `/tai-lieu*` sang API, nên HTTPS không phát sinh mixed-content. `CORS_ORIGIN` vẫn chấp nhận cả HTTPS/HTTP localhost để tương thích dev.
+- `scripts/https-local.ps1` chuyển sang compose mặc định, thêm `--remove-orphans`, giữ bước lấy/cài CA Caddy vào Trusted Root CurrentUser và đưa ra lệnh kiểm tra cổng nếu một ứng dụng ngoài Docker đang chiếm `WEB_PORT`.
+- `.env.example` ở root mặc định `WEB_PUBLIC_URL=https://localhost:3000`; các `.env.example` riêng của API/Web vẫn giữ URL HTTP trực tiếp để chạy dev độc lập. Docker luôn ép frontend dùng same-origin `/api/v1`; không thay đổi Prisma schema nên **không có migration database mới**.
+- Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm install` → `npm test` → `npm run typecheck` → `npm run build` → `docker compose up -d --build --remove-orphans` → `docker compose ps` → `docker compose logs migrate --tail 150` → `docker compose logs api --tail 150` → `.\scripts\release.ps1 v2.19.3`.
 
 ---
 

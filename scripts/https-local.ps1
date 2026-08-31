@@ -6,14 +6,19 @@ $ErrorActionPreference = "Stop"
 $thuMucGoc = Split-Path -Parent $PSScriptRoot
 Set-Location $thuMucGoc
 
-$tepCompose = Join-Path $thuMucGoc "docker-compose.https.yml"
 $thuMucChungThu = Join-Path $thuMucGoc ".local-https"
 $tepCA = Join-Path $thuMucChungThu "nhienin3d-local-ca.crt"
 $duongDanCATrongContainer = "/data/caddy/pki/authorities/local/root.crt"
+$webPort = if ($env:WEB_PORT) { $env:WEB_PORT } else { "3000" }
 
-Write-Host "[NhienIn3d] Khoi dong Docker Compose HTTPS..." -ForegroundColor Cyan
-docker compose -f $tepCompose up -d --build
-if ($LASTEXITCODE -ne 0) { throw "Docker Compose HTTPS khong khoi dong duoc." }
+Write-Host "[NhienIn3d] Khoi dong stack HTTPS thong nhat..." -ForegroundColor Cyan
+Write-Host "[NhienIn3d] Web khong bind truc tiep cong $webPort; Caddy la dich vu duy nhat bind cong nay." -ForegroundColor DarkGray
+
+docker compose up -d --build --remove-orphans
+if ($LASTEXITCODE -ne 0) {
+  Write-Host "[NhienIn3d] Neu cong $webPort bi chuong trinh khac chiem, kiem tra: Get-NetTCPConnection -LocalPort $webPort" -ForegroundColor Yellow
+  throw "Docker Compose HTTPS khong khoi dong duoc."
+}
 
 New-Item -ItemType Directory -Force -Path $thuMucChungThu | Out-Null
 
@@ -32,9 +37,9 @@ Write-Host "[NhienIn3d] Cai CA vao Trusted Root cua Windows CurrentUser..." -For
 & certutil.exe -user -addstore Root $tepCA | Out-Null
 if ($LASTEXITCODE -ne 0) { throw "Khong cai duoc CA local vao Windows CurrentUser Root." }
 
-$webPort = if ($env:WEB_PORT) { $env:WEB_PORT } else { "3000" }
 $url = "https://localhost:$webPort"
 Write-Host "[NhienIn3d] HTTPS local da san sang: $url" -ForegroundColor Green
+Write-Host "Tu v2.19.3, lenh 'docker compose up -d --build' cung dung chinh stack HTTPS nay, khong con web/Caddy tranh cong 3000." -ForegroundColor DarkGray
 Write-Host "Neu trinh duyet da mo tu truoc, nhan Ctrl+F5 hoac dong/mo lai tab." -ForegroundColor DarkGray
 
 if (-not $KhongMoTrinhDuyet) {

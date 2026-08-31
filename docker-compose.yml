@@ -61,7 +61,7 @@ services:
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@nhienin3d.local}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
       ADMIN_NAME: ${ADMIN_NAME:-System Admin}
-      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+      CORS_ORIGIN: ${CORS_ORIGIN:-https://localhost:3000,http://localhost:3000}
       NODE_ENV: ${NODE_ENV:-development}
       MAIL_ENABLED: ${MAIL_ENABLED:-false}
       MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
@@ -76,7 +76,7 @@ services:
       MAIL_TIMEOUT: ${MAIL_TIMEOUT:-5000}
       MAIL_WRITE_TIMEOUT: ${MAIL_WRITE_TIMEOUT:-5000}
       MAIL_TLS_REJECT_UNAUTHORIZED: ${MAIL_TLS_REJECT_UNAUTHORIZED:-true}
-      WEB_PUBLIC_URL: ${WEB_PUBLIC_URL:-http://localhost:3000}
+      WEB_PUBLIC_URL: ${WEB_PUBLIC_URL:-https://localhost:3000}
       RESET_PASSWORD_EXPIRES_MINUTES: ${RESET_PASSWORD_EXPIRES_MINUTES:-15}
       LOW_STOCK_EMAIL_ENABLED: ${LOW_STOCK_EMAIL_ENABLED:-false}
       LOW_STOCK_EMAIL_INTERVAL_MINUTES: ${LOW_STOCK_EMAIL_INTERVAL_MINUTES:-60}
@@ -92,12 +92,29 @@ services:
     build:
       context: ./apps/web
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001/api/v1}
+        NEXT_PUBLIC_API_URL: /api/v1
     container_name: nhienin3d-web
     restart: unless-stopped
-    ports:
-      - "${WEB_PORT:-3000}:3000"
+    expose:
+      - "3000"
     depends_on:
+      api:
+        condition: service_started
+    networks: [nhienin3d-noi-bo]
+
+  https:
+    image: caddy:2.10.2-alpine
+    container_name: nhienin3d-https
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${WEB_PORT:-3000}:443"
+    volumes:
+      - ./infra/caddy/Caddyfile.local-https:/etc/caddy/Caddyfile:ro
+      - nhienin3d-caddy-data:/data
+      - nhienin3d-caddy-config:/config
+    depends_on:
+      web:
+        condition: service_started
       api:
         condition: service_started
     networks: [nhienin3d-noi-bo]
@@ -107,3 +124,5 @@ networks:
     driver: bridge
 volumes:
   nhienin3d-postgres-data:
+  nhienin3d-caddy-data:
+  nhienin3d-caddy-config:
