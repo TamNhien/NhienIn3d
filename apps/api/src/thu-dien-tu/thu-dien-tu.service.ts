@@ -31,6 +31,42 @@ export class ThuDienTuService {
     this.logger.log(`SMTP đã bật: ${cau_hinh.tuy_chon.host}:${cau_hinh.tuy_chon.port}`);
   }
 
+  async guiCanhBaoTonKho(input: {
+    thu_dien_tu: string[];
+    nguong_sap_het: number;
+    bien_the: Array<{ ma_bien_the: string; ma_san_pham: string; ten_san_pham: string; so_luong_ton: number }>;
+  }) {
+    if (!this.truyen) throw new Error("Dịch vụ email đang tắt. Hãy đặt MAIL_ENABLED=true và cấu hình SMTP.");
+    if (!input.thu_dien_tu.length) throw new Error("Không có địa chỉ Admin để nhận cảnh báo tồn kho.");
+
+    const het = input.bien_the.filter(x => x.so_luong_ton <= 0).length;
+    const sapHet = input.bien_the.length - het;
+    const rowsText = input.bien_the.map(x => `- ${x.ma_bien_the} · ${x.ma_san_pham} · ${x.ten_san_pham}: ${x.so_luong_ton}`).join("\n");
+    const rowsHtml = input.bien_the.map(x => `<tr><td style="padding:8px;border-bottom:1px solid #e5e7eb"><b>${thoatHtml(x.ma_bien_the)}</b></td><td style="padding:8px;border-bottom:1px solid #e5e7eb">${thoatHtml(x.ma_san_pham)}</td><td style="padding:8px;border-bottom:1px solid #e5e7eb">${thoatHtml(x.ten_san_pham)}</td><td style="padding:8px;border-bottom:1px solid #e5e7eb;text-align:right"><b>${x.so_luong_ton}</b></td></tr>`).join("");
+
+    await this.truyen.sendMail({
+      from: this.from,
+      to: input.thu_dien_tu,
+      subject: `[NhienIn3d] Cảnh báo tồn kho: ${input.bien_the.length} biến thể cần xử lý`,
+      text: [
+        "Cảnh báo tồn kho NhienIn3d",
+        `Ngưỡng sắp hết: <= ${input.nguong_sap_het}`,
+        `Hết hàng: ${het} · Sắp hết: ${sapHet}`,
+        "",
+        rowsText,
+        "",
+        "Email này chỉ được gửi lại khi trạng thái/tồn kho cảnh báo thay đổi."
+      ].join("\n"),
+      html: `
+        <div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;max-width:760px;margin:auto;padding:28px;color:#111827">
+          <h1 style="font-size:24px;margin:0 0 10px">Cảnh báo tồn kho NhienIn3d</h1>
+          <p>Ngưỡng sắp hết: <strong>≤ ${input.nguong_sap_het}</strong>. Hiện có <strong>${het}</strong> biến thể hết hàng và <strong>${sapHet}</strong> biến thể sắp hết.</p>
+          <table style="width:100%;border-collapse:collapse;margin-top:18px"><thead><tr><th style="text-align:left;padding:8px">Biến thể</th><th style="text-align:left;padding:8px">Sản phẩm</th><th style="text-align:left;padding:8px">Tên</th><th style="text-align:right;padding:8px">Tồn</th></tr></thead><tbody>${rowsHtml}</tbody></table>
+          <p style="font-size:12px;color:#64748b;margin-top:20px">Hệ thống chống gửi lặp: email chỉ gửi lại khi danh sách/tồn kho cảnh báo thay đổi.</p>
+        </div>`
+    });
+  }
+
   async guiLienKetDatLaiMatKhau(input: {
     thu_dien_tu: string;
     ho_ten: string;

@@ -43,6 +43,10 @@ export type AdminSanPham = { id: string; ma_san_pham: string; ten_san_pham: stri
 export type NhatKyAdmin = { id: string; loai_su_kien: string; nguoi_dung_id?: string | null; nguoi_thuc_hien?: { id: string; ho_ten: string; thu_dien_tu: string } | null; chi_tiet: Record<string, unknown>; ngay_tao: string };
 export type LichSuKhoAdmin = { id: string; loai_su_kien: string; loai_bien_dong: "NHAP_KHO" | "XUAT_KHO" | "DIEU_CHINH" | string; ton_cu: number; ton_moi: number; chenh_lech: number; ly_do: string; ma_bien_the: string; ma_san_pham: string; nguoi_thuc_hien?: { id: string; ho_ten: string; thu_dien_tu?: string } | null; chi_tiet: Record<string, unknown>; ngay_tao: string };
 export type AdminCauHinhKho = { nguong_sap_het: number; ngay_cap_nhat?: string | null };
+export type DongImportKhoAdmin = { dong: number; ma_bien_the: string; so_luong_nhap: number; ly_do: string; hop_le: boolean; loi: string[]; bien_the_id?: string | null; ma_san_pham: string; ten_san_pham: string; ton_hien_tai: number | null; ton_sau_nhap: number | null };
+export type KiemTraImportKhoAdmin = { ten_file: string; tong_dong: number; hop_le: number; khong_hop_le: number; dong: DongImportKhoAdmin[] };
+export type PhieuNhapKhoAdmin = { id: string; ma_phieu: string; ma_lo?: string | null; nha_cung_cap?: string | null; ghi_chu?: string | null; nguoi_tao_id?: string | null; so_dong: number; tong_so_luong: number; ngay_tao: string; chi_tiet: Array<{ id?: string; ma_bien_the: string; so_luong_nhap: number; ton_truoc: number; ton_sau: number; ly_do?: string | null; ma_san_pham?: string; ten_san_pham?: string }> };
+export type TrangThaiCanhBaoKhoEmailAdmin = { bat: boolean; chu_ky_phut: number; so_nguoi_nhan: number; lan_gui_cuoi?: string | null; tong_canh_bao_lan_cuoi: number; trang_thai_lan_cuoi: string };
 
 export type AdminTongQuan = {
   nguoi_dung: number;
@@ -111,6 +115,11 @@ export const xoaMauSacAdmin = (id: string) => goi<{ thong_bao: string; id: strin
 export const layCauHinhKhoAdmin = () => goi<AdminCauHinhKho>("/quan-tri/kho/cau-hinh");
 export const capNhatCauHinhKhoAdmin = (nguong_sap_het: number) => goi<AdminCauHinhKho>("/quan-tri/kho/cau-hinh", { method: "POST", body: JSON.stringify({ nguong_sap_het }) });
 export const layLichSuKhoAdmin = (loai = "") => goi<LichSuKhoAdmin[]>(`/quan-tri/kho/lich-su${loai ? `?loai=${encodeURIComponent(loai)}` : ""}`);
+export const kiemTraTepNhapKhoAdmin = (ten_file: string, du_lieu_base64: string) => goi<KiemTraImportKhoAdmin>("/quan-tri/kho/import/kiem-tra", { method: "POST", body: JSON.stringify({ ten_file, du_lieu_base64 }) });
+export const nhapKhoTheoLoAdmin = (payload: { ma_lo?: string; nha_cung_cap?: string; ghi_chu?: string; dong: Array<{ ma_bien_the: string; so_luong_nhap: number; ly_do?: string }> }) => goi<PhieuNhapKhoAdmin>("/quan-tri/kho/nhap-lo", { method: "POST", body: JSON.stringify(payload) });
+export const layPhieuNhapKhoAdmin = () => goi<PhieuNhapKhoAdmin[]>("/quan-tri/kho/phieu-nhap");
+export const layTrangThaiCanhBaoKhoEmailAdmin = () => goi<TrangThaiCanhBaoKhoEmailAdmin>("/quan-tri/kho/canh-bao-email");
+export const guiCanhBaoKhoEmailAdmin = () => goi<{ da_gui: boolean; ly_do?: string; tong_canh_bao: number; so_nguoi_nhan?: number; lan_gui?: string }>("/quan-tri/kho/canh-bao-email/gui", { method: "POST" });
 export const taoBienTheAdmin = (san_pham_id: string, payload: { ma_bien_the: string; vat_lieu_id?: string; mau_sac_id?: string; gia_chenh_lech?: number; so_luong_ton: number; dang_hien_thi?: boolean }) => goi<AdminBienThe>(`/quan-tri/san-pham/${san_pham_id}/bien-the`, { method: "POST", body: JSON.stringify(payload) });
 export const capNhatBienTheAdmin = (id: string, payload: { ma_bien_the?: string; vat_lieu_id?: string | null; mau_sac_id?: string | null; gia_chenh_lech?: number; so_luong_ton?: number; dang_hien_thi?: boolean; ly_do_ton_kho?: string }) => goi<AdminBienThe>(`/quan-tri/bien-the/${id}/cap-nhat`, { method: "POST", body: JSON.stringify(payload) });
 export const xoaBienTheAdmin = (id: string) => goi<{ thong_bao: string; id: string }>(`/quan-tri/bien-the/${id}/xoa`, { method: "POST", body: JSON.stringify({ xac_nhan: true }) });

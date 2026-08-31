@@ -1,6 +1,6 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v2.17.1** — 31/08/2026
+> Phiên bản hiện tại: **v2.18.0** — 31/08/2026
 
 NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **frontend Next.js** và **backend NestJS/Fastify** kết nối **PostgreSQL qua Prisma**.
 
@@ -20,6 +20,9 @@ NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **fro
 
 ## Điểm chính bản hiện tại
 
+- v2.18.0 bổ sung **nhập kho nhanh theo lô**: Admin có thể chọn CSV/XLSX, xem trước và kiểm tra toàn bộ mã biến thể/số lượng/lỗi trùng trước khi ghi; chỉ khi tất cả dòng hợp lệ mới cho phép xác nhận nhập kho trong một transaction.
+- Mỗi lần nhập lô tạo **phiếu nhập kho** và chi tiết tồn trước → tồn sau, mã lô/nhà cung cấp/ghi chú; lịch sử gần nhất hiển thị ngay trong tab Kho và audit liên kết theo mã phiếu.
+- Cảnh báo tồn kho qua email có thể chạy theo lịch bằng `LOW_STOCK_EMAIL_*`; hệ thống lưu chữ ký trạng thái trong `cau_hinh_he_thong` để **không gửi lặp** khi danh sách tồn thấp chưa thay đổi, đồng thời Admin có nút kiểm tra/gửi ngay.
 - v2.17.1 sửa form **Tạo biến thể mới** trong tab Kho: chia lại grid desktop 4 cột, field co đúng chiều rộng, nhãn không bị che và responsive 2/1 cột để không còn hiện tượng chữ/ô nhập chồng lên nhau.
 - v2.17.0 bổ sung **cảnh báo tồn kho theo ngưỡng cấu hình**: Admin chỉnh ngưỡng ngay trong tab Kho, Dashboard cảnh báo số biến thể sắp hết/hết hàng; lịch sử kho phân loại Nhập/Xuất/Điều chỉnh, lưu nguyên nhân, chênh lệch và người thao tác.
 - v2.16.0 bổ sung **CRUD Vật liệu & Màu sắc** trong Admin, chặn xóa dữ liệu tham chiếu đang được biến thể sử dụng; tab Kho có bộ lọc nâng cao theo tồn/vật liệu/màu/hiển thị và lịch sử điều chỉnh tồn gần nhất.
@@ -991,13 +994,28 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 
 ---
 
+## v2.18.0 — 31/08/2026
+
+- Bổ sung **nhập kho nhanh theo lô** trong tab Kho. Admin có thể nhập mã lô, nhà cung cấp, ghi chú rồi chọn file **CSV hoặc XLSX** để đưa nhiều biến thể vào một lần.
+- File import được backend giải mã và **kiểm tra trước khi ghi**: bắt buộc cột `ma_bien_the` và `so_luong_nhap`, giới hạn tối đa 500 dòng/2 MB, phát hiện SKU không tồn tại, số lượng không hợp lệ và mã biến thể trùng trong cùng file. Giao diện hiển thị preview tồn hiện tại → tồn sau nhập; chỉ khi mọi dòng hợp lệ mới bật nút xác nhận.
+- Parser XLSX đọc trực tiếp worksheet đầu tiên từ định dạng ZIP/XML chuẩn Office Open XML; không thêm thư viện npm mới chỉ để import Excel. CSV hỗ trợ UTF-8 BOM, dấu phẩy hoặc dấu chấm phẩy và trường có dấu ngoặc kép.
+- Migration `202608310002_v218_nhap_kho_theo_lo` tạo `phieu_nhap_kho` và `chi_tiet_phieu_nhap_kho`. Mỗi lần xác nhận chạy trong **một Prisma transaction**, tăng tồn từng biến thể, lưu tồn trước/tồn sau và tạo audit `ADMIN_CAP_NHAT_TON_KHO` + `ADMIN_NHAP_KHO_THEO_LO`; lỗi ở một dòng sẽ rollback toàn bộ lô.
+- Tab Kho hiển thị **phiếu nhập gần đây** gồm mã phiếu, mã lô, nhà cung cấp, số dòng, tổng số lượng và thời điểm nhập để dễ đối soát.
+- Bổ sung **cảnh báo tồn kho qua email**. Khi `LOW_STOCK_EMAIL_ENABLED=true`, API kiểm tra định kỳ theo `LOW_STOCK_EMAIL_INTERVAL_MINUTES` (15–1440 phút). Người nhận lấy từ `LOW_STOCK_EMAIL_TO`; nếu bỏ trống sẽ dùng email của các Admin đang hoạt động.
+- Trạng thái cảnh báo lưu trong `cau_hinh_he_thong` với khóa `CANH_BAO_KHO_EMAIL`. Backend tạo SHA-256 từ ngưỡng + danh sách tồn thấp và **không gửi lặp nếu chữ ký chưa đổi**; khi tồn kho hoặc ngưỡng thay đổi mới gửi lại. Admin vẫn có nút **Kiểm tra & gửi ngay** để chạy một lượt thủ công.
+- Email cảnh báo liệt kê mã biến thể, sản phẩm, tồn hiện tại và trạng thái `HẾT HÀNG / SẮP HẾT`; việc gửi tiếp tục dùng cấu hình SMTP/Nodemailer hiện có.
+- Mở rộng regression/contract test cho schema + migration phiếu nhập, API preview/transaction, scheduler chống gửi lặp, Web import CSV/XLSX, phiếu nhập và trạng thái email.
+- Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm test` → `npm run typecheck` → `npm run build` → `docker compose up -d --build` → `docker compose ps` → `docker compose logs migrate --tail 150` → `docker compose logs api --tail 150` → `.\scripts\release.ps1 v2.18.0`.
+
+---
+
 # Lộ trình tiếp theo
 
-## v2.18.0
+## v2.19.0
 
-- Nhập kho nhanh theo lô và import CSV/Excel có kiểm tra dữ liệu trước khi ghi.
-- Cảnh báo tồn kho qua email cho Admin theo lịch, tránh gửi lặp khi trạng thái chưa thay đổi.
-- Mở rộng E2E cho CRUD catalog, dữ liệu tham chiếu, kiểm duyệt đánh giá và xuất báo cáo.
+- Quản lý nhà cung cấp và liên kết nhà cung cấp với phiếu nhập/lô hàng.
+- Lọc, tìm kiếm, xem chi tiết và xuất Excel lịch sử phiếu nhập kho.
+- Bổ sung mức tồn tối thiểu/tối đa theo biến thể và gợi ý số lượng cần nhập.
 
 ## v3.0.0
 

@@ -26,6 +26,7 @@ apps/api/prisma/migrations/202608300002_v295_nhan_vien_ban_hang/migration.sql
 apps/api/prisma/migrations/202608300003_v299_hai_ca_lam_va_quan_ly_ca/migration.sql
 apps/api/prisma/migrations/202608300004_v212_quan_tri_don_hang_audit/migration.sql
 apps/api/prisma/migrations/202608310001_v217_canh_bao_kho/migration.sql
+apps/api/prisma/migrations/202608310002_v218_nhap_kho_theo_lo/migration.sql
 apps/api/prisma/migrations/migration_lock.toml
 apps/api/prisma/schema.prisma
 apps/api/prisma/seed.ts
@@ -58,6 +59,8 @@ apps/api/src/quan-tri/dto/cap-nhat-san-pham-quan-tri.dto.ts
 apps/api/src/quan-tri/dto/cap-nhat-ton-kho.dto.ts
 apps/api/src/quan-tri/dto/cap-nhat-trang-thai-don-hang.dto.ts
 apps/api/src/quan-tri/dto/cap-nhat-vat-lieu.dto.ts
+apps/api/src/quan-tri/dto/kiem-tra-tep-nhap-kho.dto.ts
+apps/api/src/quan-tri/dto/nhap-kho-lo.dto.ts
 apps/api/src/quan-tri/dto/tao-bien-the.dto.ts
 apps/api/src/quan-tri/dto/tao-ca-lam.dto.ts
 apps/api/src/quan-tri/dto/tao-danh-muc.dto.ts
@@ -154,3 +157,4 @@ scripts/khoi-tao.ps1
 scripts/kiem-tra.ps1
 scripts/release.ps1
 tests/cau-truc.test.mjs
+tests/e2e-admin-v218.test.mjs

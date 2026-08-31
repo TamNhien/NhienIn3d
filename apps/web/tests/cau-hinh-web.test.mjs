@@ -816,3 +816,33 @@ test("v2.17.1 form tao bien the khong chong o nhap va khong che nhan", () => {
   assert.match(css, /@media\(max-width:980px\)[\s\S]*repeat\(2,minmax\(0,1fr\)\)/);
   assert.match(css, /@media\(max-width:620px\)[\s\S]*grid-template-columns:1fr/);
 });
+
+
+test("v2.18.0 web import CSV Excel co preview xac nhan va phieu nhap", () => {
+  const page = readFileSync("app/quan-tri/page.tsx", "utf8");
+  const lib = readFileSync("lib/quan-tri.ts", "utf8");
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.match(page, /Nhập kho nhanh theo lô/u);
+  assert.match(page, /Chọn CSV \/ Excel/u);
+  assert.match(page, /Tải CSV mẫu/u);
+  assert.match(page, /Xác nhận nhập kho/u);
+  assert.match(page, /Phiếu nhập gần đây/u);
+  assert.match(lib, /kiemTraTepNhapKhoAdmin/);
+  assert.match(lib, /nhapKhoTheoLoAdmin/);
+  assert.match(lib, /layPhieuNhapKhoAdmin/);
+  assert.match(css, /v2\.18\.0 - nhập kho theo lô/u);
+  assert.match(css, /cine-batch-import-v218/);
+});
+
+test("v2.18.0 web hien trang thai va gui canh bao kho email thu cong", () => {
+  const page = readFileSync("app/quan-tri/page.tsx", "utf8");
+  const lib = readFileSync("lib/quan-tri.ts", "utf8");
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.match(page, /Cảnh báo tồn kho qua email/u);
+  assert.match(page, /LOW_STOCK_EMAIL_ENABLED/);
+  assert.match(page, /Kiểm tra & gửi ngay/u);
+  assert.match(lib, /TrangThaiCanhBaoKhoEmailAdmin/);
+  assert.match(lib, /layTrangThaiCanhBaoKhoEmailAdmin/);
+  assert.match(lib, /guiCanhBaoKhoEmailAdmin/);
+  assert.match(css, /cine-stock-email-v218/);
+});

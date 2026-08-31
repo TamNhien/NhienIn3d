@@ -15,6 +15,9 @@ import {
   AdminVatLieu,
   AdminMauSac,
   AdminCauHinhKho,
+  KiemTraImportKhoAdmin,
+  PhieuNhapKhoAdmin,
+  TrangThaiCanhBaoKhoEmailAdmin,
   AdminDanhGia,
   NhatKyAdmin,
   LichSuKhoAdmin,
@@ -47,6 +50,11 @@ import {
   capNhatMauSacAdmin,
   xoaMauSacAdmin,
   layLichSuKhoAdmin,
+  kiemTraTepNhapKhoAdmin,
+  nhapKhoTheoLoAdmin,
+  layPhieuNhapKhoAdmin,
+  layTrangThaiCanhBaoKhoEmailAdmin,
+  guiCanhBaoKhoEmailAdmin,
   layDanhGiaAdmin,
   taoDanhMucAdmin,
   capNhatDanhMucAdmin,
@@ -155,6 +163,10 @@ export default function QuanTriPage() {
   const [mau_sac_qt, setMauSacQt] = useState<AdminMauSac[]>([]);
   const [lich_su_kho, setLichSuKho] = useState<LichSuKhoAdmin[]>([]);
   const [cau_hinh_kho, setCauHinhKho] = useState<AdminCauHinhKho>({ nguong_sap_het: 5 });
+  const [import_kho, setImportKho] = useState<KiemTraImportKhoAdmin | null>(null);
+  const [phieu_nhap_kho, setPhieuNhapKho] = useState<PhieuNhapKhoAdmin[]>([]);
+  const [canh_bao_kho_email, setCanhBaoKhoEmail] = useState<TrangThaiCanhBaoKhoEmailAdmin | null>(null);
+  const [nhap_lo_meta, setNhapLoMeta] = useState({ ma_lo: "", nha_cung_cap: "", ghi_chu: "" });
   const [kho_ly_do, setKhoLyDo] = useState<Record<string, string>>({});
   const [lich_su_kho_loc_loai, setLichSuKhoLocLoai] = useState("");
   const [danh_gia_qt, setDanhGiaQt] = useState<AdminDanhGia[]>([]);
@@ -198,7 +210,7 @@ export default function QuanTriPage() {
     const tk = await layTaiKhoan();
     setTaiKhoan(tk);
     if (!tk || tk.vai_tro !== "ADMIN") return;
-    const [tq, nd, nvData, caData, pcData, donData, spData, dmData, vlData, msData, chKhoData, lsKhoData, dgData, nkData] = await Promise.all([layTongQuan(), layNguoiDung(), layNhanVien(), layCaLam(), layPhanCa(), layDonHangAdmin(), laySanPhamAdmin(), layDanhMucAdmin(), layVatLieuAdmin(), layMauSacAdmin(), layCauHinhKhoAdmin(), layLichSuKhoAdmin(), layDanhGiaAdmin(), layNhatKyAdmin()]);
+    const [tq, nd, nvData, caData, pcData, donData, spData, dmData, vlData, msData, chKhoData, lsKhoData, phieuNhapData, emailKhoData, dgData, nkData] = await Promise.all([layTongQuan(), layNguoiDung(), layNhanVien(), layCaLam(), layPhanCa(), layDonHangAdmin(), laySanPhamAdmin(), layDanhMucAdmin(), layVatLieuAdmin(), layMauSacAdmin(), layCauHinhKhoAdmin(), layLichSuKhoAdmin(), layPhieuNhapKhoAdmin(), layTrangThaiCanhBaoKhoEmailAdmin(), layDanhGiaAdmin(), layNhatKyAdmin()]);
     setTongQuan(tq);
     setNguoiDung(nd);
     setNhanVien(nvData);
@@ -211,6 +223,8 @@ export default function QuanTriPage() {
     setMauSacQt(msData);
     setCauHinhKho(chKhoData);
     setLichSuKho(lsKhoData);
+    setPhieuNhapKho(phieuNhapData);
+    setCanhBaoKhoEmail(emailKhoData);
     setDanhGiaQt(dgData);
     setSpMoi(x => ({ ...x, danh_muc_id: x.danh_muc_id || dmData[0]?.id || "" }));
     setBtMoi(x => ({ ...x, san_pham_id: x.san_pham_id || spData[0]?.id || "" }));
@@ -603,6 +617,59 @@ export default function QuanTriPage() {
     finally { setDangXuLy(null); }
   }
 
+  async function docTepNhapKho(file?: File) {
+    if (!file) return;
+    setDangXuLy("kiem-tra-import-kho"); setThongBao(""); setImportKho(null);
+    try {
+      if (!/\.(csv|xlsx)$/i.test(file.name)) throw new Error("Chỉ chọn file CSV hoặc Excel .xlsx");
+      if (file.size > 2 * 1024 * 1024) throw new Error("File nhập kho phải nhỏ hơn hoặc bằng 2 MB");
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      let binary = "";
+      for (let i = 0; i < bytes.length; i += 32768) binary += String.fromCharCode(...bytes.subarray(i, Math.min(i + 32768, bytes.length)));
+      const kq = await kiemTraTepNhapKhoAdmin(file.name, btoa(binary));
+      setImportKho(kq);
+      setThongBao(kq.khong_hop_le ? `Đã kiểm tra ${kq.tong_dong} dòng: ${kq.khong_hop_le} dòng cần sửa trước khi ghi.` : `Đã kiểm tra ${kq.tong_dong} dòng: tất cả hợp lệ, có thể nhập kho.`);
+    } catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể kiểm tra file nhập kho"); }
+    finally { setDangXuLy(null); }
+  }
+
+  function taiMauNhapKho() {
+    const csv = ["ma_bien_the,so_luong_nhap,ly_do", "N3D-MAU-001,10,Nhập kho theo lô"].join("\r\n");
+    const blob = new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = "mau-nhap-kho-nhienin3d.csv"; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  }
+
+  async function xacNhanNhapKhoTheoLo() {
+    if (!import_kho || !import_kho.dong.length) return;
+    if (import_kho.khong_hop_le > 0) { setThongBao("File còn dòng không hợp lệ. Hãy sửa file và kiểm tra lại trước khi ghi kho."); return; }
+    if (!window.confirm(`Xác nhận nhập ${import_kho.dong.reduce((s,x)=>s+x.so_luong_nhap,0)} sản phẩm cho ${import_kho.dong.length} biến thể?`)) return;
+    setDangXuLy("nhap-kho-theo-lo"); setThongBao("");
+    try {
+      const phieu = await nhapKhoTheoLoAdmin({
+        ma_lo: nhap_lo_meta.ma_lo.trim() || undefined,
+        nha_cung_cap: nhap_lo_meta.nha_cung_cap.trim() || undefined,
+        ghi_chu: nhap_lo_meta.ghi_chu.trim() || undefined,
+        dong: import_kho.dong.map(x => ({ ma_bien_the: x.ma_bien_the, so_luong_nhap: x.so_luong_nhap, ly_do: x.ly_do || "Nhập kho theo lô" }))
+      });
+      const [sp, tq, ls, pn, nk, emailState] = await Promise.all([laySanPhamAdmin(), layTongQuan(), layLichSuKhoAdmin(), layPhieuNhapKhoAdmin(), layNhatKyAdmin(), layTrangThaiCanhBaoKhoEmailAdmin()]);
+      setSanPhamQt(sp); setTongQuan(tq); setLichSuKho(ls); setPhieuNhapKho(pn); setNhatKy(nk); setCanhBaoKhoEmail(emailState);
+      setImportKho(null); setNhapLoMeta({ ma_lo: "", nha_cung_cap: "", ghi_chu: "" });
+      setThongBao(`Đã nhập kho theo phiếu ${phieu.ma_phieu}: ${phieu.so_dong} dòng · ${phieu.tong_so_luong} sản phẩm.`);
+    } catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể nhập kho theo lô"); }
+    finally { setDangXuLy(null); }
+  }
+
+  async function guiCanhBaoKhoNgay() {
+    setDangXuLy("gui-canh-bao-kho-email"); setThongBao("");
+    try {
+      const kq = await guiCanhBaoKhoEmailAdmin();
+      setCanhBaoKhoEmail(await layTrangThaiCanhBaoKhoEmailAdmin());
+      setNhatKy(await layNhatKyAdmin());
+      setThongBao(kq.da_gui ? `Đã gửi cảnh báo tồn kho tới ${kq.so_nguoi_nhan || 0} địa chỉ Admin.` : (kq.ly_do || "Không cần gửi cảnh báo tồn kho."));
+    } catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể gửi cảnh báo tồn kho qua email"); }
+    finally { setDangXuLy(null); }
+  }
+
   async function taoDanhMucMoi(e: FormEvent) {
     e.preventDefault(); setDangXuLy("tao-danh-muc"); setThongBao("");
     try {
@@ -991,6 +1058,21 @@ export default function QuanTriPage() {
       </div>
 
       <div className="cine-card cine-stock-config-v217"><div><h3>Ngưỡng cảnh báo sắp hết</h3><p>Dùng chung cho Dashboard, bộ lọc Kho và nhãn trạng thái. Giá trị từ 1–999.</p></div><label><span>Ngưỡng tồn</span><input type="number" min="1" max="999" value={cau_hinh_kho.nguong_sap_het} onChange={e=>setCauHinhKho(x=>({...x,nguong_sap_het:Math.max(1,Math.min(999,Number(e.target.value)||1))}))}/></label><button type="button" className="cine-btn cine-btn-primary" onClick={luuCauHinhKho} disabled={dang_xu_ly==="cau-hinh-kho"}>{dang_xu_ly==="cau-hinh-kho"?"Đang lưu…":"Lưu ngưỡng"}</button></div>
+
+      <div className="cine-card cine-stock-email-v218">
+        <div><h3>Cảnh báo tồn kho qua email</h3><p>{canh_bao_kho_email?.bat ? `Đang bật · kiểm tra mỗi ${canh_bao_kho_email.chu_ky_phut} phút · ${canh_bao_kho_email.so_nguoi_nhan} người nhận.` : "Đang tắt theo cấu hình môi trường LOW_STOCK_EMAIL_ENABLED."}</p><small>{canh_bao_kho_email?.lan_gui_cuoi ? `Lần gửi gần nhất: ${new Date(canh_bao_kho_email.lan_gui_cuoi).toLocaleString("vi-VN")} · ${canh_bao_kho_email.tong_canh_bao_lan_cuoi} cảnh báo` : "Chưa có lần gửi cảnh báo thành công."}</small></div>
+        <button type="button" className="cine-btn cine-btn-secondary" onClick={guiCanhBaoKhoNgay} disabled={dang_xu_ly==="gui-canh-bao-kho-email"}>{dang_xu_ly==="gui-canh-bao-kho-email"?"Đang kiểm tra…":"Kiểm tra & gửi ngay"}</button>
+      </div>
+
+      <div className="cine-card cine-batch-import-v218">
+        <div className="cine-batch-head-v218"><div><h3>Nhập kho nhanh theo lô</h3><p>Import CSV/Excel, kiểm tra toàn bộ mã biến thể và số lượng trước khi ghi. Chỉ khi 100% dòng hợp lệ mới cho xác nhận nhập kho.</p></div><div className="cine-batch-actions-v218"><button type="button" className="cine-btn cine-btn-secondary" onClick={taiMauNhapKho}>Tải CSV mẫu</button><label className="cine-btn cine-btn-primary cine-file-btn-v218">{dang_xu_ly==="kiem-tra-import-kho"?"Đang kiểm tra…":"Chọn CSV / Excel"}<input type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={e=>void docTepNhapKho(e.target.files?.[0])}/></label></div></div>
+        <div className="cine-batch-meta-v218"><label><span>Mã lô</span><input value={nhap_lo_meta.ma_lo} maxLength={80} onChange={e=>setNhapLoMeta(x=>({...x,ma_lo:e.target.value}))} placeholder="VD: PLA-20260831-A"/></label><label><span>Nhà cung cấp</span><input value={nhap_lo_meta.nha_cung_cap} maxLength={180} onChange={e=>setNhapLoMeta(x=>({...x,nha_cung_cap:e.target.value}))} placeholder="Tên nhà cung cấp"/></label><label><span>Ghi chú phiếu</span><input value={nhap_lo_meta.ghi_chu} maxLength={1000} onChange={e=>setNhapLoMeta(x=>({...x,ghi_chu:e.target.value}))} placeholder="Thông tin chung của lô nhập"/></label></div>
+        {import_kho ? <div className="cine-import-preview-v218">
+          <div className="cine-import-summary-v218"><span><b>{import_kho.tong_dong}</b> dòng</span><span className="ok"><b>{import_kho.hop_le}</b> hợp lệ</span><span className={import_kho.khong_hop_le?"bad":"ok"}><b>{import_kho.khong_hop_le}</b> lỗi</span><span><b>{import_kho.dong.filter(x=>x.hop_le).reduce((sum,x)=>sum+x.so_luong_nhap,0)}</b> tổng SL nhập</span><button type="button" className="cine-btn cine-btn-primary" onClick={xacNhanNhapKhoTheoLo} disabled={import_kho.khong_hop_le>0 || import_kho.hop_le===0 || dang_xu_ly==="nhap-kho-theo-lo"}>{dang_xu_ly==="nhap-kho-theo-lo"?"Đang ghi kho…":"Xác nhận nhập kho"}</button></div>
+          <div className="cine-import-table-wrap-v218"><div className="cine-import-table-v218"><div className="head"><span>Dòng</span><span>Mã biến thể</span><span>Sản phẩm</span><span>SL nhập</span><span>Tồn trước → sau</span><span>Kết quả</span></div>{import_kho.dong.slice(0,100).map(item=><div className={item.hop_le?"row ok":"row bad"} key={`${item.dong}-${item.ma_bien_the}`}><span>{item.dong}</span><span><b>{item.ma_bien_the||"—"}</b></span><span>{item.ten_san_pham||item.ma_san_pham||"—"}</span><span>+{Number.isFinite(item.so_luong_nhap)?item.so_luong_nhap:"?"}</span><span>{item.ton_hien_tai===null?"—":`${item.ton_hien_tai} → ${item.ton_sau_nhap}`}</span><span>{item.hop_le?"Hợp lệ":item.loi.join(" · ")}</span></div>)}</div></div>
+        </div> : <div className="cine-import-empty-v218">Chưa chọn file. Cột bắt buộc: <b>ma_bien_the</b>, <b>so_luong_nhap</b>; cột tùy chọn: <b>ly_do</b>.</div>}
+        {phieu_nhap_kho.length>0 && <div className="cine-receipt-list-v218"><h4>Phiếu nhập gần đây</h4>{phieu_nhap_kho.slice(0,6).map(p=><div key={p.id}><span><b>{p.ma_phieu}</b><small>{p.ma_lo?`Lô ${p.ma_lo}`:"Không mã lô"}{p.nha_cung_cap?` · ${p.nha_cung_cap}`:""}</small></span><strong>{p.so_dong} dòng · +{p.tong_so_luong}</strong><time>{new Date(p.ngay_tao).toLocaleString("vi-VN")}</time></div>)}</div>}
+      </div>
 
       <form className="cine-card cine-variant-create-v215" onSubmit={taoBienTheMoi}>
         <div><h3>Tạo biến thể mới</h3><p>Mỗi sản phẩm có thể có nhiều tổ hợp vật liệu/màu với mã và tồn kho riêng.</p></div>

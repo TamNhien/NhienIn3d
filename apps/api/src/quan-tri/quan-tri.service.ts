@@ -1,6 +1,9 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
 import * as argon2 from "argon2";
+import { createHash } from "node:crypto";
+import { inflateRawSync } from "node:zlib";
 import { CoSoDuLieuService } from "../co-so-du-lieu/co-so-du-lieu.service.js";
+import { ThuDienTuService } from "../thu-dien-tu/thu-dien-tu.service.js";
 import { TrangThaiDonHang, TrangThaiNhanVien, TrangThaiNguon, TrangThaiPhanCa, TrangThaiSanPham, TrangThaiThanhToan, VaiTro } from "../generated/prisma/client.js";
 import type { NguoiDungXacThuc } from "../xac-thuc/jwt.guard.js";
 import { CapNhatNguoiDungDto } from "./dto/cap-nhat-nguoi-dung.dto.js";
@@ -24,10 +27,31 @@ import { CapNhatVatLieuDto } from "./dto/cap-nhat-vat-lieu.dto.js";
 import { TaoMauSacDto } from "./dto/tao-mau-sac.dto.js";
 import { CapNhatMauSacDto } from "./dto/cap-nhat-mau-sac.dto.js";
 import { CapNhatCauHinhKhoDto } from "./dto/cap-nhat-cau-hinh-kho.dto.js";
+import { KiemTraTepNhapKhoDto } from "./dto/kiem-tra-tep-nhap-kho.dto.js";
+import { NhapKhoLoDto } from "./dto/nhap-kho-lo.dto.js";
 
 @Injectable()
-export class QuanTriService {
-  constructor(private readonly db: CoSoDuLieuService) {}
+export class QuanTriService implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(QuanTriService.name);
+  private bo_hen_canh_bao_kho: NodeJS.Timeout | null = null;
+
+  constructor(private readonly db: CoSoDuLieuService, private readonly thu_dien_tu: ThuDienTuService) {}
+
+  onModuleInit() {
+    const bat = ["1", "true", "yes", "on"].includes((process.env.LOW_STOCK_EMAIL_ENABLED || "false").trim().toLowerCase());
+    if (!bat) return;
+    const raw = Number(process.env.LOW_STOCK_EMAIL_INTERVAL_MINUTES || 60);
+    const phut = Number.isFinite(raw) ? Math.max(15, Math.min(1440, Math.floor(raw))) : 60;
+    const chay = () => this.kiem_tra_gui_canh_bao_kho_email().catch(error => this.logger.warn(`Không thể gửi cảnh báo tồn kho: ${error instanceof Error ? error.message : String(error)}`));
+    setTimeout(chay, 30_000).unref();
+    this.bo_hen_canh_bao_kho = setInterval(chay, phut * 60_000);
+    this.bo_hen_canh_bao_kho.unref();
+    this.logger.log(`Cảnh báo tồn kho qua email được kiểm tra mỗi ${phut} phút.`);
+  }
+
+  onModuleDestroy() {
+    if (this.bo_hen_canh_bao_kho) clearInterval(this.bo_hen_canh_bao_kho);
+  }
 
   private phan_loai_bien_dong_kho(ton_cu: number, ton_moi: number) {
     if (ton_moi > ton_cu) return "NHAP_KHO";
@@ -52,6 +76,226 @@ export class QuanTriService {
     });
     await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_CAP_NHAT_CAU_HINH_KHO", nguoi_dung_id: actor.id, chi_tiet: { nguong_sap_het: dto.nguong_sap_het } } });
     return { nguong_sap_het: dto.nguong_sap_het, ngay_cap_nhat: item.ngay_cap_nhat };
+  }
+
+  private giai_ma_xml(value: string) {
+    return value.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, "&").replace(/&#(\d+);/g, (_m, n) => String.fromCodePoint(Number(n))).replace(/&#x([0-9a-f]+);/gi, (_m, n) => String.fromCodePoint(Number.parseInt(n, 16)));
+  }
+
+  private tach_csv(text: string) {
+    const rows: string[][] = [];
+    let row: string[] = [], cell = "", quoted = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (quoted) {
+        if (c === '"' && text[i + 1] === '"') { cell += '"'; i++; }
+        else if (c === '"') quoted = false;
+        else cell += c;
+      } else if (c === '"') quoted = true;
+      else if (c === "," || c === ";") { row.push(cell.trim()); cell = ""; }
+      else if (c === "\n") { row.push(cell.trim()); rows.push(row); row = []; cell = ""; }
+      else if (c !== "\r") cell += c;
+    }
+    row.push(cell.trim());
+    if (row.some(x => x.length)) rows.push(row);
+    return rows;
+  }
+
+  private doc_zip_entries(buffer: Buffer) {
+    const entries = new Map<string, Buffer>();
+    let eocd = -1;
+    for (let i = buffer.length - 22; i >= Math.max(0, buffer.length - 65557); i--) {
+      if (buffer.readUInt32LE(i) === 0x06054b50) { eocd = i; break; }
+    }
+    if (eocd < 0) throw new BadRequestException("File Excel không có cấu trúc ZIP/XLSX hợp lệ");
+    const count = buffer.readUInt16LE(eocd + 10);
+    let offset = buffer.readUInt32LE(eocd + 16);
+    for (let i = 0; i < count; i++) {
+      if (offset + 46 > buffer.length || buffer.readUInt32LE(offset) !== 0x02014b50) throw new BadRequestException("File Excel bị lỗi bảng thư mục ZIP");
+      const method = buffer.readUInt16LE(offset + 10);
+      const compressed = buffer.readUInt32LE(offset + 20);
+      const nameLen = buffer.readUInt16LE(offset + 28);
+      const extraLen = buffer.readUInt16LE(offset + 30);
+      const commentLen = buffer.readUInt16LE(offset + 32);
+      const localOffset = buffer.readUInt32LE(offset + 42);
+      const name = buffer.subarray(offset + 46, offset + 46 + nameLen).toString("utf8");
+      if (localOffset + 30 > buffer.length || buffer.readUInt32LE(localOffset) !== 0x04034b50) throw new BadRequestException("File Excel bị lỗi local ZIP header");
+      const localNameLen = buffer.readUInt16LE(localOffset + 26);
+      const localExtraLen = buffer.readUInt16LE(localOffset + 28);
+      const start = localOffset + 30 + localNameLen + localExtraLen;
+      const payload = buffer.subarray(start, start + compressed);
+      const data = method === 0 ? Buffer.from(payload) : method === 8 ? inflateRawSync(payload) : null;
+      if (data) entries.set(name, data);
+      offset += 46 + nameLen + extraLen + commentLen;
+    }
+    return entries;
+  }
+
+  private cot_excel(ref: string) {
+    const letters = (ref.match(/[A-Z]+/i)?.[0] || "A").toUpperCase();
+    let n = 0;
+    for (const c of letters) n = n * 26 + c.charCodeAt(0) - 64;
+    return Math.max(0, n - 1);
+  }
+
+  private tach_xlsx(buffer: Buffer) {
+    const zip = this.doc_zip_entries(buffer);
+    const sheetName = [...zip.keys()].filter(x => /^xl\/worksheets\/sheet\d+\.xml$/i.test(x)).sort((a, b) => Number(/sheet(\d+)/i.exec(a)?.[1] || 0) - Number(/sheet(\d+)/i.exec(b)?.[1] || 0))[0];
+    const sheet = sheetName ? zip.get(sheetName) : undefined;
+    if (!sheet) throw new BadRequestException("Excel phải có ít nhất một worksheet để nhập kho");
+    const sharedXml = zip.get("xl/sharedStrings.xml")?.toString("utf8") || "";
+    const shared: string[] = [];
+    for (const match of sharedXml.matchAll(/<si\b[^>]*>([\s\S]*?)<\/si>/g)) {
+      const parts = [...match[1].matchAll(/<t\b[^>]*>([\s\S]*?)<\/t>/g)].map(x => this.giai_ma_xml(x[1]));
+      shared.push(parts.join(""));
+    }
+    const rows: string[][] = [];
+    const xml = sheet.toString("utf8");
+    for (const rowMatch of xml.matchAll(/<row\b[^>]*>([\s\S]*?)<\/row>/g)) {
+      const row: string[] = [];
+      for (const cellMatch of rowMatch[1].matchAll(/<c\b([^>]*)>([\s\S]*?)<\/c>/g)) {
+        const attrs = cellMatch[1], body = cellMatch[2];
+        const ref = /\br="([A-Z]+\d+)"/i.exec(attrs)?.[1] || `A${rows.length + 1}`;
+        const type = /\bt="([^"]+)"/.exec(attrs)?.[1] || "";
+        const raw = /<v\b[^>]*>([\s\S]*?)<\/v>/.exec(body)?.[1] ?? /<t\b[^>]*>([\s\S]*?)<\/t>/.exec(body)?.[1] ?? "";
+        const value = type === "s" ? (shared[Number(raw)] ?? "") : this.giai_ma_xml(raw);
+        row[this.cot_excel(ref)] = value.trim();
+      }
+      if (row.some(x => (x || "").trim())) rows.push(row.map(x => x || ""));
+    }
+    return rows;
+  }
+
+  private chuan_hoa_tieu_de(value: string) {
+    return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replaceAll("đ", "d").replaceAll("Đ", "D").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  }
+
+  private dong_tu_bang(rows: string[][]) {
+    if (rows.length < 2) throw new BadRequestException("File nhập kho phải có hàng tiêu đề và ít nhất 1 dòng dữ liệu");
+    const header = rows[0].map(x => this.chuan_hoa_tieu_de(x));
+    const tim = (...names: string[]) => header.findIndex(x => names.includes(x));
+    const iMa = tim("ma_bien_the", "bien_the", "sku", "ma_sku");
+    const iSo = tim("so_luong_nhap", "so_luong", "sl_nhap", "quantity", "qty");
+    const iLyDo = tim("ly_do", "ghi_chu", "note", "reason");
+    if (iMa < 0 || iSo < 0) throw new BadRequestException("File phải có cột ma_bien_the và so_luong_nhap");
+    const dataRows = rows.slice(1).filter(r => r.some(x => (x || "").trim()));
+    if (dataRows.length > 500) throw new BadRequestException("Mỗi file chỉ được nhập tối đa 500 dòng dữ liệu");
+    return dataRows.map((r, index) => ({
+      dong: index + 2,
+      ma_bien_the: (r[iMa] || "").trim().toUpperCase(),
+      so_luong_nhap: Number((r[iSo] || "").replace(/\s/g, "")),
+      ly_do: iLyDo >= 0 ? (r[iLyDo] || "").trim().slice(0, 300) : ""
+    }));
+  }
+
+  async kiem_tra_tep_nhap_kho(dto: KiemTraTepNhapKhoDto) {
+    const ten = dto.ten_file.trim();
+    const ext = ten.toLowerCase().split(".").pop();
+    if (!ext || !["csv", "xlsx"].includes(ext)) throw new BadRequestException("Chỉ hỗ trợ file .csv hoặc .xlsx");
+    let buffer: Buffer;
+    try { buffer = Buffer.from(dto.du_lieu_base64.replace(/^data:[^,]+,/, ""), "base64"); }
+    catch { throw new BadRequestException("Dữ liệu file không hợp lệ"); }
+    if (!buffer.length || buffer.length > 2 * 1024 * 1024) throw new BadRequestException("File nhập kho phải nhỏ hơn hoặc bằng 2 MB");
+    const rows = ext === "csv" ? this.tach_csv(buffer.toString("utf8").replace(/^\uFEFF/, "")) : this.tach_xlsx(buffer);
+    const dong = this.dong_tu_bang(rows);
+    const ma = [...new Set(dong.map(x => x.ma_bien_the).filter(Boolean))];
+    const bienThe = await this.db.bienTheSanPham.findMany({ where: { ma_bien_the: { in: ma } }, include: { san_pham: { select: { ma_san_pham: true, ten_san_pham: true } } } });
+    const map = new Map(bienThe.map(x => [x.ma_bien_the.toUpperCase(), x]));
+    const seen = new Set<string>();
+    const ket_qua = dong.map(item => {
+      const loi: string[] = [];
+      if (!item.ma_bien_the) loi.push("Thiếu mã biến thể");
+      if (!Number.isInteger(item.so_luong_nhap) || item.so_luong_nhap < 1 || item.so_luong_nhap > 1000000) loi.push("Số lượng nhập phải là số nguyên 1–1.000.000");
+      if (item.ma_bien_the && seen.has(item.ma_bien_the)) loi.push("Mã biến thể bị lặp trong file");
+      if (item.ma_bien_the) seen.add(item.ma_bien_the);
+      const bt = map.get(item.ma_bien_the);
+      if (item.ma_bien_the && !bt) loi.push("Không tìm thấy biến thể trong hệ thống");
+      return { ...item, hop_le: loi.length === 0, loi, bien_the_id: bt?.id || null, ma_san_pham: bt?.san_pham.ma_san_pham || "", ten_san_pham: bt?.san_pham.ten_san_pham || "", ton_hien_tai: bt?.so_luong_ton ?? null, ton_sau_nhap: bt ? bt.so_luong_ton + item.so_luong_nhap : null };
+    });
+    return { ten_file: ten, tong_dong: ket_qua.length, hop_le: ket_qua.filter(x => x.hop_le).length, khong_hop_le: ket_qua.filter(x => !x.hop_le).length, dong: ket_qua };
+  }
+
+  private tao_ma_phieu_nhap() {
+    const vn = new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString().replace(/[-:TZ.]/g, "").slice(0, 14);
+    return `PNK-${vn}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+  }
+
+  async nhap_kho_theo_lo(actor: NguoiDungXacThuc, dto: NhapKhoLoDto) {
+    const seen = new Set<string>();
+    const dong = dto.dong.map((x, index) => ({ ...x, ma_bien_the: x.ma_bien_the.trim().toUpperCase(), ly_do: x.ly_do?.trim() || "Nhập kho theo lô", stt: index + 1 }));
+    for (const item of dong) {
+      if (seen.has(item.ma_bien_the)) throw new BadRequestException(`Mã biến thể ${item.ma_bien_the} bị lặp trong danh sách nhập`);
+      seen.add(item.ma_bien_the);
+    }
+    const bienThe = await this.db.bienTheSanPham.findMany({ where: { ma_bien_the: { in: dong.map(x => x.ma_bien_the) } }, include: { san_pham: { select: { ma_san_pham: true, ten_san_pham: true } } } });
+    const map = new Map(bienThe.map(x => [x.ma_bien_the.toUpperCase(), x]));
+    const thieu = dong.filter(x => !map.has(x.ma_bien_the)).map(x => x.ma_bien_the);
+    if (thieu.length) throw new BadRequestException(`Không tìm thấy biến thể: ${thieu.join(", ")}`);
+    const ma_phieu = this.tao_ma_phieu_nhap();
+    const tong_so_luong = dong.reduce((sum, x) => sum + x.so_luong_nhap, 0);
+    const ket_qua = await this.db.$transaction(async tx => {
+      const phieu = await tx.phieuNhapKho.create({ data: { ma_phieu, ma_lo: dto.ma_lo?.trim() || null, nha_cung_cap: dto.nha_cung_cap?.trim() || null, ghi_chu: dto.ghi_chu?.trim() || null, nguoi_tao_id: actor.id, so_dong: dong.length, tong_so_luong } });
+      const chi_tiet: Array<{ ma_bien_the: string; ma_san_pham: string; ten_san_pham: string; so_luong_nhap: number; ton_truoc: number; ton_sau: number }> = [];
+      for (const item of dong) {
+        const hien = await tx.bienTheSanPham.findUniqueOrThrow({ where: { ma_bien_the: item.ma_bien_the }, include: { san_pham: { select: { ma_san_pham: true, ten_san_pham: true } } } });
+        const capNhat = await tx.bienTheSanPham.update({ where: { id: hien.id }, data: { so_luong_ton: { increment: item.so_luong_nhap } } });
+        // Lấy tồn trước từ kết quả increment để audit vẫn chính xác nếu có hai transaction nhập kho đồng thời.
+        const ton_truoc = capNhat.so_luong_ton - item.so_luong_nhap;
+        await tx.chiTietPhieuNhapKho.create({ data: { phieu_nhap_id: phieu.id, bien_the_id: hien.id, ma_bien_the: hien.ma_bien_the, so_luong_nhap: item.so_luong_nhap, ton_truoc, ton_sau: capNhat.so_luong_ton, ly_do: item.ly_do } });
+        await tx.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_CAP_NHAT_TON_KHO", nguoi_dung_id: actor.id, chi_tiet: { bien_the_id: hien.id, ma_bien_the: hien.ma_bien_the, ma_san_pham: hien.san_pham.ma_san_pham, ton_cu: ton_truoc, ton_moi: capNhat.so_luong_ton, chenh_lech: item.so_luong_nhap, loai_bien_dong: "NHAP_KHO", ly_do: item.ly_do, ma_phieu_nhap: ma_phieu, ma_lo: dto.ma_lo?.trim() || null } } });
+        chi_tiet.push({ ma_bien_the: hien.ma_bien_the, ma_san_pham: hien.san_pham.ma_san_pham, ten_san_pham: hien.san_pham.ten_san_pham, so_luong_nhap: item.so_luong_nhap, ton_truoc, ton_sau: capNhat.so_luong_ton });
+      }
+      await tx.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_NHAP_KHO_THEO_LO", nguoi_dung_id: actor.id, chi_tiet: { phieu_nhap_id: phieu.id, ma_phieu, ma_lo: dto.ma_lo?.trim() || null, nha_cung_cap: dto.nha_cung_cap?.trim() || null, so_dong: dong.length, tong_so_luong } } });
+      return { ...phieu, chi_tiet };
+    });
+    return ket_qua;
+  }
+
+  async danh_sach_phieu_nhap_kho() {
+    return this.db.phieuNhapKho.findMany({ include: { chi_tiet: { orderBy: { ngay_tao: "asc" } } }, orderBy: { ngay_tao: "desc" }, take: 30 });
+  }
+
+  private async danh_sach_canh_bao_kho() {
+    const { nguong_sap_het } = await this.lay_cau_hinh_kho();
+    const ds = await this.db.bienTheSanPham.findMany({ where: { so_luong_ton: { lte: nguong_sap_het }, dang_hien_thi: true }, include: { san_pham: { select: { ma_san_pham: true, ten_san_pham: true, nguon_tham_khao: true, trang_thai: true } } }, orderBy: [{ so_luong_ton: "asc" }, { ma_bien_the: "asc" }], take: 200 });
+    return { nguong_sap_het, bien_the: ds.filter(x => !x.san_pham.nguon_tham_khao?.startsWith("__ADMIN_DELETED__:") && x.san_pham.trang_thai !== TrangThaiSanPham.NGUNG_BAN).map(x => ({ id: x.id, ma_bien_the: x.ma_bien_the, so_luong_ton: x.so_luong_ton, ma_san_pham: x.san_pham.ma_san_pham, ten_san_pham: x.san_pham.ten_san_pham })) };
+  }
+
+  private async dia_chi_nhan_canh_bao_kho() {
+    const env = (process.env.LOW_STOCK_EMAIL_TO || "").split(",").map(x => x.trim()).filter(Boolean);
+    if (env.length) return [...new Set(env)];
+    const admin = await this.db.nguoiDung.findMany({ where: { vai_tro: VaiTro.ADMIN, da_kich_hoat: true }, select: { thu_dien_tu: true } });
+    return [...new Set(admin.map(x => x.thu_dien_tu).filter(Boolean))];
+  }
+
+  async trang_thai_canh_bao_kho_email() {
+    const state = await this.db.cauHinhHeThong.findUnique({ where: { khoa: "CANH_BAO_KHO_EMAIL" } });
+    const raw = state?.gia_tri;
+    const data = raw && typeof raw === "object" && !Array.isArray(raw) ? raw as Record<string, unknown> : {};
+    const bat = ["1", "true", "yes", "on"].includes((process.env.LOW_STOCK_EMAIL_ENABLED || "false").trim().toLowerCase());
+    const interval = Math.max(15, Math.min(1440, Number(process.env.LOW_STOCK_EMAIL_INTERVAL_MINUTES || 60) || 60));
+    const recipients = await this.dia_chi_nhan_canh_bao_kho();
+    return { bat, chu_ky_phut: interval, so_nguoi_nhan: recipients.length, lan_gui_cuoi: typeof data.lan_gui_cuoi === "string" ? data.lan_gui_cuoi : null, tong_canh_bao_lan_cuoi: Number(data.tong_canh_bao || 0), trang_thai_lan_cuoi: typeof data.trang_thai === "string" ? data.trang_thai : "CHUA_GUI" };
+  }
+
+  async kiem_tra_gui_canh_bao_kho_email() {
+    const { nguong_sap_het, bien_the } = await this.danh_sach_canh_bao_kho();
+    const chu_ky = createHash("sha256").update(`${nguong_sap_het}|${bien_the.map(x => `${x.id}:${x.so_luong_ton}`).join("|")}`).digest("hex");
+    const state = await this.db.cauHinhHeThong.findUnique({ where: { khoa: "CANH_BAO_KHO_EMAIL" } });
+    const raw = state?.gia_tri;
+    const cu = raw && typeof raw === "object" && !Array.isArray(raw) ? raw as Record<string, unknown> : {};
+    if (!bien_the.length) {
+      await this.db.cauHinhHeThong.upsert({ where: { khoa: "CANH_BAO_KHO_EMAIL" }, create: { khoa: "CANH_BAO_KHO_EMAIL", gia_tri: { chu_ky, tong_canh_bao: 0, trang_thai: "KHONG_CANH_BAO" } }, update: { gia_tri: { chu_ky, tong_canh_bao: 0, trang_thai: "KHONG_CANH_BAO", lan_gui_cuoi: typeof cu.lan_gui_cuoi === "string" ? cu.lan_gui_cuoi : null } } });
+      return { da_gui: false, ly_do: "Không có biến thể dưới ngưỡng cảnh báo", tong_canh_bao: 0 };
+    }
+    if (cu.chu_ky === chu_ky) return { da_gui: false, ly_do: "Trạng thái tồn kho chưa thay đổi; đã chống gửi lặp", tong_canh_bao: bien_the.length };
+    const recipients = await this.dia_chi_nhan_canh_bao_kho();
+    if (!recipients.length) return { da_gui: false, ly_do: "Không có email Admin nhận cảnh báo", tong_canh_bao: bien_the.length };
+    await this.thu_dien_tu.guiCanhBaoTonKho({ thu_dien_tu: recipients, nguong_sap_het, bien_the });
+    const now = new Date().toISOString();
+    await this.db.cauHinhHeThong.upsert({ where: { khoa: "CANH_BAO_KHO_EMAIL" }, create: { khoa: "CANH_BAO_KHO_EMAIL", gia_tri: { chu_ky, lan_gui_cuoi: now, tong_canh_bao: bien_the.length, trang_thai: "DA_GUI" } }, update: { gia_tri: { chu_ky, lan_gui_cuoi: now, tong_canh_bao: bien_the.length, trang_thai: "DA_GUI" } } });
+    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "HE_THONG_GUI_CANH_BAO_KHO_EMAIL", chi_tiet: { nguong_sap_het, tong_canh_bao: bien_the.length, so_nguoi_nhan: recipients.length, chu_ky } } });
+    return { da_gui: true, tong_canh_bao: bien_the.length, so_nguoi_nhan: recipients.length, lan_gui: now };
   }
 
   private anh_data_url_hop_le(value: string) {

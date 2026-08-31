@@ -25,6 +25,8 @@ import { CapNhatVatLieuDto } from "./dto/cap-nhat-vat-lieu.dto.js";
 import { TaoMauSacDto } from "./dto/tao-mau-sac.dto.js";
 import { CapNhatMauSacDto } from "./dto/cap-nhat-mau-sac.dto.js";
 import { CapNhatCauHinhKhoDto } from "./dto/cap-nhat-cau-hinh-kho.dto.js";
+import { KiemTraTepNhapKhoDto } from "./dto/kiem-tra-tep-nhap-kho.dto.js";
+import { NhapKhoLoDto } from "./dto/nhap-kho-lo.dto.js";
 import { QuanTriService } from "./quan-tri.service.js";
 
 @ApiTags("Quản trị")
@@ -83,6 +85,11 @@ export class QuanTriController {
   @Get("kho/cau-hinh") cau_hinh_kho() { return this.service.lay_cau_hinh_kho(); }
   @Post("kho/cau-hinh") cap_nhat_cau_hinh_kho(@Req() req: YeuCauCoNguoiDung, @Body() dto: CapNhatCauHinhKhoDto) { return this.service.cap_nhat_cau_hinh_kho(req.nguoi_dung_xac_thuc!, dto); }
   @Get("kho/lich-su") lich_su_kho(@Query("loai") loai?: string) { return this.service.lich_su_dieu_chinh_ton_kho(loai); }
+  @Post("kho/import/kiem-tra") kiem_tra_import_kho(@Body() dto: KiemTraTepNhapKhoDto) { return this.service.kiem_tra_tep_nhap_kho(dto); }
+  @Post("kho/nhap-lo") nhap_kho_theo_lo(@Req() req: YeuCauCoNguoiDung, @Body() dto: NhapKhoLoDto) { return this.service.nhap_kho_theo_lo(req.nguoi_dung_xac_thuc!, dto); }
+  @Get("kho/phieu-nhap") phieu_nhap_kho() { return this.service.danh_sach_phieu_nhap_kho(); }
+  @Get("kho/canh-bao-email") canh_bao_email() { return this.service.trang_thai_canh_bao_kho_email(); }
+  @Post("kho/canh-bao-email/gui") gui_canh_bao_email() { return this.service.kiem_tra_gui_canh_bao_kho_email(); }
 
   @Get("san-pham") san_pham_quan_tri() { return this.service.danh_sach_san_pham_quan_tri(); }
   @Post("san-pham") tao_san_pham_quan_tri(@Req() req: YeuCauCoNguoiDung, @Body() dto: TaoSanPhamQuanTriDto) { return this.service.tao_san_pham_quan_tri(req.nguoi_dung_xac_thuc!, dto); }

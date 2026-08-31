@@ -64,11 +64,11 @@ test("seed v2.12.0 theo doi 24 bang va cho phep du lieu van hanh bi xoa", () => 
 });
 
 
-test("API hien thi dung version v2.17.1 o health va OpenAPI", () => {
+test("API hien thi dung version v2.18.0 o health va OpenAPI", () => {
   const health = readFileSync("src/suc-khoe/suc-khoe.controller.ts", "utf8");
   const main = readFileSync("src/main.ts", "utf8");
-  assert.match(health, /phien_ban: "v2\.17\.1"/);
-  assert.match(main, /setVersion\("2\.17\.1"\)/);
+  assert.match(health, /phien_ban: "v2\.18\.0"/);
+  assert.match(main, /setVersion\("2\.18\.0"\)/);
 });
 
 test("V2 co migration gio hang, thanh toan va dia chi", () => {
@@ -261,7 +261,7 @@ test("v2.8.3 XacThucModule re-export JwtModule cho JwtGuard o module tai khoan v
   assert.match(authModule, /imports:\s*\[JwtModule\.register\(\{\}\),\s*ThuDienTuModule\]/);
   assert.match(authModule, /exports:\s*\[JwtModule,\s*XacThucService,\s*JwtGuard,\s*VaiTroGuard\]/);
   assert.match(taiKhoanModule, /imports:\s*\[XacThucModule\]/);
-  assert.match(quanTriModule, /imports:\s*\[XacThucModule\]/);
+  assert.match(quanTriModule, /imports:\s*\[XacThucModule(?:,\s*[^\]]+)?\]/);
 });
 
 
@@ -646,4 +646,50 @@ test("v2.17.0 API audit kho co loai bien dong va ly do", () => {
   assert.match(service, /XUAT_KHO/);
   assert.match(service, /ly_do/);
   assert.match(dto, /ly_do_ton_kho/);
+});
+
+
+test("v2.18.0 API import CSV XLSX kiem tra du lieu truoc khi ghi", () => {
+  const controller = readFileSync("src/quan-tri/quan-tri.controller.ts", "utf8");
+  const service = readFileSync("src/quan-tri/quan-tri.service.ts", "utf8");
+  const dto = readFileSync("src/quan-tri/dto/kiem-tra-tep-nhap-kho.dto.ts", "utf8");
+  assert.match(controller, /@Post\("kho\/import\/kiem-tra"\)/);
+  assert.match(service, /tach_csv/);
+  assert.match(service, /tach_xlsx/);
+  assert.match(service, /Mỗi file chỉ được nhập tối đa 500 dòng dữ liệu/u);
+  assert.match(service, /File nhập kho phải nhỏ hơn hoặc bằng 2 MB/u);
+  assert.match(service, /Mã biến thể bị lặp trong file/u);
+  assert.match(dto, /du_lieu_base64/);
+});
+
+test("v2.18.0 API nhap kho lo atomic co phieu chi tiet va audit", () => {
+  const schema = readFileSync("prisma/schema.prisma", "utf8");
+  const service = readFileSync("src/quan-tri/quan-tri.service.ts", "utf8");
+  const controller = readFileSync("src/quan-tri/quan-tri.controller.ts", "utf8");
+  const dto = readFileSync("src/quan-tri/dto/nhap-kho-lo.dto.ts", "utf8");
+  assert.match(schema, /model PhieuNhapKho/);
+  assert.match(schema, /model ChiTietPhieuNhapKho/);
+  assert.match(controller, /@Post\("kho\/nhap-lo"\)/);
+  assert.match(controller, /@Get\("kho\/phieu-nhap"\)/);
+  assert.match(service, /this\.db\.\$transaction\(async tx/);
+  assert.match(service, /tx\.bienTheSanPham\.update/);
+  assert.match(service, /tx\.chiTietPhieuNhapKho\.create/);
+  assert.match(service, /ADMIN_NHAP_KHO_THEO_LO/);
+  assert.match(dto, /@ArrayMaxSize\(500\)/);
+});
+
+test("v2.18.0 API canh bao ton kho email theo lich va chong gui lap SHA256", () => {
+  const service = readFileSync("src/quan-tri/quan-tri.service.ts", "utf8");
+  const mail = readFileSync("src/thu-dien-tu/thu-dien-tu.service.ts", "utf8");
+  const module = readFileSync("src/quan-tri/quan-tri.module.ts", "utf8");
+  assert.match(service, /implements OnModuleInit, OnModuleDestroy/);
+  assert.match(service, /LOW_STOCK_EMAIL_ENABLED/);
+  assert.match(service, /LOW_STOCK_EMAIL_INTERVAL_MINUTES/);
+  assert.match(service, /LOW_STOCK_EMAIL_TO/);
+  assert.match(service, /createHash\("sha256"\)/);
+  assert.match(service, /cu\.chu_ky === chu_ky/);
+  assert.match(service, /CANH_BAO_KHO_EMAIL/);
+  assert.match(mail, /guiCanhBaoTonKho/);
+  assert.match(mail, /Email này chỉ được gửi lại khi trạng thái\/tồn kho cảnh báo thay đổi/u);
+  assert.match(module, /ThuDienTuModule/);
 });

@@ -166,9 +166,47 @@ model BienTheSanPham {
   vat_lieu      VatLieu?  @relation(fields: [vat_lieu_id], references: [id], onDelete: SetNull)
   mau_sac       MauSac?   @relation(fields: [mau_sac_id], references: [id], onDelete: SetNull)
   chi_tiet_gio_hang ChiTietGioHang[]
+  chi_tiet_nhap_kho ChiTietPhieuNhapKho[]
 
   @@index([san_pham_id])
   @@map("bien_the_san_pham")
+}
+
+
+model PhieuNhapKho {
+  id               String                 @id @default(uuid()) @db.Uuid
+  ma_phieu         String                 @unique @db.VarChar(40)
+  ma_lo            String?                @db.VarChar(80)
+  nha_cung_cap     String?                @db.VarChar(180)
+  ghi_chu          String?                @db.Text
+  nguoi_tao_id     String?                @db.Uuid
+  so_dong          Int                    @default(0)
+  tong_so_luong    Int                    @default(0)
+  ngay_tao         DateTime               @default(now()) @db.Timestamptz(6)
+  chi_tiet         ChiTietPhieuNhapKho[]
+
+  @@index([ngay_tao])
+  @@index([ma_lo])
+  @@map("phieu_nhap_kho")
+}
+
+model ChiTietPhieuNhapKho {
+  id               String          @id @default(uuid()) @db.Uuid
+  phieu_nhap_id    String          @db.Uuid
+  bien_the_id      String          @db.Uuid
+  ma_bien_the      String          @db.VarChar(80)
+  so_luong_nhap    Int
+  ton_truoc        Int
+  ton_sau          Int
+  ly_do            String?         @db.VarChar(300)
+  ngay_tao         DateTime        @default(now()) @db.Timestamptz(6)
+  phieu_nhap       PhieuNhapKho    @relation(fields: [phieu_nhap_id], references: [id], onDelete: Cascade)
+  bien_the         BienTheSanPham  @relation(fields: [bien_the_id], references: [id], onDelete: Restrict)
+
+  @@index([phieu_nhap_id])
+  @@index([bien_the_id])
+  @@index([ngay_tao])
+  @@map("chi_tiet_phieu_nhap_kho")
 }
 
 model DonHang {
