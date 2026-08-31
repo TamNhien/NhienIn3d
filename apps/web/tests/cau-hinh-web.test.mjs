@@ -846,3 +846,17 @@ test("v2.18.0 web hien trang thai va gui canh bao kho email thu cong", () => {
   assert.match(lib, /guiCanhBaoKhoEmailAdmin/);
   assert.match(css, /cine-stock-email-v218/);
 });
+
+test("v2.18.2 dropdown vat lieu mau Admin de doc va tuong phan cao", () => {
+  const page = readFileSync("app/quan-tri/page.tsx", "utf8");
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.match(page, /cine-select-readable-v2182/);
+  assert.match(page, /Mặc định \/ chưa chọn/u);
+  assert.match(page, /x\.ma_vat_lieu[^\n]*x\.ten_vat_lieu/);
+  assert.match(page, /x\.ma_mau[^\n]*x\.ten_mau/);
+  assert.match(css, /v2\.18\.2 - tăng độ tương phản/u);
+  assert.match(css, /color-scheme:dark/);
+  assert.match(css, /cine-select-readable-v2182 option\{/);
+  assert.match(css, /font-size:16px/);
+  assert.match(css, /option:checked/);
+});

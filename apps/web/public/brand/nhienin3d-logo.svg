@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">NhienIn3d</title>
+  <desc id="desc">Biểu tượng khối lập phương 3D của NhienIn3d</desc>
+  <defs>
+    <linearGradient id="bg" x1="8" y1="6" x2="56" y2="58" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff5f8f"/>
+      <stop offset="0.52" stop-color="#8b5cf6"/>
+      <stop offset="1" stop-color="#22d3ee"/>
+    </linearGradient>
+    <linearGradient id="face" x1="19" y1="17" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.98"/>
+      <stop offset="1" stop-color="#dbeafe" stop-opacity="0.82"/>
+    </linearGradient>
+  </defs>
+  <rect x="3" y="3" width="58" height="58" rx="17" fill="#08101d"/>
+  <rect x="3.75" y="3.75" width="56.5" height="56.5" rx="16.25" fill="none" stroke="url(#bg)" stroke-width="1.5" opacity="0.95"/>
+  <path d="M32 13 49 22.5v19L32 51 15 41.5v-19L32 13Z" fill="none" stroke="url(#bg)" stroke-width="3.3" stroke-linejoin="round"/>
+  <path d="M15.7 22.9 32 32.1l16.3-9.2M32 32.1V50" fill="none" stroke="url(#face)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M24.6 27.8 32 23.6l7.4 4.2L32 32l-7.4-4.2Z" fill="url(#face)" opacity="0.96"/>
+  <circle cx="50.5" cy="13.5" r="3" fill="#22d3ee"/>
+</svg>

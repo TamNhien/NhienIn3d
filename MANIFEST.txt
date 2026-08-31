@@ -114,6 +114,7 @@ apps/web/app/dang-nhap/page.tsx
 apps/web/app/dat-lai-mat-khau/page.tsx
 apps/web/app/gio-hang/page.tsx
 apps/web/app/globals.css
+apps/web/app/icon.svg
 apps/web/app/layout.tsx
 apps/web/app/page.tsx
 apps/web/app/quan-tri/page.tsx
@@ -145,6 +146,7 @@ apps/web/package.json
 apps/web/postcss.config.mjs
 apps/web/public/.gitkeep
 apps/web/public/backgrounds/nhienin3d-main.jpg
+apps/web/public/brand/nhienin3d-logo.svg
 apps/web/public/images/khoi-lap-phuong-banh-rang.jpg
 apps/web/tests/cau-hinh-web.test.mjs
 apps/web/tsconfig.json

@@ -817,3 +817,49 @@ footer{border-top:1px solid var(--line);max-width:1240px;margin:auto;padding:30p
 .cine-import-empty-v218{padding:18px;color:#94a3b8;font-size:12px}.cine-import-preview-v218{display:grid}.cine-import-summary-v218{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:14px 18px;border-bottom:1px solid #253246}.cine-import-summary-v218>span{display:inline-flex;gap:5px;align-items:center;padding:7px 10px;border-radius:999px;background:#0b1322;border:1px solid #334155;color:#cbd5e1;font-size:11px}.cine-import-summary-v218>span.ok{color:#86efac;border-color:rgba(34,197,94,.38)}.cine-import-summary-v218>span.bad{color:#fda4af;border-color:rgba(244,63,94,.4)}.cine-import-summary-v218 .cine-btn{margin-left:auto}.cine-import-table-wrap-v218{overflow:auto;max-height:390px}.cine-import-table-v218{min-width:980px}.cine-import-table-v218>.head,.cine-import-table-v218>.row{display:grid;grid-template-columns:64px 160px minmax(260px,1fr) 100px 150px minmax(220px,1fr);gap:10px;align-items:center;padding:10px 16px}.cine-import-table-v218>.head{position:sticky;top:0;z-index:2;background:#111827;border-bottom:1px solid #334155;color:#aeb9c8;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.05em}.cine-import-table-v218>.row{border-bottom:1px solid #202c3f;font-size:11px;color:#d6dee9}.cine-import-table-v218>.row.ok>span:last-child{color:#86efac}.cine-import-table-v218>.row.bad{background:rgba(244,63,94,.055)}.cine-import-table-v218>.row.bad>span:last-child{color:#fda4af}
 .cine-receipt-list-v218{display:grid;border-top:1px solid #2b394e}.cine-receipt-list-v218 h4{margin:0;padding:14px 18px 8px;font-size:14px}.cine-receipt-list-v218>div{display:grid;grid-template-columns:minmax(260px,1.3fr) 160px 180px;gap:14px;align-items:center;padding:10px 18px;border-top:1px solid #202c3f}.cine-receipt-list-v218>div>span{display:grid;gap:3px}.cine-receipt-list-v218 small{color:#8491a3}.cine-receipt-list-v218 strong{font-size:12px;color:#86efac}.cine-receipt-list-v218 time{text-align:right;color:#94a3b8;font-size:11px}
 @media(max-width:900px){.cine-stock-email-v218,.cine-batch-head-v218{align-items:flex-start;flex-direction:column}.cine-batch-actions-v218{justify-content:flex-start}.cine-batch-meta-v218{grid-template-columns:1fr}.cine-import-summary-v218 .cine-btn{margin-left:0}.cine-receipt-list-v218>div{grid-template-columns:1fr}.cine-receipt-list-v218 time{text-align:left}}
+
+
+/* v2.18.1 - logo thương hiệu ở favicon và trước tên NhienIn3d. */
+.site-brand{display:inline-flex;align-items:center;gap:9px}
+.site-brand-logo{display:block;width:31px;height:31px;flex:0 0 31px;object-fit:contain;filter:drop-shadow(0 5px 12px rgba(139,92,246,.18));transition:transform .18s ease,filter .18s ease}
+.site-brand-word{display:inline-block;color:#fff;line-height:1;white-space:nowrap}.site-brand-word>span{color:var(--accent)}
+.site-brand:hover .site-brand-logo{transform:translateY(-1px) scale(1.04);filter:drop-shadow(0 7px 16px rgba(34,211,238,.22))}
+.footer-brand{display:inline-flex;align-items:center}.footer-brand .site-brand-logo{width:34px;height:34px;flex-basis:34px}
+.menu-drawer-kicker{display:flex;align-items:center;gap:7px}.menu-drawer-kicker img{width:20px;height:20px;display:block}
+@media(max-width:700px){.site-brand{gap:7px}.site-brand-logo{width:28px;height:28px;flex-basis:28px}}
+@media(prefers-reduced-motion:reduce){.site-brand-logo{transition:none}.site-brand:hover .site-brand-logo{transform:none}}
+
+/* v2.18.2 - tăng độ tương phản và khả năng đọc cho danh sách xổ xuống Vật liệu/Màu trong Admin. */
+.cine-select-readable-v2182{
+  color-scheme:dark;
+  background-color:#0b1322!important;
+  color:#f8fafc!important;
+  border-color:#475569!important;
+  font-size:15px!important;
+  font-weight:750!important;
+  line-height:1.4;
+  cursor:pointer;
+}
+.cine-select-readable-v2182:hover{border-color:#64748b!important}
+.cine-select-readable-v2182:focus{
+  border-color:#a78bfa!important;
+  box-shadow:0 0 0 3px rgba(167,139,250,.18)!important;
+  outline:none;
+}
+.cine-select-readable-v2182 option{
+  color-scheme:dark;
+  background:#0f172a;
+  color:#f8fafc;
+  font-size:16px;
+  font-weight:650;
+  line-height:1.55;
+  padding:10px 12px;
+}
+.cine-select-readable-v2182 option:checked{
+  background:#4c1d95;
+  color:#fff;
+  font-weight:800;
+}
+@media(max-width:620px){
+  .cine-select-readable-v2182{font-size:16px!important}
+}

@@ -101,7 +101,7 @@ export function ThanhDieuHuong() {
     <div className="menu-drawer-backdrop" role="presentation" onMouseDown={e => { if (e.target === e.currentTarget) setMoMenu(false); }}>
       <aside id="nhienin3d-navigation-drawer" className="menu-drawer" role="dialog" aria-modal="true" aria-label="Menu điều hướng">
         <div className="menu-drawer-head">
-          <div><p className="menu-drawer-kicker">NhienIn3d</p><h2>Menu</h2></div>
+          <div><p className="menu-drawer-kicker"><img src="/brand/nhienin3d-logo.svg" alt="" aria-hidden="true" />NhienIn3d</p><h2>Menu</h2></div>
           <button className="menu-drawer-close" type="button" onClick={() => setMoMenu(false)} aria-label="Đóng menu">✕</button>
         </div>
         {tai_khoan && <div className="menu-drawer-user">
@@ -129,7 +129,7 @@ export function ThanhDieuHuong() {
   return <>
     <header className="site-header">
       <div className="site-header-inner">
-        <Link href="/" className="site-brand">Nhien<span>In3d</span></Link>
+        <Link href="/" className="site-brand" aria-label="NhienIn3d - Trang chủ"><img className="site-brand-logo" src="/brand/nhienin3d-logo.svg" alt="" aria-hidden="true" /><span className="site-brand-word">Nhien<span>In3d</span></span></Link>
         <nav className="desktop-primary-nav" aria-label="Điều hướng chính">
           <Link className={active("/san-pham") ? "nav-link active" : "nav-link"} href="/san-pham">Sản phẩm</Link>
           <Link className={active("/yeu-thich") ? "nav-link active" : "nav-link"} href="/yeu-thich">Yêu thích {so_yeu_thich > 0 && <b>{so_yeu_thich}</b>}</Link>

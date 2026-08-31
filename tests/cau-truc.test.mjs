@@ -157,16 +157,16 @@ test("V2 co migration nang cap khong ghi de migration V1", () => {
   assert.equal(existsSync("apps/api/prisma/migrations/202608290002_v002_gio_hang_thanh_toan/migration.sql"), true);
 });
 
-test("version v2.18.0 dong bo root API va Web", () => {
-  assert.equal(readFileSync("VERSION", "utf8").trim(), "2.18.0");
-  assert.equal(docJson("package.json").version, "2.18.0");
-  assert.equal(docJson("apps/api/package.json").version, "2.18.0");
-  assert.equal(docJson("apps/web/package.json").version, "2.18.0");
+test("version v2.18.2 dong bo root API va Web", () => {
+  assert.equal(readFileSync("VERSION", "utf8").trim(), "2.18.2");
+  assert.equal(docJson("package.json").version, "2.18.2");
+  assert.equal(docJson("apps/api/package.json").version, "2.18.2");
+  assert.equal(docJson("apps/web/package.json").version, "2.18.2");
 });
 
-test("README co lich su phien ban tang dan den v2.18.0", () => {
+test("README co lich su phien ban tang dan den v2.18.2", () => {
   const readme = readFileSync("README.md", "utf8");
-  const viTri = ["## v1.0.0", "## v1.0.1", "## v1.0.2", "## v1.0.3", "## v1.0.4", "## v1.0.5", "## v1.0.6", "## v1.0.7", "## v2.0.0", "## v2.1.0", "## v2.1.1", "## v2.2.0", "## v2.2.1", "## v2.3.0", "## v2.4.0", "## v2.4.1", "## v2.5.0", "## v2.6.0", "## v2.6.1", "## v2.7.0", "## v2.8.0", "## v2.8.1", "## v2.8.2", "## v2.8.3", "## v2.8.4", "## v2.8.5", "## v2.8.6", "## v2.8.7", "## v2.8.8", "## v2.8.9", "## v2.9.0", "## v2.9.1", "## v2.9.2", "## v2.9.3", "## v2.9.4", "## v2.9.5", "## v2.9.6", "## v2.9.7", "## v2.9.8", "## v2.9.9", "## v2.10.0", "## v2.10.1", "## v2.10.2", "## v2.11.0", "## v2.12.0", "## v2.12.1", "## v2.12.2", "## v2.12.3", "## v2.13.0", "## v2.14.0", "## v2.15.0", "## v2.15.1", "## v2.15.2", "## v2.15.3", "## v2.15.4", "## v2.15.5", "## v2.16.0", "## v2.17.0", "## v2.17.1", "## v2.18.0"].map(x => readme.indexOf(x));
+  const viTri = ["## v1.0.0", "## v1.0.1", "## v1.0.2", "## v1.0.3", "## v1.0.4", "## v1.0.5", "## v1.0.6", "## v1.0.7", "## v2.0.0", "## v2.1.0", "## v2.1.1", "## v2.2.0", "## v2.2.1", "## v2.3.0", "## v2.4.0", "## v2.4.1", "## v2.5.0", "## v2.6.0", "## v2.6.1", "## v2.7.0", "## v2.8.0", "## v2.8.1", "## v2.8.2", "## v2.8.3", "## v2.8.4", "## v2.8.5", "## v2.8.6", "## v2.8.7", "## v2.8.8", "## v2.8.9", "## v2.9.0", "## v2.9.1", "## v2.9.2", "## v2.9.3", "## v2.9.4", "## v2.9.5", "## v2.9.6", "## v2.9.7", "## v2.9.8", "## v2.9.9", "## v2.10.0", "## v2.10.1", "## v2.10.2", "## v2.11.0", "## v2.12.0", "## v2.12.1", "## v2.12.2", "## v2.12.3", "## v2.13.0", "## v2.14.0", "## v2.15.0", "## v2.15.1", "## v2.15.2", "## v2.15.3", "## v2.15.4", "## v2.15.5", "## v2.16.0", "## v2.17.0", "## v2.17.1", "## v2.18.0", "## v2.18.1", "## v2.18.2"].map(x => readme.indexOf(x));
   assert.ok(viTri.every(x => x >= 0));
   assert.deepEqual([...viTri].sort((a,b)=>a-b), viTri);
 });
@@ -906,7 +906,33 @@ test("v2.18.0 cau hinh email ton kho duoc dua vao env va Docker", () => {
     assert.match(src, /LOW_STOCK_EMAIL_TO/);
   }
   const readme = readFileSync("README.md", "utf8");
-  assert.match(readme, /Phiên bản hiện tại: \*\*v2\.18\.0\*\*/u);
+  assert.match(readme, /Phiên bản hiện tại: \*\*v2\.18\.2\*\*/u);
   assert.match(readme, /202608310002_v218_nhap_kho_theo_lo/);
   assert.doesNotMatch(readme, /Giao diện dựng lại theo bố cục CineBooking Pro/u);
+});
+
+
+test("v2.18.1 co favicon va logo truoc NhienIn3d", () => {
+  const layout = readFileSync("apps/web/app/layout.tsx", "utf8");
+  const nav = readFileSync("apps/web/components/thanh-dieu-huong.tsx", "utf8");
+  const footer = readFileSync("apps/web/components/chan-trang.tsx", "utf8");
+  const css = readFileSync("apps/web/app/globals.css", "utf8");
+  assert.equal(existsSync("apps/web/app/icon.svg"), true);
+  assert.equal(existsSync("apps/web/public/brand/nhienin3d-logo.svg"), true);
+  assert.match(layout, /icons:\s*\{/);
+  assert.match(layout, /\/brand\/nhienin3d-logo\.svg/);
+  assert.match(nav, /site-brand-logo/);
+  assert.match(nav, /NhienIn3d - Trang chủ/u);
+  assert.match(footer, /site-brand-logo/);
+  assert.match(css, /v2\.18\.1 - logo thương hiệu/u);
+  assert.match(css, /\.site-brand-logo\{/);
+});
+
+test("v2.18.2 Admin select vat lieu mau co che do toi va option ro", () => {
+  const admin = readFileSync("apps/web/app/quan-tri/page.tsx", "utf8");
+  const css = readFileSync("apps/web/app/globals.css", "utf8");
+  assert.match(admin, /cine-select-readable-v2182/);
+  assert.match(admin, /ma_vat_lieu/);
+  assert.match(css, /color-scheme:dark/);
+  assert.match(css, /cine-select-readable-v2182 option:checked/);
 });

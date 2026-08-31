@@ -6,7 +6,11 @@ import { ChanTrang } from "../components/chan-trang";
 export const metadata: Metadata = {
   title: "NhienIn3d | Sản phẩm in 3D",
   description: "Cửa hàng sản phẩm in 3D hiện đại với quy trình đặt hàng tinh gọn.",
-  applicationName: "NhienIn3d"
+  applicationName: "NhienIn3d",
+  icons: {
+    icon: [{ url: "/brand/nhienin3d-logo.svg", type: "image/svg+xml" }],
+    shortcut: "/brand/nhienin3d-logo.svg"
+  }
 };
 
 export const viewport: Viewport = {

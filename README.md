@@ -1,6 +1,6 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v2.18.0** — 31/08/2026
+> Phiên bản hiện tại: **v2.18.2** — 31/08/2026
 
 NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **frontend Next.js** và **backend NestJS/Fastify** kết nối **PostgreSQL qua Prisma**.
 
@@ -20,6 +20,8 @@ NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **fro
 
 ## Điểm chính bản hiện tại
 
+- v2.18.2 làm rõ danh sách xổ xuống **Vật liệu/Màu** trong Admin: nền tối tương phản cao, chữ lớn hơn, mục đang chọn nổi bật và option hiển thị cả mã + tên; đồng thời giữ toàn bộ logo/favicon thương hiệu từ v2.18.1.
+- v2.18.1 bổ sung **logo NhienIn3d** đồng bộ trên favicon/tab trình duyệt, thanh điều hướng, menu drawer và footer; logo khối 3D dùng SVG local nên sắc nét ở mọi DPI và không cần tải tài nguyên ngoài.
 - v2.18.0 bổ sung **nhập kho nhanh theo lô**: Admin có thể chọn CSV/XLSX, xem trước và kiểm tra toàn bộ mã biến thể/số lượng/lỗi trùng trước khi ghi; chỉ khi tất cả dòng hợp lệ mới cho phép xác nhận nhập kho trong một transaction.
 - Mỗi lần nhập lô tạo **phiếu nhập kho** và chi tiết tồn trước → tồn sau, mã lô/nhà cung cấp/ghi chú; lịch sử gần nhất hiển thị ngay trong tab Kho và audit liên kết theo mã phiếu.
 - Cảnh báo tồn kho qua email có thể chạy theo lịch bằng `LOW_STOCK_EMAIL_*`; hệ thống lưu chữ ký trạng thái trong `cau_hinh_he_thong` để **không gửi lặp** khi danh sách tồn thấp chưa thay đổi, đồng thời Admin có nút kiểm tra/gửi ngay.
@@ -1006,6 +1008,29 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 - Email cảnh báo liệt kê mã biến thể, sản phẩm, tồn hiện tại và trạng thái `HẾT HÀNG / SẮP HẾT`; việc gửi tiếp tục dùng cấu hình SMTP/Nodemailer hiện có.
 - Mở rộng regression/contract test cho schema + migration phiếu nhập, API preview/transaction, scheduler chống gửi lặp, Web import CSV/XLSX, phiếu nhập và trạng thái email.
 - Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm test` → `npm run typecheck` → `npm run build` → `docker compose up -d --build` → `docker compose ps` → `docker compose logs migrate --tail 150` → `docker compose logs api --tail 150` → `.\scripts\release.ps1 v2.18.0`.
+
+---
+
+
+## v2.18.1 — 31/08/2026
+
+- Bổ sung logo thương hiệu **NhienIn3d** dạng SVG local, thiết kế theo khối lập phương 3D với dải màu hồng/tím/xanh đồng bộ giao diện hiện tại.
+- Thêm favicon cho tab trình duyệt qua `app/icon.svg` và khai báo `metadata.icons`, thay biểu tượng mặc định của localhost/Next.js bằng logo NhienIn3d.
+- Đặt logo **ngay trước chữ NhienIn3d** trên header; đồng bộ cùng logo ở menu drawer và footer để nhận diện thương hiệu nhất quán.
+- Logo responsive 31px desktop / 28px mobile, có hiệu ứng hover nhẹ và tôn trọng `prefers-reduced-motion`; dùng `aria-hidden` cho ảnh trang trí để không lặp tên thương hiệu với screen reader.
+- Không thay đổi API, nghiệp vụ hoặc Prisma schema nên **không có migration database mới**.
+- Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm test` → `npm run typecheck` → `npm run build` → `docker compose up -d --build` → `docker compose ps` → `docker compose logs migrate --tail 150` → `docker compose logs api --tail 150` → `.\scripts\release.ps1 v2.18.1`.
+
+---
+
+## v2.18.2 — 31/08/2026
+
+- Sửa danh sách xổ xuống **Vật liệu** và **Màu sắc** trong Admin khó nhìn trên nền tối: ép `color-scheme: dark`, tăng cỡ chữ/độ đậm và độ tương phản của `select`/`option`.
+- Mục đang được chọn có nền tím nổi bật; trạng thái focus có viền tím rõ hơn để dễ xác định field đang thao tác.
+- Option Vật liệu hiển thị **mã vật liệu · tên vật liệu**; option Màu hiển thị **mã màu · tên màu**, giúp phân biệt nhanh khi dữ liệu nhiều.
+- Áp dụng đồng bộ cho form **Tạo biến thể mới**, bộ lọc Kho và select Vật liệu/Màu trong từng dòng biến thể; mobile tăng lên 16px để tránh chữ nhỏ.
+- Giữ nguyên logo/favicon v2.18.1, API và Prisma schema; **không có migration database mới**.
+- Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm test` → `npm run typecheck` → `npm run build` → `docker compose up -d --build` → `docker compose ps` → `docker compose logs migrate --tail 150` → `docker compose logs api --tail 150` → `.\scripts\release.ps1 v2.18.2`.
 
 ---
 
