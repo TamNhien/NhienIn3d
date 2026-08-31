@@ -1,7 +1,7 @@
 {
   "name": "nhienin3d",
   "private": true,
-  "version": "2.18.2",
+  "version": "2.18.3",
   "description": "NhienIn3d - cửa hàng sản phẩm in 3D hiện đại",
   "engines": {
     "node": ">=24.0.0"
@@ -22,7 +22,9 @@
     "test:root": "node --test tests/*.test.mjs",
     "audit:security": "npm audit --audit-level=high",
     "db:kiem-tra-du-lieu": "npm run db:kiem-tra-du-lieu --workspace=@nhienin3d/api",
-    "mail:kiem-tra": "npm run mail:kiem-tra --workspace=@nhienin3d/api"
+    "mail:kiem-tra": "npm run mail:kiem-tra --workspace=@nhienin3d/api",
+    "dev:web:https": "npm run dev:https --workspace=@nhienin3d/web",
+    "https:local": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/https-local.ps1"
   },
   "workspaces": [
     "apps/api",

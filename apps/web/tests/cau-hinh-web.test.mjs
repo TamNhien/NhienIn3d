@@ -860,3 +860,10 @@ test("v2.18.2 dropdown vat lieu mau Admin de doc va tuong phan cao", () => {
   assert.match(css, /font-size:16px/);
   assert.match(css, /option:checked/);
 });
+
+
+test("v2.18.3 Next dev co lenh HTTPS local", () => {
+  const pkg = JSON.parse(readFileSync("package.json", "utf8"));
+  assert.equal(pkg.version, "2.18.3");
+  assert.match(pkg.scripts["dev:https"], /next dev --experimental-https/);
+});

@@ -157,16 +157,16 @@ test("V2 co migration nang cap khong ghi de migration V1", () => {
   assert.equal(existsSync("apps/api/prisma/migrations/202608290002_v002_gio_hang_thanh_toan/migration.sql"), true);
 });
 
-test("version v2.18.2 dong bo root API va Web", () => {
-  assert.equal(readFileSync("VERSION", "utf8").trim(), "2.18.2");
-  assert.equal(docJson("package.json").version, "2.18.2");
-  assert.equal(docJson("apps/api/package.json").version, "2.18.2");
-  assert.equal(docJson("apps/web/package.json").version, "2.18.2");
+test("version v2.18.3 dong bo root API va Web", () => {
+  assert.equal(readFileSync("VERSION", "utf8").trim(), "2.18.3");
+  assert.equal(docJson("package.json").version, "2.18.3");
+  assert.equal(docJson("apps/api/package.json").version, "2.18.3");
+  assert.equal(docJson("apps/web/package.json").version, "2.18.3");
 });
 
-test("README co lich su phien ban tang dan den v2.18.2", () => {
+test("README co lich su phien ban tang dan den v2.18.3", () => {
   const readme = readFileSync("README.md", "utf8");
-  const viTri = ["## v1.0.0", "## v1.0.1", "## v1.0.2", "## v1.0.3", "## v1.0.4", "## v1.0.5", "## v1.0.6", "## v1.0.7", "## v2.0.0", "## v2.1.0", "## v2.1.1", "## v2.2.0", "## v2.2.1", "## v2.3.0", "## v2.4.0", "## v2.4.1", "## v2.5.0", "## v2.6.0", "## v2.6.1", "## v2.7.0", "## v2.8.0", "## v2.8.1", "## v2.8.2", "## v2.8.3", "## v2.8.4", "## v2.8.5", "## v2.8.6", "## v2.8.7", "## v2.8.8", "## v2.8.9", "## v2.9.0", "## v2.9.1", "## v2.9.2", "## v2.9.3", "## v2.9.4", "## v2.9.5", "## v2.9.6", "## v2.9.7", "## v2.9.8", "## v2.9.9", "## v2.10.0", "## v2.10.1", "## v2.10.2", "## v2.11.0", "## v2.12.0", "## v2.12.1", "## v2.12.2", "## v2.12.3", "## v2.13.0", "## v2.14.0", "## v2.15.0", "## v2.15.1", "## v2.15.2", "## v2.15.3", "## v2.15.4", "## v2.15.5", "## v2.16.0", "## v2.17.0", "## v2.17.1", "## v2.18.0", "## v2.18.1", "## v2.18.2"].map(x => readme.indexOf(x));
+  const viTri = ["## v1.0.0", "## v1.0.1", "## v1.0.2", "## v1.0.3", "## v1.0.4", "## v1.0.5", "## v1.0.6", "## v1.0.7", "## v2.0.0", "## v2.1.0", "## v2.1.1", "## v2.2.0", "## v2.2.1", "## v2.3.0", "## v2.4.0", "## v2.4.1", "## v2.5.0", "## v2.6.0", "## v2.6.1", "## v2.7.0", "## v2.8.0", "## v2.8.1", "## v2.8.2", "## v2.8.3", "## v2.8.4", "## v2.8.5", "## v2.8.6", "## v2.8.7", "## v2.8.8", "## v2.8.9", "## v2.9.0", "## v2.9.1", "## v2.9.2", "## v2.9.3", "## v2.9.4", "## v2.9.5", "## v2.9.6", "## v2.9.7", "## v2.9.8", "## v2.9.9", "## v2.10.0", "## v2.10.1", "## v2.10.2", "## v2.11.0", "## v2.12.0", "## v2.12.1", "## v2.12.2", "## v2.12.3", "## v2.13.0", "## v2.14.0", "## v2.15.0", "## v2.15.1", "## v2.15.2", "## v2.15.3", "## v2.15.4", "## v2.15.5", "## v2.16.0", "## v2.17.0", "## v2.17.1", "## v2.18.0", "## v2.18.1", "## v2.18.2", "## v2.18.3"].map(x => readme.indexOf(x));
   assert.ok(viTri.every(x => x >= 0));
   assert.deepEqual([...viTri].sort((a,b)=>a-b), viTri);
 });
@@ -906,7 +906,7 @@ test("v2.18.0 cau hinh email ton kho duoc dua vao env va Docker", () => {
     assert.match(src, /LOW_STOCK_EMAIL_TO/);
   }
   const readme = readFileSync("README.md", "utf8");
-  assert.match(readme, /Phiên bản hiện tại: \*\*v2\.18\.2\*\*/u);
+  assert.match(readme, /Phiên bản hiện tại: \*\*v2\.18\.3\*\*/u);
   assert.match(readme, /202608310002_v218_nhap_kho_theo_lo/);
   assert.doesNotMatch(readme, /Giao diện dựng lại theo bố cục CineBooking Pro/u);
 });
@@ -935,4 +935,26 @@ test("v2.18.2 Admin select vat lieu mau co che do toi va option ro", () => {
   assert.match(admin, /ma_vat_lieu/);
   assert.match(css, /color-scheme:dark/);
   assert.match(css, /cine-select-readable-v2182 option:checked/);
+});
+
+
+test("v2.18.3 co HTTPS local tin cay qua Caddy va script Windows", () => {
+  assert.equal(existsSync("docker-compose.https.yml"), true);
+  assert.equal(existsSync("infra/caddy/Caddyfile.local-https"), true);
+  assert.equal(existsSync("scripts/https-local.ps1"), true);
+  assert.equal(existsSync("scripts/https-local-bo-tin-cay.ps1"), true);
+  const compose = readFileSync("docker-compose.https.yml", "utf8");
+  const caddy = readFileSync("infra/caddy/Caddyfile.local-https", "utf8");
+  const ps1 = readFileSync("scripts/https-local.ps1", "utf8");
+  const pkg = docJson("package.json");
+  assert.match(compose, /NEXT_PUBLIC_API_URL:\s*\/api\/v1/);
+  assert.match(compose, /127\.0\.0\.1:\$\{WEB_PORT:-3000\}:443/);
+  assert.match(caddy, /https:\/\/localhost/);
+  assert.match(caddy, /tls internal/);
+  assert.match(caddy, /@api path \/api\/\* \/tai-lieu\*/);
+  assert.match(caddy, /reverse_proxy @api api:3001/);
+  assert.match(caddy, /reverse_proxy web:3000/);
+  assert.match(ps1, /certutil\.exe -user -addstore Root/);
+  assert.match(ps1, /https:\/\/localhost:/);
+  assert.match(pkg.scripts["dev:web:https"], /dev:https/);
 });

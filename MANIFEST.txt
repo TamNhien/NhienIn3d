@@ -150,10 +150,14 @@ apps/web/public/brand/nhienin3d-logo.svg
 apps/web/public/images/khoi-lap-phuong-banh-rang.jpg
 apps/web/tests/cau-hinh-web.test.mjs
 apps/web/tsconfig.json
+docker-compose.https.yml
 docker-compose.yml
+infra/caddy/Caddyfile.local-https
 package.json
 scripts/cap-nhat.ps1
 scripts/don-dep-legacy.mjs
+scripts/https-local-bo-tin-cay.ps1
+scripts/https-local.ps1
 scripts/khoi-tao-github.ps1
 scripts/khoi-tao.ps1
 scripts/kiem-tra.ps1

@@ -9,3 +9,6 @@ coverage/
 .DS_Store
 apps/api/src/generated/prisma/
 release/
+
+# Chứng thư CA local do Caddy tạo; không commit.
+.local-https/

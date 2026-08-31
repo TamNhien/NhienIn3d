@@ -1,6 +1,6 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v2.18.2** — 31/08/2026
+> Phiên bản hiện tại: **v2.18.3** — 31/08/2026
 
 NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **frontend Next.js** và **backend NestJS/Fastify** kết nối **PostgreSQL qua Prisma**.
 
@@ -20,6 +20,7 @@ NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **fro
 
 ## Điểm chính bản hiện tại
 
+- v2.18.3 bổ sung **HTTPS local được Windows/Chromium tin cậy** cho `localhost:3000`: Caddy reverse proxy TLS cùng origin cho Web + `/api/*`, script PowerShell tự lấy CA nội bộ và cài vào Trusted Root của `CurrentUser`, loại bỏ cảnh báo “Kết nối không an toàn” khi chạy đúng chế độ HTTPS.
 - v2.18.2 làm rõ danh sách xổ xuống **Vật liệu/Màu** trong Admin: nền tối tương phản cao, chữ lớn hơn, mục đang chọn nổi bật và option hiển thị cả mã + tên; đồng thời giữ toàn bộ logo/favicon thương hiệu từ v2.18.1.
 - v2.18.1 bổ sung **logo NhienIn3d** đồng bộ trên favicon/tab trình duyệt, thanh điều hướng, menu drawer và footer; logo khối 3D dùng SVG local nên sắc nét ở mọi DPI và không cần tải tài nguyên ngoài.
 - v2.18.0 bổ sung **nhập kho nhanh theo lô**: Admin có thể chọn CSV/XLSX, xem trước và kiểm tra toàn bộ mã biến thể/số lượng/lỗi trùng trước khi ghi; chỉ khi tất cả dòng hợp lệ mới cho phép xác nhận nhập kho trong một transaction.
@@ -427,17 +428,57 @@ docker compose logs web --tail 100
 
 Không dùng `docker compose down -v` khi chỉ nâng version vì lệnh đó xóa PostgreSQL volume.
 
+## HTTPS local không còn cảnh báo “Kết nối không an toàn”
+
+Chế độ Docker mặc định vẫn giữ HTTP để tương thích. Khi cần trình duyệt hiển thị kết nối an toàn trên máy Windows, chạy **một lệnh**:
+
+```powershell
+cd D:\LienThongDH\DoAn\NhienIn3d
+.\scripts\https-local.ps1
+```
+
+Script sẽ tự động:
+
+1. Chạy stack bằng `docker-compose.https.yml`.
+2. Đặt Caddy trước Web/API và phục vụ TLS tại `https://localhost:3000`.
+3. Proxy `/api/*` về API nội bộ để frontend HTTPS không gọi API HTTP/mixed-content.
+4. Sao chép CA local của Caddy và cài vào **Trusted Root Certification Authorities của CurrentUser** bằng `certutil -user`; không cần cài chứng thư hệ thống cho toàn máy.
+5. Mở trình duyệt tại `https://localhost:3000`.
+
+Sau lần đầu, nếu tab cũ vẫn hiện trạng thái trước đó, nhấn `Ctrl+F5` hoặc đóng/mở lại tab. **Không xóa volume Caddy** nếu muốn giữ nguyên CA đã được Windows tin cậy.
+
+Dừng stack HTTPS:
+
+```powershell
+docker compose -f docker-compose.https.yml down
+```
+
+Nếu không còn dùng HTTPS local và muốn gỡ CA khỏi Trusted Root của tài khoản Windows hiện tại:
+
+```powershell
+.\scripts\https-local-bo-tin-cay.ps1
+```
+
+Muốn chạy riêng Next.js HTTPS trong lúc phát triển frontend, có thể dùng:
+
+```powershell
+npm run dev:web:https
+```
+
+Next.js hỗ trợ `--experimental-https` cho local development; với toàn bộ hệ thống Docker, ưu tiên `https-local.ps1` để Web và API luôn cùng origin HTTPS.
+
 ## URL local
 
 ```text
-Web:             http://localhost:3000
-Sản phẩm:        http://localhost:3000/san-pham
-Tài khoản:       http://localhost:3000/tai-khoan
-Quản trị:        http://localhost:3000/quan-tri
-Đăng nhập:       http://localhost:3000/dang-nhap
-Quên mật khẩu:   http://localhost:3000/quen-mat-khau
-API:             http://localhost:3001/api/v1
-Swagger:         http://localhost:3001/tai-lieu
+Web HTTP:        http://localhost:3000
+Web HTTPS:       https://localhost:3000 (sau khi chạy .\scripts\https-local.ps1)
+Sản phẩm HTTPS: https://localhost:3000/san-pham
+Tài khoản HTTPS:https://localhost:3000/tai-khoan
+Quản trị HTTPS: https://localhost:3000/quan-tri
+Đăng nhập HTTPS:https://localhost:3000/dang-nhap
+API trực tiếp:    http://localhost:3001/api/v1
+Swagger HTTPS:   https://localhost:3000/tai-lieu
+Swagger trực tiếp:http://localhost:3001/tai-lieu
 Mailpit profile: http://localhost:8025 (chỉ khi chạy --profile mailpit)
 PostgreSQL:      127.0.0.1:5434
 ```
@@ -1031,6 +1072,18 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 - Áp dụng đồng bộ cho form **Tạo biến thể mới**, bộ lọc Kho và select Vật liệu/Màu trong từng dòng biến thể; mobile tăng lên 16px để tránh chữ nhỏ.
 - Giữ nguyên logo/favicon v2.18.1, API và Prisma schema; **không có migration database mới**.
 - Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm test` → `npm run typecheck` → `npm run build` → `docker compose up -d --build` → `docker compose ps` → `docker compose logs migrate --tail 150` → `docker compose logs api --tail 150` → `.\scripts\release.ps1 v2.18.2`.
+
+---
+
+## v2.18.3 — 31/08/2026
+
+- Bổ sung chế độ **HTTPS local tin cậy** dành cho Windows/Chromium để `https://localhost:3000` không còn bị đánh dấu “Kết nối không an toàn”.
+- Thêm `docker-compose.https.yml` với **Caddy TLS reverse proxy**; frontend dùng API cùng origin `/api/v1`, tránh mixed-content khi trang Web chạy HTTPS.
+- Thêm `scripts/https-local.ps1`: tự khởi động stack HTTPS, lấy CA local từ Caddy, cài vào Trusted Root của **CurrentUser** bằng `certutil -user` rồi mở đúng URL HTTPS.
+- Thêm `infra/caddy/Caddyfile.local-https`, volume CA Caddy bền vững và `.local-https/` vào `.gitignore`/`.dockerignore`; không commit private key/chứng thư local vào Git. Có `https-local-bo-tin-cay.ps1` để gỡ CA khỏi Trusted Root khi không còn dùng.
+- Bổ sung `npm run dev:web:https` sử dụng `next dev --experimental-https` cho trường hợp phát triển frontend độc lập.
+- HTTP Compose cũ vẫn được giữ để tương thích; không thay đổi Prisma schema nên **không có migration database mới**.
+- Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm test` → `npm run typecheck` → `npm run build` → `docker compose up -d --build` → kiểm tra HTTPS bằng `.\scripts\https-local.ps1 -KhongMoTrinhDuyet` → `.\scripts\release.ps1 v2.18.3`.
 
 ---
 
