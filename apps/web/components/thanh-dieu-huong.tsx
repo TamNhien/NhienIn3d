@@ -25,7 +25,7 @@ export function ThanhDieuHuong() {
     layDanhSachYeuThich().then(ds => setSoYeuThich(ds.length)).catch(() => setSoYeuThich(0));
   }, []);
   const taiTaiKhoan = useCallback(() => {
-    layTaiKhoan().then(setTaiKhoan).catch(() => setTaiKhoan(null));
+    layTaiKhoan().then(setTaiKhoan).catch(() => undefined);
   }, []);
 
   useEffect(() => setDaMount(true), []);

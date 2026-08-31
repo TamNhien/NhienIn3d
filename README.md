@@ -1,6 +1,6 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v3.3.0** — 31/08/2026
+> Phiên bản hiện tại: **v3.3.2** — 31/08/2026
 
 NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **frontend Next.js** và **backend NestJS/Fastify** kết nối **PostgreSQL qua Prisma**.
 
@@ -19,6 +19,11 @@ NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **fro
 
 
 ## Điểm chính bản hiện tại
+
+- v3.3.1 sửa lỗi F5 nhiều lần ở Admin có thể chạm rate limit rồi bị hiểu nhầm là hết phiên: tăng ngưỡng API mặc định lên 600 request/phút, cho phép cấu hình `API_RATE_LIMIT_MAX`, dùng single-flight cho `layTaiKhoan`/`lamMoiPhien` và không coi 429/5xx là tín hiệu đăng xuất.
+- v3.3.2 đối soát doanh thu khi giao hàng: chốt đúng giao dịch COD đang chờ dù có giao dịch thất bại mới hơn, tách KPI số đơn đã giao khỏi số đơn ghi nhận doanh thu và làm rõ đơn thanh toán trước không được cộng doanh thu lần hai.
+- Sau khi Admin xác nhận đã giao, API trả metadata `cap_nhat_doanh_thu`; Dashboard cập nhật doanh thu ngay trên UI rồi đồng bộ lại từ PostgreSQL. Đơn đã thanh toán online từ trước được ghi rõ là không cộng doanh thu lần hai.
+- Truy vấn doanh thu 30 ngày không còn chỉ lấy giao dịch mới nhất; hệ thống chọn đúng giao dịch `DA_THANH_TOAN` và lọc theo thời điểm ghi nhận thực tế.
 
 - v3.3.0 mở rộng audit diff cho **danh mục, vật liệu, màu sắc, ca làm và phân ca**; tab Nhật ký Admin có thêm bộ lọc theo người thao tác và vẫn xuất CSV/Excel theo đúng bộ lọc.
 - Tab **Hệ thống** bổ sung thống kê vận hành 7/30 ngày: tỷ lệ health tốt, backup/restore thành công và số lần gửi cảnh báo; lịch sử vận hành có nút **Xuất Excel**.
@@ -1247,6 +1252,27 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 - Migration `202608310007_v330_audit_ops_indexes` thêm index `(nguoi_dung_id, ngay_tao)`, `(loai_su_kien, ngay_tao)` cho audit, index trạng thái/ngày cho đơn hàng và index ngày cho lịch sử vận hành.
 - GitHub Actions CI thêm job `runtime-docker`: dựng PostgreSQL + migrate + API bằng Docker Compose, chờ `/api/v1/suc-khoe`, sau đó chạy `scripts/e2e-runtime-v320.ps1` trên database tạm cô lập để kiểm tra `pg_dump` → SHA-256 → `pg_restore`.
 - Giao diện Hệ thống có thẻ thống kê 7/30 ngày, hiển thị silence/escalation và nút xuất Excel lịch sử vận hành. Đồng bộ Root/API/Web/Health/OpenAPI lên **v3.3.0**.
+
+---
+
+## v3.3.1 — 31/08/2026
+
+- Fix rate-limit khi Admin F5/thao tác liên tục: `API_RATE_LIMIT_MAX=600` mặc định và được truyền qua Docker Compose. Cơ chế khóa tài khoản sau nhiều lần nhập sai mật khẩu vẫn giữ nguyên.
+- `layTaiKhoan()` và `lamMoiPhien()` dùng single-flight để Header + trang Admin không cùng lúc rotate một refresh token. Backend cũng giữ cùng kết quả rotate trong cửa sổ 30 giây theo hash refresh token, nên các request còn sót từ lần F5 trước nhận cùng session mới thay vì request đến sau bị 401. 429/5xx chỉ là lỗi tạm thời, không xóa trạng thái đăng nhập; trang Admin tự retry thay vì đẩy người dùng ra màn hình đăng nhập.
+- Khi cập nhật đơn sang `HOAN_TAT`, API trả `cap_nhat_doanh_thu` cho biết doanh thu vừa được ghi nhận hay đã ghi nhận từ trước. Hệ thống kiểm tra toàn bộ giao dịch của đơn để không chốt thêm một giao dịch `CHO_THANH_TOAN` nếu đơn đã có giao dịch `DA_THANH_TOAN`, tránh cộng doanh thu lặp. Web cập nhật KPI/biểu đồ ngay, sau đó đọc lại `/quan-tri/tong-quan` để PostgreSQL là nguồn dữ liệu cuối cùng.
+- Sửa truy vấn doanh thu: tìm giao dịch `DA_THANH_TOAN` hợp lệ thay vì mặc định lấy giao dịch mới nhất; chỉ tính các khoản có `ngay_ghi_nhan` trong 30 ngày.
+- Không có migration database mới. Đồng bộ Root/API/Web/Health/OpenAPI lên **v3.3.1**.
+
+---
+
+## v3.3.2 — 31/08/2026
+
+- Fix trường hợp Admin chuyển 3–4 đơn sang `HOAN_TAT` nhưng chỉ một phần COD làm doanh thu tăng: backend không còn giả định giao dịch mới nhất là giao dịch cần chốt. Hệ thống ưu tiên giao dịch `COD + CHO_THANH_TOAN`, sau đó mới dùng giao dịch chờ thanh toán khác; một lần thanh toán thất bại mới hơn không còn che khuất giao dịch COD hợp lệ.
+- Sau transaction, metadata `cap_nhat_doanh_thu` lấy đúng giao dịch `DA_THANH_TOAN` thực tế và trả thêm `nguon` (`CHOT_KHI_GIAO`, `DA_THANH_TOAN_TRUOC`, `LEGACY_KHONG_GIAO_DICH`, `KHONG_PHAT_SINH`) để UI giải thích chính xác vì sao doanh thu có hoặc không tăng.
+- Tổng quan tách riêng `don_da_giao_theo_ky` và `don_ghi_nhan_doanh_thu_theo_ky`. Đơn online/chuyển khoản đã trả tiền được ghi nhận doanh thu trước khi giao nên chuyển sang “Đã giao” không được cộng lần hai; Dashboard hiển thị đồng thời số đơn đã giao và số đơn ghi nhận doanh thu để đối soát.
+- Giao diện Đơn hàng chọn đúng giao dịch thanh toán để hiển thị/chốt, optimistic update theo `id` giao dịch thay vì luôn lấy phần tử đầu tiên. Nút chuyển trạng thái đổi nội dung theo nghiệp vụ: đơn đã thanh toán trước chỉ hiện **Xác nhận đã giao**, COD/chưa ghi nhận mới hiện **Xác nhận đã giao & ghi doanh thu**.
+- Thêm nút **Đối soát doanh thu** trong Quản trị đơn hàng và API `POST /api/v1/quan-tri/don-hang/doi-soat-doanh-thu`: quét tối đa 500 đơn đã giao còn giao dịch chờ thanh toán, chốt đúng giao dịch hợp lệ, ghi lịch sử đơn + audit tổng hợp và tải lại Dashboard. Dùng để sửa ngay dữ liệu đã phát sinh trước bản vá mà không cần mở từng đơn.
+- Không có migration database mới. Đồng bộ Root/API/Web/Health/OpenAPI lên **v3.3.2**.
 
 ---
 

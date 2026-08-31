@@ -26,13 +26,14 @@ async function khoi_dong() {
     allowedHeaders: ["Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With"]
   });
   await fastify.register(helmet, { global: true, contentSecurityPolicy: false });
-  await fastify.register(rateLimit, { max: 120, timeWindow: "1 minute" });
+  const api_rate_limit_max = Math.max(120, Number(process.env.API_RATE_LIMIT_MAX || 600) || 600);
+  await fastify.register(rateLimit, { max: api_rate_limit_max, timeWindow: "1 minute" });
 
   app.setGlobalPrefix("api/v1");
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
   app.enableShutdownHooks();
 
-  const cau_hinh_openapi = new DocumentBuilder().setTitle("NhienIn3d API").setDescription("API v3.3.0 cho cửa hàng sản phẩm in 3D NhienIn3d").setVersion("3.3.0").addCookieAuth("nhienin3d_phien").build();
+  const cau_hinh_openapi = new DocumentBuilder().setTitle("NhienIn3d API").setDescription("API v3.3.2 cho cửa hàng sản phẩm in 3D NhienIn3d").setVersion("3.3.2").addCookieAuth("nhienin3d_phien").build();
   const tai_lieu = SwaggerModule.createDocument(app, cau_hinh_openapi);
   SwaggerModule.setup("tai-lieu", app, tai_lieu);
 

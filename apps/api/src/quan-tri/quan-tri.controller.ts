@@ -73,6 +73,7 @@ export class QuanTriController {
   @Delete("phan-ca/:id") xoa_phan_ca(@Req() req: YeuCauCoNguoiDung, @Param("id") id: string) { return this.service.xoa_phan_ca(req.nguoi_dung_xac_thuc!, id); }
 
   @Get("don-hang") don_hang(@Query("trang_thai") trang_thai?: string, @Query("tim_kiem") tim_kiem?: string) { return this.service.danh_sach_don_hang(trang_thai, tim_kiem); }
+  @Post("don-hang/doi-soat-doanh-thu") doi_soat_doanh_thu_don_da_giao(@Req() req: YeuCauCoNguoiDung) { return this.service.doi_soat_doanh_thu_don_da_giao(req.nguoi_dung_xac_thuc!); }
   @Get("don-hang/:id") chi_tiet_don_hang(@Param("id") id: string) { return this.service.chi_tiet_don_hang(id); }
   @Post("don-hang/:id/trang-thai") cap_nhat_trang_thai_don_hang(@Req() req: YeuCauCoNguoiDung, @Param("id") id: string, @Body() dto: CapNhatTrangThaiDonHangDto) { return this.service.cap_nhat_trang_thai_don_hang(req.nguoi_dung_xac_thuc!, id, dto); }
 

@@ -21,9 +21,18 @@ function thoiGianDatLaiPhut() {
   return Number.isFinite(gia_tri) ? Math.min(60, Math.max(5, Math.floor(gia_tri))) : 15;
 }
 
+type KetQuaPhien = {
+  ma_truy_cap: string;
+  ma_lam_moi: string;
+  nguoi_dung: { id: string; thu_dien_tu: string; ho_ten: string; vai_tro: VaiTro };
+};
+
 @Injectable()
 export class XacThucService {
   private readonly logger = new Logger(XacThucService.name);
+  // v3.3.1: giu ket qua rotate refresh trong 30 giay de cac request F5/Header/Admin
+  // trung nhau nhan cung mot session moi thay vi request den sau bi 401.
+  private readonly lam_moi_dang_xu_ly = new Map<string, Promise<KetQuaPhien>>();
 
   constructor(
     private readonly db: CoSoDuLieuService,
@@ -39,21 +48,23 @@ export class XacThucService {
     return { id: nguoi_dung.id, thu_dien_tu: nguoi_dung.thu_dien_tu, ho_ten: nguoi_dung.ho_ten, vai_tro: nguoi_dung.vai_tro };
   }
 
-  private async taoPhien(nguoi_dung: { id: string; thu_dien_tu: string; ho_ten: string; vai_tro: VaiTro; phien_ban_mat_khau: number }, dia_chi_ip?: string, trinh_duyet?: string) {
+  private async taoMaTruyCap(nguoi_dung: { id: string; vai_tro: VaiTro; phien_ban_mat_khau: number }, phien_id: string) {
     const jwt_secret = process.env.JWT_SECRET;
     if (!jwt_secret || jwt_secret.length < 32) throw new Error("JWT_SECRET chưa an toàn");
+    return this.jwt.signAsync(
+      { sub: nguoi_dung.id, sid: phien_id, vai_tro: nguoi_dung.vai_tro, phien_ban_mat_khau: nguoi_dung.phien_ban_mat_khau },
+      { secret: jwt_secret, expiresIn: "15m", issuer: "NhienIn3d", audience: "NhienIn3d-Web" }
+    );
+  }
 
+  private async taoPhien(nguoi_dung: { id: string; thu_dien_tu: string; ho_ten: string; vai_tro: VaiTro; phien_ban_mat_khau: number }, dia_chi_ip?: string, trinh_duyet?: string): Promise<KetQuaPhien> {
     const ma_lam_moi = randomBytes(48).toString("base64url");
     const ma_lam_moi_bam = this.bamMaLamMoi(ma_lam_moi);
     const het_han_luc = new Date(Date.now() + THOI_GIAN_REFRESH_GIAY * 1000);
     const phien = await this.db.phienDangNhap.create({
       data: { nguoi_dung_id: nguoi_dung.id, ma_lam_moi_bam, dia_chi_ip, trinh_duyet, het_han_luc }
     });
-
-    const ma_truy_cap = await this.jwt.signAsync(
-      { sub: nguoi_dung.id, sid: phien.id, vai_tro: nguoi_dung.vai_tro, phien_ban_mat_khau: nguoi_dung.phien_ban_mat_khau },
-      { secret: jwt_secret, expiresIn: "15m", issuer: "NhienIn3d", audience: "NhienIn3d-Web" }
-    );
+    const ma_truy_cap = await this.taoMaTruyCap(nguoi_dung, phien.id);
     return { ma_truy_cap, ma_lam_moi, nguoi_dung: this.thongTinNguoiDung(nguoi_dung) };
   }
 
@@ -125,19 +136,38 @@ export class XacThucService {
     return this.taoPhien(da_cap_nhat, dia_chi_ip, trinh_duyet);
   }
 
-  async lam_moi(ma_lam_moi: string | undefined, dia_chi_ip?: string, trinh_duyet?: string) {
+  async lam_moi(ma_lam_moi: string | undefined, dia_chi_ip?: string, trinh_duyet?: string): Promise<KetQuaPhien> {
     if (!ma_lam_moi) throw new UnauthorizedException("Thiếu phiên làm mới");
     const ma_lam_moi_bam = this.bamMaLamMoi(ma_lam_moi);
-    const phien = await this.db.phienDangNhap.findUnique({ where: { ma_lam_moi_bam }, include: { nguoi_dung: true } });
-    if (!phien || phien.da_thu_hoi || phien.het_han_luc <= new Date() || !phien.nguoi_dung.da_kich_hoat) {
-      throw new UnauthorizedException("Phiên làm mới không hợp lệ hoặc đã hết hạn");
-    }
+    const da_co = this.lam_moi_dang_xu_ly.get(ma_lam_moi_bam);
+    if (da_co) return da_co;
 
-    await this.db.$transaction([
-      this.db.phienDangNhap.update({ where: { id: phien.id }, data: { da_thu_hoi: true } }),
-      this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "LAM_MOI_PHIEN", nguoi_dung_id: phien.nguoi_dung_id, dia_chi_ip } })
-    ]);
-    return this.taoPhien(phien.nguoi_dung, dia_chi_ip, phien.trinh_duyet || trinh_duyet);
+    const dang_xu_ly = (async () => {
+      const phien = await this.db.phienDangNhap.findUnique({ where: { ma_lam_moi_bam }, include: { nguoi_dung: true } });
+      if (!phien || phien.da_thu_hoi || phien.het_han_luc <= new Date() || !phien.nguoi_dung.da_kich_hoat) {
+        throw new UnauthorizedException("Phiên làm mới không hợp lệ hoặc đã hết hạn");
+      }
+
+      await this.db.$transaction([
+        this.db.phienDangNhap.update({ where: { id: phien.id }, data: { da_thu_hoi: true } }),
+        this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "LAM_MOI_PHIEN", nguoi_dung_id: phien.nguoi_dung_id, dia_chi_ip, chi_tiet: { phien_id_cu: phien.id, chong_trung_f5: true } } })
+      ]);
+      return this.taoPhien(phien.nguoi_dung, dia_chi_ip, trinh_duyet || phien.trinh_duyet || undefined);
+    })();
+
+    // Dat Promise vao map truoc khi await DB de request song song cung cho mot ket qua.
+    this.lam_moi_dang_xu_ly.set(ma_lam_moi_bam, dang_xu_ly);
+    try {
+      const ket_qua = await dang_xu_ly;
+      const timer = setTimeout(() => {
+        if (this.lam_moi_dang_xu_ly.get(ma_lam_moi_bam) === dang_xu_ly) this.lam_moi_dang_xu_ly.delete(ma_lam_moi_bam);
+      }, 30_000);
+      timer.unref();
+      return ket_qua;
+    } catch (error) {
+      if (this.lam_moi_dang_xu_ly.get(ma_lam_moi_bam) === dang_xu_ly) this.lam_moi_dang_xu_ly.delete(ma_lam_moi_bam);
+      throw error;
+    }
   }
 
   async dang_xuat(ma_lam_moi?: string, ma_truy_cap?: string, dia_chi_ip?: string) {

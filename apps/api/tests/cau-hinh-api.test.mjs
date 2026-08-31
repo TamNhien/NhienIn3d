@@ -64,11 +64,11 @@ test("seed v2.12.0 theo doi 24 bang va cho phep du lieu van hanh bi xoa", () => 
 });
 
 
-test("API hien thi dung version v3.3.0 o health va OpenAPI", () => {
+test("API hien thi dung version v3.3.2 o health va OpenAPI", () => {
   const health = readFileSync("src/suc-khoe/suc-khoe.controller.ts", "utf8");
   const main = readFileSync("src/main.ts", "utf8");
-  assert.match(health, /phien_ban: "v3\.3\.0"/);
-  assert.match(main, /setVersion\("3\.3\.0"\)/);
+  assert.match(health, /phien_ban: "v3\.3\.2"/);
+  assert.match(main, /setVersion\("3\.3\.2"\)/);
 });
 
 test("V2 co migration gio hang, thanh toan va dia chi", () => {
@@ -274,7 +274,7 @@ test("v2.8.5 ho so sua email va logout thu hoi session access", () => {
   assert.match(dto, /thu_dien_tu/);
   assert.match(dto, /IsEmail/);
   assert.match(account, /Email này đã được sử dụng/u);
-  assert.match(auth, /sid: phien\.id/);
+  assert.match(auth, /sid: phien(?:\.id|_id)/);
   assert.match(auth, /ignoreExpiration: true/);
   assert.match(guard, /phienDangNhap\.findFirst/);
   assert.match(controller, /Đã đăng xuất hoàn toàn/u);

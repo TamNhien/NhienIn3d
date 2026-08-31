@@ -115,6 +115,8 @@ apps/api/tests/v300-mfa-security.test.mjs
 apps/api/tests/v320-operations.test.mjs
 apps/api/tests/v321-order-delivered-typecheck.test.mjs
 apps/api/tests/v330-audit-ops.test.mjs
+apps/api/tests/v331-session-revenue.test.mjs
+apps/api/tests/v332-revenue-delivery-reconcile.test.mjs
 apps/api/tsconfig.build.json
 apps/api/tsconfig.json
 apps/web/.dockerignore
@@ -169,6 +171,8 @@ apps/web/tests/v321-order-delivered.test.mjs
 apps/web/tests/v322-order-update-ux.test.mjs
 apps/web/tests/v323-order-payment-type.test.mjs
 apps/web/tests/v330-audit-ops.test.mjs
+apps/web/tests/v331-session-revenue.test.mjs
+apps/web/tests/v332-revenue-delivery-reconcile.test.mjs
 apps/web/tsconfig.json
 docker-compose.https.yml
 docker-compose.yml
@@ -197,3 +201,5 @@ tests/v321-order-delivered-typecheck.test.mjs
 tests/v322-order-update-ux.test.mjs
 tests/v323-order-payment-type.test.mjs
 tests/v330-audit-ops.test.mjs
+tests/v331-session-revenue.test.mjs
+tests/v332-revenue-delivery-reconcile.test.mjs

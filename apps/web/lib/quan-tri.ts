@@ -30,11 +30,13 @@ export type AdminDonHang = {
   id: string; ma_don_hang: string; ho_ten_nguoi_nhan: string; so_dien_thoai: string; tong_tien: number; trang_thai: string; ngay_tao: string; ngay_cap_nhat: string;
   khach_hang?: { id: string; thu_dien_tu: string; ho_ten: string } | null; so_mat_hang: number; tong_so_luong: number; thanh_toan?: AdminThanhToanTomTat | null;
 };
+export type KetQuaDoiSoatDoanhThuDonDaGiao = { so_don_quet: number; so_don_cap_nhat: number; tong_doanh_thu_bo_sung: number; don_hang: Array<{ ma_don_hang: string; so_tien: number; phuong_thuc: string }> };
 export type AdminDonHangChiTiet = Omit<AdminDonHang, "thanh_toan"> & {
   dia_chi_giao_hang: string; ghi_chu?: string | null;
   chi_tiet: Array<{ id: string; ten_san_pham: string; ma_san_pham: string; so_luong: number; don_gia: number; thanh_tien: number; tuy_chon: Record<string, unknown> }>;
   thanh_toan: AdminThanhToanChiTiet[];
   lich_su: Array<{ id: string; trang_thai_cu?: string | null; trang_thai_moi: string; ghi_chu?: string | null; ngay_tao: string; nguoi_thuc_hien?: { ho_ten: string; thu_dien_tu: string; vai_tro: string } | null }>;
+  cap_nhat_doanh_thu?: { da_ghi_nhan_moi: boolean; da_co_tu_truoc: boolean; so_tien: number; ngay_ghi_nhan?: string | null; nguon?: "CHOT_KHI_GIAO" | "DA_THANH_TOAN_TRUOC" | "LEGACY_KHONG_GIAO_DICH" | "KHONG_PHAT_SINH" | string };
 };
 export type AdminBienThe = { id: string; ma_bien_the: string; so_luong_ton: number; ton_toi_thieu: number; ton_toi_da: number; dang_hien_thi: boolean; gia_chenh_lech: number | string; vat_lieu?: { id: string; ten_vat_lieu: string } | null; mau_sac?: { id: string; ten_mau: string; ma_hex: string } | null };
 export type AdminDanhMuc = { id: string; ma_danh_muc: string; ten_danh_muc: string; duong_dan: string; mo_ta?: string | null; thu_tu: number; dang_hien_thi: boolean; so_san_pham: number };
@@ -79,6 +81,7 @@ export type AdminTongQuan = {
   doanh_thu: { hom_nay: number; bay_ngay: number; ba_muoi_ngay: number; gia_tri_don_trung_binh_30_ngay: number };
   don_hang_theo_ky: { hom_nay: number; bay_ngay: number; ba_muoi_ngay: number };
   don_ghi_nhan_doanh_thu_theo_ky: { hom_nay: number; bay_ngay: number; ba_muoi_ngay: number };
+  don_da_giao_theo_ky: { hom_nay: number; bay_ngay: number; ba_muoi_ngay: number };
   khach_hang_moi: { hom_nay: number; bay_ngay: number; ba_muoi_ngay: number };
   trang_thai_don_hang: Record<string, number>;
   doanh_thu_theo_ngay: Array<{ ngay: string; doanh_thu: number; so_don: number }>;
@@ -119,6 +122,7 @@ export const layDonHangAdmin = (trang_thai = "", tim_kiem = "") => {
 };
 export const layChiTietDonHangAdmin = (id: string) => goi<AdminDonHangChiTiet>(`/quan-tri/don-hang/${id}`);
 export const capNhatTrangThaiDonHangAdmin = (id: string, payload: { trang_thai: string; ghi_chu?: string }) => goi<AdminDonHangChiTiet>(`/quan-tri/don-hang/${id}/trang-thai`, { method: "POST", body: JSON.stringify(payload) });
+export const doiSoatDoanhThuDonDaGiaoAdmin = () => goi<KetQuaDoiSoatDoanhThuDonDaGiao>("/quan-tri/don-hang/doi-soat-doanh-thu", { method: "POST" });
 export const layDanhMucAdmin = () => goi<AdminDanhMuc[]>("/quan-tri/danh-muc");
 export const laySanPhamAdmin = () => goi<AdminSanPham[]>("/quan-tri/san-pham");
 export const taoSanPhamAdmin = (payload: { ma_san_pham: string; ten_san_pham: string; danh_muc_id: string; mo_ta_ngan?: string; gia_ban: number; kich_thuoc?: string; khoi_luong_gam?: number; thoi_gian_in_gio?: number; trang_thai?: string; so_luong_ton: number; anh_chinh_data_url: string }) => goi<AdminSanPham>("/quan-tri/san-pham", { method: "POST", body: JSON.stringify(payload) });

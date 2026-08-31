@@ -17,7 +17,18 @@ export type TaiKhoan = {
   nhan_vien?: { id: string; ma_nhan_vien: string; chuc_danh: string; bo_phan: string; trang_thai: string } | null;
 };
 
+// v3.3.1: single-flight auth requests. Header and admin page mount together on F5;
+// without deduplication both could rotate the same refresh token concurrently.
+let phien_dang_lam_moi: Promise<TaiKhoan | null> | null = null;
+let tai_khoan_dang_tai: Promise<TaiKhoan | null> | null = null;
+
 async function docLoi(res: Response) {
+  if (res.status === 429) {
+    const retry_after = Number(res.headers.get("retry-after") || 0);
+    return retry_after > 0
+      ? `Hệ thống đang nhận nhiều yêu cầu. Vui lòng thử lại sau ${retry_after} giây.`
+      : "Hệ thống đang nhận nhiều yêu cầu. Vui lòng thử lại sau ít giây.";
+  }
   try {
     const data = await res.json();
     const message = Array.isArray(data?.message) ? data.message.join(" · ") : data?.message;
@@ -59,23 +70,36 @@ export async function dangNhap(payload: { thu_dien_tu: string; mat_khau: string 
   return data.nguoi_dung;
 }
 
-export async function lamMoiPhien() {
-  const res = await goi("/xac-thuc/lam-moi", { method: "POST" });
-  if (!res.ok) return null;
-  const data = await res.json() as { nguoi_dung: TaiKhoan };
-  return data.nguoi_dung;
+export async function lamMoiPhien(): Promise<TaiKhoan | null> {
+  if (phien_dang_lam_moi) return phien_dang_lam_moi;
+  phien_dang_lam_moi = (async () => {
+    const res = await goi("/xac-thuc/lam-moi", { method: "POST" });
+    if (res.status === 401 || res.status === 403) return null;
+    if (!res.ok) throw new Error(await docLoi(res));
+    const data = await res.json() as { nguoi_dung: TaiKhoan };
+    return data.nguoi_dung;
+  })();
+  try { return await phien_dang_lam_moi; }
+  finally { phien_dang_lam_moi = null; }
 }
 
 export async function layTaiKhoan(): Promise<TaiKhoan | null> {
   if (typeof window !== "undefined" && localStorage.getItem(KHOA_DA_DANG_XUAT) === "1") return null;
-  let res = await goi("/xac-thuc/toi");
-  if (res.status === 401) {
-    const da_lam_moi = await lamMoiPhien();
-    if (!da_lam_moi) return null;
-    res = await goi("/xac-thuc/toi");
-  }
-  if (!res.ok) return null;
-  return res.json() as Promise<TaiKhoan>;
+  if (tai_khoan_dang_tai) return tai_khoan_dang_tai;
+  tai_khoan_dang_tai = (async () => {
+    let res = await goi("/xac-thuc/toi");
+    if (res.status === 401) {
+      const da_lam_moi = await lamMoiPhien();
+      if (!da_lam_moi) return null;
+      res = await goi("/xac-thuc/toi");
+    }
+    if (res.status === 401 || res.status === 403) return null;
+    // 429/5xx are transient system errors, not a logout signal.
+    if (!res.ok) throw new Error(await docLoi(res));
+    return res.json() as Promise<TaiKhoan>;
+  })();
+  try { return await tai_khoan_dang_tai; }
+  finally { tai_khoan_dang_tai = null; }
 }
 
 export async function dangXuat() {

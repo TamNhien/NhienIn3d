@@ -31,6 +31,7 @@ import {
   capNhatNhanVien,
   capNhatPhanCa,
   capNhatTrangThaiDonHangAdmin,
+  doiSoatDoanhThuDonDaGiaoAdmin,
   capNhatSanPhamAdmin,
   kichHoatNguoiDung,
   khoaNguoiDung,
@@ -132,8 +133,54 @@ const nhanTrangThaiDon = (trang_thai: string) => ({
 const TRANG_THAI_DON = ["CHO_XAC_NHAN", "DA_XAC_NHAN", "DANG_SAN_XUAT", "DANG_GIAO", "HOAN_TAT", "DA_HUY"] as const;
 const nhanTrangThaiThanhToan = (trang_thai: string) => ({ CHO_THANH_TOAN: "Chờ thanh toán", DA_THANH_TOAN: "Đã thanh toán", THAT_BAI: "Thất bại", DA_HOAN_TIEN: "Đã hoàn tiền" }[trang_thai] || trang_thai);
 const TRANG_THAI_TIEP_THEO: Record<string, string[]> = { CHO_XAC_NHAN: ["DA_XAC_NHAN", "DA_HUY", "HOAN_TAT"], DA_XAC_NHAN: ["DANG_SAN_XUAT", "DA_HUY", "HOAN_TAT"], DANG_SAN_XUAT: ["DANG_GIAO", "DA_HUY", "HOAN_TAT"], DANG_GIAO: ["HOAN_TAT"], HOAN_TAT: [], DA_HUY: ["HOAN_TAT"] };
-const canGhiNhanDoanhThuDonDaGiao = (don: AdminDonHangChiTiet | null) => Boolean(don && don.trang_thai === "HOAN_TAT" && don.thanh_toan[0]?.trang_thai === "CHO_THANH_TOAN");
-const daGhiNhanDoanhThu = (don: AdminDonHangChiTiet | null) => Boolean(don && don.trang_thai !== "DA_HUY" && (don.thanh_toan[0]?.trang_thai === "DA_THANH_TOAN" || (!don.thanh_toan[0] && don.trang_thai === "HOAN_TAT")));
+const thanhToanDaGhiNhan = (don: AdminDonHangChiTiet | null) => don?.thanh_toan.find(tt => tt.trang_thai === "DA_THANH_TOAN") || null;
+const thanhToanChoGhiNhan = (don: AdminDonHangChiTiet | null) => don?.thanh_toan.find(tt => tt.trang_thai === "CHO_THANH_TOAN" && tt.phuong_thuc.ma_phuong_thuc === "COD") || don?.thanh_toan.find(tt => tt.trang_thai === "CHO_THANH_TOAN") || null;
+const thanhToanHienThi = (don: AdminDonHangChiTiet | null) => thanhToanDaGhiNhan(don) || thanhToanChoGhiNhan(don) || don?.thanh_toan[0] || null;
+const canGhiNhanDoanhThuDonDaGiao = (don: AdminDonHangChiTiet | null) => Boolean(don && don.trang_thai === "HOAN_TAT" && !thanhToanDaGhiNhan(don) && thanhToanChoGhiNhan(don));
+const daGhiNhanDoanhThu = (don: AdminDonHangChiTiet | null) => Boolean(don && don.trang_thai !== "DA_HUY" && (thanhToanDaGhiNhan(don) || (don.thanh_toan.length === 0 && don.trang_thai === "HOAN_TAT")));
+const ngayVietNamClient = (gia_tri: string | Date) => new Date(new Date(gia_tri).getTime() + 7 * 60 * 60 * 1000).toISOString().slice(0, 10);
+const capNhatTongQuanSauDon = (tong_quan: AdminTongQuan, trang_thai_cu: string, trang_thai_moi: string, doanh_thu?: AdminDonHangChiTiet["cap_nhat_doanh_thu"]) => {
+  let ket_qua = tong_quan;
+  if (trang_thai_cu !== trang_thai_moi) {
+    const trang_thai = { ...ket_qua.trang_thai_don_hang };
+    trang_thai[trang_thai_cu] = Math.max(0, Number(trang_thai[trang_thai_cu] || 0) - 1);
+    trang_thai[trang_thai_moi] = Number(trang_thai[trang_thai_moi] || 0) + 1;
+    const tang_da_giao = trang_thai_moi === "HOAN_TAT" && trang_thai_cu !== "HOAN_TAT";
+    ket_qua = {
+      ...ket_qua,
+      trang_thai_don_hang: trang_thai,
+      don_da_giao_theo_ky: tang_da_giao ? {
+        hom_nay: ket_qua.don_da_giao_theo_ky.hom_nay + 1,
+        bay_ngay: ket_qua.don_da_giao_theo_ky.bay_ngay + 1,
+        ba_muoi_ngay: ket_qua.don_da_giao_theo_ky.ba_muoi_ngay + 1
+      } : ket_qua.don_da_giao_theo_ky
+    };
+  }
+  if (!doanh_thu?.da_ghi_nhan_moi || doanh_thu.so_tien <= 0) return ket_qua;
+  const ngay = ngayVietNamClient(doanh_thu.ngay_ghi_nhan || new Date());
+  const trong_30 = ngay >= ket_qua.ky_bao_cao.tu_30_ngay && ngay <= ket_qua.ky_bao_cao.hom_nay;
+  if (!trong_30) return ket_qua;
+  const trong_7 = ngay >= ket_qua.ky_bao_cao.tu_7_ngay && ngay <= ket_qua.ky_bao_cao.hom_nay;
+  const la_hom_nay = ngay === ket_qua.ky_bao_cao.hom_nay;
+  const so_don_30 = ket_qua.don_ghi_nhan_doanh_thu_theo_ky.ba_muoi_ngay + 1;
+  const doanh_thu_30 = ket_qua.doanh_thu.ba_muoi_ngay + doanh_thu.so_tien;
+  return {
+    ...ket_qua,
+    doanh_thu: {
+      ...ket_qua.doanh_thu,
+      hom_nay: ket_qua.doanh_thu.hom_nay + (la_hom_nay ? doanh_thu.so_tien : 0),
+      bay_ngay: ket_qua.doanh_thu.bay_ngay + (trong_7 ? doanh_thu.so_tien : 0),
+      ba_muoi_ngay: doanh_thu_30,
+      gia_tri_don_trung_binh_30_ngay: so_don_30 ? Math.round(doanh_thu_30 / so_don_30) : 0
+    },
+    don_ghi_nhan_doanh_thu_theo_ky: {
+      hom_nay: ket_qua.don_ghi_nhan_doanh_thu_theo_ky.hom_nay + (la_hom_nay ? 1 : 0),
+      bay_ngay: ket_qua.don_ghi_nhan_doanh_thu_theo_ky.bay_ngay + (trong_7 ? 1 : 0),
+      ba_muoi_ngay: so_don_30
+    },
+    doanh_thu_theo_ngay: ket_qua.doanh_thu_theo_ngay.map(item => item.ngay === ngay ? { ...item, doanh_thu: item.doanh_thu + doanh_thu.so_tien, so_don: item.so_don + 1 } : item)
+  };
+};
 const nhanSuKienAudit = (loai: string) => ({
   ADMIN_CAP_NHAT_NGUOI_DUNG: "Cập nhật khách hàng", ADMIN_KICH_HOAT_NGUOI_DUNG: "Kích hoạt tài khoản", ADMIN_KHOA_NGUOI_DUNG: "Khóa tài khoản", ADMIN_XOA_NGUOI_DUNG: "Xóa tài khoản",
   ADMIN_TAO_NHAN_VIEN: "Tạo nhân viên", ADMIN_CAP_NHAT_NHAN_VIEN: "Cập nhật nhân viên", ADMIN_TAO_CA_LAM: "Tạo ca", ADMIN_CAP_NHAT_CA_LAM: "Cập nhật ca", ADMIN_XOA_CA_LAM: "Xóa ca",
@@ -184,6 +231,7 @@ type TabQuanTri = "tong-quan" | "don-hang" | "san-pham" | "kho" | "nha-cung-cap"
 
 export default function QuanTriPage() {
   const [tai_khoan, setTaiKhoan] = useState<TaiKhoan | null | undefined>(undefined);
+  const [loi_xac_thuc, setLoiXacThuc] = useState("");
   const [tong_quan, setTongQuan] = useState<AdminTongQuan | null>(null);
   const [nguoi_dung, setNguoiDung] = useState<AdminNguoiDung[]>([]);
   const [nhan_vien, setNhanVien] = useState<AdminNhanVien[]>([]);
@@ -261,7 +309,14 @@ export default function QuanTriPage() {
   const [pc_dang_sua_id, setPcDangSuaId] = useState<string | null>(null);
 
   const taiDuLieu = useCallback(async () => {
-    const tk = await layTaiKhoan();
+    let tk: TaiKhoan | null;
+    try {
+      tk = await layTaiKhoan();
+      setLoiXacThuc("");
+    } catch (e) {
+      setLoiXacThuc(e instanceof Error ? e.message : "Không thể xác minh phiên đăng nhập lúc này");
+      throw e;
+    }
     setTaiKhoan(tk);
     if (!tk || tk.vai_tro !== "ADMIN") return;
     const [tq, nd, nvData, caData, pcData, donData, spData, dmData, vlData, msData, chKhoData, lsKhoData, phieuNhapData, nccData, emailKhoData, dgData, nkPage, heThongData, vanHanhPage, thongKeVanHanh] = await Promise.all([layTongQuan(), layNguoiDung(), layNhanVien(), layCaLam(), layPhanCa(), layDonHangAdmin(), laySanPhamAdmin(), layDanhMucAdmin(), layVatLieuAdmin(), layMauSacAdmin(), layCauHinhKhoAdmin(), layLichSuKhoAdmin(), layPhieuNhapKhoAdmin(), layNhaCungCapAdmin(), layTrangThaiCanhBaoKhoEmailAdmin(), layDanhGiaAdmin(), layNhatKyPhanTrangAdmin({ trang: 1, kich_thuoc: 25 }), laySucKhoeHeThongAdmin(), layLichSuVanHanhAdmin({ trang: 1, kich_thuoc: 20 }), layThongKeVanHanhAdmin()]);
@@ -292,7 +347,19 @@ export default function QuanTriPage() {
     setPc(x => ({ ...x, nhan_vien_id: x.nhan_vien_id || nvData[0]?.id || "", ca_lam_viec_id: x.ca_lam_viec_id || caData[0]?.id || "" }));
   }, []);
 
-  useEffect(() => { taiDuLieu().catch(e => setThongBao(e instanceof Error ? e.message : "Không thể tải dữ liệu quản trị")); }, [taiDuLieu]);
+  useEffect(() => {
+    let da_huy = false;
+    let timer: number | undefined;
+    const chay = async (lan = 0) => {
+      try { await taiDuLieu(); }
+      catch (e) {
+        if (!da_huy) setThongBao(e instanceof Error ? e.message : "Không thể tải dữ liệu quản trị");
+        if (!da_huy && lan < 2) timer = window.setTimeout(() => { void chay(lan + 1); }, 1200 * (lan + 1));
+      }
+    };
+    void chay();
+    return () => { da_huy = true; if (timer !== undefined) window.clearTimeout(timer); };
+  }, [taiDuLieu]);
 
   function suaKhachHangLocal(id: string, patch: Partial<AdminNguoiDung>) {
     setNguoiDung(ds => ds.map(x => x.id === id ? { ...x, ...patch } : x));
@@ -544,6 +611,29 @@ export default function QuanTriPage() {
     finally { setDangXuLy(null); }
   }
 
+  async function doiSoatDoanhThuDaGiao() {
+    if (!window.confirm("Đối soát tất cả đơn đã giao nhưng còn giao dịch chờ thanh toán? Hệ thống sẽ chốt đúng một giao dịch hợp lệ cho mỗi đơn và cập nhật doanh thu.")) return;
+    setDangXuLy("doi-soat-doanh-thu");
+    setThongBao("Đang đối soát doanh thu các đơn đã giao...");
+    try {
+      const kq = await doiSoatDoanhThuDonDaGiaoAdmin();
+      setThongBao(kq.so_don_cap_nhat > 0
+        ? `Đã đối soát ${kq.so_don_cap_nhat} đơn, bổ sung ${dinhDangTien(kq.tong_doanh_thu_bo_sung)} doanh thu.`
+        : "Đối soát hoàn tất: không còn đơn đã giao nào có giao dịch chờ thanh toán cần chốt.");
+      const [tq, ds] = await Promise.all([layTongQuan(), layDonHangAdmin(don_loc_trang_thai, don_tim_kiem)]);
+      setTongQuan(tq);
+      setDonHang(ds);
+      if (don_chon) {
+        const ct = await layChiTietDonHangAdmin(don_chon.id).catch(() => null);
+        if (ct) setDonChon(ct);
+      }
+    } catch (e) {
+      setThongBao(e instanceof Error ? e.message : "Không thể đối soát doanh thu đơn đã giao");
+    } finally {
+      setDangXuLy(null);
+    }
+  }
+
   async function moChiTietDon(id: string) {
     setDangXuLy(`don-xem-${id}`);
     setThongBao("");
@@ -562,7 +652,8 @@ export default function QuanTriPage() {
     const id = don_truoc.id;
     const trang_thai_moi = don_trang_thai_moi;
     const ghi_chu = don_ghi_chu.trim() || undefined;
-    const chot_thanh_toan_tam = trang_thai_moi === "HOAN_TAT" && don_truoc.thanh_toan[0]?.trang_thai === "CHO_THANH_TOAN";
+    const thanh_toan_can_chot_tam = trang_thai_moi === "HOAN_TAT" && !thanhToanDaGhiNhan(don_truoc) ? thanhToanChoGhiNhan(don_truoc) : null;
+    const chot_thanh_toan_tam = Boolean(thanh_toan_can_chot_tam);
     const thoi_diem_tam = new Date().toISOString();
 
     setDangXuLy(`don-${id}`);
@@ -573,7 +664,7 @@ export default function QuanTriPage() {
       ...don_truoc,
       trang_thai: trang_thai_moi,
       thanh_toan: chot_thanh_toan_tam
-        ? don_truoc.thanh_toan.map((tt, index) => index === 0 ? { ...tt, trang_thai: "DA_THANH_TOAN", ngay_thanh_toan: thoi_diem_tam } : tt)
+        ? don_truoc.thanh_toan.map(tt => tt.id === thanh_toan_can_chot_tam?.id ? { ...tt, trang_thai: "DA_THANH_TOAN", ngay_thanh_toan: thoi_diem_tam } : tt)
         : don_truoc.thanh_toan
     });
     setDonHang(ds => ds.map(item => item.id === id ? {
@@ -587,18 +678,32 @@ export default function QuanTriPage() {
       setDonChon(hien_tai => hien_tai?.id === id ? da_luu : hien_tai);
       setDonTrangThaiMoi(da_luu.trang_thai);
       setDonGhiChu("");
-      setDonHang(ds => ds.map(item => item.id === id ? { ...item, trang_thai: da_luu.trang_thai, ngay_cap_nhat: da_luu.ngay_cap_nhat, thanh_toan: da_luu.thanh_toan[0] ? { trang_thai: da_luu.thanh_toan[0].trang_thai, ma_giao_dich: da_luu.thanh_toan[0].ma_giao_dich } : item.thanh_toan } : item));
-      setThongBao(`\u0110\u00e3 c\u1eadp nh\u1eadt ${da_luu.ma_don_hang} \u2192 ${nhanTrangThaiDon(da_luu.trang_thai)}.`);
+      const thanh_toan_hien_thi = da_luu.thanh_toan.find(tt => tt.trang_thai === "DA_THANH_TOAN") || da_luu.thanh_toan[0] || null;
+      setDonHang(ds => ds.map(item => item.id === id ? { ...item, trang_thai: da_luu.trang_thai, ngay_cap_nhat: da_luu.ngay_cap_nhat, thanh_toan: thanh_toan_hien_thi ? { trang_thai: thanh_toan_hien_thi.trang_thai, ma_giao_dich: thanh_toan_hien_thi.ma_giao_dich } : item.thanh_toan } : item));
 
-      // Khong giu nut o trang thai "Dang luu" trong luc refresh dashboard/audit phia sau.
+      // v3.3.1: dashboard phan hoi ngay sau khi server xac nhan doanh thu moi.
+      // Sau do van doc lai /tong-quan de PostgreSQL la nguon su that cuoi cung.
+      setTongQuan(tq => tq ? capNhatTongQuanSauDon(tq, don_truoc.trang_thai, da_luu.trang_thai, da_luu.cap_nhat_doanh_thu) : tq);
+      if (da_luu.cap_nhat_doanh_thu?.da_ghi_nhan_moi) {
+        setThongBao(`Đã giao ${da_luu.ma_don_hang}. Doanh thu +${dinhDangTien(da_luu.cap_nhat_doanh_thu.so_tien)} đã được ghi nhận.`);
+      } else if (da_luu.trang_thai === "HOAN_TAT" && da_luu.cap_nhat_doanh_thu?.da_co_tu_truoc) {
+        setThongBao(`Đã giao ${da_luu.ma_don_hang}. Đơn đã thanh toán trước đó nên doanh thu đã có trong Tổng quan, không cộng lần hai.`);
+      } else {
+        setThongBao(`Đã cập nhật ${da_luu.ma_don_hang} → ${nhanTrangThaiDon(da_luu.trang_thai)}.`);
+      }
+
+      const dongBoTongQuan = () => layTongQuan().then(setTongQuan).catch(() => undefined);
+      void dongBoTongQuan().then(() => undefined);
+      // Neu request dong bo trung luc API dang ban/bi gioi han tam thoi, thu lai mot lan.
+      window.setTimeout(() => { void dongBoTongQuan(); }, 900);
+
+      // Khong giu nut o trang thai "Dang luu" trong luc refresh danh sach/audit phia sau.
       void Promise.allSettled([
         layDonHangAdmin(don_loc_trang_thai, don_tim_kiem),
-        layTongQuan(),
         laySanPhamAdmin(),
         layNhatKyAdmin()
-      ]).then(([ds_kq, tq_kq, sp_kq, nk_kq]) => {
+      ]).then(([ds_kq, sp_kq, nk_kq]) => {
         if (ds_kq.status === "fulfilled") setDonHang(ds_kq.value);
-        if (tq_kq.status === "fulfilled") setTongQuan(tq_kq.value);
         if (sp_kq.status === "fulfilled") setSanPhamQt(sp_kq.value);
         if (nk_kq.status === "fulfilled") setNhatKy(nk_kq.value);
       });
@@ -1104,8 +1209,11 @@ export default function QuanTriPage() {
   }, [phanCaTrongKhoang]);
 
   const maxDoanhThu7Ngay = useMemo(() => Math.max(1, ...(tong_quan?.doanh_thu_theo_ngay.map(x => x.doanh_thu) || [1])), [tong_quan]);
+  const giaoDichDonChon = thanhToanHienThi(don_chon);
+  const donChonDaThuTienTruoc = Boolean(don_chon && thanhToanDaGhiNhan(don_chon));
+  const donChonSeGhiNhanKhiGiao = Boolean(don_chon && !donChonDaThuTienTruoc && (thanhToanChoGhiNhan(don_chon) || don_chon.thanh_toan.length === 0));
 
-  if (tai_khoan === undefined) return <main className="auth-shell"><div className="auth-card"><p>Đang xác minh quyền Admin...</p></div></main>;
+  if (tai_khoan === undefined) return <main className="auth-shell"><div className="auth-card"><p>{loi_xac_thuc ? `Kết nối tạm thời gián đoạn: ${loi_xac_thuc}. Phiên đăng nhập vẫn được giữ, hệ thống sẽ tự thử lại.` : "Đang xác minh quyền Admin..."}</p>{loi_xac_thuc && <button type="button" className="primary" onClick={() => { setLoiXacThuc(""); void taiDuLieu().catch(e => setLoiXacThuc(e instanceof Error ? e.message : "Không thể xác minh phiên")); }}>Thử lại</button>}</div></main>;
   if (!tai_khoan) return <main className="auth-shell"><section className="auth-card"><h1>Cần đăng nhập</h1><Link className="primary auth-primary-link" href="/dang-nhap?chuyen_den=/quan-tri">Đăng nhập</Link></section></main>;
   if (tai_khoan.vai_tro !== "ADMIN") return <main className="auth-shell"><section className="auth-card"><h1>Không có quyền truy cập</h1><p>Khu vực này chỉ dành cho Admin.</p><Link className="primary auth-primary-link" href="/tai-khoan">Về tài khoản</Link></section></main>;
 
@@ -1144,12 +1252,13 @@ export default function QuanTriPage() {
       {!tong_quan ? <div className="cine-card cine-admin-section">Đang tải thống kê quản trị…</div> : <>
         {tong_quan.canh_bao_kho.tong_canh_bao > 0 && <div className="cine-card cine-stock-alert-v217" role="alert"><div><b>⚠️ Cảnh báo tồn kho</b><span>{tong_quan.canh_bao_kho.sap_het} biến thể sắp hết (≤ {tong_quan.canh_bao_kho.nguong_sap_het}) · {tong_quan.canh_bao_kho.het_hang} biến thể hết hàng.</span></div><button type="button" className="cine-btn cine-btn-primary" onClick={()=>setTab("kho")}>Mở kho xử lý</button></div>}
         <div className="cine-dashboard-period-cards">
-          <article className="cine-card cine-dashboard-kpi"><span>Doanh thu hôm nay</span><strong>{dinhDangTien(tong_quan.doanh_thu.hom_nay)}</strong><small>{tong_quan.don_ghi_nhan_doanh_thu_theo_ky.hom_nay} đơn ghi nhận doanh thu · {tong_quan.don_hang_theo_ky.hom_nay} đơn mới phát sinh</small></article>
+          <article className="cine-card cine-dashboard-kpi"><span>Doanh thu hôm nay</span><strong>{dinhDangTien(tong_quan.doanh_thu.hom_nay)}</strong><small>{tong_quan.don_ghi_nhan_doanh_thu_theo_ky.hom_nay} đơn ghi nhận doanh thu · {tong_quan.don_da_giao_theo_ky.hom_nay} đơn đã giao · {tong_quan.don_hang_theo_ky.hom_nay} đơn mới phát sinh</small></article>
           <article className="cine-card cine-dashboard-kpi"><span>Doanh thu 7 ngày</span><strong>{dinhDangTien(tong_quan.doanh_thu.bay_ngay)}</strong><small>{tong_quan.don_ghi_nhan_doanh_thu_theo_ky.bay_ngay} đơn ghi nhận doanh thu · {tong_quan.don_hang_theo_ky.bay_ngay} đơn mới</small></article>
           <article className="cine-card cine-dashboard-kpi"><span>Doanh thu 30 ngày</span><strong>{dinhDangTien(tong_quan.doanh_thu.ba_muoi_ngay)}</strong><small>{tong_quan.don_ghi_nhan_doanh_thu_theo_ky.ba_muoi_ngay} đơn ghi nhận doanh thu · trung bình {dinhDangTien(tong_quan.doanh_thu.gia_tri_don_trung_binh_30_ngay)}/đơn</small></article>
           <article className="cine-card cine-dashboard-kpi"><span>Khách hàng mới</span><strong>{tong_quan.khach_hang_moi.ba_muoi_ngay}</strong><small>Hôm nay {tong_quan.khach_hang_moi.hom_nay} · 7 ngày {tong_quan.khach_hang_moi.bay_ngay}</small></article>
         </div>
 
+        <div className="cine-card cine-revenue-explain-v332"><b>Đối soát giao hàng & doanh thu</b><span>Doanh thu tính một lần theo thời điểm thu tiền. Đơn online/chuyển khoản đã thanh toán được tính trước khi giao; vì vậy số đơn vừa chuyển “Đã giao” có thể lớn hơn số đơn vừa làm doanh thu tăng. COD chỉ tăng doanh thu khi Admin xác nhận giao và hệ thống chốt giao dịch chờ thanh toán.</span></div>
         <div className="cine-dashboard-grid">
           <article className="cine-card cine-dashboard-panel cine-dashboard-revenue">
             <div className="cine-dashboard-panel-head"><div><h2>Doanh thu 7 ngày</h2><p>Số đơn và doanh thu đều theo thời điểm thanh toán/ghi nhận, múi giờ Việt Nam.</p></div><strong>{dinhDangTien(tong_quan.doanh_thu.bay_ngay)}</strong></div>
@@ -1192,7 +1301,7 @@ export default function QuanTriPage() {
     </section>}
 
     {tab === "don-hang" && <section className="cine-admin-operations cine-commerce-admin-v212">
-      <div className="cine-operations-heading"><div><h2>Quản trị đơn hàng</h2><p>Tìm kiếm, xem chi tiết, cập nhật trạng thái và theo dõi lịch sử xử lý.</p></div><span className="cine-admin-count">{don_hang.length} đơn</span></div>
+      <div className="cine-operations-heading"><div><h2>Quản trị đơn hàng</h2><p>Tìm kiếm, xem chi tiết, cập nhật trạng thái và theo dõi lịch sử xử lý.</p></div><div className="cine-order-heading-actions-v332"><span className="cine-admin-count">{don_hang.length} đơn</span><button type="button" className="cine-btn cine-btn-secondary" onClick={doiSoatDoanhThuDaGiao} disabled={dang_xu_ly === "doi-soat-doanh-thu"}>{dang_xu_ly === "doi-soat-doanh-thu" ? "Đang đối soát…" : "Đối soát doanh thu"}</button></div></div>
       <div className="cine-card cine-admin-filterbar-v212">
         <label><span>Tìm đơn hàng</span><input value={don_tim_kiem} onChange={e => setDonTimKiem(e.target.value)} placeholder="Mã đơn, người nhận, SĐT, email..."/></label>
         <label><span>Trạng thái</span><select value={don_loc_trang_thai} onChange={e => setDonLocTrangThai(e.target.value)}><option value="">Tất cả trạng thái</option>{TRANG_THAI_DON.map(x => <option key={x} value={x}>{nhanTrangThaiDon(x)}</option>)}</select></label>
@@ -1212,8 +1321,8 @@ export default function QuanTriPage() {
             <div className="cine-order-detail-head-v212"><div><span>Mã đơn</span><h3>{don_chon.ma_don_hang}</h3><small>{new Date(don_chon.ngay_tao).toLocaleString("vi-VN")}</small></div><strong>{dinhDangTien(don_chon.tong_tien)}</strong></div>
             <div className="cine-order-recipient-v212"><div><span>Người nhận</span><b>{don_chon.ho_ten_nguoi_nhan}</b><small>{don_chon.so_dien_thoai}</small></div><div><span>Địa chỉ giao hàng</span><b>{don_chon.dia_chi_giao_hang}</b>{don_chon.khach_hang?.thu_dien_tu && <small>{don_chon.khach_hang.thu_dien_tu}</small>}</div></div>
             <div className="cine-order-lines-v212"><h4>Sản phẩm</h4>{don_chon.chi_tiet.map(ct => <div className="cine-order-line-v212" key={ct.id}><span><b>{ct.ten_san_pham}</b><small>{ct.ma_san_pham} · {String(ct.tuy_chon?.ma_bien_the || "Cấu hình mặc định")}</small></span><span>{ct.so_luong} × {dinhDangTien(ct.don_gia)}</span><strong>{dinhDangTien(ct.thanh_tien)}</strong></div>)}</div>
-            <div className="cine-order-payment-v2151"><div><h4>Thanh toán & doanh thu</h4><p>Non-COD đã thanh toán được ghi nhận doanh thu ngay. COD ghi nhận khi Admin xác nhận đơn đã giao / hoàn tất.</p></div>{don_chon.thanh_toan[0] ? <div className="cine-payment-grid-v2151"><span><small>Phương thức</small><b>{don_chon.thanh_toan[0].phuong_thuc.ten_phuong_thuc}</b></span><span><small>Trạng thái</small><b>{nhanTrangThaiThanhToan(don_chon.thanh_toan[0].trang_thai)}</b></span><span><small>Số tiền</small><b>{dinhDangTien(don_chon.thanh_toan[0].so_tien)}</b></span><span><small>Ghi nhận doanh thu</small><b className={daGhiNhanDoanhThu(don_chon) ? "revenue-ok-v2151" : "revenue-wait-v2151"}>{daGhiNhanDoanhThu(don_chon) ? "Đã ghi nhận" : "Chưa ghi nhận"}</b></span>{don_chon.thanh_toan[0].ngay_thanh_toan && <span><small>Thanh toán lúc</small><b>{new Date(don_chon.thanh_toan[0].ngay_thanh_toan!).toLocaleString("vi-VN")}</b></span>}</div> : <small>Đơn chưa có giao dịch thanh toán.</small>}</div>
-            <div className="cine-order-update-v212"><h4>Cập nhật trạng thái</h4><p className="cine-order-admin-override-v321">Admin có thể xác nhận <b>Đã giao / hoàn tất</b> trực tiếp từ mọi trạng thái đơn hàng. COD chờ thanh toán sẽ được chốt và ghi nhận doanh thu.</p><div className="cine-order-update-fields-v212"><label><span>Trạng thái mới</span><select value={don_trang_thai_moi} onChange={e => setDonTrangThaiMoi(e.target.value)}><option value={don_chon.trang_thai}>{nhanTrangThaiDon(don_chon.trang_thai)} (hiện tại)</option>{(TRANG_THAI_TIEP_THEO[don_chon.trang_thai] || []).map(x => <option key={x} value={x}>{nhanTrangThaiDon(x)}{x === "HOAN_TAT" ? " · ghi doanh thu COD" : ""}</option>)}</select></label><label><span>Ghi chú xử lý</span><input value={don_ghi_chu} onChange={e => setDonGhiChu(e.target.value)} placeholder="VD: Đã giao hàng cho khách"/></label></div><button type="button" className="cine-btn cine-btn-primary" onClick={luuTrangThaiDon} disabled={dang_xu_ly === `don-${don_chon.id}` || (don_trang_thai_moi === don_chon.trang_thai && !canGhiNhanDoanhThuDonDaGiao(don_chon))}>{dang_xu_ly === `don-${don_chon.id}` ? "Đang lưu…" : canGhiNhanDoanhThuDonDaGiao(don_chon) && don_trang_thai_moi === don_chon.trang_thai ? "Ghi nhận thanh toán & doanh thu" : don_trang_thai_moi === "HOAN_TAT" ? "Xác nhận đã giao & ghi doanh thu" : "Lưu trạng thái"}</button>{canGhiNhanDoanhThuDonDaGiao(don_chon) ? <small className="cine-terminal-note-v212 revenue-wait-v2151">Đơn đã giao nhưng giao dịch vẫn chờ thanh toán. Bấm Ghi nhận thanh toán & doanh thu để chốt doanh thu.</small> : TRANG_THAI_TIEP_THEO[don_chon.trang_thai]?.length === 0 && <small className="cine-terminal-note-v212">Đơn đã ở trạng thái kết thúc, không chuyển tiếp.</small>}</div>
+            <div className="cine-order-payment-v2151"><div><h4>Thanh toán & doanh thu</h4><p>Doanh thu chỉ tính một lần. Online/chuyển khoản đã trả tiền được ghi nhận trước khi giao; COD ghi nhận lúc Admin xác nhận đã giao.</p></div>{giaoDichDonChon ? <div className="cine-payment-grid-v2151"><span><small>Phương thức</small><b>{giaoDichDonChon.phuong_thuc.ten_phuong_thuc}</b></span><span><small>Trạng thái</small><b>{nhanTrangThaiThanhToan(giaoDichDonChon.trang_thai)}</b></span><span><small>Số tiền</small><b>{dinhDangTien(giaoDichDonChon.so_tien)}</b></span><span><small>Ghi nhận doanh thu</small><b className={daGhiNhanDoanhThu(don_chon) ? "revenue-ok-v2151" : "revenue-wait-v2151"}>{daGhiNhanDoanhThu(don_chon) ? "Đã ghi nhận" : "Chưa ghi nhận"}</b></span>{giaoDichDonChon.ngay_thanh_toan && <span><small>Thanh toán lúc</small><b>{new Date(giaoDichDonChon.ngay_thanh_toan).toLocaleString("vi-VN")}</b></span>}</div> : <small>Đơn chưa có giao dịch thanh toán. Khi xác nhận giao, hệ thống dùng giá trị đơn làm doanh thu tương thích dữ liệu cũ.</small>}{donChonDaThuTienTruoc && <small className="cine-terminal-note-v212 revenue-ok-v2151">Đơn này đã thu tiền trước. Chuyển sang Đã giao chỉ cập nhật giao hàng, không cộng doanh thu lần hai.</small>}</div>
+            <div className="cine-order-update-v212"><h4>Cập nhật trạng thái</h4><p className="cine-order-admin-override-v321">Admin có thể xác nhận <b>Đã giao / hoàn tất</b> trực tiếp từ mọi trạng thái đơn hàng. Hệ thống chỉ cộng doanh thu nếu đơn chưa được ghi nhận trước đó.</p><div className="cine-order-update-fields-v212"><label><span>Trạng thái mới</span><select value={don_trang_thai_moi} onChange={e => setDonTrangThaiMoi(e.target.value)}><option value={don_chon.trang_thai}>{nhanTrangThaiDon(don_chon.trang_thai)} (hiện tại)</option>{(TRANG_THAI_TIEP_THEO[don_chon.trang_thai] || []).map(x => <option key={x} value={x}>{nhanTrangThaiDon(x)}{x === "HOAN_TAT" && donChonSeGhiNhanKhiGiao ? " · sẽ ghi doanh thu" : x === "HOAN_TAT" && donChonDaThuTienTruoc ? " · doanh thu đã có" : ""}</option>)}</select></label><label><span>Ghi chú xử lý</span><input value={don_ghi_chu} onChange={e => setDonGhiChu(e.target.value)} placeholder="VD: Đã giao hàng cho khách"/></label></div><button type="button" className="cine-btn cine-btn-primary" onClick={luuTrangThaiDon} disabled={dang_xu_ly === `don-${don_chon.id}` || (don_trang_thai_moi === don_chon.trang_thai && !canGhiNhanDoanhThuDonDaGiao(don_chon))}>{dang_xu_ly === `don-${don_chon.id}` ? "Đang lưu…" : canGhiNhanDoanhThuDonDaGiao(don_chon) && don_trang_thai_moi === don_chon.trang_thai ? "Ghi nhận thanh toán & doanh thu" : don_trang_thai_moi === "HOAN_TAT" && donChonSeGhiNhanKhiGiao ? "Xác nhận đã giao & ghi doanh thu" : don_trang_thai_moi === "HOAN_TAT" ? "Xác nhận đã giao" : "Lưu trạng thái"}</button>{canGhiNhanDoanhThuDonDaGiao(don_chon) ? <small className="cine-terminal-note-v212 revenue-wait-v2151">Đơn đã giao nhưng vẫn còn giao dịch chờ thanh toán hợp lệ. Bấm để chốt doanh thu.</small> : TRANG_THAI_TIEP_THEO[don_chon.trang_thai]?.length === 0 && <small className="cine-terminal-note-v212">Đơn đã ở trạng thái kết thúc, không chuyển tiếp.</small>}</div>
             <div className="cine-order-history-v212"><h4>Lịch sử xử lý</h4>{don_chon.lich_su.map(ls => <div key={ls.id} className="cine-order-history-item-v212"><i/><span><b>{nhanTrangThaiDon(ls.trang_thai_moi)}</b><small>{new Date(ls.ngay_tao).toLocaleString("vi-VN")} · {ls.nguoi_thuc_hien?.ho_ten || "Hệ thống/khách hàng"}</small>{ls.ghi_chu && <em>{ls.ghi_chu}</em>}</span></div>)}</div>
           </>}
         </div>

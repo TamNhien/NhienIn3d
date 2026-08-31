@@ -155,7 +155,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const trang_thai = !database.ket_noi ? "LOI" : (backup_cu || (smtp.bat && !smtp.san_sang) ? "CANH_BAO" : "TOT");
     const ket_qua = {
       trang_thai,
-      phien_ban: "3.3.0",
+      phien_ban: "3.3.2",
       thoi_gian: new Date().toISOString(),
       api: { uptime_giay: Math.floor(process.uptime()), node: process.version, pid: process.pid, rss_bytes: bo_nho.rss, heap_used_bytes: bo_nho.heapUsed, heap_total_bytes: bo_nho.heapTotal },
       database,
@@ -762,8 +762,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
         select: {
           id: true, ma_don_hang: true, tong_tien: true, trang_thai: true, ngay_tao: true, ngay_cap_nhat: true,
           thanh_toan: {
-            orderBy: { ngay_tao: "desc" },
-            take: 1,
+            orderBy: [{ ngay_thanh_toan: "desc" }, { ngay_tao: "desc" }],
             select: { so_tien: true, ngay_thanh_toan: true, trang_thai: true, phuong_thuc: { select: { ma_phuong_thuc: true } } }
           }
         }
@@ -807,13 +806,16 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     // - COD: khi Admin chuyển đơn sang HOAN_TAT (đã giao), giao dịch được xác nhận đã thanh toán.
     // - Đơn HOAN_TAT cũ chưa có bản ghi thanh toán hợp lệ vẫn được giữ tương thích theo ngay_cap_nhat.
     const doanhThuDaGhiNhan = don_doanh_thu_30_ngay.map(d => {
-      const tt = d.thanh_toan[0];
-      const da_thanh_toan = tt?.trang_thai === TrangThaiThanhToan.DA_THANH_TOAN;
-      const fallback_legacy = !tt && d.trang_thai === TrangThaiDonHang.HOAN_TAT;
-      const ngay_ghi_nhan = da_thanh_toan ? (tt.ngay_thanh_toan || d.ngay_cap_nhat) : (fallback_legacy ? d.ngay_cap_nhat : null);
+      // Khong lay giao dich moi nhat mot cach mu quang: mot don co the co giao dich
+      // THAT_BAI/CHO_THANH_TOAN moi hon giao dich DA_THANH_TOAN hop le.
+      const tt = d.thanh_toan.find(x => x.trang_thai === TrangThaiThanhToan.DA_THANH_TOAN);
+      const da_thanh_toan = Boolean(tt);
+      const fallback_legacy = d.thanh_toan.length === 0 && d.trang_thai === TrangThaiDonHang.HOAN_TAT;
+      const ngay_ghi_nhan = tt ? (tt.ngay_thanh_toan || d.ngay_cap_nhat) : (fallback_legacy ? d.ngay_cap_nhat : null);
       if (!ngay_ghi_nhan) return null;
-      return { id: d.id, ngay_ghi_nhan, so_tien: da_thanh_toan ? Number(tt.so_tien) : Number(d.tong_tien) };
-    }).filter((x): x is { id: string; ngay_ghi_nhan: Date; so_tien: number } => Boolean(x));
+      return { id: d.id, ngay_ghi_nhan, so_tien: tt ? Number(tt.so_tien) : Number(d.tong_tien) };
+    }).filter((x): x is { id: string; ngay_ghi_nhan: Date; so_tien: number } => Boolean(x))
+      .filter(x => x.ngay_ghi_nhan >= bat_dau_30_ngay);
     const trongKhoang = (date: Date, batDau: Date) => date >= batDau;
     const tongTienDoanhThu = (ds: typeof doanhThuDaGhiNhan) => ds.reduce((sum, item) => sum + item.so_tien, 0);
     const doanh_thu_hom_nay = tongTienDoanhThu(doanhThuDaGhiNhan.filter(d => trongKhoang(d.ngay_ghi_nhan, bat_dau_hom_nay)));
@@ -825,6 +827,12 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const don_ghi_nhan_doanh_thu_hom_nay = doanhThuDaGhiNhan.filter(d => trongKhoang(d.ngay_ghi_nhan, bat_dau_hom_nay)).length;
     const don_ghi_nhan_doanh_thu_7_ngay = doanhThuDaGhiNhan.filter(d => trongKhoang(d.ngay_ghi_nhan, bat_dau_7_ngay)).length;
     const don_ghi_nhan_doanh_thu_30_ngay = doanhThuDaGhiNhan.length;
+    // v3.3.2: tách số đơn đã giao khỏi số đơn vừa phát sinh doanh thu.
+    // Đơn online có thể đã ghi nhận doanh thu trước khi giao nên hai con số không bắt buộc bằng nhau.
+    const donDaGiao30Ngay = don_doanh_thu_30_ngay.filter(d => d.trang_thai === TrangThaiDonHang.HOAN_TAT && d.ngay_cap_nhat >= bat_dau_30_ngay);
+    const don_da_giao_hom_nay = donDaGiao30Ngay.filter(d => d.ngay_cap_nhat >= bat_dau_hom_nay).length;
+    const don_da_giao_7_ngay = donDaGiao30Ngay.filter(d => d.ngay_cap_nhat >= bat_dau_7_ngay).length;
+    const don_da_giao_30_ngay = donDaGiao30Ngay.length;
     const don_hom_nay = don_30_ngay.filter(d => trongKhoang(d.ngay_tao, bat_dau_hom_nay)).length;
     const don_7_ngay = don_30_ngay.filter(d => trongKhoang(d.ngay_tao, bat_dau_7_ngay)).length;
     const don_30_ngay_count = don_30_ngay.length;
@@ -879,6 +887,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
         bay_ngay: don_ghi_nhan_doanh_thu_7_ngay,
         ba_muoi_ngay: don_ghi_nhan_doanh_thu_30_ngay
       },
+      don_da_giao_theo_ky: { hom_nay: don_da_giao_hom_nay, bay_ngay: don_da_giao_7_ngay, ba_muoi_ngay: don_da_giao_30_ngay },
       khach_hang_moi: { hom_nay: khach_hang_moi_hom_nay, bay_ngay: khach_hang_moi_7_ngay, ba_muoi_ngay: khach_hang_moi_30_ngay },
       trang_thai_don_hang: trang_thai,
       doanh_thu_theo_ngay,
@@ -1386,7 +1395,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       include: {
         nguoi_dung: { select: { id: true, thu_dien_tu: true, ho_ten: true } },
         chi_tiet: { select: { so_luong: true } },
-        thanh_toan: { orderBy: { ngay_tao: "desc" }, take: 1, select: { trang_thai: true, ma_giao_dich: true } }
+        thanh_toan: { orderBy: { ngay_tao: "desc" }, select: { trang_thai: true, ma_giao_dich: true } }
       },
       orderBy: { ngay_tao: "desc" },
       take: 250
@@ -1403,7 +1412,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       khach_hang: item.nguoi_dung,
       so_mat_hang: item.chi_tiet.length,
       tong_so_luong: item.chi_tiet.reduce((sum, x) => sum + x.so_luong, 0),
-      thanh_toan: item.thanh_toan[0] || null
+      thanh_toan: item.thanh_toan.find(tt => tt.trang_thai === TrangThaiThanhToan.DA_THANH_TOAN) || item.thanh_toan[0] || null
     }));
   }
 
@@ -1433,18 +1442,37 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       where: { id },
       include: {
         chi_tiet: true,
-        thanh_toan: { include: { phuong_thuc: true }, orderBy: { ngay_tao: "desc" }, take: 1 }
+        thanh_toan: { include: { phuong_thuc: true }, orderBy: { ngay_tao: "desc" } }
       }
     });
     if (!hien_tai) throw new NotFoundException("Không tìm thấy đơn hàng");
     const trang_thai_moi = dto.trang_thai as TrangThaiDonHang;
     const thanh_toan_hien_tai = hien_tai.thanh_toan[0] || null;
-    // Cho phép Admin bấm lưu lại đơn đã giao/hoàn tất cũ nếu giao dịch vẫn CHO_THANH_TOAN.
+    const thanh_toan_da_ghi_nhan = hien_tai.thanh_toan.find(tt => tt.trang_thai === TrangThaiThanhToan.DA_THANH_TOAN) || null;
+    // v3.3.2: không giả định giao dịch mới nhất là giao dịch cần chốt. Một đơn có thể
+    // có lần thanh toán thất bại mới hơn nhưng vẫn còn giao dịch COD/CHO_THANH_TOAN hợp lệ.
+    // Ưu tiên COD đang chờ, sau đó mới lấy bất kỳ giao dịch đang chờ nào.
+    const thanh_toan_can_chot = hien_tai.thanh_toan.find(tt =>
+      tt.trang_thai === TrangThaiThanhToan.CHO_THANH_TOAN && tt.phuong_thuc.ma_phuong_thuc === "COD"
+    ) || hien_tai.thanh_toan.find(tt => tt.trang_thai === TrangThaiThanhToan.CHO_THANH_TOAN) || null;
+    // Cho phép Admin bấm lưu lại đơn đã giao/hoàn tất cũ nếu vẫn còn giao dịch chờ thanh toán.
     // Trường hợp này không đổi trạng thái đơn, chỉ chốt thanh toán để doanh thu được ghi nhận.
     const chi_xac_nhan_doanh_thu = hien_tai.trang_thai === trang_thai_moi
       && trang_thai_moi === TrangThaiDonHang.HOAN_TAT
-      && thanh_toan_hien_tai?.trang_thai === TrangThaiThanhToan.CHO_THANH_TOAN;
-    if (hien_tai.trang_thai === trang_thai_moi && !chi_xac_nhan_doanh_thu) return this.chi_tiet_don_hang(id);
+      && !thanh_toan_da_ghi_nhan
+      && Boolean(thanh_toan_can_chot);
+    if (hien_tai.trang_thai === trang_thai_moi && !chi_xac_nhan_doanh_thu) {
+      const chi_tiet = await this.chi_tiet_don_hang(id);
+      return {
+        ...chi_tiet,
+        cap_nhat_doanh_thu: {
+          da_ghi_nhan_moi: false,
+          da_co_tu_truoc: Boolean(thanh_toan_da_ghi_nhan),
+          so_tien: Number(thanh_toan_da_ghi_nhan?.so_tien || thanh_toan_can_chot?.so_tien || thanh_toan_hien_tai?.so_tien || hien_tai.tong_tien),
+          ngay_ghi_nhan: thanh_toan_da_ghi_nhan?.ngay_thanh_toan || null
+        }
+      };
+    }
 
     const chuyenHopLe: Record<TrangThaiDonHang, TrangThaiDonHang[]> = {
       CHO_XAC_NHAN: [TrangThaiDonHang.DA_XAC_NHAN, TrangThaiDonHang.DA_HUY],
@@ -1486,15 +1514,15 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
           if (cap_nhat.count !== 1) throw new BadRequestException(`Không đủ tồn kho để khôi phục đơn đã hủy: ${ma_bien_the}`);
         }
       }
-      // Khi Admin xác nhận đơn đã giao/hoàn tất, mọi giao dịch còn CHO_THANH_TOAN
-      // được chốt DA_THANH_TOAN. Với COD đây chính là thời điểm thu tiền và ghi nhận doanh thu.
-      if (trang_thai_moi === TrangThaiDonHang.HOAN_TAT && thanh_toan_hien_tai?.trang_thai === TrangThaiThanhToan.CHO_THANH_TOAN) {
+      // Khi Admin xác nhận đã giao/hoàn tất, chốt đúng một giao dịch đang chờ hợp lệ.
+      // Ưu tiên COD; không để một giao dịch THAT_BAI mới hơn che khuất giao dịch cần thu tiền.
+      if (trang_thai_moi === TrangThaiDonHang.HOAN_TAT && !thanh_toan_da_ghi_nhan && thanh_toan_can_chot) {
         await tx.thanhToan.update({
-          where: { id: thanh_toan_hien_tai.id },
+          where: { id: thanh_toan_can_chot.id },
           data: {
             trang_thai: TrangThaiThanhToan.DA_THANH_TOAN,
             ngay_thanh_toan: new Date(),
-            noi_dung: `${thanh_toan_hien_tai.noi_dung || hien_tai.ma_don_hang} · Admin xác nhận đã giao/hoàn tất`
+            noi_dung: `${thanh_toan_can_chot.noi_dung || hien_tai.ma_don_hang} · Admin xác nhận đã giao/hoàn tất`
           }
         });
         thanh_toan_duoc_ghi_nhan = true;
@@ -1514,10 +1542,93 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
         }
       });
     });
-    const truoc = { trang_thai: hien_tai.trang_thai, thanh_toan: thanh_toan_hien_tai?.trang_thai || null };
-    const sau = { trang_thai: trang_thai_moi, thanh_toan: thanh_toan_duoc_ghi_nhan ? TrangThaiThanhToan.DA_THANH_TOAN : (thanh_toan_hien_tai?.trang_thai || null) };
-    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_CAP_NHAT_DON_HANG", nguoi_dung_id: actor.id, chi_tiet: { don_hang_id: id, ma_don_hang: hien_tai.ma_don_hang, truoc, sau, thay_doi: this.tao_diff(truoc, sau), ghi_chu: dto.ghi_chu?.trim() || null, thanh_toan_duoc_ghi_nhan, chi_xac_nhan_doanh_thu, phuong_thuc: thanh_toan_hien_tai?.phuong_thuc.ma_phuong_thuc || null } } });
-    return this.chi_tiet_don_hang(id);
+    const truoc = { trang_thai: hien_tai.trang_thai, thanh_toan: thanh_toan_da_ghi_nhan?.trang_thai || thanh_toan_hien_tai?.trang_thai || null };
+    const sau = { trang_thai: trang_thai_moi, thanh_toan: thanh_toan_duoc_ghi_nhan || thanh_toan_da_ghi_nhan ? TrangThaiThanhToan.DA_THANH_TOAN : (thanh_toan_hien_tai?.trang_thai || null) };
+    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_CAP_NHAT_DON_HANG", nguoi_dung_id: actor.id, chi_tiet: { don_hang_id: id, ma_don_hang: hien_tai.ma_don_hang, truoc, sau, thay_doi: this.tao_diff(truoc, sau), ghi_chu: dto.ghi_chu?.trim() || null, thanh_toan_duoc_ghi_nhan, chi_xac_nhan_doanh_thu, phuong_thuc: (thanh_toan_da_ghi_nhan || thanh_toan_can_chot || thanh_toan_hien_tai)?.phuong_thuc.ma_phuong_thuc || null } } });
+    const chi_tiet = await this.chi_tiet_don_hang(id);
+    const fallback_legacy_moi = hien_tai.thanh_toan.length === 0 && hien_tai.trang_thai !== TrangThaiDonHang.HOAN_TAT && trang_thai_moi === TrangThaiDonHang.HOAN_TAT;
+    const giao_dich_da_ghi_nhan_sau = chi_tiet.thanh_toan.find(tt => tt.trang_thai === TrangThaiThanhToan.DA_THANH_TOAN) || null;
+    const giao_dich_hien_thi_sau = giao_dich_da_ghi_nhan_sau || chi_tiet.thanh_toan[0] || null;
+    return {
+      ...chi_tiet,
+      cap_nhat_doanh_thu: {
+        da_ghi_nhan_moi: thanh_toan_duoc_ghi_nhan || fallback_legacy_moi,
+        da_co_tu_truoc: !thanh_toan_duoc_ghi_nhan && Boolean(thanh_toan_da_ghi_nhan),
+        so_tien: Number((thanh_toan_da_ghi_nhan || giao_dich_da_ghi_nhan_sau || giao_dich_hien_thi_sau)?.so_tien || hien_tai.tong_tien),
+        ngay_ghi_nhan: thanh_toan_da_ghi_nhan?.ngay_thanh_toan || giao_dich_da_ghi_nhan_sau?.ngay_thanh_toan || (fallback_legacy_moi ? chi_tiet.ngay_cap_nhat : null),
+        nguon: thanh_toan_duoc_ghi_nhan ? "CHOT_KHI_GIAO" : thanh_toan_da_ghi_nhan ? "DA_THANH_TOAN_TRUOC" : fallback_legacy_moi ? "LEGACY_KHONG_GIAO_DICH" : "KHONG_PHAT_SINH"
+      }
+    };
+  }
+
+
+  async doi_soat_doanh_thu_don_da_giao(actor: NguoiDungXacThuc) {
+    // v3.3.2: sửa dữ liệu vận hành đã tồn tại trước bản vá. Chỉ xét đơn đã giao
+    // chưa có bất kỳ giao dịch DA_THANH_TOAN nào nhưng còn giao dịch CHO_THANH_TOAN.
+    const ds = await this.db.donHang.findMany({
+      where: {
+        trang_thai: TrangThaiDonHang.HOAN_TAT,
+        thanh_toan: {
+          none: { trang_thai: TrangThaiThanhToan.DA_THANH_TOAN },
+          some: { trang_thai: TrangThaiThanhToan.CHO_THANH_TOAN }
+        }
+      },
+      include: {
+        thanh_toan: { include: { phuong_thuc: true }, orderBy: { ngay_tao: "desc" } }
+      },
+      orderBy: { ngay_cap_nhat: "desc" },
+      take: 500
+    });
+
+    const da_cap_nhat: Array<{ id: string; ma_don_hang: string; so_tien: number; ma_giao_dich: string; phuong_thuc: string }> = [];
+    await this.db.$transaction(async tx => {
+      for (const don of ds) {
+        const giao_dich = don.thanh_toan.find(tt => tt.trang_thai === TrangThaiThanhToan.CHO_THANH_TOAN && tt.phuong_thuc.ma_phuong_thuc === "COD")
+          || don.thanh_toan.find(tt => tt.trang_thai === TrangThaiThanhToan.CHO_THANH_TOAN)
+          || null;
+        if (!giao_dich) continue;
+        const ngay = new Date();
+        const cap_nhat = await tx.thanhToan.updateMany({
+          where: { id: giao_dich.id, trang_thai: TrangThaiThanhToan.CHO_THANH_TOAN },
+          data: {
+            trang_thai: TrangThaiThanhToan.DA_THANH_TOAN,
+            ngay_thanh_toan: ngay,
+            noi_dung: `${giao_dich.noi_dung || don.ma_don_hang} · Admin đối soát doanh thu đơn đã giao`
+          }
+        });
+        if (cap_nhat.count !== 1) continue;
+        da_cap_nhat.push({ id: don.id, ma_don_hang: don.ma_don_hang, so_tien: Number(giao_dich.so_tien), ma_giao_dich: giao_dich.ma_giao_dich, phuong_thuc: giao_dich.phuong_thuc.ma_phuong_thuc });
+        await tx.lichSuDonHang.create({
+          data: {
+            don_hang_id: don.id,
+            nguoi_thuc_hien_id: actor.id,
+            trang_thai_cu: TrangThaiDonHang.HOAN_TAT,
+            trang_thai_moi: TrangThaiDonHang.HOAN_TAT,
+            ghi_chu: "Đối soát: chốt giao dịch chờ thanh toán của đơn đã giao và ghi nhận doanh thu."
+          }
+        });
+      }
+    });
+
+    const tong_doanh_thu_bo_sung = da_cap_nhat.reduce((tong, item) => tong + item.so_tien, 0);
+    await this.db.nhatKyBaoMat.create({
+      data: {
+        loai_su_kien: "ADMIN_DOI_SOAT_DOANH_THU_DON_DA_GIAO",
+        nguoi_dung_id: actor.id,
+        chi_tiet: this.chuan_hoa_json_object({
+          so_don_quet: ds.length,
+          so_don_cap_nhat: da_cap_nhat.length,
+          tong_doanh_thu_bo_sung,
+          don_hang: da_cap_nhat.slice(0, 50).map(item => ({ ma_don_hang: item.ma_don_hang, so_tien: item.so_tien, ma_giao_dich: item.ma_giao_dich, phuong_thuc: item.phuong_thuc }))
+        })
+      }
+    });
+    return {
+      so_don_quet: ds.length,
+      so_don_cap_nhat: da_cap_nhat.length,
+      tong_doanh_thu_bo_sung,
+      don_hang: da_cap_nhat.map(item => ({ ma_don_hang: item.ma_don_hang, so_tien: item.so_tien, phuong_thuc: item.phuong_thuc }))
+    };
   }
 
 
