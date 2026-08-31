@@ -1,6 +1,6 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v2.18.3** — 31/08/2026
+> Phiên bản hiện tại: **v2.19.0** — 31/08/2026
 
 NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **frontend Next.js** và **backend NestJS/Fastify** kết nối **PostgreSQL qua Prisma**.
 
@@ -20,6 +20,9 @@ NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **fro
 
 ## Điểm chính bản hiện tại
 
+- v2.19.0 bổ sung **quản lý nhà cung cấp** đầy đủ trong Admin, liên kết nhà cung cấp với phiếu nhập/lô hàng và chặn xóa nhà cung cấp đã có lịch sử nhập kho; có thể chuyển sang trạng thái ngừng hoạt động để giữ nguyên dữ liệu đối soát.
+- Lịch sử **phiếu nhập kho** hỗ trợ tìm kiếm/lọc theo nhà cung cấp và khoảng ngày, xem chi tiết từng dòng tồn trước → tồn sau, đồng thời xuất Excel để đối soát.
+- Mỗi biến thể có **tồn tối thiểu/tối đa**; Kho tự xác định biến thể cần nhập và tính **gợi ý số lượng cần nhập = tồn tối đa - tồn hiện tại** khi tồn chạm ngưỡng tối thiểu. Báo cáo tồn kho Excel/CSV cũng mang theo định mức và gợi ý nhập.
 - v2.18.3 bổ sung **HTTPS local được Windows/Chromium tin cậy** cho `localhost:3000`: Caddy reverse proxy TLS cùng origin cho Web + `/api/*`, script PowerShell tự lấy CA nội bộ và cài vào Trusted Root của `CurrentUser`, loại bỏ cảnh báo “Kết nối không an toàn” khi chạy đúng chế độ HTTPS.
 - v2.18.2 làm rõ danh sách xổ xuống **Vật liệu/Màu** trong Admin: nền tối tương phản cao, chữ lớn hơn, mục đang chọn nổi bật và option hiển thị cả mã + tên; đồng thời giữ toàn bộ logo/favicon thương hiệu từ v2.18.1.
 - v2.18.1 bổ sung **logo NhienIn3d** đồng bộ trên favicon/tab trình duyệt, thanh điều hướng, menu drawer và footer; logo khối 3D dùng SVG local nên sắc nét ở mọi DPI và không cần tải tài nguyên ngoài.
@@ -1087,13 +1090,31 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 
 ---
 
+## v2.19.0 — 31/08/2026
+
+- Thêm tab **Nhà cung cấp** trong Admin: tạo/sửa/xóa, tìm kiếm, lọc trạng thái, lưu người liên hệ/điện thoại/email/địa chỉ/ghi chú và bật/tắt hoạt động. Nhà cung cấp đã có phiếu nhập không được xóa để bảo toàn lịch sử; Admin có thể chuyển sang **Ngừng hoạt động**.
+- Phiếu **Nhập kho theo lô** chọn trực tiếp nhà cung cấp đang hoạt động bằng ID; backend vẫn lưu tên nhà cung cấp snapshot để dữ liệu cũ/đối soát không bị mất khi thông tin nhà cung cấp thay đổi.
+- Nâng cấp **Lịch sử phiếu nhập kho**: tìm mã phiếu/mã lô/mã biến thể/tên nhà cung cấp, lọc theo nhà cung cấp + khoảng ngày, xem chi tiết từng dòng và xuất Excel `.xlsx`.
+- Bổ sung `ton_toi_thieu` và `ton_toi_da` cho từng biến thể. Khi tồn hiện tại `<= tồn tối thiểu` và tồn tối đa hợp lệ, giao diện tự hiển thị **Gợi ý nhập** để đưa tồn lên mức tối đa; có bộ lọc riêng **Cần nhập theo định mức** và KPI tổng số biến thể/tổng số lượng nên nhập.
+- Báo cáo **Tồn kho** CSV/Excel bổ sung cột Tồn tối thiểu, Tồn tối đa và Gợi ý nhập. Audit ghi nhận thay đổi định mức cùng thay đổi tồn kho.
+- Thêm migration `202608310003_v219_nha_cung_cap_dinh_muc_kho`: tạo bảng `nha_cung_cap`, FK từ `phieu_nhap_kho`, đồng thời thêm định mức min/max cho `bien_the_san_pham`.
+- Giữ toàn bộ HTTPS local, logo/favicon, import CSV/XLSX và cảnh báo tồn qua email từ v2.18.x.
+- Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm test` → `npm run typecheck` → `npm run build` → `docker compose up -d --build` → `docker compose ps` → `docker compose logs migrate --tail 150` → `docker compose logs api --tail 150` → `.\scripts\release.ps1 v2.19.0`.
+
+---
+
+## v2.19.1 — 31/08/2026
+
+- Sửa các ô **Email/Mật khẩu** ở trang Đăng nhập bị nền xanh/trắng quá sáng khi Chrome/Brave tự điền thông tin đăng nhập (autofill), làm lệch hoàn toàn dark theme.
+- Ép nền input auth sang dark `#091321`, chữ sáng, placeholder dễ đọc; focus dùng viền tím và nền tối hơn để nhận biết field đang thao tác.
+- Bổ sung rule riêng cho Chromium/Brave `:-webkit-autofill`/`:autofill` với inset shadow + `-webkit-text-fill-color`, nên trình duyệt không còn phủ nền sáng lên Email/Mật khẩu đã lưu.
+- Đồng bộ `color-scheme: dark`, caret và nút **Hiện/Ẩn mật khẩu**; áp dụng cho toàn bộ biểu mẫu auth dùng chung style, không chỉ riêng trang đăng nhập.
+- Không thay đổi API nghiệp vụ hoặc Prisma schema nên **không có migration database mới**.
+- Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm test` → `npm run typecheck` → `npm run build` → `docker compose up -d --build` → `docker compose ps` → `docker compose logs api --tail 150` → `.\scripts\release.ps1 v2.19.1`.
+
+---
+
 # Lộ trình tiếp theo
-
-## v2.19.0
-
-- Quản lý nhà cung cấp và liên kết nhà cung cấp với phiếu nhập/lô hàng.
-- Lọc, tìm kiếm, xem chi tiết và xuất Excel lịch sử phiếu nhập kho.
-- Bổ sung mức tồn tối thiểu/tối đa theo biến thể và gợi ý số lượng cần nhập.
 
 ## v3.0.0
 

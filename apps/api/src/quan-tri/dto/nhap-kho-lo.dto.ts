@@ -1,5 +1,5 @@
 import { Type } from "class-transformer";
-import { ArrayMaxSize, ArrayMinSize, IsArray, IsInt, IsOptional, IsString, Length, Max, MaxLength, Min, ValidateNested } from "class-validator";
+import { ArrayMaxSize, ArrayMinSize, IsArray, IsInt, IsOptional, IsString, IsUUID, Length, Max, MaxLength, Min, ValidateNested } from "class-validator";
 
 export class DongNhapKhoDto {
   @IsString() @Length(3, 80)
@@ -15,6 +15,9 @@ export class DongNhapKhoDto {
 export class NhapKhoLoDto {
   @IsOptional() @IsString() @MaxLength(80)
   ma_lo?: string;
+
+  @IsOptional() @IsUUID()
+  nha_cung_cap_id?: string;
 
   @IsOptional() @IsString() @MaxLength(180)
   nha_cung_cap?: string;

@@ -17,6 +17,7 @@ import {
   AdminCauHinhKho,
   KiemTraImportKhoAdmin,
   PhieuNhapKhoAdmin,
+  NhaCungCapAdmin,
   TrangThaiCanhBaoKhoEmailAdmin,
   AdminDanhGia,
   NhatKyAdmin,
@@ -53,6 +54,12 @@ import {
   kiemTraTepNhapKhoAdmin,
   nhapKhoTheoLoAdmin,
   layPhieuNhapKhoAdmin,
+  layChiTietPhieuNhapKhoAdmin,
+  xuatExcelPhieuNhapKhoAdmin,
+  layNhaCungCapAdmin,
+  taoNhaCungCapAdmin,
+  capNhatNhaCungCapAdmin,
+  xoaNhaCungCapAdmin,
   layTrangThaiCanhBaoKhoEmailAdmin,
   guiCanhBaoKhoEmailAdmin,
   layDanhGiaAdmin,
@@ -108,7 +115,7 @@ const nhanSuKienAudit = (loai: string) => ({
   ADMIN_TAO_DANH_MUC: "Tạo danh mục", ADMIN_CAP_NHAT_DANH_MUC: "Cập nhật danh mục", ADMIN_XOA_DANH_MUC: "Xóa danh mục",
   ADMIN_TAO_BIEN_THE: "Tạo biến thể", ADMIN_CAP_NHAT_BIEN_THE: "Cập nhật biến thể", ADMIN_XOA_BIEN_THE: "Xóa biến thể",
   ADMIN_TAO_VAT_LIEU: "Tạo vật liệu", ADMIN_CAP_NHAT_VAT_LIEU: "Cập nhật vật liệu", ADMIN_XOA_VAT_LIEU: "Xóa vật liệu",
-  ADMIN_TAO_MAU_SAC: "Tạo màu", ADMIN_CAP_NHAT_MAU_SAC: "Cập nhật màu", ADMIN_XOA_MAU_SAC: "Xóa màu", ADMIN_CAP_NHAT_CAU_HINH_KHO: "Cập nhật cảnh báo kho",
+  ADMIN_TAO_MAU_SAC: "Tạo màu", ADMIN_CAP_NHAT_MAU_SAC: "Cập nhật màu", ADMIN_XOA_MAU_SAC: "Xóa màu", ADMIN_TAO_NHA_CUNG_CAP: "Tạo nhà cung cấp", ADMIN_CAP_NHAT_NHA_CUNG_CAP: "Cập nhật nhà cung cấp", ADMIN_XOA_NHA_CUNG_CAP: "Xóa nhà cung cấp", ADMIN_NHAP_KHO_THEO_LO: "Nhập kho theo lô", ADMIN_CAP_NHAT_CAU_HINH_KHO: "Cập nhật cảnh báo kho",
   ADMIN_DUYET_DANH_GIA: "Duyệt đánh giá", ADMIN_AN_DANH_GIA: "Ẩn đánh giá", ADMIN_XOA_DANH_GIA: "Xóa đánh giá"
 }[loai] || loai.replaceAll("_", " "));
 
@@ -146,7 +153,7 @@ async function chuanHoaAnhSanPham(file: File) {
 }
 
 
-type TabQuanTri = "tong-quan" | "don-hang" | "san-pham" | "kho" | "tham-chieu" | "danh-muc" | "danh-gia" | "bao-cao" | "khach-hang" | "nhan-vien" | "tao-nhan-vien" | "ca-lam" | "xep-ca" | "nhat-ky";
+type TabQuanTri = "tong-quan" | "don-hang" | "san-pham" | "kho" | "nha-cung-cap" | "tham-chieu" | "danh-muc" | "danh-gia" | "bao-cao" | "khach-hang" | "nhan-vien" | "tao-nhan-vien" | "ca-lam" | "xep-ca" | "nhat-ky";
 
 export default function QuanTriPage() {
   const [tai_khoan, setTaiKhoan] = useState<TaiKhoan | null | undefined>(undefined);
@@ -165,10 +172,19 @@ export default function QuanTriPage() {
   const [cau_hinh_kho, setCauHinhKho] = useState<AdminCauHinhKho>({ nguong_sap_het: 5 });
   const [import_kho, setImportKho] = useState<KiemTraImportKhoAdmin | null>(null);
   const [phieu_nhap_kho, setPhieuNhapKho] = useState<PhieuNhapKhoAdmin[]>([]);
+  const [phieu_nhap_chi_tiet, setPhieuNhapChiTiet] = useState<PhieuNhapKhoAdmin | null>(null);
+  const [nha_cung_cap_qt, setNhaCungCapQt] = useState<NhaCungCapAdmin[]>([]);
   const [canh_bao_kho_email, setCanhBaoKhoEmail] = useState<TrangThaiCanhBaoKhoEmailAdmin | null>(null);
-  const [nhap_lo_meta, setNhapLoMeta] = useState({ ma_lo: "", nha_cung_cap: "", ghi_chu: "" });
+  const [nhap_lo_meta, setNhapLoMeta] = useState({ ma_lo: "", nha_cung_cap_id: "", ghi_chu: "" });
   const [kho_ly_do, setKhoLyDo] = useState<Record<string, string>>({});
   const [lich_su_kho_loc_loai, setLichSuKhoLocLoai] = useState("");
+  const [phieu_nhap_tim_kiem, setPhieuNhapTimKiem] = useState("");
+  const [phieu_nhap_loc_ncc, setPhieuNhapLocNcc] = useState("");
+  const [phieu_nhap_tu_ngay, setPhieuNhapTuNgay] = useState(sauNgay(-29));
+  const [phieu_nhap_den_ngay, setPhieuNhapDenNgay] = useState(homNay());
+  const [ncc_tim_kiem, setNccTimKiem] = useState("");
+  const [ncc_loc_hoat_dong, setNccLocHoatDong] = useState("");
+  const [ncc_moi, setNccMoi] = useState({ ma_nha_cung_cap: "", ten_nha_cung_cap: "", nguoi_lien_he: "", so_dien_thoai: "", thu_dien_tu: "", dia_chi: "", ghi_chu: "", dang_hoat_dong: true });
   const [danh_gia_qt, setDanhGiaQt] = useState<AdminDanhGia[]>([]);
   const [nhat_ky, setNhatKy] = useState<NhatKyAdmin[]>([]);
   const [thong_bao, setThongBao] = useState("");
@@ -210,7 +226,7 @@ export default function QuanTriPage() {
     const tk = await layTaiKhoan();
     setTaiKhoan(tk);
     if (!tk || tk.vai_tro !== "ADMIN") return;
-    const [tq, nd, nvData, caData, pcData, donData, spData, dmData, vlData, msData, chKhoData, lsKhoData, phieuNhapData, emailKhoData, dgData, nkData] = await Promise.all([layTongQuan(), layNguoiDung(), layNhanVien(), layCaLam(), layPhanCa(), layDonHangAdmin(), laySanPhamAdmin(), layDanhMucAdmin(), layVatLieuAdmin(), layMauSacAdmin(), layCauHinhKhoAdmin(), layLichSuKhoAdmin(), layPhieuNhapKhoAdmin(), layTrangThaiCanhBaoKhoEmailAdmin(), layDanhGiaAdmin(), layNhatKyAdmin()]);
+    const [tq, nd, nvData, caData, pcData, donData, spData, dmData, vlData, msData, chKhoData, lsKhoData, phieuNhapData, nccData, emailKhoData, dgData, nkData] = await Promise.all([layTongQuan(), layNguoiDung(), layNhanVien(), layCaLam(), layPhanCa(), layDonHangAdmin(), laySanPhamAdmin(), layDanhMucAdmin(), layVatLieuAdmin(), layMauSacAdmin(), layCauHinhKhoAdmin(), layLichSuKhoAdmin(), layPhieuNhapKhoAdmin(), layNhaCungCapAdmin(), layTrangThaiCanhBaoKhoEmailAdmin(), layDanhGiaAdmin(), layNhatKyAdmin()]);
     setTongQuan(tq);
     setNguoiDung(nd);
     setNhanVien(nvData);
@@ -224,6 +240,7 @@ export default function QuanTriPage() {
     setCauHinhKho(chKhoData);
     setLichSuKho(lsKhoData);
     setPhieuNhapKho(phieuNhapData);
+    setNhaCungCapQt(nccData);
     setCanhBaoKhoEmail(emailKhoData);
     setDanhGiaQt(dgData);
     setSpMoi(x => ({ ...x, danh_muc_id: x.danh_muc_id || dmData[0]?.id || "" }));
@@ -595,13 +612,14 @@ export default function QuanTriPage() {
     try {
       await capNhatBienTheAdmin(bien_the_id, {
         ma_bien_the: bt.ma_bien_the.trim(), vat_lieu_id: bt.vat_lieu?.id || null, mau_sac_id: bt.mau_sac?.id || null,
-        gia_chenh_lech: Number(bt.gia_chenh_lech) || 0, so_luong_ton: Number(bt.so_luong_ton), dang_hien_thi: bt.dang_hien_thi,
+        gia_chenh_lech: Number(bt.gia_chenh_lech) || 0, so_luong_ton: Number(bt.so_luong_ton), ton_toi_thieu: Math.max(0, Number(bt.ton_toi_thieu) || 0), ton_toi_da: Math.max(0, Number(bt.ton_toi_da) || 0), dang_hien_thi: bt.dang_hien_thi,
         ly_do_ton_kho: kho_ly_do[bien_the_id]?.trim() || "Điều chỉnh tồn kho"
       });
       const [ds, tq, nk, lsKho] = await Promise.all([laySanPhamAdmin(), layTongQuan(), layNhatKyAdmin(), layLichSuKhoAdmin()]);
       setSanPhamQt(ds); setTongQuan(tq); setNhatKy(nk); setLichSuKho(lsKho);
       setKhoLyDo(x => ({ ...x, [bien_the_id]: "" }));
-      setThongBao(`Đã lưu biến thể ${bt.ma_bien_the}: tồn ${bt.so_luong_ton}.`);
+      const goiY = bt.ton_toi_da > bt.ton_toi_thieu && bt.so_luong_ton <= bt.ton_toi_thieu ? Math.max(0, bt.ton_toi_da - bt.so_luong_ton) : 0;
+      setThongBao(`Đã lưu biến thể ${bt.ma_bien_the}: tồn ${bt.so_luong_ton}, định mức ${bt.ton_toi_thieu}–${bt.ton_toi_da || "∞"}${goiY ? ` · gợi ý nhập ${goiY}` : ""}.`);
     } catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể cập nhật biến thể/tồn kho"); }
     finally { setDangXuLy(null); }
   }
@@ -647,15 +665,85 @@ export default function QuanTriPage() {
     try {
       const phieu = await nhapKhoTheoLoAdmin({
         ma_lo: nhap_lo_meta.ma_lo.trim() || undefined,
-        nha_cung_cap: nhap_lo_meta.nha_cung_cap.trim() || undefined,
+        nha_cung_cap_id: nhap_lo_meta.nha_cung_cap_id || undefined,
         ghi_chu: nhap_lo_meta.ghi_chu.trim() || undefined,
         dong: import_kho.dong.map(x => ({ ma_bien_the: x.ma_bien_the, so_luong_nhap: x.so_luong_nhap, ly_do: x.ly_do || "Nhập kho theo lô" }))
       });
-      const [sp, tq, ls, pn, nk, emailState] = await Promise.all([laySanPhamAdmin(), layTongQuan(), layLichSuKhoAdmin(), layPhieuNhapKhoAdmin(), layNhatKyAdmin(), layTrangThaiCanhBaoKhoEmailAdmin()]);
-      setSanPhamQt(sp); setTongQuan(tq); setLichSuKho(ls); setPhieuNhapKho(pn); setNhatKy(nk); setCanhBaoKhoEmail(emailState);
-      setImportKho(null); setNhapLoMeta({ ma_lo: "", nha_cung_cap: "", ghi_chu: "" });
+      const [sp, tq, ls, pn, ncc, nk, emailState] = await Promise.all([laySanPhamAdmin(), layTongQuan(), layLichSuKhoAdmin(), layPhieuNhapKhoAdmin(), layNhaCungCapAdmin(), layNhatKyAdmin(), layTrangThaiCanhBaoKhoEmailAdmin()]);
+      setSanPhamQt(sp); setTongQuan(tq); setLichSuKho(ls); setPhieuNhapKho(pn); setNhaCungCapQt(ncc); setNhatKy(nk); setCanhBaoKhoEmail(emailState);
+      setImportKho(null); setNhapLoMeta({ ma_lo: "", nha_cung_cap_id: "", ghi_chu: "" });
       setThongBao(`Đã nhập kho theo phiếu ${phieu.ma_phieu}: ${phieu.so_dong} dòng · ${phieu.tong_so_luong} sản phẩm.`);
     } catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể nhập kho theo lô"); }
+    finally { setDangXuLy(null); }
+  }
+
+  function suaNhaCungCapLocal(id: string, patch: Partial<NhaCungCapAdmin>) {
+    setNhaCungCapQt(ds => ds.map(x => x.id === id ? { ...x, ...patch } : x));
+  }
+
+  async function taoNhaCungCapMoi(e: FormEvent) {
+    e.preventDefault(); setDangXuLy("tao-nha-cung-cap"); setThongBao("");
+    try {
+      const da_tao = await taoNhaCungCapAdmin({
+        ma_nha_cung_cap: ncc_moi.ma_nha_cung_cap.trim().toUpperCase(), ten_nha_cung_cap: ncc_moi.ten_nha_cung_cap.trim(),
+        nguoi_lien_he: ncc_moi.nguoi_lien_he.trim(), so_dien_thoai: ncc_moi.so_dien_thoai.trim(), thu_dien_tu: ncc_moi.thu_dien_tu.trim(),
+        dia_chi: ncc_moi.dia_chi.trim(), ghi_chu: ncc_moi.ghi_chu.trim(), dang_hoat_dong: ncc_moi.dang_hoat_dong
+      });
+      const [ds, nk] = await Promise.all([layNhaCungCapAdmin(ncc_tim_kiem, ncc_loc_hoat_dong), layNhatKyAdmin()]);
+      setNhaCungCapQt(ds); setNhatKy(nk); setNccMoi({ ma_nha_cung_cap: "", ten_nha_cung_cap: "", nguoi_lien_he: "", so_dien_thoai: "", thu_dien_tu: "", dia_chi: "", ghi_chu: "", dang_hoat_dong: true });
+      setThongBao(`Đã tạo nhà cung cấp ${da_tao.ma_nha_cung_cap} · ${da_tao.ten_nha_cung_cap}.`);
+    } catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể tạo nhà cung cấp"); }
+    finally { setDangXuLy(null); }
+  }
+
+  async function luuNhaCungCap(item: NhaCungCapAdmin) {
+    setDangXuLy(`ncc-${item.id}`); setThongBao("");
+    try {
+      const da_luu = await capNhatNhaCungCapAdmin(item.id, { ten_nha_cung_cap: item.ten_nha_cung_cap.trim(), nguoi_lien_he: item.nguoi_lien_he?.trim() || "", so_dien_thoai: item.so_dien_thoai?.trim() || "", thu_dien_tu: item.thu_dien_tu?.trim() || "", dia_chi: item.dia_chi?.trim() || "", ghi_chu: item.ghi_chu?.trim() || "", dang_hoat_dong: item.dang_hoat_dong });
+      setNhaCungCapQt(ds => ds.map(x => x.id === item.id ? da_luu : x)); setNhatKy(await layNhatKyAdmin());
+      setThongBao(`Đã lưu nhà cung cấp ${da_luu.ma_nha_cung_cap}.`);
+    } catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể cập nhật nhà cung cấp"); }
+    finally { setDangXuLy(null); }
+  }
+
+  async function xoaNhaCungCap(item: NhaCungCapAdmin) {
+    if (!window.confirm(`Xóa nhà cung cấp ${item.ma_nha_cung_cap} · ${item.ten_nha_cung_cap}?`)) return;
+    setDangXuLy(`ncc-${item.id}`); setThongBao("");
+    try {
+      const kq = await xoaNhaCungCapAdmin(item.id); const [ds, nk] = await Promise.all([layNhaCungCapAdmin(ncc_tim_kiem, ncc_loc_hoat_dong), layNhatKyAdmin()]); setNhaCungCapQt(ds); setNhatKy(nk); setThongBao(kq.thong_bao);
+    } catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể xóa nhà cung cấp"); }
+    finally { setDangXuLy(null); }
+  }
+
+  async function locNhaCungCap() {
+    setDangXuLy("loc-nha-cung-cap"); setThongBao("");
+    try { setNhaCungCapQt(await layNhaCungCapAdmin(ncc_tim_kiem, ncc_loc_hoat_dong)); }
+    catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể lọc nhà cung cấp"); }
+    finally { setDangXuLy(null); }
+  }
+
+  async function locPhieuNhapKho() {
+    setDangXuLy("loc-phieu-nhap"); setThongBao(""); setPhieuNhapChiTiet(null);
+    try { setPhieuNhapKho(await layPhieuNhapKhoAdmin(phieu_nhap_tim_kiem, phieu_nhap_loc_ncc, phieu_nhap_tu_ngay, phieu_nhap_den_ngay)); }
+    catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể lọc phiếu nhập kho"); }
+    finally { setDangXuLy(null); }
+  }
+
+  async function xemChiTietPhieuNhapKho(id: string) {
+    setDangXuLy(`phieu-nhap-${id}`); setThongBao("");
+    try { setPhieuNhapChiTiet(await layChiTietPhieuNhapKhoAdmin(id)); }
+    catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể tải chi tiết phiếu nhập"); }
+    finally { setDangXuLy(null); }
+  }
+
+  async function taiExcelPhieuNhapKho() {
+    setDangXuLy("excel-phieu-nhap"); setThongBao("");
+    try {
+      const kq = await xuatExcelPhieuNhapKhoAdmin(phieu_nhap_tim_kiem, phieu_nhap_loc_ncc, phieu_nhap_tu_ngay, phieu_nhap_den_ngay);
+      const binary = atob(kq.base64); const bytes = new Uint8Array(binary.length); for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const blob = new Blob([bytes], { type: kq.mime_type }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = kq.ten_file; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      setThongBao(`Đã xuất Excel lịch sử phiếu nhập: ${kq.ten_file}.`);
+    } catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể xuất Excel phiếu nhập"); }
     finally { setDangXuLy(null); }
   }
 
@@ -811,6 +899,7 @@ export default function QuanTriPage() {
       if (kho_loc_ton === "CON_HANG" && bt.so_luong_ton <= nguongKho) return false;
       if (kho_loc_ton === "SAP_HET" && !(bt.so_luong_ton > 0 && bt.so_luong_ton <= nguongKho)) return false;
       if (kho_loc_ton === "HET_HANG" && bt.so_luong_ton > 0) return false;
+      if (kho_loc_ton === "CAN_NHAP" && !(bt.ton_toi_da > bt.ton_toi_thieu && bt.so_luong_ton <= bt.ton_toi_thieu)) return false;
       if (kho_loc_vat_lieu && bt.vat_lieu?.id !== kho_loc_vat_lieu) return false;
       if (kho_loc_mau && bt.mau_sac?.id !== kho_loc_mau) return false;
       if (kho_loc_hien_thi === "HIEN" && !bt.dang_hien_thi) return false;
@@ -824,7 +913,9 @@ export default function QuanTriPage() {
       bien_the: ds.length,
       tong_ton: ds.reduce((tong, bt) => tong + Number(bt.so_luong_ton || 0), 0),
       sap_het: ds.filter(bt => bt.so_luong_ton > 0 && bt.so_luong_ton <= nguongKho).length,
-      het_hang: ds.filter(bt => bt.so_luong_ton <= 0).length
+      het_hang: ds.filter(bt => bt.so_luong_ton <= 0).length,
+      can_nhap: ds.filter(bt => bt.ton_toi_da > bt.ton_toi_thieu && bt.so_luong_ton <= bt.ton_toi_thieu).length,
+      goi_y_nhap: ds.reduce((tong, bt) => tong + (bt.ton_toi_da > bt.ton_toi_thieu && bt.so_luong_ton <= bt.ton_toi_thieu ? Math.max(0, bt.ton_toi_da - bt.so_luong_ton) : 0), 0)
     };
   }, [san_pham_qt, nguongKho]);
   const lichSuKhoDaLoc = useMemo(() => lich_su_kho.filter(x => !lich_su_kho_loc_loai || x.loai_bien_dong === lich_su_kho_loc_loai), [lich_su_kho, lich_su_kho_loc_loai]);
@@ -868,6 +959,7 @@ export default function QuanTriPage() {
     ["san-pham", "Sản phẩm"],
     ["danh-muc", "Danh mục"],
     ["kho", "Kho"],
+    ["nha-cung-cap", "Nhà cung cấp"],
     ["tham-chieu", "Vật liệu & màu"],
     ["danh-gia", "Đánh giá"],
     ["bao-cao", "Báo cáo"],
@@ -1048,13 +1140,14 @@ export default function QuanTriPage() {
     </section>}
 
     {tab === "kho" && <section className="cine-admin-operations cine-commerce-admin-v212 cine-inventory-admin-v214 cine-variant-admin-v215">
-      <div className="cine-operations-heading"><div><h2>Kho hàng</h2><p>Quản lý biến thể nâng cao: mã biến thể, vật liệu, màu, chênh lệch giá, tồn kho và trạng thái hiển thị.</p></div><div className="cine-product-heading-actions-v213"><span className="cine-admin-count">{thongKeKho.bien_the} biến thể</span><button type="button" className="cine-btn cine-btn-secondary" onClick={() => setTab("san-pham")}>Quản lý sản phẩm</button></div></div>
+      <div className="cine-operations-heading"><div><h2>Kho hàng</h2><p>Quản lý biến thể, định mức tồn tối thiểu/tối đa, gợi ý nhập hàng, phiếu nhập và nhà cung cấp.</p></div><div className="cine-product-heading-actions-v213"><span className="cine-admin-count">{thongKeKho.bien_the} biến thể</span><button type="button" className="cine-btn cine-btn-secondary" onClick={() => setTab("nha-cung-cap")}>Nhà cung cấp</button><button type="button" className="cine-btn cine-btn-secondary" onClick={() => setTab("san-pham")}>Quản lý sản phẩm</button></div></div>
 
       <div className="cine-inventory-stats-v214">
         <article className="cine-card cine-inventory-stat-v214"><span>Tổng biến thể</span><b>{thongKeKho.bien_the}</b><small>Đang theo dõi trong kho</small></article>
         <article className="cine-card cine-inventory-stat-v214"><span>Tổng tồn</span><b>{thongKeKho.tong_ton}</b><small>Tổng số lượng khả dụng</small></article>
         <article className="cine-card cine-inventory-stat-v214 warning"><span>Sắp hết</span><b>{thongKeKho.sap_het}</b><small>Từ 1 đến {nguongKho} sản phẩm</small></article>
         <article className="cine-card cine-inventory-stat-v214 critical"><span>Hết hàng</span><b>{thongKeKho.het_hang}</b><small>Tồn kho bằng 0</small></article>
+        <article className="cine-card cine-inventory-stat-v214 reorder"><span>Cần nhập theo định mức</span><b>{thongKeKho.can_nhap}</b><small>Gợi ý nhập tổng +{thongKeKho.goi_y_nhap}</small></article>
       </div>
 
       <div className="cine-card cine-stock-config-v217"><div><h3>Ngưỡng cảnh báo sắp hết</h3><p>Dùng chung cho Dashboard, bộ lọc Kho và nhãn trạng thái. Giá trị từ 1–999.</p></div><label><span>Ngưỡng tồn</span><input type="number" min="1" max="999" value={cau_hinh_kho.nguong_sap_het} onChange={e=>setCauHinhKho(x=>({...x,nguong_sap_het:Math.max(1,Math.min(999,Number(e.target.value)||1))}))}/></label><button type="button" className="cine-btn cine-btn-primary" onClick={luuCauHinhKho} disabled={dang_xu_ly==="cau-hinh-kho"}>{dang_xu_ly==="cau-hinh-kho"?"Đang lưu…":"Lưu ngưỡng"}</button></div>
@@ -1066,12 +1159,29 @@ export default function QuanTriPage() {
 
       <div className="cine-card cine-batch-import-v218">
         <div className="cine-batch-head-v218"><div><h3>Nhập kho nhanh theo lô</h3><p>Import CSV/Excel, kiểm tra toàn bộ mã biến thể và số lượng trước khi ghi. Chỉ khi 100% dòng hợp lệ mới cho xác nhận nhập kho.</p></div><div className="cine-batch-actions-v218"><button type="button" className="cine-btn cine-btn-secondary" onClick={taiMauNhapKho}>Tải CSV mẫu</button><label className="cine-btn cine-btn-primary cine-file-btn-v218">{dang_xu_ly==="kiem-tra-import-kho"?"Đang kiểm tra…":"Chọn CSV / Excel"}<input type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={e=>void docTepNhapKho(e.target.files?.[0])}/></label></div></div>
-        <div className="cine-batch-meta-v218"><label><span>Mã lô</span><input value={nhap_lo_meta.ma_lo} maxLength={80} onChange={e=>setNhapLoMeta(x=>({...x,ma_lo:e.target.value}))} placeholder="VD: PLA-20260831-A"/></label><label><span>Nhà cung cấp</span><input value={nhap_lo_meta.nha_cung_cap} maxLength={180} onChange={e=>setNhapLoMeta(x=>({...x,nha_cung_cap:e.target.value}))} placeholder="Tên nhà cung cấp"/></label><label><span>Ghi chú phiếu</span><input value={nhap_lo_meta.ghi_chu} maxLength={1000} onChange={e=>setNhapLoMeta(x=>({...x,ghi_chu:e.target.value}))} placeholder="Thông tin chung của lô nhập"/></label></div>
+        <div className="cine-batch-meta-v218"><label><span>Mã lô</span><input value={nhap_lo_meta.ma_lo} maxLength={80} onChange={e=>setNhapLoMeta(x=>({...x,ma_lo:e.target.value}))} placeholder="VD: PLA-20260831-A"/></label><label><span>Nhà cung cấp</span><select className="cine-select-readable-v2182" value={nhap_lo_meta.nha_cung_cap_id} onChange={e=>setNhapLoMeta(x=>({...x,nha_cung_cap_id:e.target.value}))}><option value="">Không gắn nhà cung cấp</option>{nha_cung_cap_qt.filter(x=>x.dang_hoat_dong).map(x=><option key={x.id} value={x.id}>{x.ma_nha_cung_cap} · {x.ten_nha_cung_cap}</option>)}</select><button type="button" className="cine-inline-link-v219" onClick={()=>setTab("nha-cung-cap")}>Quản lý nhà cung cấp</button></label><label><span>Ghi chú phiếu</span><input value={nhap_lo_meta.ghi_chu} maxLength={1000} onChange={e=>setNhapLoMeta(x=>({...x,ghi_chu:e.target.value}))} placeholder="Thông tin chung của lô nhập"/></label></div>
         {import_kho ? <div className="cine-import-preview-v218">
           <div className="cine-import-summary-v218"><span><b>{import_kho.tong_dong}</b> dòng</span><span className="ok"><b>{import_kho.hop_le}</b> hợp lệ</span><span className={import_kho.khong_hop_le?"bad":"ok"}><b>{import_kho.khong_hop_le}</b> lỗi</span><span><b>{import_kho.dong.filter(x=>x.hop_le).reduce((sum,x)=>sum+x.so_luong_nhap,0)}</b> tổng SL nhập</span><button type="button" className="cine-btn cine-btn-primary" onClick={xacNhanNhapKhoTheoLo} disabled={import_kho.khong_hop_le>0 || import_kho.hop_le===0 || dang_xu_ly==="nhap-kho-theo-lo"}>{dang_xu_ly==="nhap-kho-theo-lo"?"Đang ghi kho…":"Xác nhận nhập kho"}</button></div>
           <div className="cine-import-table-wrap-v218"><div className="cine-import-table-v218"><div className="head"><span>Dòng</span><span>Mã biến thể</span><span>Sản phẩm</span><span>SL nhập</span><span>Tồn trước → sau</span><span>Kết quả</span></div>{import_kho.dong.slice(0,100).map(item=><div className={item.hop_le?"row ok":"row bad"} key={`${item.dong}-${item.ma_bien_the}`}><span>{item.dong}</span><span><b>{item.ma_bien_the||"—"}</b></span><span>{item.ten_san_pham||item.ma_san_pham||"—"}</span><span>+{Number.isFinite(item.so_luong_nhap)?item.so_luong_nhap:"?"}</span><span>{item.ton_hien_tai===null?"—":`${item.ton_hien_tai} → ${item.ton_sau_nhap}`}</span><span>{item.hop_le?"Hợp lệ":item.loi.join(" · ")}</span></div>)}</div></div>
         </div> : <div className="cine-import-empty-v218">Chưa chọn file. Cột bắt buộc: <b>ma_bien_the</b>, <b>so_luong_nhap</b>; cột tùy chọn: <b>ly_do</b>.</div>}
         {phieu_nhap_kho.length>0 && <div className="cine-receipt-list-v218"><h4>Phiếu nhập gần đây</h4>{phieu_nhap_kho.slice(0,6).map(p=><div key={p.id}><span><b>{p.ma_phieu}</b><small>{p.ma_lo?`Lô ${p.ma_lo}`:"Không mã lô"}{p.nha_cung_cap?` · ${p.nha_cung_cap}`:""}</small></span><strong>{p.so_dong} dòng · +{p.tong_so_luong}</strong><time>{new Date(p.ngay_tao).toLocaleString("vi-VN")}</time></div>)}</div>}
+      </div>
+
+      <div className="cine-card cine-receipt-history-v219">
+        <div className="cine-receipt-history-head-v219"><div><h3>Lịch sử phiếu nhập kho</h3><p>Tìm theo mã phiếu/mã lô/nhà cung cấp, lọc theo thời gian, xem chi tiết và xuất Excel đối soát.</p></div><button type="button" className="cine-btn cine-btn-secondary" onClick={taiExcelPhieuNhapKho} disabled={dang_xu_ly==="excel-phieu-nhap"}>{dang_xu_ly==="excel-phieu-nhap"?"Đang xuất…":"Xuất Excel"}</button></div>
+        <div className="cine-receipt-filters-v219">
+          <label className="wide"><span>Tìm phiếu nhập</span><input value={phieu_nhap_tim_kiem} onChange={e=>setPhieuNhapTimKiem(e.target.value)} placeholder="Mã phiếu, mã lô, tên nhà cung cấp…"/></label>
+          <label><span>Nhà cung cấp</span><select className="cine-select-readable-v2182" value={phieu_nhap_loc_ncc} onChange={e=>setPhieuNhapLocNcc(e.target.value)}><option value="">Tất cả nhà cung cấp</option>{nha_cung_cap_qt.map(x=><option key={x.id} value={x.id}>{x.ma_nha_cung_cap} · {x.ten_nha_cung_cap}</option>)}</select></label>
+          <label><span>Từ ngày</span><input type="date" value={phieu_nhap_tu_ngay} onChange={e=>setPhieuNhapTuNgay(e.target.value)}/></label>
+          <label><span>Đến ngày</span><input type="date" value={phieu_nhap_den_ngay} onChange={e=>setPhieuNhapDenNgay(e.target.value)}/></label>
+          <button type="button" className="cine-btn cine-btn-primary" onClick={locPhieuNhapKho} disabled={dang_xu_ly==="loc-phieu-nhap"}>{dang_xu_ly==="loc-phieu-nhap"?"Đang lọc…":"Lọc phiếu"}</button>
+        </div>
+        <div className="cine-receipt-table-v219">
+          <div className="head"><span>Phiếu / lô</span><span>Nhà cung cấp</span><span>Quy mô</span><span>Ngày tạo</span><span>Thao tác</span></div>
+          {phieu_nhap_kho.slice(0,80).map(p=><div className="row" key={p.id}><span><b>{p.ma_phieu}</b><small>{p.ma_lo?`Lô ${p.ma_lo}`:"Không mã lô"}</small></span><span><b>{p.nha_cung_cap_ref?.ten_nha_cung_cap || p.nha_cung_cap || "—"}</b><small>{p.nha_cung_cap_ref?.ma_nha_cung_cap || ""}</small></span><span><b>{p.so_dong} dòng</b><small>+{p.tong_so_luong} sản phẩm</small></span><time>{new Date(p.ngay_tao).toLocaleString("vi-VN")}</time><button type="button" className="cine-btn cine-btn-secondary" onClick={()=>xemChiTietPhieuNhapKho(p.id)} disabled={dang_xu_ly===`phieu-nhap-${p.id}`}>{dang_xu_ly===`phieu-nhap-${p.id}`?"Đang tải…":"Chi tiết"}</button></div>)}
+          {phieu_nhap_kho.length===0&&<div className="cine-dashboard-empty">Không có phiếu nhập phù hợp bộ lọc.</div>}
+        </div>
+        {phieu_nhap_chi_tiet&&<div className="cine-receipt-detail-v219"><div className="cine-receipt-detail-head-v219"><div><h4>{phieu_nhap_chi_tiet.ma_phieu}</h4><p>{phieu_nhap_chi_tiet.ma_lo?`Lô ${phieu_nhap_chi_tiet.ma_lo} · `:""}{phieu_nhap_chi_tiet.nha_cung_cap_ref?.ten_nha_cung_cap || phieu_nhap_chi_tiet.nha_cung_cap || "Không nhà cung cấp"}</p></div><button type="button" className="cine-btn cine-btn-secondary" onClick={()=>setPhieuNhapChiTiet(null)}>Đóng</button></div><div className="cine-receipt-detail-table-v219"><div className="head"><span>Biến thể</span><span>Sản phẩm</span><span>Vật liệu / màu</span><span>SL nhập</span><span>Tồn trước → sau</span><span>Lý do</span></div>{phieu_nhap_chi_tiet.chi_tiet.map((d,i)=><div className="row" key={d.id||`${d.ma_bien_the}-${i}`}><span><b>{d.ma_bien_the}</b></span><span>{d.ma_san_pham?`${d.ma_san_pham} · `:""}{d.ten_san_pham||"—"}</span><span>{d.vat_lieu||"—"} / {d.mau_sac||"—"}</span><strong>+{d.so_luong_nhap}</strong><span>{d.ton_truoc} → {d.ton_sau}</span><span>{d.ly_do||"Nhập kho"}</span></div>)}</div></div>}
       </div>
 
       <form className="cine-card cine-variant-create-v215" onSubmit={taoBienTheMoi}>
@@ -1088,7 +1198,7 @@ export default function QuanTriPage() {
 
       <div className="cine-card cine-stock-filters-v216">
         <label className="wide"><span>Tìm trong kho</span><input value={kho_tim_kiem} onChange={e => setKhoTimKiem(e.target.value)} placeholder="Mã sản phẩm, tên, biến thể, vật liệu, màu..."/></label>
-        <label><span>Tình trạng tồn</span><select value={kho_loc_ton} onChange={e=>setKhoLocTon(e.target.value)}><option value="">Tất cả</option><option value="CON_HANG">Còn hàng &gt; {nguongKho}</option><option value="SAP_HET">Sắp hết 1–{nguongKho}</option><option value="HET_HANG">Hết hàng 0</option></select></label>
+        <label><span>Tình trạng tồn</span><select value={kho_loc_ton} onChange={e=>setKhoLocTon(e.target.value)}><option value="">Tất cả</option><option value="CON_HANG">Còn hàng &gt; {nguongKho}</option><option value="SAP_HET">Sắp hết 1–{nguongKho}</option><option value="HET_HANG">Hết hàng 0</option><option value="CAN_NHAP">Cần nhập theo định mức</option></select></label>
         <label><span>Vật liệu</span><select className="cine-select-readable-v2182" value={kho_loc_vat_lieu} onChange={e=>setKhoLocVatLieu(e.target.value)}><option value="">Tất cả vật liệu</option>{vat_lieu_qt.map(x=><option key={x.id} value={x.id}>{x.ma_vat_lieu} · {x.ten_vat_lieu}</option>)}</select></label>
         <label><span>Màu</span><select className="cine-select-readable-v2182" value={kho_loc_mau} onChange={e=>setKhoLocMau(e.target.value)}><option value="">Tất cả màu</option>{mau_sac_qt.map(x=><option key={x.id} value={x.id}>{x.ma_mau} · {x.ten_mau}</option>)}</select></label>
         <label><span>Hiển thị</span><select value={kho_loc_hien_thi} onChange={e=>setKhoLocHienThi(e.target.value)}><option value="">Tất cả</option><option value="HIEN">Đang hiện</option><option value="AN">Đang ẩn</option></select></label>
@@ -1096,14 +1206,17 @@ export default function QuanTriPage() {
       </div>
 
       <div className="cine-card cine-inventory-table-card-v214 cine-variant-table-v215"><div className="cine-inventory-scroll-v214">
-        <div className="cine-inventory-head-v214 cine-variant-head-v215"><span>Sản phẩm</span><span>Mã biến thể</span><span>Vật liệu</span><span>Màu</span><span>Chênh giá</span><span>Tồn</span><span>Tình trạng</span><span>Hiển thị</span><span>Lý do điều chỉnh</span><span>Thao tác</span></div>
-        {danhSachKho.map(({ san_pham, bien_the }) => { const trang_thai_kho = bien_the.so_luong_ton <= 0 ? "HẾT HÀNG" : bien_the.so_luong_ton <= nguongKho ? "SẮP HẾT" : "CÒN HÀNG"; const stock_key = bien_the.so_luong_ton <= 0 ? "out" : bien_the.so_luong_ton <= nguongKho ? "low" : "ok"; return <div className="cine-inventory-row-v214 cine-variant-row-v215" key={bien_the.id}>
+        <div className="cine-inventory-head-v214 cine-variant-head-v215"><span>Sản phẩm</span><span>Mã biến thể</span><span>Vật liệu</span><span>Màu</span><span>Chênh giá</span><span>Tồn</span><span>Tồn min</span><span>Tồn max</span><span>Gợi ý nhập</span><span>Tình trạng</span><span>Hiển thị</span><span>Lý do điều chỉnh</span><span>Thao tác</span></div>
+        {danhSachKho.map(({ san_pham, bien_the }) => { const trang_thai_kho = bien_the.so_luong_ton <= 0 ? "HẾT HÀNG" : bien_the.so_luong_ton <= nguongKho ? "SẮP HẾT" : "CÒN HÀNG"; const stock_key = bien_the.so_luong_ton <= 0 ? "out" : bien_the.so_luong_ton <= nguongKho ? "low" : "ok"; const goi_y_nhap = bien_the.ton_toi_da > bien_the.ton_toi_thieu && bien_the.so_luong_ton <= bien_the.ton_toi_thieu ? Math.max(0,bien_the.ton_toi_da-bien_the.so_luong_ton) : 0; return <div className="cine-inventory-row-v214 cine-variant-row-v215" key={bien_the.id}>
           <span className="cine-inventory-product-v214"><b>{san_pham.ten_san_pham}</b><small>{san_pham.ma_san_pham}</small></span>
           <input value={bien_the.ma_bien_the} onChange={e => suaBienTheLocal(san_pham.id,bien_the.id,{ma_bien_the:e.target.value})}/>
           <select className="cine-select-readable-v2182" value={bien_the.vat_lieu?.id || ""} onChange={e => { const x=vat_lieu_qt.find(v=>v.id===e.target.value); suaBienTheLocal(san_pham.id,bien_the.id,{vat_lieu:x?{id:x.id,ten_vat_lieu:x.ten_vat_lieu}:null}); }}><option value="">Mặc định / chưa chọn</option>{vat_lieu_qt.map(x => <option key={x.id} value={x.id}>{x.ma_vat_lieu} · {x.ten_vat_lieu}</option>)}</select>
           <select className="cine-select-readable-v2182" value={bien_the.mau_sac?.id || ""} onChange={e => { const x=mau_sac_qt.find(v=>v.id===e.target.value); suaBienTheLocal(san_pham.id,bien_the.id,{mau_sac:x?{id:x.id,ten_mau:x.ten_mau,ma_hex:x.ma_hex}:null}); }}><option value="">Mặc định / chưa chọn</option>{mau_sac_qt.map(x => <option key={x.id} value={x.id}>{x.ma_mau} · {x.ten_mau}</option>)}</select>
           <input type="number" step="1000" value={Number(bien_the.gia_chenh_lech)} onChange={e => suaBienTheLocal(san_pham.id,bien_the.id,{gia_chenh_lech:Number(e.target.value)})}/>
           <input aria-label={`Tồn kho ${bien_the.ma_bien_the}`} type="number" min="0" max="1000000" value={bien_the.so_luong_ton} onChange={e => suaBienTheLocal(san_pham.id,bien_the.id,{so_luong_ton:Math.max(0,Number(e.target.value))})}/>
+          <input aria-label={`Tồn tối thiểu ${bien_the.ma_bien_the}`} type="number" min="0" max="1000000" value={bien_the.ton_toi_thieu} onChange={e => suaBienTheLocal(san_pham.id,bien_the.id,{ton_toi_thieu:Math.max(0,Number(e.target.value))})}/>
+          <input aria-label={`Tồn tối đa ${bien_the.ma_bien_the}`} type="number" min="0" max="1000000" value={bien_the.ton_toi_da} onChange={e => suaBienTheLocal(san_pham.id,bien_the.id,{ton_toi_da:Math.max(0,Number(e.target.value))})}/>
+          <span className={`cine-reorder-suggest-v219 ${goi_y_nhap>0?"active":""}`}>{goi_y_nhap>0?`+${goi_y_nhap}`:"—"}</span>
           <span className="cine-stock-state-v214" data-stock={stock_key}>{trang_thai_kho}</span>
           <label className="cine-stock-toggle-v212"><input type="checkbox" checked={bien_the.dang_hien_thi} onChange={e => suaBienTheLocal(san_pham.id,bien_the.id,{dang_hien_thi:e.target.checked})}/><span>{bien_the.dang_hien_thi ? "Hiện" : "Ẩn"}</span></label>
           <input className="cine-stock-reason-v217" value={kho_ly_do[bien_the.id] || ""} onChange={e=>setKhoLyDo(x=>({...x,[bien_the.id]:e.target.value}))} maxLength={300} placeholder="Nhập kho, bán lẻ, kiểm kê…"/>
@@ -1115,6 +1228,21 @@ export default function QuanTriPage() {
       <div className="cine-card cine-stock-history-v216 cine-stock-history-v217">
         <div className="cine-stock-history-head-v216"><div><h3>Lịch sử nhập / xuất / điều chỉnh kho</h3><p>Ghi rõ nguyên nhân, chênh lệch, người thao tác và thời điểm.</p></div><label className="cine-history-filter-v217"><span>Loại biến động</span><select value={lich_su_kho_loc_loai} onChange={e=>setLichSuKhoLocLoai(e.target.value)}><option value="">Tất cả</option><option value="NHAP_KHO">Nhập kho</option><option value="XUAT_KHO">Xuất kho</option><option value="DIEU_CHINH">Điều chỉnh</option></select></label></div>
         <div className="cine-stock-history-list-v216">{lichSuKhoDaLoc.slice(0,24).map(item=> <div className="cine-stock-history-row-v216 cine-stock-history-row-v217" key={item.id}><span><b>{item.ma_bien_the || "Biến thể"}</b><small>{item.ma_san_pham} · {item.nguoi_thuc_hien?.ho_ten || "Admin"}</small><em>{item.ly_do}</em></span><span className="cine-stock-movement-v217" data-type={item.loai_bien_dong}>{item.loai_bien_dong === "NHAP_KHO" ? "Nhập kho" : item.loai_bien_dong === "XUAT_KHO" ? "Xuất kho" : "Điều chỉnh"}</span><strong className={item.chenh_lech >= 0 ? "plus" : "minus"}>{item.ton_cu} → {item.ton_moi} ({item.chenh_lech >= 0 ? "+" : ""}{item.chenh_lech})</strong><time>{new Date(item.ngay_tao).toLocaleString("vi-VN")}</time></div>)}{lichSuKhoDaLoc.length===0&&<div className="cine-dashboard-empty">Chưa có biến động kho phù hợp.</div>}</div>
+      </div>
+    </section>}
+
+    {tab === "nha-cung-cap" && <section className="cine-admin-operations cine-supplier-admin-v219">
+      <div className="cine-operations-heading"><div><h2>Nhà cung cấp</h2><p>Quản lý thông tin nhà cung cấp và liên kết trực tiếp với phiếu nhập kho. Nhà cung cấp đã có phiếu nhập chỉ được ngừng hoạt động, không xóa.</p></div><div className="cine-product-heading-actions-v213"><span className="cine-admin-count">{nha_cung_cap_qt.length} nhà cung cấp</span><button type="button" className="cine-btn cine-btn-secondary" onClick={()=>setTab("kho")}>Mở kho</button></div></div>
+      <div className="cine-supplier-layout-v219">
+        <form className="cine-card cine-supplier-create-v219" onSubmit={taoNhaCungCapMoi}>
+          <h3>Thêm nhà cung cấp</h3>
+          <div className="cine-supplier-form-grid-v219"><label><span>Mã nhà cung cấp</span><input required value={ncc_moi.ma_nha_cung_cap} onChange={e=>setNccMoi(x=>({...x,ma_nha_cung_cap:e.target.value}))} placeholder="VD: NCC-PLA-01"/></label><label><span>Tên nhà cung cấp</span><input required value={ncc_moi.ten_nha_cung_cap} onChange={e=>setNccMoi(x=>({...x,ten_nha_cung_cap:e.target.value}))}/></label><label><span>Người liên hệ</span><input value={ncc_moi.nguoi_lien_he} onChange={e=>setNccMoi(x=>({...x,nguoi_lien_he:e.target.value}))}/></label><label><span>Số điện thoại</span><input value={ncc_moi.so_dien_thoai} onChange={e=>setNccMoi(x=>({...x,so_dien_thoai:e.target.value}))}/></label><label><span>Email</span><input type="email" value={ncc_moi.thu_dien_tu} onChange={e=>setNccMoi(x=>({...x,thu_dien_tu:e.target.value}))}/></label><label className="wide"><span>Địa chỉ</span><input value={ncc_moi.dia_chi} onChange={e=>setNccMoi(x=>({...x,dia_chi:e.target.value}))}/></label><label className="wide"><span>Ghi chú</span><textarea value={ncc_moi.ghi_chu} onChange={e=>setNccMoi(x=>({...x,ghi_chu:e.target.value}))}/></label><label className="cine-check-v215"><input type="checkbox" checked={ncc_moi.dang_hoat_dong} onChange={e=>setNccMoi(x=>({...x,dang_hoat_dong:e.target.checked}))}/><span>Đang hoạt động</span></label></div>
+          <button className="cine-btn cine-btn-primary" disabled={dang_xu_ly==="tao-nha-cung-cap"}>{dang_xu_ly==="tao-nha-cung-cap"?"Đang tạo…":"+ Thêm nhà cung cấp"}</button>
+        </form>
+        <div className="cine-supplier-main-v219">
+          <div className="cine-card cine-supplier-filter-v219"><label><span>Tìm nhà cung cấp</span><input value={ncc_tim_kiem} onChange={e=>setNccTimKiem(e.target.value)} placeholder="Mã, tên, người liên hệ, điện thoại, email…"/></label><label><span>Trạng thái</span><select value={ncc_loc_hoat_dong} onChange={e=>setNccLocHoatDong(e.target.value)}><option value="">Tất cả</option><option value="true">Đang hoạt động</option><option value="false">Ngừng hoạt động</option></select></label><button type="button" className="cine-btn cine-btn-primary" onClick={locNhaCungCap} disabled={dang_xu_ly==="loc-nha-cung-cap"}>Lọc</button></div>
+          <div className="cine-supplier-list-v219">{nha_cung_cap_qt.map(item=><article className="cine-card cine-supplier-row-v219" key={item.id}><div className="cine-supplier-code-v219"><b>{item.ma_nha_cung_cap}</b><small>{item.so_phieu_nhap} phiếu nhập</small><span className={`status-badge ${item.dang_hoat_dong?"active":"locked"}`}>{item.dang_hoat_dong?"Hoạt động":"Ngừng"}</span></div><div className="cine-supplier-fields-v219"><label><span>Tên nhà cung cấp</span><input value={item.ten_nha_cung_cap} onChange={e=>suaNhaCungCapLocal(item.id,{ten_nha_cung_cap:e.target.value})}/></label><label><span>Người liên hệ</span><input value={item.nguoi_lien_he||""} onChange={e=>suaNhaCungCapLocal(item.id,{nguoi_lien_he:e.target.value})}/></label><label><span>Điện thoại</span><input value={item.so_dien_thoai||""} onChange={e=>suaNhaCungCapLocal(item.id,{so_dien_thoai:e.target.value})}/></label><label><span>Email</span><input type="email" value={item.thu_dien_tu||""} onChange={e=>suaNhaCungCapLocal(item.id,{thu_dien_tu:e.target.value})}/></label><label className="wide"><span>Địa chỉ</span><input value={item.dia_chi||""} onChange={e=>suaNhaCungCapLocal(item.id,{dia_chi:e.target.value})}/></label><label className="wide"><span>Ghi chú</span><input value={item.ghi_chu||""} onChange={e=>suaNhaCungCapLocal(item.id,{ghi_chu:e.target.value})}/></label><label className="cine-check-v215"><input type="checkbox" checked={item.dang_hoat_dong} onChange={e=>suaNhaCungCapLocal(item.id,{dang_hoat_dong:e.target.checked})}/><span>{item.dang_hoat_dong?"Đang hoạt động":"Ngừng hoạt động"}</span></label></div><div className="cine-row-actions-v215"><button type="button" className="cine-btn cine-btn-secondary" onClick={()=>luuNhaCungCap(item)} disabled={dang_xu_ly===`ncc-${item.id}`}>Lưu</button><button type="button" className="cine-btn cine-btn-danger-outline" onClick={()=>xoaNhaCungCap(item)} disabled={dang_xu_ly===`ncc-${item.id}`||item.so_phieu_nhap>0} title={item.so_phieu_nhap>0?"Đã có phiếu nhập: hãy chuyển sang Ngừng hoạt động":"Xóa nhà cung cấp"}>Xóa</button></div></article>)}{nha_cung_cap_qt.length===0&&<div className="cine-card cine-dashboard-empty">Không có nhà cung cấp phù hợp.</div>}</div>
+        </div>
       </div>
     </section>}
 

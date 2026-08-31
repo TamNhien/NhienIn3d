@@ -17,6 +17,12 @@ export class CapNhatBienTheDto {
   @IsOptional() @Type(() => Number) @IsInt() @Min(0) @Max(1000000)
   so_luong_ton?: number;
 
+  @IsOptional() @Type(() => Number) @IsInt() @Min(0) @Max(1000000)
+  ton_toi_thieu?: number;
+
+  @IsOptional() @Type(() => Number) @IsInt() @Min(0) @Max(1000000)
+  ton_toi_da?: number;
+
   @IsOptional() @IsBoolean()
   dang_hien_thi?: boolean;
 

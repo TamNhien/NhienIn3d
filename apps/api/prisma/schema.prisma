@@ -161,6 +161,8 @@ model BienTheSanPham {
   ma_bien_the   String    @unique @db.VarChar(80)
   gia_chenh_lech Decimal  @default(0) @db.Decimal(14, 2)
   so_luong_ton  Int       @default(0)
+  ton_toi_thieu Int       @default(0)
+  ton_toi_da    Int       @default(0)
   dang_hien_thi Boolean   @default(true)
   san_pham      SanPham   @relation(fields: [san_pham_id], references: [id], onDelete: Cascade)
   vat_lieu      VatLieu?  @relation(fields: [vat_lieu_id], references: [id], onDelete: SetNull)
@@ -173,20 +175,42 @@ model BienTheSanPham {
 }
 
 
+model NhaCungCap {
+  id               String          @id @default(uuid()) @db.Uuid
+  ma_nha_cung_cap  String          @unique @db.VarChar(50)
+  ten_nha_cung_cap String          @db.VarChar(180)
+  nguoi_lien_he    String?         @db.VarChar(120)
+  so_dien_thoai    String?         @db.VarChar(30)
+  thu_dien_tu      String?         @db.VarChar(190)
+  dia_chi          String?         @db.Text
+  ghi_chu          String?         @db.Text
+  dang_hoat_dong   Boolean         @default(true)
+  ngay_tao         DateTime        @default(now()) @db.Timestamptz(6)
+  ngay_cap_nhat    DateTime        @updatedAt @db.Timestamptz(6)
+  phieu_nhap       PhieuNhapKho[]
+
+  @@index([ten_nha_cung_cap])
+  @@index([dang_hoat_dong])
+  @@map("nha_cung_cap")
+}
+
 model PhieuNhapKho {
   id               String                 @id @default(uuid()) @db.Uuid
   ma_phieu         String                 @unique @db.VarChar(40)
   ma_lo            String?                @db.VarChar(80)
   nha_cung_cap     String?                @db.VarChar(180)
+  nha_cung_cap_id  String?                @db.Uuid
   ghi_chu          String?                @db.Text
   nguoi_tao_id     String?                @db.Uuid
   so_dong          Int                    @default(0)
   tong_so_luong    Int                    @default(0)
   ngay_tao         DateTime               @default(now()) @db.Timestamptz(6)
   chi_tiet         ChiTietPhieuNhapKho[]
+  nha_cung_cap_ref NhaCungCap?            @relation(fields: [nha_cung_cap_id], references: [id], onDelete: SetNull)
 
   @@index([ngay_tao])
   @@index([ma_lo])
+  @@index([nha_cung_cap_id])
   @@map("phieu_nhap_kho")
 }
 

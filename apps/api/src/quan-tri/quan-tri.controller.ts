@@ -27,6 +27,8 @@ import { CapNhatMauSacDto } from "./dto/cap-nhat-mau-sac.dto.js";
 import { CapNhatCauHinhKhoDto } from "./dto/cap-nhat-cau-hinh-kho.dto.js";
 import { KiemTraTepNhapKhoDto } from "./dto/kiem-tra-tep-nhap-kho.dto.js";
 import { NhapKhoLoDto } from "./dto/nhap-kho-lo.dto.js";
+import { TaoNhaCungCapDto } from "./dto/tao-nha-cung-cap.dto.js";
+import { CapNhatNhaCungCapDto } from "./dto/cap-nhat-nha-cung-cap.dto.js";
 import { QuanTriService } from "./quan-tri.service.js";
 
 @ApiTags("Quản trị")
@@ -82,12 +84,19 @@ export class QuanTriController {
   @Post("mau-sac") tao_mau_sac(@Req() req: YeuCauCoNguoiDung, @Body() dto: TaoMauSacDto) { return this.service.tao_mau_sac(req.nguoi_dung_xac_thuc!, dto); }
   @Post("mau-sac/:id/cap-nhat") cap_nhat_mau_sac(@Req() req: YeuCauCoNguoiDung, @Param("id") id: string, @Body() dto: CapNhatMauSacDto) { return this.service.cap_nhat_mau_sac(req.nguoi_dung_xac_thuc!, id, dto); }
   @Post("mau-sac/:id/xoa") xoa_mau_sac(@Req() req: YeuCauCoNguoiDung, @Param("id") id: string) { return this.service.xoa_mau_sac(req.nguoi_dung_xac_thuc!, id); }
+  @Get("nha-cung-cap") nha_cung_cap(@Query("tim_kiem") tim_kiem?: string, @Query("dang_hoat_dong") dang_hoat_dong?: string) { return this.service.danh_sach_nha_cung_cap(tim_kiem, dang_hoat_dong); }
+  @Post("nha-cung-cap") tao_nha_cung_cap(@Req() req: YeuCauCoNguoiDung, @Body() dto: TaoNhaCungCapDto) { return this.service.tao_nha_cung_cap(req.nguoi_dung_xac_thuc!, dto); }
+  @Post("nha-cung-cap/:id/cap-nhat") cap_nhat_nha_cung_cap(@Req() req: YeuCauCoNguoiDung, @Param("id") id: string, @Body() dto: CapNhatNhaCungCapDto) { return this.service.cap_nhat_nha_cung_cap(req.nguoi_dung_xac_thuc!, id, dto); }
+  @Post("nha-cung-cap/:id/xoa") xoa_nha_cung_cap(@Req() req: YeuCauCoNguoiDung, @Param("id") id: string) { return this.service.xoa_nha_cung_cap(req.nguoi_dung_xac_thuc!, id); }
+
   @Get("kho/cau-hinh") cau_hinh_kho() { return this.service.lay_cau_hinh_kho(); }
   @Post("kho/cau-hinh") cap_nhat_cau_hinh_kho(@Req() req: YeuCauCoNguoiDung, @Body() dto: CapNhatCauHinhKhoDto) { return this.service.cap_nhat_cau_hinh_kho(req.nguoi_dung_xac_thuc!, dto); }
   @Get("kho/lich-su") lich_su_kho(@Query("loai") loai?: string) { return this.service.lich_su_dieu_chinh_ton_kho(loai); }
   @Post("kho/import/kiem-tra") kiem_tra_import_kho(@Body() dto: KiemTraTepNhapKhoDto) { return this.service.kiem_tra_tep_nhap_kho(dto); }
   @Post("kho/nhap-lo") nhap_kho_theo_lo(@Req() req: YeuCauCoNguoiDung, @Body() dto: NhapKhoLoDto) { return this.service.nhap_kho_theo_lo(req.nguoi_dung_xac_thuc!, dto); }
-  @Get("kho/phieu-nhap") phieu_nhap_kho() { return this.service.danh_sach_phieu_nhap_kho(); }
+  @Get("kho/phieu-nhap") phieu_nhap_kho(@Query("tim_kiem") tim_kiem?: string, @Query("nha_cung_cap_id") nha_cung_cap_id?: string, @Query("tu_ngay") tu_ngay?: string, @Query("den_ngay") den_ngay?: string) { return this.service.danh_sach_phieu_nhap_kho(tim_kiem, nha_cung_cap_id, tu_ngay, den_ngay); }
+  @Get("kho/phieu-nhap/excel") phieu_nhap_kho_excel(@Query("tim_kiem") tim_kiem?: string, @Query("nha_cung_cap_id") nha_cung_cap_id?: string, @Query("tu_ngay") tu_ngay?: string, @Query("den_ngay") den_ngay?: string) { return this.service.xuat_excel_phieu_nhap_kho(tim_kiem, nha_cung_cap_id, tu_ngay, den_ngay); }
+  @Get("kho/phieu-nhap/:id") chi_tiet_phieu_nhap_kho(@Param("id") id: string) { return this.service.chi_tiet_phieu_nhap_kho(id); }
   @Get("kho/canh-bao-email") canh_bao_email() { return this.service.trang_thai_canh_bao_kho_email(); }
   @Post("kho/canh-bao-email/gui") gui_canh_bao_email() { return this.service.kiem_tra_gui_canh_bao_kho_email(); }
 
