@@ -36,7 +36,7 @@ function taoDatabaseUrl(): string {
 const adapter = new PrismaPg({ connectionString: taoDatabaseUrl() });
 const db = new PrismaClient({ adapter });
 
-const PHIEN_BAN_HIEN_TAI = "SEED_V2140_TACH_SAN_PHAM_KHO";
+const PHIEN_BAN_HIEN_TAI = "SEED_V2150_DANH_MUC_BIEN_THE_DANH_GIA_BAO_CAO";
 
 const danh_muc = [
   ["HOBBY_RC", "Mô hình & RC", "mo-hinh-rc", "Mô hình cơ khí, xe điều khiển và sản phẩm lắp ráp."],
@@ -254,7 +254,7 @@ const phien_ban_seed = [
   ["SEED_V2120_DON_HANG_SAN_PHAM_AUDIT", "NhienIn3d v2.12.0 bổ sung quản trị đơn hàng, lịch sử trạng thái, sản phẩm/tồn kho và audit Admin."],
   ["SEED_V2122_SAN_PHAM_12_GRID_6", "NhienIn3d v2.12.2 bổ sung đủ 12 sản phẩm mẫu để storefront hiển thị 2 hàng × 6 sản phẩm."],
   ["SEED_V2130_QUAN_TRI_SAN_PHAM_ANH_LOCAL", "NhienIn3d v2.13.0 cho Admin CRUD sản phẩm, ảnh tải từ máy chuẩn hóa 1000x800 và seed không ghi đè dữ liệu quản trị."],
-  [PHIEN_BAN_HIEN_TAI, "NhienIn3d v2.14.0 tách quản lý sản phẩm và kho thành hai khu vực Admin riêng; CRUD sản phẩm và tồn kho tiếp tục lưu bền vững."]
+  [PHIEN_BAN_HIEN_TAI, "NhienIn3d v2.15.0 bổ sung CRUD danh mục, quản lý biến thể nâng cao, duyệt đánh giá và xuất báo cáo CSV; dữ liệu vận hành tiếp tục lưu bền vững."]
 ] as const;
 
 async function main() {

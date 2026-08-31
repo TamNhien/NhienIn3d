@@ -14,6 +14,11 @@ import { CapNhatTrangThaiDonHangDto } from "./dto/cap-nhat-trang-thai-don-hang.d
 import { CapNhatSanPhamQuanTriDto } from "./dto/cap-nhat-san-pham-quan-tri.dto.js";
 import { TaoSanPhamQuanTriDto } from "./dto/tao-san-pham-quan-tri.dto.js";
 import { CapNhatTonKhoDto } from "./dto/cap-nhat-ton-kho.dto.js";
+import { TaoDanhMucDto } from "./dto/tao-danh-muc.dto.js";
+import { CapNhatDanhMucDto } from "./dto/cap-nhat-danh-muc.dto.js";
+import { TaoBienTheDto } from "./dto/tao-bien-the.dto.js";
+import { CapNhatBienTheDto } from "./dto/cap-nhat-bien-the.dto.js";
+import { CapNhatDanhGiaDto } from "./dto/cap-nhat-danh-gia.dto.js";
 
 @Injectable()
 export class QuanTriService {
@@ -34,6 +39,13 @@ export class QuanTriService {
       .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 150) || "san-pham";
     const ma_slug = ma.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
     return `${slug}-${ma_slug}`.slice(0, 220);
+  }
+
+  private tao_duong_dan_danh_muc(ten: string, ma: string) {
+    const slug = ten.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replaceAll("đ", "d").replaceAll("Đ", "D")
+      .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 120) || "danh-muc";
+    const maSlug = ma.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    return `${slug}-${maSlug}`.slice(0, 160);
   }
 
   async tong_quan() {
@@ -744,11 +756,67 @@ export class QuanTriService {
     return this.chi_tiet_don_hang(id);
   }
 
+
+  async danh_sach_danh_muc_quan_tri() {
+    const ds = await this.db.danhMuc.findMany({
+      include: { _count: { select: { san_pham: true } } },
+      orderBy: [{ thu_tu: "asc" }, { ten_danh_muc: "asc" }]
+    });
+    return ds.map(x => ({ ...x, so_san_pham: x._count.san_pham, _count: undefined }));
+  }
+
+  async tao_danh_muc(actor: NguoiDungXacThuc, dto: TaoDanhMucDto) {
+    const ma = dto.ma_danh_muc.trim().toUpperCase();
+    const ten = dto.ten_danh_muc.trim();
+    const trung = await this.db.danhMuc.findUnique({ where: { ma_danh_muc: ma }, select: { id: true } });
+    if (trung) throw new ConflictException("Mã danh mục đã tồn tại");
+    const item = await this.db.danhMuc.create({ data: {
+      ma_danh_muc: ma, ten_danh_muc: ten, duong_dan: this.tao_duong_dan_danh_muc(ten, ma),
+      mo_ta: dto.mo_ta?.trim() || null, thu_tu: dto.thu_tu ?? 0, dang_hien_thi: dto.dang_hien_thi ?? true
+    } });
+    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_TAO_DANH_MUC", nguoi_dung_id: actor.id, chi_tiet: { danh_muc_id: item.id, ma_danh_muc: ma, ten_danh_muc: ten } } });
+    return { ...item, so_san_pham: 0 };
+  }
+
+  async cap_nhat_danh_muc(actor: NguoiDungXacThuc, id: string, dto: CapNhatDanhMucDto) {
+    const hien_tai = await this.db.danhMuc.findUnique({ where: { id }, include: { _count: { select: { san_pham: true } } } });
+    if (!hien_tai) throw new NotFoundException("Không tìm thấy danh mục");
+    const ten = dto.ten_danh_muc?.trim();
+    const data = {
+      ...(ten !== undefined ? { ten_danh_muc: ten, duong_dan: this.tao_duong_dan_danh_muc(ten, hien_tai.ma_danh_muc) } : {}),
+      ...(dto.mo_ta !== undefined ? { mo_ta: dto.mo_ta.trim() || null } : {}),
+      ...(dto.thu_tu !== undefined ? { thu_tu: dto.thu_tu } : {}),
+      ...(dto.dang_hien_thi !== undefined ? { dang_hien_thi: dto.dang_hien_thi } : {})
+    };
+    if (!Object.keys(data).length) throw new BadRequestException("Không có dữ liệu danh mục để cập nhật");
+    const item = await this.db.danhMuc.update({ where: { id }, data });
+    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_CAP_NHAT_DANH_MUC", nguoi_dung_id: actor.id, chi_tiet: { danh_muc_id: id, ma_danh_muc: hien_tai.ma_danh_muc, truong_cap_nhat: Object.keys(data) } } });
+    return { ...item, so_san_pham: hien_tai._count.san_pham };
+  }
+
+  async xoa_danh_muc(actor: NguoiDungXacThuc, id: string) {
+    const hien_tai = await this.db.danhMuc.findUnique({ where: { id }, include: { _count: { select: { san_pham: true } } } });
+    if (!hien_tai) throw new NotFoundException("Không tìm thấy danh mục");
+    if (hien_tai._count.san_pham > 0) throw new BadRequestException(`Danh mục đang có ${hien_tai._count.san_pham} sản phẩm. Hãy chuyển sản phẩm sang danh mục khác trước khi xóa.`);
+    await this.db.danhMuc.delete({ where: { id } });
+    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_XOA_DANH_MUC", nguoi_dung_id: actor.id, chi_tiet: { danh_muc_id: id, ma_danh_muc: hien_tai.ma_danh_muc, ten_danh_muc: hien_tai.ten_danh_muc } } });
+    return { thong_bao: `Đã xóa danh mục ${hien_tai.ten_danh_muc}`, id };
+  }
+
+  async danh_sach_vat_lieu_quan_tri() {
+    const ds = await this.db.vatLieu.findMany({ orderBy: { ten_vat_lieu: "asc" } });
+    return ds.map(x => ({ ...x, he_so_gia: Number(x.he_so_gia) }));
+  }
+
+  async danh_sach_mau_sac_quan_tri() {
+    return this.db.mauSac.findMany({ orderBy: { ten_mau: "asc" } });
+  }
+
   async danh_sach_san_pham_quan_tri() {
     const ds = await this.db.sanPham.findMany({
       include: {
         danh_muc: { select: { id: true, ma_danh_muc: true, ten_danh_muc: true } },
-        bien_the: { include: { vat_lieu: { select: { ten_vat_lieu: true } }, mau_sac: { select: { ten_mau: true, ma_hex: true } } }, orderBy: { ma_bien_the: "asc" } },
+        bien_the: { include: { vat_lieu: { select: { id: true, ten_vat_lieu: true } }, mau_sac: { select: { id: true, ten_mau: true, ma_hex: true } } }, orderBy: { ma_bien_the: "asc" } },
         hinh_anh: { where: { la_anh_chinh: true }, take: 1, select: { duong_dan_anh: true } }
       },
       orderBy: { ma_san_pham: "asc" }
@@ -856,6 +924,125 @@ export class QuanTriService {
     const da_cap_nhat = await this.db.bienTheSanPham.update({ where: { id }, data: { so_luong_ton: dto.so_luong_ton, dang_hien_thi: dto.dang_hien_thi ?? hien_tai.dang_hien_thi }, include: { vat_lieu: true, mau_sac: true } });
     await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_CAP_NHAT_TON_KHO", nguoi_dung_id: actor.id, chi_tiet: { bien_the_id: id, ma_bien_the: hien_tai.ma_bien_the, ma_san_pham: hien_tai.san_pham.ma_san_pham, ton_cu: hien_tai.so_luong_ton, ton_moi: da_cap_nhat.so_luong_ton, hien_thi: da_cap_nhat.dang_hien_thi } } });
     return da_cap_nhat;
+  }
+
+
+  async tao_bien_the(actor: NguoiDungXacThuc, san_pham_id: string, dto: TaoBienTheDto) {
+    const ma = dto.ma_bien_the.trim().toUpperCase();
+    const [sp, trung, vat_lieu, mau_sac] = await Promise.all([
+      this.db.sanPham.findUnique({ where: { id: san_pham_id }, select: { id: true, ma_san_pham: true, nguon_tham_khao: true } }),
+      this.db.bienTheSanPham.findUnique({ where: { ma_bien_the: ma }, select: { id: true } }),
+      dto.vat_lieu_id ? this.db.vatLieu.findUnique({ where: { id: dto.vat_lieu_id }, select: { id: true } }) : Promise.resolve(null),
+      dto.mau_sac_id ? this.db.mauSac.findUnique({ where: { id: dto.mau_sac_id }, select: { id: true } }) : Promise.resolve(null)
+    ]);
+    if (!sp || sp.nguon_tham_khao?.startsWith("__ADMIN_DELETED__:")) throw new NotFoundException("Không tìm thấy sản phẩm");
+    if (trung) throw new ConflictException("Mã biến thể đã tồn tại");
+    if (dto.vat_lieu_id && !vat_lieu) throw new BadRequestException("Vật liệu không hợp lệ");
+    if (dto.mau_sac_id && !mau_sac) throw new BadRequestException("Màu sắc không hợp lệ");
+    const item = await this.db.bienTheSanPham.create({ data: {
+      san_pham_id, ma_bien_the: ma, vat_lieu_id: dto.vat_lieu_id || null, mau_sac_id: dto.mau_sac_id || null,
+      gia_chenh_lech: dto.gia_chenh_lech ?? 0, so_luong_ton: dto.so_luong_ton, dang_hien_thi: dto.dang_hien_thi ?? true
+    }, include: { vat_lieu: true, mau_sac: true } });
+    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_TAO_BIEN_THE", nguoi_dung_id: actor.id, chi_tiet: { san_pham_id, ma_san_pham: sp.ma_san_pham, bien_the_id: item.id, ma_bien_the: ma } } });
+    return { ...item, gia_chenh_lech: Number(item.gia_chenh_lech) };
+  }
+
+  async cap_nhat_bien_the(actor: NguoiDungXacThuc, id: string, dto: CapNhatBienTheDto) {
+    const hien_tai = await this.db.bienTheSanPham.findUnique({ where: { id }, include: { san_pham: { select: { id: true, ma_san_pham: true } } } });
+    if (!hien_tai) throw new NotFoundException("Không tìm thấy biến thể");
+    if (dto.ma_bien_the !== undefined) {
+      const ma = dto.ma_bien_the.trim().toUpperCase();
+      const trung = await this.db.bienTheSanPham.findFirst({ where: { ma_bien_the: ma, id: { not: id } }, select: { id: true } });
+      if (trung) throw new ConflictException("Mã biến thể đã tồn tại");
+    }
+    if (dto.vat_lieu_id) {
+      const x = await this.db.vatLieu.findUnique({ where: { id: dto.vat_lieu_id }, select: { id: true } });
+      if (!x) throw new BadRequestException("Vật liệu không hợp lệ");
+    }
+    if (dto.mau_sac_id) {
+      const x = await this.db.mauSac.findUnique({ where: { id: dto.mau_sac_id }, select: { id: true } });
+      if (!x) throw new BadRequestException("Màu sắc không hợp lệ");
+    }
+    const data = {
+      ...(dto.ma_bien_the !== undefined ? { ma_bien_the: dto.ma_bien_the.trim().toUpperCase() } : {}),
+      ...(dto.vat_lieu_id !== undefined ? { vat_lieu_id: dto.vat_lieu_id || null } : {}),
+      ...(dto.mau_sac_id !== undefined ? { mau_sac_id: dto.mau_sac_id || null } : {}),
+      ...(dto.gia_chenh_lech !== undefined ? { gia_chenh_lech: dto.gia_chenh_lech } : {}),
+      ...(dto.so_luong_ton !== undefined ? { so_luong_ton: dto.so_luong_ton } : {}),
+      ...(dto.dang_hien_thi !== undefined ? { dang_hien_thi: dto.dang_hien_thi } : {})
+    };
+    if (!Object.keys(data).length) throw new BadRequestException("Không có dữ liệu biến thể để cập nhật");
+    const item = await this.db.bienTheSanPham.update({ where: { id }, data, include: { vat_lieu: true, mau_sac: true } });
+    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_CAP_NHAT_BIEN_THE", nguoi_dung_id: actor.id, chi_tiet: { bien_the_id: id, san_pham_id: hien_tai.san_pham.id, ma_san_pham: hien_tai.san_pham.ma_san_pham, ma_bien_the_cu: hien_tai.ma_bien_the, ma_bien_the_moi: item.ma_bien_the } } });
+    return { ...item, gia_chenh_lech: Number(item.gia_chenh_lech) };
+  }
+
+  async xoa_bien_the(actor: NguoiDungXacThuc, id: string) {
+    const hien_tai = await this.db.bienTheSanPham.findUnique({ where: { id }, include: { san_pham: { select: { id: true, ma_san_pham: true } } } });
+    if (!hien_tai) throw new NotFoundException("Không tìm thấy biến thể");
+    const so_bien_the = await this.db.bienTheSanPham.count({ where: { san_pham_id: hien_tai.san_pham_id } });
+    if (so_bien_the <= 1) throw new BadRequestException("Sản phẩm phải còn ít nhất một biến thể. Hãy tạo biến thể mới trước khi xóa biến thể cuối cùng.");
+    await this.db.$transaction(async tx => {
+      await tx.chiTietGioHang.deleteMany({ where: { bien_the_id: id } });
+      await tx.bienTheSanPham.delete({ where: { id } });
+    });
+    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_XOA_BIEN_THE", nguoi_dung_id: actor.id, chi_tiet: { bien_the_id: id, ma_bien_the: hien_tai.ma_bien_the, san_pham_id: hien_tai.san_pham.id, ma_san_pham: hien_tai.san_pham.ma_san_pham } } });
+    return { thong_bao: `Đã xóa biến thể ${hien_tai.ma_bien_the}`, id };
+  }
+
+  async danh_sach_danh_gia_quan_tri(trang_thai?: string) {
+    const where = trang_thai === "CHO_DUYET" ? { da_duyet: false } : trang_thai === "DA_DUYET" ? { da_duyet: true } : {};
+    return this.db.danhGiaSanPham.findMany({
+      where,
+      include: { san_pham: { select: { id: true, ma_san_pham: true, ten_san_pham: true } } },
+      orderBy: { ngay_tao: "desc" }, take: 300
+    });
+  }
+
+  async cap_nhat_danh_gia(actor: NguoiDungXacThuc, id: string, dto: CapNhatDanhGiaDto) {
+    const hien_tai = await this.db.danhGiaSanPham.findUnique({ where: { id }, include: { san_pham: { select: { ma_san_pham: true } } } });
+    if (!hien_tai) throw new NotFoundException("Không tìm thấy đánh giá");
+    const item = await this.db.danhGiaSanPham.update({ where: { id }, data: { da_duyet: dto.da_duyet }, include: { san_pham: { select: { id: true, ma_san_pham: true, ten_san_pham: true } } } });
+    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: dto.da_duyet ? "ADMIN_DUYET_DANH_GIA" : "ADMIN_AN_DANH_GIA", nguoi_dung_id: actor.id, chi_tiet: { danh_gia_id: id, ma_san_pham: hien_tai.san_pham.ma_san_pham, da_duyet: dto.da_duyet } } });
+    return item;
+  }
+
+  async xoa_danh_gia(actor: NguoiDungXacThuc, id: string) {
+    const hien_tai = await this.db.danhGiaSanPham.findUnique({ where: { id }, include: { san_pham: { select: { ma_san_pham: true } } } });
+    if (!hien_tai) throw new NotFoundException("Không tìm thấy đánh giá");
+    await this.db.danhGiaSanPham.delete({ where: { id } });
+    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_XOA_DANH_GIA", nguoi_dung_id: actor.id, chi_tiet: { danh_gia_id: id, ma_san_pham: hien_tai.san_pham.ma_san_pham, ho_ten: hien_tai.ho_ten } } });
+    return { thong_bao: "Đã xóa đánh giá", id };
+  }
+
+  async xuat_bao_cao_csv(loai: string, tu_ngay?: string, den_ngay?: string) {
+    const hopLe = (v?: string) => Boolean(v && /^\d{4}-\d{2}-\d{2}$/.test(v));
+    const nowVn = new Date(Date.now() + 7 * 60 * 60 * 1000);
+    const den = hopLe(den_ngay) ? den_ngay! : nowVn.toISOString().slice(0, 10);
+    const d = new Date(`${den}T00:00:00+07:00`); d.setDate(d.getDate() - 29);
+    const tu = hopLe(tu_ngay) ? tu_ngay! : new Date(d.getTime() + 7 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    if (tu > den) throw new BadRequestException("Từ ngày không được lớn hơn đến ngày");
+    const start = new Date(`${tu}T00:00:00+07:00`);
+    const end = new Date(`${den}T00:00:00+07:00`); end.setDate(end.getDate() + 1);
+    const esc = (v: unknown) => { const raw = String(v ?? ""); const safe = /^[=+\-@]/.test(raw) ? `'${raw}` : raw; return `"${safe.replaceAll('"', '""')}"`; };
+    const csv = (rows: unknown[][]) => rows.map(row => row.map(esc).join(",")).join("\r\n");
+
+    if (loai === "don-hang") {
+      const ds = await this.db.donHang.findMany({ where: { ngay_tao: { gte: start, lt: end } }, orderBy: { ngay_tao: "asc" } });
+      return { ten_file: `don-hang_${tu}_${den}.csv`, csv: csv([["Ngày", "Mã đơn", "Người nhận", "Số điện thoại", "Địa chỉ", "Trạng thái", "Tổng tiền"], ...ds.map(x => [x.ngay_tao.toISOString(), x.ma_don_hang, x.ho_ten_nguoi_nhan, x.so_dien_thoai, x.dia_chi_giao_hang, x.trang_thai, Number(x.tong_tien)])]) };
+    }
+    if (loai === "doanh-thu") {
+      const ds = await this.db.donHang.findMany({ where: { ngay_tao: { gte: start, lt: end }, trang_thai: TrangThaiDonHang.HOAN_TAT }, orderBy: { ngay_tao: "asc" }, select: { ngay_tao: true, tong_tien: true } });
+      const map = new Map<string, { so_don: number; doanh_thu: number }>();
+      for (const x of ds) { const key = new Date(x.ngay_tao.getTime() + 7 * 60 * 60 * 1000).toISOString().slice(0, 10); const cur = map.get(key) || { so_don: 0, doanh_thu: 0 }; cur.so_don++; cur.doanh_thu += Number(x.tong_tien); map.set(key, cur); }
+      const rows = Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b)).map(([ngay, x]) => [ngay, x.so_don, x.doanh_thu]);
+      return { ten_file: `doanh-thu_${tu}_${den}.csv`, csv: csv([["Ngày", "Số đơn hoàn tất", "Doanh thu"], ...rows]) };
+    }
+    if (loai === "ton-kho") {
+      const ds = await this.db.bienTheSanPham.findMany({ include: { san_pham: { select: { ma_san_pham: true, ten_san_pham: true } }, vat_lieu: { select: { ten_vat_lieu: true } }, mau_sac: { select: { ten_mau: true } } }, orderBy: { ma_bien_the: "asc" } });
+      return { ten_file: `ton-kho_${den}.csv`, csv: csv([["Mã sản phẩm", "Tên sản phẩm", "Mã biến thể", "Vật liệu", "Màu", "Tồn kho", "Hiển thị", "Chênh lệch giá"], ...ds.map(x => [x.san_pham.ma_san_pham, x.san_pham.ten_san_pham, x.ma_bien_the, x.vat_lieu?.ten_vat_lieu || "Mặc định", x.mau_sac?.ten_mau || "Mặc định", x.so_luong_ton, x.dang_hien_thi ? "Có" : "Không", Number(x.gia_chenh_lech)])]) };
+    }
+    throw new BadRequestException("Loại báo cáo không hợp lệ");
   }
 
   async danh_sach_nhat_ky_admin() {

@@ -1,6 +1,6 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v2.14.0** — 30/08/2026
+> Phiên bản hiện tại: **v2.15.0** — 30/08/2026
 
 NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **frontend Next.js** và **backend NestJS/Fastify** kết nối **PostgreSQL qua Prisma**.
 
@@ -19,7 +19,7 @@ NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **fro
 
 ## Giao diện dựng lại theo bố cục CineBooking Pro
 
-Bản source v2.14.0 tiếp tục dùng **frontend layout** theo cấu trúc CineBooking Pro, giữ nguyên nghiệp vụ NhienIn3d và tách rõ quản lý **Sản phẩm** với **Kho** trong Admin:
+Bản source v2.15.0 tiếp tục dùng **frontend layout** theo cấu trúc CineBooking Pro, giữ nguyên nghiệp vụ NhienIn3d và mở rộng quản trị **Danh mục / Sản phẩm / Kho & biến thể / Đánh giá / Báo cáo**:
 
 - Dùng `RootLayout` chung với **header sticky**, vùng nội dung `max-w-7xl`, **footer dùng chung** và menu drawer responsive; không còn lặp navbar ở từng route.
 - Bổ sung **Tailwind CSS 4 + `@tailwindcss/postcss`** giống lớp công nghệ frontend tham chiếu, đồng thời giữ toàn bộ CSS/logic nghiệp vụ cũ để tránh phá luồng sản phẩm, giỏ hàng, tài khoản và quản trị.
@@ -29,6 +29,11 @@ Bản source v2.14.0 tiếp tục dùng **frontend layout** theo cấu trúc Cin
 
 ## Điểm chính bản hiện tại
 
+- v2.15.0 bổ sung **CRUD Danh mục**: tạo, sửa tên/mô tả/thứ tự/hiển thị và xóa danh mục trống; không cho xóa khi vẫn còn sản phẩm để tránh mất liên kết dữ liệu.
+- Tab **Kho** được nâng thành quản lý biến thể đầy đủ: tạo/sửa/xóa mã biến thể, chọn vật liệu, màu sắc, giá chênh lệch, tồn kho và trạng thái hiển thị; sản phẩm luôn phải còn ít nhất một biến thể.
+- Thêm tab **Đánh giá**: đánh giá mới ở trạng thái chờ duyệt; Admin có thể Duyệt, Ẩn hoặc Xóa. Storefront chỉ đọc đánh giá đã duyệt.
+- Thêm tab **Báo cáo CSV** với khoảng ngày tùy chọn: Đơn hàng, Doanh thu đơn hoàn tất và snapshot Tồn kho. File xuất UTF-8 có BOM ở frontend để mở trực tiếp trong Excel mà không lỗi dấu tiếng Việt; dữ liệu bắt đầu bằng ký tự công thức Excel được trung hòa để hạn chế CSV injection.
+- Các thao tác Danh mục/Biến thể/Đánh giá được ghi vào `nhat_ky_bao_mat` dưới nhóm sự kiện `ADMIN_*`.
 - v2.14.0 tách tab **Sản phẩm** và **Kho**: Sản phẩm chỉ phụ trách thêm/sửa/xóa, ảnh và thông tin bán hàng; Kho chỉ phụ trách tồn kho/hiển thị từng biến thể.
 - Admin có thể **chọn ảnh JPEG/PNG/WebP trực tiếp từ máy**. Frontend crop/căn giữa và chuẩn hóa ảnh thành **1000 × 800 (tỉ lệ 5:4)** trước khi lưu, đồng bộ đúng khung ảnh product card; ảnh tải lên được lưu cùng dữ liệu sản phẩm trong PostgreSQL dưới dạng data URL nên không phụ thuộc đường dẫn file tạm trên máy người dùng.
 - Hai sản phẩm `N3D-ORG-011` và `N3D-MAKER-012` chuyển sang **ảnh chụp sản phẩm thật** từ trang tham khảo MakerWorld thay cho SVG minh họa v2.12.3.
@@ -238,7 +243,7 @@ V2.8.0 hoàn thiện khu vực tài khoản và quản trị nhân sự:
 - `SIEU_QUAN_TRI` bypass mọi `VaiTroGuard`; `QUAN_TRI` có toàn quyền trên các module quản trị hiện có nhưng không được tự cấp/đụng tài khoản `SIEU_QUAN_TRI`.
 - Các bảng dữ liệu mẫu tĩnh tiếp tục có tối thiểu 10 dòng seed; tài khoản/nhân sự/ca/phân ca là dữ liệu vận hành và được phép thay đổi số lượng.
 
-### Backend v2.8.0
+### Backend hiện tại — v2.15.0
 
 Backend **đã có và đang dùng thật** trong project, không phải mock frontend.
 
@@ -261,21 +266,45 @@ GET    /api/v1/tai-khoan/don-hang
 GET    /api/v1/tai-khoan/lich-lam-viec
 ```
 
-Endpoint quản trị:
+Endpoint quản trị chính:
 
 ```text
 GET    /api/v1/quan-tri/tong-quan
 GET    /api/v1/quan-tri/nguoi-dung
-PATCH  /api/v1/quan-tri/nguoi-dung/:id
+POST   /api/v1/quan-tri/nguoi-dung/:id/cap-nhat
+POST   /api/v1/quan-tri/nguoi-dung/:id/kich-hoat
+POST   /api/v1/quan-tri/nguoi-dung/:id/khoa
+POST   /api/v1/quan-tri/nguoi-dung/:id/xoa
+
+GET    /api/v1/quan-tri/danh-muc
+POST   /api/v1/quan-tri/danh-muc
+POST   /api/v1/quan-tri/danh-muc/:id/cap-nhat
+POST   /api/v1/quan-tri/danh-muc/:id/xoa
+
+GET    /api/v1/quan-tri/san-pham
+POST   /api/v1/quan-tri/san-pham
+POST   /api/v1/quan-tri/san-pham/:id/cap-nhat
+POST   /api/v1/quan-tri/san-pham/:id/xoa
+GET    /api/v1/quan-tri/vat-lieu
+GET    /api/v1/quan-tri/mau-sac
+POST   /api/v1/quan-tri/san-pham/:id/bien-the
+POST   /api/v1/quan-tri/bien-the/:id/cap-nhat
+POST   /api/v1/quan-tri/bien-the/:id/xoa
+
+GET    /api/v1/quan-tri/danh-gia
+POST   /api/v1/quan-tri/danh-gia/:id/trang-thai
+POST   /api/v1/quan-tri/danh-gia/:id/xoa
+GET    /api/v1/quan-tri/bao-cao/don-hang
+GET    /api/v1/quan-tri/bao-cao/doanh-thu
+GET    /api/v1/quan-tri/bao-cao/ton-kho
+GET    /api/v1/quan-tri/nhat-ky
+
 GET    /api/v1/quan-tri/nhan-vien
 POST   /api/v1/quan-tri/nhan-vien
-PATCH  /api/v1/quan-tri/nhan-vien/:id
 GET    /api/v1/quan-tri/ca-lam
 POST   /api/v1/quan-tri/ca-lam
 GET    /api/v1/quan-tri/phan-ca
 POST   /api/v1/quan-tri/phan-ca
-PATCH  /api/v1/quan-tri/phan-ca/:id
-DELETE /api/v1/quan-tri/phan-ca/:id
 ```
 
 ## Cấu trúc database tài khoản và nhân sự
@@ -855,14 +884,25 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 
 ---
 
+## v2.15.0 — 30/08/2026
+
+- Bổ sung CRUD **Danh mục** trong Admin: tạo danh mục mới, sửa tên/mô tả/thứ tự/trạng thái hiển thị và xóa danh mục khi không còn sản phẩm tham chiếu.
+- Nâng tab **Kho** thành quản lý biến thể nâng cao: tạo/sửa/xóa mã biến thể, chọn vật liệu/màu, chỉnh giá chênh lệch, tồn kho và trạng thái hiển thị. API trả cả ID vật liệu/màu để form chỉnh sửa khôi phục đúng lựa chọn sau F5.
+- Thêm quy trình kiểm duyệt **Đánh giá sản phẩm**: đánh giá mới mặc định `da_duyet=false`; Admin có thể duyệt, ẩn hoặc xóa; storefront chỉ hiển thị đánh giá đã duyệt.
+- Thêm **Báo cáo CSV** theo khoảng ngày: đơn hàng, doanh thu các đơn `HOAN_TAT`, và snapshot tồn kho/biến thể. Frontend thêm BOM UTF-8 trước khi tải để Excel hiển thị tiếng Việt đúng dấu.
+- Bổ sung audit trail cho tạo/sửa/xóa danh mục, tạo/sửa/xóa biến thể và duyệt/ẩn/xóa đánh giá.
+- Không thay đổi Prisma schema nên **không có migration database mới**.
+- Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm test` → `npm run typecheck` → `npm run build` → Docker Compose → `.\scripts\release.ps1 v2.15.0`.
+
+---
+
 # Lộ trình tiếp theo
 
-## v2.15.0
+## v2.16.0
 
-- CRUD danh mục và quản lý biến thể nâng cao (vật liệu/màu/mã biến thể).
-- Duyệt/ẩn đánh giá sản phẩm trong Admin.
-- Xuất báo cáo đơn hàng/doanh thu/tồn kho theo CSV.
-- Mở rộng regression test/E2E cho luồng quản trị thương mại điện tử.
+- CRUD bảng vật liệu/màu riêng và kiểm soát dữ liệu tham chiếu trước khi xóa.
+- Bộ lọc/báo cáo tồn kho nâng cao, cảnh báo sắp hết và lịch sử điều chỉnh tồn.
+- Mở rộng E2E cho CRUD catalog, kiểm duyệt đánh giá và xuất báo cáo.
 
 ## v3.0.0
 

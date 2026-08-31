@@ -685,3 +685,21 @@ test("v2.14.0 tach rieng san pham va kho trong Admin", () => {
   assert.match(css, /cine-inventory-stats-v214/);
   assert.match(css, /cine-stock-state-v214/);
 });
+
+
+test("v2.15.0 web co danh muc bien the nang cao duyet danh gia va bao cao CSV", () => {
+  const admin = readFileSync("app/quan-tri/page.tsx", "utf8");
+  const lib = readFileSync("lib/quan-tri.ts", "utf8");
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.match(admin, /\["danh-muc", "Danh mục"\]/u);
+  assert.match(admin, /\["danh-gia", "Đánh giá"\]/u);
+  assert.match(admin, /\["bao-cao", "Báo cáo CSV"\]/u);
+  assert.match(admin, /Tạo biến thể mới/u);
+  assert.match(admin, /Duyệt đánh giá sản phẩm/u);
+  assert.match(admin, /Xuất báo cáo CSV/u);
+  assert.match(lib, /taoDanhMucAdmin/);
+  assert.match(lib, /taoBienTheAdmin/);
+  assert.match(lib, /capNhatDanhGiaAdmin/);
+  assert.match(lib, /layBaoCaoCsvAdmin/);
+  assert.match(css, /v2\.15\.0 - danh mục, biến thể nâng cao, duyệt đánh giá và báo cáo CSV/u);
+});

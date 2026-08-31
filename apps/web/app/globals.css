@@ -679,3 +679,28 @@ footer{border-top:1px solid var(--line);max-width:1240px;margin:auto;padding:30p
 .cine-inventory-row-v214 .cine-stock-toggle-v212{min-height:38px;display:flex;align-items:center;gap:8px}.cine-inventory-row-v214 .cine-stock-toggle-v212 input{width:18px;height:18px}.cine-inventory-row-v214 .cine-btn{min-height:42px;padding:9px 12px}
 @media(max-width:900px){.cine-inventory-stats-v214{grid-template-columns:repeat(2,minmax(0,1fr))}.cine-inventory-toolbar-v214{grid-template-columns:1fr}.cine-inventory-toolbar-v214>div{text-align:left;grid-template-columns:auto auto;justify-content:start;align-items:baseline;gap:7px}}
 @media(max-width:520px){.cine-inventory-stats-v214{grid-template-columns:1fr}}
+
+/* v2.15.0 - danh mục, biến thể nâng cao, duyệt đánh giá và báo cáo CSV */
+.cine-category-layout-v215{display:grid;grid-template-columns:minmax(320px,420px) minmax(0,1fr);gap:18px;align-items:start}
+.cine-category-create-v215{display:grid;gap:14px;padding:22px;position:sticky;top:96px}
+.cine-category-create-v215 h3{margin:0;font-size:22px}
+.cine-category-create-v215 label,.cine-category-row-v215 label,.cine-variant-create-v215 label,.cine-review-filter-v215 label,.cine-report-period-v215 label{display:grid;gap:7px}
+.cine-category-create-v215 label>span,.cine-category-row-v215 label>span,.cine-variant-create-v215 label>span,.cine-review-filter-v215 label>span,.cine-report-period-v215 label>span{font-size:13px;font-weight:800;color:#bac5d8;text-transform:uppercase;letter-spacing:.04em}
+.cine-category-list-v215{display:grid;gap:12px}
+.cine-category-row-v215{display:grid;grid-template-columns:minmax(130px,.7fr) minmax(170px,1.2fr) minmax(220px,1.7fr) 100px 130px auto;gap:12px;align-items:end;padding:16px}
+.cine-category-code-v215{display:grid;gap:4px;align-self:center}.cine-category-code-v215 b{font-size:16px}.cine-category-code-v215 small{color:#8e9bb0}
+.cine-two-fields-v215{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:end}
+.cine-check-v215{display:flex!important;align-items:center;gap:10px!important;min-height:48px;padding:0 12px;border:1px solid #2b3a52;border-radius:12px;background:#0b1321}.cine-check-v215 input{width:18px;height:18px}.cine-check-v215 span{font-size:14px!important;text-transform:none!important;color:#dce4ef!important}
+.cine-row-actions-v215{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+
+.cine-variant-create-v215{display:grid;grid-template-columns:minmax(180px,1.4fr) repeat(5,minmax(135px,1fr)) 125px auto;gap:12px;align-items:end;padding:18px;margin-bottom:16px}.cine-variant-create-v215>div:first-child{grid-column:1/-1;display:flex;justify-content:space-between;align-items:end;gap:20px}.cine-variant-create-v215 h3{margin:0;font-size:20px}.cine-variant-create-v215 p{margin:4px 0 0;color:#9ba9bd}
+.cine-variant-head-v215,.cine-variant-row-v215{grid-template-columns:minmax(190px,1.5fr) minmax(150px,1.1fr) minmax(130px,1fr) minmax(130px,1fr) 120px 100px 110px 110px 150px;min-width:1420px}
+.cine-variant-row-v215 input,.cine-variant-row-v215 select{min-width:0;width:100%;height:44px;padding:0 10px}.cine-variant-row-v215 .cine-row-actions-v215{flex-wrap:nowrap}.cine-variant-row-v215 .cine-btn{padding:10px 12px}
+
+.cine-review-filter-v215{display:flex;align-items:end;justify-content:space-between;gap:20px;padding:16px;margin-bottom:14px}.cine-review-filter-v215 label{min-width:260px}.cine-review-filter-v215>div{display:grid;text-align:right}.cine-review-filter-v215>div b{font-size:22px}.cine-review-filter-v215>div span{color:#8e9bb0;font-size:12px}
+.cine-review-list-v215{display:grid;gap:12px}.cine-review-row-v215{display:grid;grid-template-columns:minmax(190px,.9fr) minmax(320px,2fr) 120px auto;gap:16px;align-items:center;padding:18px}.cine-review-product-v215{display:grid;gap:4px}.cine-review-product-v215 small{color:#8e9bb0}.cine-review-content-v215{display:grid;gap:7px}.cine-review-content-v215>div{display:flex;gap:12px;align-items:center}.cine-review-content-v215>div span{color:#facc15;letter-spacing:.08em}.cine-review-content-v215 p{margin:0;line-height:1.55;color:#dce4ef}.cine-review-content-v215 small{color:#8e9bb0}
+
+.cine-report-period-v215{display:grid;grid-template-columns:repeat(2,minmax(220px,320px));gap:14px;padding:18px;margin-bottom:16px}.cine-report-grid-v215{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.cine-report-grid-v215 article{padding:22px;display:grid;gap:12px;align-content:start}.cine-report-grid-v215 h3{margin:0;font-size:22px}.cine-report-grid-v215 p{margin:0;color:#9ba9bd;line-height:1.6;min-height:52px}.cine-report-grid-v215 .cine-btn{justify-self:start}
+
+@media(max-width:1180px){.cine-category-layout-v215{grid-template-columns:1fr}.cine-category-create-v215{position:static}.cine-category-row-v215{grid-template-columns:1fr 1fr}.cine-category-code-v215,.cine-category-row-v215 .cine-row-actions-v215{grid-column:1/-1}.cine-variant-create-v215{grid-template-columns:repeat(2,minmax(0,1fr))}.cine-report-grid-v215{grid-template-columns:1fr}.cine-review-row-v215{grid-template-columns:1fr 130px}.cine-review-product-v215,.cine-review-content-v215{grid-column:1/-1}}
+@media(max-width:680px){.cine-category-row-v215,.cine-variant-create-v215,.cine-report-period-v215{grid-template-columns:1fr}.cine-two-fields-v215{grid-template-columns:1fr}.cine-review-filter-v215{align-items:stretch;flex-direction:column}.cine-review-filter-v215 label{min-width:0}.cine-review-row-v215{grid-template-columns:1fr}.cine-review-row-v215 .cine-row-actions-v215{justify-content:flex-start}}

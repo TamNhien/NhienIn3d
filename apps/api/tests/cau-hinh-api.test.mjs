@@ -57,18 +57,18 @@ test("seed v2.12.0 theo doi 24 bang va cho phep du lieu van hanh bi xoa", () => 
     assert.match(seed, new RegExp(`${bang}: await db\\.`));
   }
   assert.match(seed, /so_luong < 10/);
-  assert.match(seed, /PHIEN_BAN_HIEN_TAI = "SEED_V2140_TACH_SAN_PHAM_KHO"/);
+  assert.match(seed, /PHIEN_BAN_HIEN_TAI = "SEED_V2150_DANH_MUC_BIEN_THE_DANH_GIA_BAO_CAO"/);
   assert.match(seed, /bang_bien_dong/);
   assert.match(seed, /SEED_V286_TAI_KHOAN_MAT_KHAU_BRAVE/);
   assert.match(seed, /\/images\/khoi-lap-phuong-banh-rang\.jpg/);
 });
 
 
-test("API hien thi dung version v2.14.0 o health va OpenAPI", () => {
+test("API hien thi dung version v2.15.0 o health va OpenAPI", () => {
   const health = readFileSync("src/suc-khoe/suc-khoe.controller.ts", "utf8");
   const main = readFileSync("src/main.ts", "utf8");
-  assert.match(health, /phien_ban: "v2\.14\.0"/);
-  assert.match(main, /setVersion\("2\.14\.0"\)/);
+  assert.match(health, /phien_ban: "v2\.15\.0"/);
+  assert.match(main, /setVersion\("2\.15\.0"\)/);
 });
 
 test("V2 co migration gio hang, thanh toan va dia chi", () => {
@@ -126,12 +126,12 @@ test("v2.5.0 mac dinh sap xep san pham tang dan theo so trong ma", () => {
 });
 
 
-test("v2.5.0 co danh gia san pham va che do duyet production", () => {
+test("danh gia san pham chi hien thi noi dung da duyet", () => {
   const controller = readFileSync('src/danh-gia/danh-gia.controller.ts', 'utf8');
   const service = readFileSync('src/danh-gia/danh-gia.service.ts', 'utf8');
   assert.match(controller, /danh-gia/);
-  assert.match(service, /NODE_ENV !== "production"/);
-  assert.match(service, /da_duyet/);
+  assert.match(service, /da_duyet: true/);
+  assert.match(service, /const da_duyet = false/);
 });
 
 test("v2.5.0 API san pham tra diem danh gia va goi y lien quan", () => {
@@ -540,4 +540,25 @@ test("v2.13.0 API cho Admin tao sua xoa san pham va luu anh local", () => {
   assert.match(service, /__ADMIN_DELETED__:/);
   assert.match(seed, /update: \{\}/);
   assert.match(main, /bodyLimit: 3 \* 1024 \* 1024/);
+});
+
+
+test("v2.15.0 API CRUD danh muc bien the duyet danh gia va xuat CSV", () => {
+  const controller = readFileSync("src/quan-tri/quan-tri.controller.ts", "utf8");
+  const service = readFileSync("src/quan-tri/quan-tri.service.ts", "utf8");
+  const reviews = readFileSync("src/danh-gia/danh-gia.service.ts", "utf8");
+  for (const route of [
+    '@Get("danh-muc")', '@Post("danh-muc")', '@Post("danh-muc/:id/cap-nhat")', '@Post("danh-muc/:id/xoa")',
+    '@Post("san-pham/:id/bien-the")', '@Post("bien-the/:id/cap-nhat")', '@Post("bien-the/:id/xoa")',
+    '@Get("danh-gia")', '@Post("danh-gia/:id/trang-thai")', '@Post("danh-gia/:id/xoa")', '@Get("bao-cao/:loai")'
+  ]) assert.match(controller, new RegExp(route.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  assert.match(service, /ADMIN_TAO_DANH_MUC/);
+  assert.match(service, /ADMIN_TAO_BIEN_THE/);
+  assert.match(service, /ADMIN_DUYET_DANH_GIA/);
+  assert.match(service, /don-hang_\$\{tu\}_\$\{den\}\.csv/);
+  assert.match(service, /doanh-thu_\$\{tu\}_\$\{den\}\.csv/);
+  assert.match(service, /ton-kho_\$\{den\}\.csv/);
+  assert.match(service, /\/\^\[=\+\\-@\]\//);
+  assert.match(reviews, /const da_duyet = false/);
+  assert.match(reviews, /đang chờ Admin duyệt/u);
 });

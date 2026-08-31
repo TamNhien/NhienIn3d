@@ -15,6 +15,11 @@ import { CapNhatTrangThaiDonHangDto } from "./dto/cap-nhat-trang-thai-don-hang.d
 import { CapNhatSanPhamQuanTriDto } from "./dto/cap-nhat-san-pham-quan-tri.dto.js";
 import { TaoSanPhamQuanTriDto } from "./dto/tao-san-pham-quan-tri.dto.js";
 import { CapNhatTonKhoDto } from "./dto/cap-nhat-ton-kho.dto.js";
+import { TaoDanhMucDto } from "./dto/tao-danh-muc.dto.js";
+import { CapNhatDanhMucDto } from "./dto/cap-nhat-danh-muc.dto.js";
+import { TaoBienTheDto } from "./dto/tao-bien-the.dto.js";
+import { CapNhatBienTheDto } from "./dto/cap-nhat-bien-the.dto.js";
+import { CapNhatDanhGiaDto } from "./dto/cap-nhat-danh-gia.dto.js";
 import { QuanTriService } from "./quan-tri.service.js";
 
 @ApiTags("Quản trị")
@@ -57,12 +62,29 @@ export class QuanTriController {
   @Get("don-hang/:id") chi_tiet_don_hang(@Param("id") id: string) { return this.service.chi_tiet_don_hang(id); }
   @Post("don-hang/:id/trang-thai") cap_nhat_trang_thai_don_hang(@Req() req: YeuCauCoNguoiDung, @Param("id") id: string, @Body() dto: CapNhatTrangThaiDonHangDto) { return this.service.cap_nhat_trang_thai_don_hang(req.nguoi_dung_xac_thuc!, id, dto); }
 
+  @Get("danh-muc") danh_muc_quan_tri() { return this.service.danh_sach_danh_muc_quan_tri(); }
+  @Post("danh-muc") tao_danh_muc(@Req() req: YeuCauCoNguoiDung, @Body() dto: TaoDanhMucDto) { return this.service.tao_danh_muc(req.nguoi_dung_xac_thuc!, dto); }
+  @Post("danh-muc/:id/cap-nhat") cap_nhat_danh_muc(@Req() req: YeuCauCoNguoiDung, @Param("id") id: string, @Body() dto: CapNhatDanhMucDto) { return this.service.cap_nhat_danh_muc(req.nguoi_dung_xac_thuc!, id, dto); }
+  @Post("danh-muc/:id/xoa") xoa_danh_muc(@Req() req: YeuCauCoNguoiDung, @Param("id") id: string) { return this.service.xoa_danh_muc(req.nguoi_dung_xac_thuc!, id); }
+
+  @Get("vat-lieu") vat_lieu_quan_tri() { return this.service.danh_sach_vat_lieu_quan_tri(); }
+  @Get("mau-sac") mau_sac_quan_tri() { return this.service.danh_sach_mau_sac_quan_tri(); }
+
   @Get("san-pham") san_pham_quan_tri() { return this.service.danh_sach_san_pham_quan_tri(); }
   @Post("san-pham") tao_san_pham_quan_tri(@Req() req: YeuCauCoNguoiDung, @Body() dto: TaoSanPhamQuanTriDto) { return this.service.tao_san_pham_quan_tri(req.nguoi_dung_xac_thuc!, dto); }
   @Post("san-pham/:id/cap-nhat") cap_nhat_san_pham_quan_tri(@Req() req: YeuCauCoNguoiDung, @Param("id") id: string, @Body() dto: CapNhatSanPhamQuanTriDto) { return this.service.cap_nhat_san_pham_quan_tri(req.nguoi_dung_xac_thuc!, id, dto); }
   @Post("san-pham/:id/xoa") xoa_san_pham_quan_tri(@Req() req: YeuCauCoNguoiDung, @Param("id") id: string) { return this.service.xoa_san_pham_quan_tri(req.nguoi_dung_xac_thuc!, id); }
   @Delete("san-pham/:id") xoa_san_pham_quan_tri_delete(@Req() req: YeuCauCoNguoiDung, @Param("id") id: string) { return this.service.xoa_san_pham_quan_tri(req.nguoi_dung_xac_thuc!, id); }
   @Post("bien-the/:id/ton-kho") cap_nhat_ton_kho(@Req() req: YeuCauCoNguoiDung, @Param("id") id: string, @Body() dto: CapNhatTonKhoDto) { return this.service.cap_nhat_ton_kho(req.nguoi_dung_xac_thuc!, id, dto); }
+  @Post("san-pham/:id/bien-the") tao_bien_the(@Req() req: YeuCauCoNguoiDung, @Param("id") id: string, @Body() dto: TaoBienTheDto) { return this.service.tao_bien_the(req.nguoi_dung_xac_thuc!, id, dto); }
+  @Post("bien-the/:id/cap-nhat") cap_nhat_bien_the(@Req() req: YeuCauCoNguoiDung, @Param("id") id: string, @Body() dto: CapNhatBienTheDto) { return this.service.cap_nhat_bien_the(req.nguoi_dung_xac_thuc!, id, dto); }
+  @Post("bien-the/:id/xoa") xoa_bien_the(@Req() req: YeuCauCoNguoiDung, @Param("id") id: string) { return this.service.xoa_bien_the(req.nguoi_dung_xac_thuc!, id); }
+
+  @Get("danh-gia") danh_gia_quan_tri(@Query("trang_thai") trang_thai?: string) { return this.service.danh_sach_danh_gia_quan_tri(trang_thai); }
+  @Post("danh-gia/:id/trang-thai") cap_nhat_danh_gia(@Req() req: YeuCauCoNguoiDung, @Param("id") id: string, @Body() dto: CapNhatDanhGiaDto) { return this.service.cap_nhat_danh_gia(req.nguoi_dung_xac_thuc!, id, dto); }
+  @Post("danh-gia/:id/xoa") xoa_danh_gia(@Req() req: YeuCauCoNguoiDung, @Param("id") id: string) { return this.service.xoa_danh_gia(req.nguoi_dung_xac_thuc!, id); }
+
+  @Get("bao-cao/:loai") bao_cao_csv(@Param("loai") loai: string, @Query("tu_ngay") tu_ngay?: string, @Query("den_ngay") den_ngay?: string) { return this.service.xuat_bao_cao_csv(loai, tu_ngay, den_ngay); }
 
   @Get("nhat-ky") nhat_ky_admin() { return this.service.danh_sach_nhat_ky_admin(); }
 }
