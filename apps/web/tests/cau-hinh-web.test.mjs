@@ -778,8 +778,29 @@ test("v2.16.0 web loc kho nang cao va hien lich su dieu chinh ton", () => {
   assert.match(admin, /kho_loc_vat_lieu/);
   assert.match(admin, /kho_loc_mau/);
   assert.match(admin, /kho_loc_hien_thi/);
-  assert.match(admin, /Lịch sử điều chỉnh tồn/u);
+  assert.match(admin, /Lịch sử (?:điều chỉnh tồn|nhập \/ xuất \/ điều chỉnh kho)/u);
   assert.match(lib, /layLichSuKhoAdmin/);
   assert.match(css, /cine-stock-filters-v216/);
   assert.match(css, /cine-stock-history-v216/);
+});
+
+
+test("v2.17.0 web co canh bao ton kho theo nguong cau hinh", () => {
+  const page = readFileSync("app/quan-tri/page.tsx", "utf8");
+  const lib = readFileSync("lib/quan-tri.ts", "utf8");
+  assert.match(page, /Cảnh báo tồn kho/u);
+  assert.match(page, /Ngưỡng cảnh báo sắp hết/u);
+  assert.match(page, /nguongKho/);
+  assert.match(lib, /layCauHinhKhoAdmin/);
+  assert.match(lib, /capNhatCauHinhKhoAdmin/);
+});
+
+test("v2.17.0 web lich su kho co loai nguyen nhan va nguoi thao tac", () => {
+  const page = readFileSync("app/quan-tri/page.tsx", "utf8");
+  const lib = readFileSync("lib/quan-tri.ts", "utf8");
+  assert.match(page, /Nhập kho/);
+  assert.match(page, /Xuất kho/);
+  assert.match(page, /Lý do điều chỉnh/u);
+  assert.match(lib, /loai_bien_dong/);
+  assert.match(lib, /chenh_lech/);
 });

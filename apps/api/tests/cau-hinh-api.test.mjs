@@ -64,11 +64,11 @@ test("seed v2.12.0 theo doi 24 bang va cho phep du lieu van hanh bi xoa", () => 
 });
 
 
-test("API hien thi dung version v2.16.0 o health va OpenAPI", () => {
+test("API hien thi dung version v2.17.0 o health va OpenAPI", () => {
   const health = readFileSync("src/suc-khoe/suc-khoe.controller.ts", "utf8");
   const main = readFileSync("src/main.ts", "utf8");
-  assert.match(health, /phien_ban: "v2\.16\.0"/);
-  assert.match(main, /setVersion\("2\.16\.0"\)/);
+  assert.match(health, /phien_ban: "v2\.17\.0"/);
+  assert.match(main, /setVersion\("2\.17\.0"\)/);
 });
 
 test("V2 co migration gio hang, thanh toan va dia chi", () => {
@@ -494,7 +494,7 @@ test("v2.11.0 API tong quan co dashboard kinh doanh chi danh cho Admin", () => {
   assert.match(service, /doanh_thu_30_ngay/);
   assert.match(service, /gia_tri_don_trung_binh_30_ngay/);
   assert.match(service, /top_san_pham_30_ngay/);
-  assert.match(service, /so_luong_ton: \{ lte: 5 \}/);
+  assert.match(service, /so_luong_ton: \{ lte: (?:5|nguong_sap_het) \}/);
 });
 
 
@@ -625,4 +625,25 @@ test("v2.16.0 API lich su kho ghi ton cu ton moi", () => {
   assert.match(service, /ton_moi: item\.so_luong_ton/);
   assert.match(service, /ADMIN_CAP_NHAT_TON_KHO/);
   assert.match(service, /ADMIN_CAP_NHAT_BIEN_THE/);
+});
+
+
+test("v2.17.0 API co cau hinh nguong ton kho va dashboard dung nguong dong", () => {
+  const controller = readFileSync("src/quan-tri/quan-tri.controller.ts", "utf8");
+  const service = readFileSync("src/quan-tri/quan-tri.service.ts", "utf8");
+  const dto = readFileSync("src/quan-tri/dto/cap-nhat-cau-hinh-kho.dto.ts", "utf8");
+  assert.match(controller, /kho\/cau-hinh/);
+  assert.match(service, /nguong_sap_het/);
+  assert.match(service, /canh_bao_kho/);
+  assert.match(dto, /@Min\(1\)/);
+  assert.match(dto, /@Max\(999\)/);
+});
+
+test("v2.17.0 API audit kho co loai bien dong va ly do", () => {
+  const service = readFileSync("src/quan-tri/quan-tri.service.ts", "utf8");
+  const dto = readFileSync("src/quan-tri/dto/cap-nhat-bien-the.dto.ts", "utf8");
+  assert.match(service, /NHAP_KHO/);
+  assert.match(service, /XUAT_KHO/);
+  assert.match(service, /ly_do/);
+  assert.match(dto, /ly_do_ton_kho/);
 });

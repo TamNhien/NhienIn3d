@@ -1,6 +1,6 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v2.16.0** — 31/08/2026
+> Phiên bản hiện tại: **v2.17.0** — 31/08/2026
 
 NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **frontend Next.js** và **backend NestJS/Fastify** kết nối **PostgreSQL qua Prisma**.
 
@@ -20,6 +20,7 @@ NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **fro
 
 ## Điểm chính bản hiện tại
 
+- v2.17.0 bổ sung **cảnh báo tồn kho theo ngưỡng cấu hình**: Admin chỉnh ngưỡng ngay trong tab Kho, Dashboard cảnh báo số biến thể sắp hết/hết hàng; lịch sử kho phân loại Nhập/Xuất/Điều chỉnh, lưu nguyên nhân, chênh lệch và người thao tác.
 - v2.16.0 bổ sung **CRUD Vật liệu & Màu sắc** trong Admin, chặn xóa dữ liệu tham chiếu đang được biến thể sử dụng; tab Kho có bộ lọc nâng cao theo tồn/vật liệu/màu/hiển thị và lịch sử điều chỉnh tồn gần nhất.
 - v2.15.5 chỉnh thanh chức năng Admin để **mọi hàng tự giãn kín 100% chiều ngang**, không còn khoảng trống lớn bên phải khi các nút xuống hàng; desktop dùng flex-wrap có flex-grow, mobile chuyển dần về nút toàn hàng.
 - v2.15.3 sửa lệch số liệu dashboard: số **đơn** nằm cạnh doanh thu giờ được đếm theo **ngày ghi nhận doanh thu/thanh toán**, không còn lấy ngày tạo đơn; đồng thời KPI tách rõ **đơn ghi nhận doanh thu** và **đơn mới phát sinh**.
@@ -947,7 +948,7 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 - Chuyển layout tab sang `flex-wrap: wrap` và cho từng nút `flex-grow`, nhờ đó **hàng cuối cũng tự giãn kín toàn bộ chiều ngang** thay vì dồn nút về bên trái.
 - Desktop dùng basis 150px để phân bố số nút cân đối theo chiều rộng; màn hình nhỏ giảm basis và mobile cho nút chiếm toàn hàng để tránh chữ bị ép/tràn.
 - Không thay đổi nghiệp vụ, API hoặc Prisma schema nên **không có migration database mới**.
-- Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm test` → `npm run typecheck` → `npm run build` → Docker Compose → `.\scripts\release.ps1 v2.15.5`.
+- Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm test` → `npm run typecheck` → `npm run build` → Docker Compose → `.\scripts\release.ps1 v2.17.0`.
 
 ---
 
@@ -964,12 +965,25 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 
 ---
 
+## v2.17.0 — 31/08/2026
+
+- Thêm bảng `cau_hinh_he_thong` và migration `202608310001_v217_canh_bao_kho` để lưu bền vững **ngưỡng sắp hết hàng**; mặc định là `5`, Admin có thể chỉnh từ `1–999`.
+- Bổ sung API `GET/POST /api/v1/quan-tri/kho/cau-hinh`; thay đổi ngưỡng được audit bằng sự kiện `ADMIN_CAP_NHAT_CAU_HINH_KHO`.
+- Dashboard có banner **Cảnh báo tồn kho** hiển thị riêng số biến thể sắp hết và hết hàng, đồng thời nút mở thẳng tab Kho để xử lý.
+- Bộ lọc, KPI và nhãn trạng thái trong tab **Kho** dùng cùng ngưỡng cấu hình thay vì cố định `5`, tránh Dashboard/Kho lệch logic.
+- Khi lưu biến thể/tồn kho, Admin có thể nhập **lý do điều chỉnh**. Backend tự phân loại biến động thành `NHAP_KHO`, `XUAT_KHO` hoặc `DIEU_CHINH`, lưu `ton_cu`, `ton_moi`, `chenh_lech`, nguyên nhân và người thao tác trong audit.
+- Panel lịch sử kho được nâng thành **Lịch sử nhập / xuất / điều chỉnh kho**, có lọc loại biến động, hiển thị lý do, người thao tác, chênh lệch và thời gian; API lịch sử hỗ trợ query `?loai=` và trả tối đa 80 biến động gần nhất.
+- Mở rộng regression test cho migration/cấu hình kho, Dashboard cảnh báo động, lý do điều chỉnh và phân loại biến động.
+- Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm test` → `npm run typecheck` → `npm run build` → `docker compose up -d --build` → `docker compose ps` → `docker compose logs migrate --tail 150` → `docker compose logs api --tail 150` → `.\scripts\release.ps1 v2.17.0`.
+
+---
+
 # Lộ trình tiếp theo
 
-## v2.17.0
+## v2.18.0
 
-- Cảnh báo tồn kho sắp hết theo ngưỡng cấu hình và thông báo trong Dashboard.
-- Lịch sử nhập/xuất/điều chỉnh kho chi tiết hơn theo nguyên nhân và người thao tác.
+- Nhập kho nhanh theo lô và import CSV/Excel có kiểm tra dữ liệu trước khi ghi.
+- Cảnh báo tồn kho qua email cho Admin theo lịch, tránh gửi lặp khi trạng thái chưa thay đổi.
 - Mở rộng E2E cho CRUD catalog, dữ liệu tham chiếu, kiểm duyệt đánh giá và xuất báo cáo.
 
 ## v3.0.0

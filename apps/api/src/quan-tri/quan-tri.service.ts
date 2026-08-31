@@ -23,10 +23,36 @@ import { TaoVatLieuDto } from "./dto/tao-vat-lieu.dto.js";
 import { CapNhatVatLieuDto } from "./dto/cap-nhat-vat-lieu.dto.js";
 import { TaoMauSacDto } from "./dto/tao-mau-sac.dto.js";
 import { CapNhatMauSacDto } from "./dto/cap-nhat-mau-sac.dto.js";
+import { CapNhatCauHinhKhoDto } from "./dto/cap-nhat-cau-hinh-kho.dto.js";
 
 @Injectable()
 export class QuanTriService {
   constructor(private readonly db: CoSoDuLieuService) {}
+
+  private phan_loai_bien_dong_kho(ton_cu: number, ton_moi: number) {
+    if (ton_moi > ton_cu) return "NHAP_KHO";
+    if (ton_moi < ton_cu) return "XUAT_KHO";
+    return "DIEU_CHINH";
+  }
+
+  async lay_cau_hinh_kho() {
+    const item = await this.db.cauHinhHeThong.findUnique({ where: { khoa: "KHO" } });
+    const raw = item?.gia_tri;
+    const data = raw && typeof raw === "object" && !Array.isArray(raw) ? raw as Record<string, unknown> : {};
+    const n = Number(data.nguong_sap_het);
+    const nguong_sap_het = Number.isInteger(n) && n >= 1 && n <= 999 ? n : 5;
+    return { nguong_sap_het, ngay_cap_nhat: item?.ngay_cap_nhat ?? null };
+  }
+
+  async cap_nhat_cau_hinh_kho(actor: NguoiDungXacThuc, dto: CapNhatCauHinhKhoDto) {
+    const item = await this.db.cauHinhHeThong.upsert({
+      where: { khoa: "KHO" },
+      create: { khoa: "KHO", gia_tri: { nguong_sap_het: dto.nguong_sap_het }, nguoi_cap_nhat_id: actor.id },
+      update: { gia_tri: { nguong_sap_het: dto.nguong_sap_het }, nguoi_cap_nhat_id: actor.id }
+    });
+    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_CAP_NHAT_CAU_HINH_KHO", nguoi_dung_id: actor.id, chi_tiet: { nguong_sap_het: dto.nguong_sap_het } } });
+    return { nguong_sap_het: dto.nguong_sap_het, ngay_cap_nhat: item.ngay_cap_nhat };
+  }
 
   private anh_data_url_hop_le(value: string) {
     const anh = value.trim();
@@ -69,8 +95,10 @@ export class QuanTriService {
     const bat_dau_hom_nay = batDauNgay(hom_nay);
     const bat_dau_7_ngay = batDauNgay(tu_7_ngay);
     const bat_dau_30_ngay = batDauNgay(tu_30_ngay);
+    const cau_hinh_kho = await this.lay_cau_hinh_kho();
+    const nguong_sap_het = cau_hinh_kho.nguong_sap_het;
 
-    const [nguoi_dung, khach_hang, nhan_vien, ca_lam_viec, phan_ca, don_hang, san_pham, don_30_ngay, don_doanh_thu_30_ngay, trang_thai_don, khach_hang_30_ngay, ton_kho_thap, don_gan_day] = await Promise.all([
+    const [nguoi_dung, khach_hang, nhan_vien, ca_lam_viec, phan_ca, don_hang, san_pham, don_30_ngay, don_doanh_thu_30_ngay, trang_thai_don, khach_hang_30_ngay, ton_kho_thap, sap_het_count, het_hang_count, don_gan_day] = await Promise.all([
       this.db.nguoiDung.count(),
       this.db.nguoiDung.count({ where: { vai_tro: VaiTro.KHACH_HANG } }),
       this.db.nhanVien.count(),
@@ -113,7 +141,7 @@ export class QuanTriService {
         select: { ngay_tao: true }
       }),
       this.db.bienTheSanPham.findMany({
-        where: { dang_hien_thi: true, so_luong_ton: { lte: 5 }, san_pham: { trang_thai: TrangThaiSanPham.DANG_BAN } },
+        where: { dang_hien_thi: true, so_luong_ton: { lte: nguong_sap_het }, san_pham: { trang_thai: TrangThaiSanPham.DANG_BAN } },
         orderBy: [{ so_luong_ton: "asc" }, { ma_bien_the: "asc" }],
         take: 10,
         select: {
@@ -125,6 +153,8 @@ export class QuanTriService {
           vat_lieu: { select: { ten_vat_lieu: true } }
         }
       }),
+      this.db.bienTheSanPham.count({ where: { dang_hien_thi: true, so_luong_ton: { gt: 0, lte: nguong_sap_het }, san_pham: { trang_thai: TrangThaiSanPham.DANG_BAN } } }),
+      this.db.bienTheSanPham.count({ where: { dang_hien_thi: true, so_luong_ton: 0, san_pham: { trang_thai: TrangThaiSanPham.DANG_BAN } } }),
       this.db.donHang.findMany({
         orderBy: { ngay_tao: "desc" },
         take: 8,
@@ -220,6 +250,7 @@ export class QuanTriService {
       trang_thai_don_hang: trang_thai,
       doanh_thu_theo_ngay,
       top_san_pham_30_ngay,
+      canh_bao_kho: { nguong_sap_het, sap_het: sap_het_count, het_hang: het_hang_count, tong_canh_bao: sap_het_count + het_hang_count },
       ton_kho_thap: ton_kho_thap.map(item => ({
         id: item.id,
         ma_bien_the: item.ma_bien_the,
@@ -949,16 +980,38 @@ export class QuanTriService {
     return { thong_bao: `Đã xóa màu ${hien_tai.ten_mau}`, id };
   }
 
-  async lich_su_dieu_chinh_ton_kho() {
-    const ds = await this.db.nhatKyBaoMat.findMany({ where: { loai_su_kien: { in: ["ADMIN_CAP_NHAT_TON_KHO", "ADMIN_CAP_NHAT_BIEN_THE"] } }, orderBy: { ngay_tao: "desc" }, take: 80 });
-    const co_thay_doi_ton = ds.filter(item => {
-      const ct = item.chi_tiet as Record<string, unknown> | null;
-      return ct && typeof ct.ton_cu === "number" && typeof ct.ton_moi === "number" && ct.ton_cu !== ct.ton_moi;
+  async lich_su_dieu_chinh_ton_kho(loai?: string) {
+    const ds = await this.db.nhatKyBaoMat.findMany({
+      where: { loai_su_kien: { in: ["ADMIN_CAP_NHAT_TON_KHO", "ADMIN_CAP_NHAT_BIEN_THE"] } },
+      orderBy: { ngay_tao: "desc" },
+      take: 240
     });
-    const actorIds = [...new Set(co_thay_doi_ton.map(x => x.nguoi_dung_id).filter((x): x is string => Boolean(x)))];
-    const actors = actorIds.length ? await this.db.nguoiDung.findMany({ where: { id: { in: actorIds } }, select: { id: true, ho_ten: true } }) : [];
+    const co_thay_doi_ton = ds.flatMap(item => {
+      const ct = item.chi_tiet as Record<string, unknown> | null;
+      if (!ct || typeof ct.ton_cu !== "number" || typeof ct.ton_moi !== "number" || ct.ton_cu === ct.ton_moi) return [];
+      const ton_cu = Number(ct.ton_cu);
+      const ton_moi = Number(ct.ton_moi);
+      const loai_bien_dong = typeof ct.loai_bien_dong === "string" ? ct.loai_bien_dong : this.phan_loai_bien_dong_kho(ton_cu, ton_moi);
+      if (loai && loai !== loai_bien_dong) return [];
+      return [{ item, ct, ton_cu, ton_moi, loai_bien_dong }];
+    });
+    const actorIds = [...new Set(co_thay_doi_ton.map(x => x.item.nguoi_dung_id).filter((x): x is string => Boolean(x)))];
+    const actors = actorIds.length ? await this.db.nguoiDung.findMany({ where: { id: { in: actorIds } }, select: { id: true, ho_ten: true, thu_dien_tu: true } }) : [];
     const actorMap = new Map(actors.map(x => [x.id, x]));
-    return co_thay_doi_ton.slice(0, 40).map(item => ({ id: item.id.toString(), loai_su_kien: item.loai_su_kien, chi_tiet: item.chi_tiet, nguoi_thuc_hien: item.nguoi_dung_id ? actorMap.get(item.nguoi_dung_id) || null : null, ngay_tao: item.ngay_tao }));
+    return co_thay_doi_ton.slice(0, 80).map(({ item, ct, ton_cu, ton_moi, loai_bien_dong }) => ({
+      id: item.id.toString(),
+      loai_su_kien: item.loai_su_kien,
+      loai_bien_dong,
+      ton_cu,
+      ton_moi,
+      chenh_lech: ton_moi - ton_cu,
+      ly_do: typeof ct.ly_do === "string" && ct.ly_do.trim() ? ct.ly_do : "Điều chỉnh tồn kho",
+      ma_bien_the: String(ct.ma_bien_the_moi || ct.ma_bien_the || ""),
+      ma_san_pham: String(ct.ma_san_pham || ""),
+      nguoi_thuc_hien: item.nguoi_dung_id ? actorMap.get(item.nguoi_dung_id) || null : null,
+      chi_tiet: item.chi_tiet,
+      ngay_tao: item.ngay_tao
+    }));
   }
 
   async danh_sach_san_pham_quan_tri() {
@@ -1071,7 +1124,8 @@ export class QuanTriService {
     const hien_tai = await this.db.bienTheSanPham.findUnique({ where: { id }, include: { san_pham: { select: { ma_san_pham: true, ten_san_pham: true } } } });
     if (!hien_tai) throw new NotFoundException("Không tìm thấy biến thể sản phẩm");
     const da_cap_nhat = await this.db.bienTheSanPham.update({ where: { id }, data: { so_luong_ton: dto.so_luong_ton, dang_hien_thi: dto.dang_hien_thi ?? hien_tai.dang_hien_thi }, include: { vat_lieu: true, mau_sac: true } });
-    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_CAP_NHAT_TON_KHO", nguoi_dung_id: actor.id, chi_tiet: { bien_the_id: id, ma_bien_the: hien_tai.ma_bien_the, ma_san_pham: hien_tai.san_pham.ma_san_pham, ton_cu: hien_tai.so_luong_ton, ton_moi: da_cap_nhat.so_luong_ton, hien_thi: da_cap_nhat.dang_hien_thi } } });
+    const loai_bien_dong = this.phan_loai_bien_dong_kho(hien_tai.so_luong_ton, da_cap_nhat.so_luong_ton);
+    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_CAP_NHAT_TON_KHO", nguoi_dung_id: actor.id, chi_tiet: { bien_the_id: id, ma_bien_the: hien_tai.ma_bien_the, ma_san_pham: hien_tai.san_pham.ma_san_pham, ton_cu: hien_tai.so_luong_ton, ton_moi: da_cap_nhat.so_luong_ton, chenh_lech: da_cap_nhat.so_luong_ton - hien_tai.so_luong_ton, loai_bien_dong, ly_do: dto.ly_do?.trim() || "Điều chỉnh tồn kho", hien_thi: da_cap_nhat.dang_hien_thi } } });
     return da_cap_nhat;
   }
 
@@ -1122,7 +1176,8 @@ export class QuanTriService {
     };
     if (!Object.keys(data).length) throw new BadRequestException("Không có dữ liệu biến thể để cập nhật");
     const item = await this.db.bienTheSanPham.update({ where: { id }, data, include: { vat_lieu: true, mau_sac: true } });
-    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_CAP_NHAT_BIEN_THE", nguoi_dung_id: actor.id, chi_tiet: { bien_the_id: id, san_pham_id: hien_tai.san_pham.id, ma_san_pham: hien_tai.san_pham.ma_san_pham, ma_bien_the_cu: hien_tai.ma_bien_the, ma_bien_the_moi: item.ma_bien_the, ton_cu: hien_tai.so_luong_ton, ton_moi: item.so_luong_ton } } });
+    const loai_bien_dong = this.phan_loai_bien_dong_kho(hien_tai.so_luong_ton, item.so_luong_ton);
+    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_CAP_NHAT_BIEN_THE", nguoi_dung_id: actor.id, chi_tiet: { bien_the_id: id, san_pham_id: hien_tai.san_pham.id, ma_san_pham: hien_tai.san_pham.ma_san_pham, ma_bien_the_cu: hien_tai.ma_bien_the, ma_bien_the_moi: item.ma_bien_the, ton_cu: hien_tai.so_luong_ton, ton_moi: item.so_luong_ton, chenh_lech: item.so_luong_ton - hien_tai.so_luong_ton, loai_bien_dong, ly_do: dto.ly_do_ton_kho?.trim() || "Điều chỉnh tồn kho" } } });
     return { ...item, gia_chenh_lech: Number(item.gia_chenh_lech) };
   }
 

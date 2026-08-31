@@ -24,6 +24,7 @@ import { TaoVatLieuDto } from "./dto/tao-vat-lieu.dto.js";
 import { CapNhatVatLieuDto } from "./dto/cap-nhat-vat-lieu.dto.js";
 import { TaoMauSacDto } from "./dto/tao-mau-sac.dto.js";
 import { CapNhatMauSacDto } from "./dto/cap-nhat-mau-sac.dto.js";
+import { CapNhatCauHinhKhoDto } from "./dto/cap-nhat-cau-hinh-kho.dto.js";
 import { QuanTriService } from "./quan-tri.service.js";
 
 @ApiTags("Quản trị")
@@ -79,7 +80,9 @@ export class QuanTriController {
   @Post("mau-sac") tao_mau_sac(@Req() req: YeuCauCoNguoiDung, @Body() dto: TaoMauSacDto) { return this.service.tao_mau_sac(req.nguoi_dung_xac_thuc!, dto); }
   @Post("mau-sac/:id/cap-nhat") cap_nhat_mau_sac(@Req() req: YeuCauCoNguoiDung, @Param("id") id: string, @Body() dto: CapNhatMauSacDto) { return this.service.cap_nhat_mau_sac(req.nguoi_dung_xac_thuc!, id, dto); }
   @Post("mau-sac/:id/xoa") xoa_mau_sac(@Req() req: YeuCauCoNguoiDung, @Param("id") id: string) { return this.service.xoa_mau_sac(req.nguoi_dung_xac_thuc!, id); }
-  @Get("kho/lich-su") lich_su_kho() { return this.service.lich_su_dieu_chinh_ton_kho(); }
+  @Get("kho/cau-hinh") cau_hinh_kho() { return this.service.lay_cau_hinh_kho(); }
+  @Post("kho/cau-hinh") cap_nhat_cau_hinh_kho(@Req() req: YeuCauCoNguoiDung, @Body() dto: CapNhatCauHinhKhoDto) { return this.service.cap_nhat_cau_hinh_kho(req.nguoi_dung_xac_thuc!, dto); }
+  @Get("kho/lich-su") lich_su_kho(@Query("loai") loai?: string) { return this.service.lich_su_dieu_chinh_ton_kho(loai); }
 
   @Get("san-pham") san_pham_quan_tri() { return this.service.danh_sach_san_pham_quan_tri(); }
   @Post("san-pham") tao_san_pham_quan_tri(@Req() req: YeuCauCoNguoiDung, @Body() dto: TaoSanPhamQuanTriDto) { return this.service.tao_san_pham_quan_tri(req.nguoi_dung_xac_thuc!, dto); }

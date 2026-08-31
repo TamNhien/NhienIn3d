@@ -1,5 +1,5 @@
 import { Type } from "class-transformer";
-import { IsBoolean, IsInt, IsOptional, Max, Min } from "class-validator";
+import { IsBoolean, IsInt, IsOptional, IsString, Max, MaxLength, Min } from "class-validator";
 
 export class CapNhatTonKhoDto {
   @Type(() => Number) @IsInt() @Min(0) @Max(1000000)
@@ -7,4 +7,7 @@ export class CapNhatTonKhoDto {
 
   @IsOptional() @IsBoolean()
   dang_hien_thi?: boolean;
+
+  @IsOptional() @IsString() @MaxLength(300)
+  ly_do?: string;
 }

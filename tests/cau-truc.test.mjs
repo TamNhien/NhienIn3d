@@ -144,7 +144,7 @@ test("v2.16.0 co CRUD vat lieu mau va lich su ton kho", () => {
   assert.match(controller, /@Post\("mau-sac"\)/);
   assert.match(controller, /@Get\("kho\/lich-su"\)/);
   assert.match(admin, /\["tham-chieu", "Vật liệu & màu"\]/u);
-  assert.match(admin, /Lịch sử điều chỉnh tồn/u);
+  assert.match(admin, /Lịch sử (?:điều chỉnh tồn|nhập \/ xuất \/ điều chỉnh kho)/u);
 });
 
 test("root co lenh kiem tra so dong du lieu database", () => {
@@ -157,16 +157,16 @@ test("V2 co migration nang cap khong ghi de migration V1", () => {
   assert.equal(existsSync("apps/api/prisma/migrations/202608290002_v002_gio_hang_thanh_toan/migration.sql"), true);
 });
 
-test("version v2.16.0 dong bo root API va Web", () => {
-  assert.equal(readFileSync("VERSION", "utf8").trim(), "2.16.0");
-  assert.equal(docJson("package.json").version, "2.16.0");
-  assert.equal(docJson("apps/api/package.json").version, "2.16.0");
-  assert.equal(docJson("apps/web/package.json").version, "2.16.0");
+test("version v2.17.0 dong bo root API va Web", () => {
+  assert.equal(readFileSync("VERSION", "utf8").trim(), "2.17.0");
+  assert.equal(docJson("package.json").version, "2.17.0");
+  assert.equal(docJson("apps/api/package.json").version, "2.17.0");
+  assert.equal(docJson("apps/web/package.json").version, "2.17.0");
 });
 
-test("README co lich su phien ban tang dan den v2.16.0", () => {
+test("README co lich su phien ban tang dan den v2.17.0", () => {
   const readme = readFileSync("README.md", "utf8");
-  const viTri = ["## v1.0.0", "## v1.0.1", "## v1.0.2", "## v1.0.3", "## v1.0.4", "## v1.0.5", "## v1.0.6", "## v1.0.7", "## v2.0.0", "## v2.1.0", "## v2.1.1", "## v2.2.0", "## v2.2.1", "## v2.3.0", "## v2.4.0", "## v2.4.1", "## v2.5.0", "## v2.6.0", "## v2.6.1", "## v2.7.0", "## v2.8.0", "## v2.8.1", "## v2.8.2", "## v2.8.3", "## v2.8.4", "## v2.8.5", "## v2.8.6", "## v2.8.7", "## v2.8.8", "## v2.8.9", "## v2.9.0", "## v2.9.1", "## v2.9.2", "## v2.9.3", "## v2.9.4", "## v2.9.5", "## v2.9.6", "## v2.9.7", "## v2.9.8", "## v2.9.9", "## v2.10.0", "## v2.10.1", "## v2.10.2", "## v2.11.0", "## v2.12.0", "## v2.12.1", "## v2.12.2", "## v2.12.3", "## v2.13.0", "## v2.14.0", "## v2.15.0", "## v2.15.1", "## v2.15.2", "## v2.15.3", "## v2.15.4", "## v2.15.5", "## v2.16.0"].map(x => readme.indexOf(x));
+  const viTri = ["## v1.0.0", "## v1.0.1", "## v1.0.2", "## v1.0.3", "## v1.0.4", "## v1.0.5", "## v1.0.6", "## v1.0.7", "## v2.0.0", "## v2.1.0", "## v2.1.1", "## v2.2.0", "## v2.2.1", "## v2.3.0", "## v2.4.0", "## v2.4.1", "## v2.5.0", "## v2.6.0", "## v2.6.1", "## v2.7.0", "## v2.8.0", "## v2.8.1", "## v2.8.2", "## v2.8.3", "## v2.8.4", "## v2.8.5", "## v2.8.6", "## v2.8.7", "## v2.8.8", "## v2.8.9", "## v2.9.0", "## v2.9.1", "## v2.9.2", "## v2.9.3", "## v2.9.4", "## v2.9.5", "## v2.9.6", "## v2.9.7", "## v2.9.8", "## v2.9.9", "## v2.10.0", "## v2.10.1", "## v2.10.2", "## v2.11.0", "## v2.12.0", "## v2.12.1", "## v2.12.2", "## v2.12.3", "## v2.13.0", "## v2.14.0", "## v2.15.0", "## v2.15.1", "## v2.15.2", "## v2.15.3", "## v2.15.4", "## v2.15.5", "## v2.16.0", "## v2.17.0"].map(x => readme.indexOf(x));
   assert.ok(viTri.every(x => x >= 0));
   assert.deepEqual([...viTri].sort((a,b)=>a-b), viTri);
 });
@@ -851,4 +851,25 @@ test("v2.13.0 admin CRUD san pham va upload anh tu may", () => {
   assert.match(main, /bodyLimit: 3 \* 1024 \* 1024/);
   assert.match(seed, /SEED_V2130_QUAN_TRI_SAN_PHAM_ANH_LOCAL/);
   assert.match(seed, /update: \{\}/);
+});
+
+
+test("v2.17.0 co migration cau hinh kho va API nguong canh bao", () => {
+  const schema = readFileSync("apps/api/prisma/schema.prisma", "utf8");
+  const migration = readFileSync("apps/api/prisma/migrations/202608310001_v217_canh_bao_kho/migration.sql", "utf8");
+  const controller = readFileSync("apps/api/src/quan-tri/quan-tri.controller.ts", "utf8");
+  assert.match(schema, /model CauHinhHeThong/);
+  assert.match(migration, /cau_hinh_he_thong/);
+  assert.match(controller, /@Get\("kho\/cau-hinh"\)/);
+  assert.match(controller, /@Post\("kho\/cau-hinh"\)/);
+});
+
+test("v2.17.0 web canh bao kho dong va lich su co ly do", () => {
+  const admin = readFileSync("apps/web/app/quan-tri/page.tsx", "utf8");
+  const css = readFileSync("apps/web/app/globals.css", "utf8");
+  assert.match(admin, /Cảnh báo tồn kho/u);
+  assert.match(admin, /Ngưỡng cảnh báo sắp hết/u);
+  assert.match(admin, /Lý do điều chỉnh/u);
+  assert.match(admin, /Lịch sử nhập \/ xuất \/ điều chỉnh kho/u);
+  assert.match(css, /v2\.17\.0 - cảnh báo tồn kho/u);
 });

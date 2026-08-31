@@ -462,3 +462,12 @@ model DanhGiaSanPham {
   @@index([ngay_tao])
   @@map("danh_gia_san_pham")
 }
+
+model CauHinhHeThong {
+  khoa              String   @id @db.VarChar(100)
+  gia_tri           Json     @db.JsonB
+  nguoi_cap_nhat_id String?  @db.Uuid
+  ngay_cap_nhat     DateTime @updatedAt @db.Timestamptz(6)
+
+  @@map("cau_hinh_he_thong")
+}

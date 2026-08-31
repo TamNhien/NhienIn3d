@@ -1,5 +1,5 @@
 import { Type } from "class-transformer";
-import { IsBoolean, IsInt, IsNumber, IsOptional, IsString, IsUUID, Length, Max, Min } from "class-validator";
+import { IsBoolean, IsInt, IsNumber, IsOptional, IsString, IsUUID, Length, Max, MaxLength, Min } from "class-validator";
 
 export class CapNhatBienTheDto {
   @IsOptional() @IsString() @Length(3, 80)
@@ -19,4 +19,7 @@ export class CapNhatBienTheDto {
 
   @IsOptional() @IsBoolean()
   dang_hien_thi?: boolean;
+
+  @IsOptional() @IsString() @MaxLength(300)
+  ly_do_ton_kho?: string;
 }

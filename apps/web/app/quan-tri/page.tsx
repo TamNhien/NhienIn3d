@@ -14,6 +14,7 @@ import {
   AdminDanhMuc,
   AdminVatLieu,
   AdminMauSac,
+  AdminCauHinhKho,
   AdminDanhGia,
   NhatKyAdmin,
   LichSuKhoAdmin,
@@ -37,6 +38,8 @@ import {
   layDanhMucAdmin,
   layVatLieuAdmin,
   layMauSacAdmin,
+  layCauHinhKhoAdmin,
+  capNhatCauHinhKhoAdmin,
   taoVatLieuAdmin,
   capNhatVatLieuAdmin,
   xoaVatLieuAdmin,
@@ -97,7 +100,7 @@ const nhanSuKienAudit = (loai: string) => ({
   ADMIN_TAO_DANH_MUC: "Tạo danh mục", ADMIN_CAP_NHAT_DANH_MUC: "Cập nhật danh mục", ADMIN_XOA_DANH_MUC: "Xóa danh mục",
   ADMIN_TAO_BIEN_THE: "Tạo biến thể", ADMIN_CAP_NHAT_BIEN_THE: "Cập nhật biến thể", ADMIN_XOA_BIEN_THE: "Xóa biến thể",
   ADMIN_TAO_VAT_LIEU: "Tạo vật liệu", ADMIN_CAP_NHAT_VAT_LIEU: "Cập nhật vật liệu", ADMIN_XOA_VAT_LIEU: "Xóa vật liệu",
-  ADMIN_TAO_MAU_SAC: "Tạo màu", ADMIN_CAP_NHAT_MAU_SAC: "Cập nhật màu", ADMIN_XOA_MAU_SAC: "Xóa màu",
+  ADMIN_TAO_MAU_SAC: "Tạo màu", ADMIN_CAP_NHAT_MAU_SAC: "Cập nhật màu", ADMIN_XOA_MAU_SAC: "Xóa màu", ADMIN_CAP_NHAT_CAU_HINH_KHO: "Cập nhật cảnh báo kho",
   ADMIN_DUYET_DANH_GIA: "Duyệt đánh giá", ADMIN_AN_DANH_GIA: "Ẩn đánh giá", ADMIN_XOA_DANH_GIA: "Xóa đánh giá"
 }[loai] || loai.replaceAll("_", " "));
 
@@ -151,6 +154,9 @@ export default function QuanTriPage() {
   const [vat_lieu_qt, setVatLieuQt] = useState<AdminVatLieu[]>([]);
   const [mau_sac_qt, setMauSacQt] = useState<AdminMauSac[]>([]);
   const [lich_su_kho, setLichSuKho] = useState<LichSuKhoAdmin[]>([]);
+  const [cau_hinh_kho, setCauHinhKho] = useState<AdminCauHinhKho>({ nguong_sap_het: 5 });
+  const [kho_ly_do, setKhoLyDo] = useState<Record<string, string>>({});
+  const [lich_su_kho_loc_loai, setLichSuKhoLocLoai] = useState("");
   const [danh_gia_qt, setDanhGiaQt] = useState<AdminDanhGia[]>([]);
   const [nhat_ky, setNhatKy] = useState<NhatKyAdmin[]>([]);
   const [thong_bao, setThongBao] = useState("");
@@ -192,7 +198,7 @@ export default function QuanTriPage() {
     const tk = await layTaiKhoan();
     setTaiKhoan(tk);
     if (!tk || tk.vai_tro !== "ADMIN") return;
-    const [tq, nd, nvData, caData, pcData, donData, spData, dmData, vlData, msData, lsKhoData, dgData, nkData] = await Promise.all([layTongQuan(), layNguoiDung(), layNhanVien(), layCaLam(), layPhanCa(), layDonHangAdmin(), laySanPhamAdmin(), layDanhMucAdmin(), layVatLieuAdmin(), layMauSacAdmin(), layLichSuKhoAdmin(), layDanhGiaAdmin(), layNhatKyAdmin()]);
+    const [tq, nd, nvData, caData, pcData, donData, spData, dmData, vlData, msData, chKhoData, lsKhoData, dgData, nkData] = await Promise.all([layTongQuan(), layNguoiDung(), layNhanVien(), layCaLam(), layPhanCa(), layDonHangAdmin(), laySanPhamAdmin(), layDanhMucAdmin(), layVatLieuAdmin(), layMauSacAdmin(), layCauHinhKhoAdmin(), layLichSuKhoAdmin(), layDanhGiaAdmin(), layNhatKyAdmin()]);
     setTongQuan(tq);
     setNguoiDung(nd);
     setNhanVien(nvData);
@@ -203,6 +209,7 @@ export default function QuanTriPage() {
     setDanhMucQt(dmData);
     setVatLieuQt(vlData);
     setMauSacQt(msData);
+    setCauHinhKho(chKhoData);
     setLichSuKho(lsKhoData);
     setDanhGiaQt(dgData);
     setSpMoi(x => ({ ...x, danh_muc_id: x.danh_muc_id || dmData[0]?.id || "" }));
@@ -574,12 +581,25 @@ export default function QuanTriPage() {
     try {
       await capNhatBienTheAdmin(bien_the_id, {
         ma_bien_the: bt.ma_bien_the.trim(), vat_lieu_id: bt.vat_lieu?.id || null, mau_sac_id: bt.mau_sac?.id || null,
-        gia_chenh_lech: Number(bt.gia_chenh_lech) || 0, so_luong_ton: Number(bt.so_luong_ton), dang_hien_thi: bt.dang_hien_thi
+        gia_chenh_lech: Number(bt.gia_chenh_lech) || 0, so_luong_ton: Number(bt.so_luong_ton), dang_hien_thi: bt.dang_hien_thi,
+        ly_do_ton_kho: kho_ly_do[bien_the_id]?.trim() || "Điều chỉnh tồn kho"
       });
       const [ds, tq, nk, lsKho] = await Promise.all([laySanPhamAdmin(), layTongQuan(), layNhatKyAdmin(), layLichSuKhoAdmin()]);
       setSanPhamQt(ds); setTongQuan(tq); setNhatKy(nk); setLichSuKho(lsKho);
+      setKhoLyDo(x => ({ ...x, [bien_the_id]: "" }));
       setThongBao(`Đã lưu biến thể ${bt.ma_bien_the}: tồn ${bt.so_luong_ton}.`);
     } catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể cập nhật biến thể/tồn kho"); }
+    finally { setDangXuLy(null); }
+  }
+
+  async function luuCauHinhKho() {
+    setDangXuLy("cau-hinh-kho"); setThongBao("");
+    try {
+      const da_luu = await capNhatCauHinhKhoAdmin(Math.max(1, Math.min(999, Number(cau_hinh_kho.nguong_sap_het) || 5)));
+      const [tq, nk] = await Promise.all([layTongQuan(), layNhatKyAdmin()]);
+      setCauHinhKho(da_luu); setTongQuan(tq); setNhatKy(nk);
+      setThongBao(`Đã cập nhật ngưỡng sắp hết hàng: ≤ ${da_luu.nguong_sap_het}.`);
+    } catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể cập nhật cấu hình kho"); }
     finally { setDangXuLy(null); }
   }
 
@@ -714,14 +734,15 @@ export default function QuanTriPage() {
   const khachHang = useMemo(() => nguoi_dung.filter(x => x.vai_tro === "KHACH_HANG"), [nguoi_dung]);
   const sanPhamDaLoc = useMemo(() => { const q = san_pham_tim_kiem.trim().toLocaleLowerCase("vi"); return q ? san_pham_qt.filter(x => `${x.ma_san_pham} ${x.ten_san_pham} ${x.danh_muc.ten_danh_muc}`.toLocaleLowerCase("vi").includes(q)) : san_pham_qt; }, [san_pham_qt, san_pham_tim_kiem]);
   const sanPhamDangChon = useMemo(() => sanPhamDaLoc.find(x => x.id === san_pham_chon_id) || sanPhamDaLoc[0] || null, [sanPhamDaLoc, san_pham_chon_id]);
+  const nguongKho = Math.max(1, Number(cau_hinh_kho.nguong_sap_het) || 5);
   const danhSachKho = useMemo(() => {
     const q = kho_tim_kiem.trim().toLocaleLowerCase("vi");
     const ds = san_pham_qt.flatMap(sp => sp.bien_the.map(bt => ({ san_pham: sp, bien_the: bt })));
     return ds.filter(item => {
       const bt = item.bien_the;
       if (q && !`${item.san_pham.ma_san_pham} ${item.san_pham.ten_san_pham} ${bt.ma_bien_the} ${bt.vat_lieu?.ten_vat_lieu || ""} ${bt.mau_sac?.ten_mau || ""}`.toLocaleLowerCase("vi").includes(q)) return false;
-      if (kho_loc_ton === "CON_HANG" && bt.so_luong_ton <= 5) return false;
-      if (kho_loc_ton === "SAP_HET" && !(bt.so_luong_ton > 0 && bt.so_luong_ton <= 5)) return false;
+      if (kho_loc_ton === "CON_HANG" && bt.so_luong_ton <= nguongKho) return false;
+      if (kho_loc_ton === "SAP_HET" && !(bt.so_luong_ton > 0 && bt.so_luong_ton <= nguongKho)) return false;
       if (kho_loc_ton === "HET_HANG" && bt.so_luong_ton > 0) return false;
       if (kho_loc_vat_lieu && bt.vat_lieu?.id !== kho_loc_vat_lieu) return false;
       if (kho_loc_mau && bt.mau_sac?.id !== kho_loc_mau) return false;
@@ -729,16 +750,17 @@ export default function QuanTriPage() {
       if (kho_loc_hien_thi === "AN" && bt.dang_hien_thi) return false;
       return true;
     }).sort((a, b) => `${a.san_pham.ma_san_pham}-${a.bien_the.ma_bien_the}`.localeCompare(`${b.san_pham.ma_san_pham}-${b.bien_the.ma_bien_the}`, "vi"));
-  }, [san_pham_qt, kho_tim_kiem, kho_loc_ton, kho_loc_vat_lieu, kho_loc_mau, kho_loc_hien_thi]);
+  }, [san_pham_qt, kho_tim_kiem, kho_loc_ton, kho_loc_vat_lieu, kho_loc_mau, kho_loc_hien_thi, nguongKho]);
   const thongKeKho = useMemo(() => {
     const ds = san_pham_qt.flatMap(sp => sp.bien_the);
     return {
       bien_the: ds.length,
       tong_ton: ds.reduce((tong, bt) => tong + Number(bt.so_luong_ton || 0), 0),
-      sap_het: ds.filter(bt => bt.so_luong_ton > 0 && bt.so_luong_ton <= 5).length,
+      sap_het: ds.filter(bt => bt.so_luong_ton > 0 && bt.so_luong_ton <= nguongKho).length,
       het_hang: ds.filter(bt => bt.so_luong_ton <= 0).length
     };
-  }, [san_pham_qt]);
+  }, [san_pham_qt, nguongKho]);
+  const lichSuKhoDaLoc = useMemo(() => lich_su_kho.filter(x => !lich_su_kho_loc_loai || x.loai_bien_dong === lich_su_kho_loc_loai), [lich_su_kho, lich_su_kho_loc_loai]);
   const danhGiaDaLoc = useMemo(() => danh_gia_qt.filter(x => !danh_gia_loc || (danh_gia_loc === "DA_DUYET" ? x.da_duyet : !x.da_duyet)), [danh_gia_qt, danh_gia_loc]);
   const nhatKyDaLoc = useMemo(() => { const q = nhat_ky_tim_kiem.trim().toLocaleLowerCase("vi"); return q ? nhat_ky.filter(x => `${x.loai_su_kien} ${x.nguoi_thuc_hien?.ho_ten || ""} ${x.nguoi_thuc_hien?.thu_dien_tu || ""} ${JSON.stringify(x.chi_tiet)}`.toLocaleLowerCase("vi").includes(q)) : nhat_ky; }, [nhat_ky, nhat_ky_tim_kiem]);
 
@@ -804,6 +826,7 @@ export default function QuanTriPage() {
 
     {tab === "tong-quan" && <section className="cine-dashboard-v211">
       {!tong_quan ? <div className="cine-card cine-admin-section">Đang tải thống kê quản trị…</div> : <>
+        {tong_quan.canh_bao_kho.tong_canh_bao > 0 && <div className="cine-card cine-stock-alert-v217" role="alert"><div><b>⚠️ Cảnh báo tồn kho</b><span>{tong_quan.canh_bao_kho.sap_het} biến thể sắp hết (≤ {tong_quan.canh_bao_kho.nguong_sap_het}) · {tong_quan.canh_bao_kho.het_hang} biến thể hết hàng.</span></div><button type="button" className="cine-btn cine-btn-primary" onClick={()=>setTab("kho")}>Mở kho xử lý</button></div>}
         <div className="cine-dashboard-period-cards">
           <article className="cine-card cine-dashboard-kpi"><span>Doanh thu hôm nay</span><strong>{dinhDangTien(tong_quan.doanh_thu.hom_nay)}</strong><small>{tong_quan.don_ghi_nhan_doanh_thu_theo_ky.hom_nay} đơn ghi nhận doanh thu · {tong_quan.don_hang_theo_ky.hom_nay} đơn mới phát sinh</small></article>
           <article className="cine-card cine-dashboard-kpi"><span>Doanh thu 7 ngày</span><strong>{dinhDangTien(tong_quan.doanh_thu.bay_ngay)}</strong><small>{tong_quan.don_ghi_nhan_doanh_thu_theo_ky.bay_ngay} đơn ghi nhận doanh thu · {tong_quan.don_hang_theo_ky.bay_ngay} đơn mới</small></article>
@@ -838,7 +861,7 @@ export default function QuanTriPage() {
           </article>
 
           <article className="cine-card cine-dashboard-panel">
-            <div className="cine-dashboard-panel-head"><div><h2>Tồn kho thấp</h2><p>Biến thể đang bán có tồn kho ≤ 5.</p></div><strong>{tong_quan.ton_kho_thap.length}</strong></div>
+            <div className="cine-dashboard-panel-head"><div><h2>Tồn kho thấp</h2><p>Biến thể đang bán có tồn kho ≤ {tong_quan.canh_bao_kho.nguong_sap_het}.</p></div><strong>{tong_quan.canh_bao_kho.tong_canh_bao}</strong></div>
             <div className="cine-low-stock-list">{tong_quan.ton_kho_thap.map(item => <div className="cine-low-stock-row" key={item.id}><span><b>{item.ten_san_pham}</b><small>{item.ma_bien_the} · {item.vat_lieu} · {item.mau_sac}</small></span><strong className={item.so_luong_ton <= 1 ? "critical" : ""}>{item.so_luong_ton}</strong></div>)}
             {tong_quan.ton_kho_thap.length === 0 && <div className="cine-dashboard-empty">Không có biến thể tồn kho thấp.</div>}</div>
           </article>
@@ -963,9 +986,11 @@ export default function QuanTriPage() {
       <div className="cine-inventory-stats-v214">
         <article className="cine-card cine-inventory-stat-v214"><span>Tổng biến thể</span><b>{thongKeKho.bien_the}</b><small>Đang theo dõi trong kho</small></article>
         <article className="cine-card cine-inventory-stat-v214"><span>Tổng tồn</span><b>{thongKeKho.tong_ton}</b><small>Tổng số lượng khả dụng</small></article>
-        <article className="cine-card cine-inventory-stat-v214 warning"><span>Sắp hết</span><b>{thongKeKho.sap_het}</b><small>Từ 1 đến 5 sản phẩm</small></article>
+        <article className="cine-card cine-inventory-stat-v214 warning"><span>Sắp hết</span><b>{thongKeKho.sap_het}</b><small>Từ 1 đến {nguongKho} sản phẩm</small></article>
         <article className="cine-card cine-inventory-stat-v214 critical"><span>Hết hàng</span><b>{thongKeKho.het_hang}</b><small>Tồn kho bằng 0</small></article>
       </div>
+
+      <div className="cine-card cine-stock-config-v217"><div><h3>Ngưỡng cảnh báo sắp hết</h3><p>Dùng chung cho Dashboard, bộ lọc Kho và nhãn trạng thái. Giá trị từ 1–999.</p></div><label><span>Ngưỡng tồn</span><input type="number" min="1" max="999" value={cau_hinh_kho.nguong_sap_het} onChange={e=>setCauHinhKho(x=>({...x,nguong_sap_het:Math.max(1,Math.min(999,Number(e.target.value)||1))}))}/></label><button type="button" className="cine-btn cine-btn-primary" onClick={luuCauHinhKho} disabled={dang_xu_ly==="cau-hinh-kho"}>{dang_xu_ly==="cau-hinh-kho"?"Đang lưu…":"Lưu ngưỡng"}</button></div>
 
       <form className="cine-card cine-variant-create-v215" onSubmit={taoBienTheMoi}>
         <div><h3>Tạo biến thể mới</h3><p>Mỗi sản phẩm có thể có nhiều tổ hợp vật liệu/màu với mã và tồn kho riêng.</p></div>
@@ -981,7 +1006,7 @@ export default function QuanTriPage() {
 
       <div className="cine-card cine-stock-filters-v216">
         <label className="wide"><span>Tìm trong kho</span><input value={kho_tim_kiem} onChange={e => setKhoTimKiem(e.target.value)} placeholder="Mã sản phẩm, tên, biến thể, vật liệu, màu..."/></label>
-        <label><span>Tình trạng tồn</span><select value={kho_loc_ton} onChange={e=>setKhoLocTon(e.target.value)}><option value="">Tất cả</option><option value="CON_HANG">Còn hàng &gt; 5</option><option value="SAP_HET">Sắp hết 1–5</option><option value="HET_HANG">Hết hàng 0</option></select></label>
+        <label><span>Tình trạng tồn</span><select value={kho_loc_ton} onChange={e=>setKhoLocTon(e.target.value)}><option value="">Tất cả</option><option value="CON_HANG">Còn hàng &gt; {nguongKho}</option><option value="SAP_HET">Sắp hết 1–{nguongKho}</option><option value="HET_HANG">Hết hàng 0</option></select></label>
         <label><span>Vật liệu</span><select value={kho_loc_vat_lieu} onChange={e=>setKhoLocVatLieu(e.target.value)}><option value="">Tất cả</option>{vat_lieu_qt.map(x=><option key={x.id} value={x.id}>{x.ten_vat_lieu}</option>)}</select></label>
         <label><span>Màu</span><select value={kho_loc_mau} onChange={e=>setKhoLocMau(e.target.value)}><option value="">Tất cả</option>{mau_sac_qt.map(x=><option key={x.id} value={x.id}>{x.ten_mau}</option>)}</select></label>
         <label><span>Hiển thị</span><select value={kho_loc_hien_thi} onChange={e=>setKhoLocHienThi(e.target.value)}><option value="">Tất cả</option><option value="HIEN">Đang hiện</option><option value="AN">Đang ẩn</option></select></label>
@@ -989,8 +1014,8 @@ export default function QuanTriPage() {
       </div>
 
       <div className="cine-card cine-inventory-table-card-v214 cine-variant-table-v215"><div className="cine-inventory-scroll-v214">
-        <div className="cine-inventory-head-v214 cine-variant-head-v215"><span>Sản phẩm</span><span>Mã biến thể</span><span>Vật liệu</span><span>Màu</span><span>Chênh giá</span><span>Tồn</span><span>Tình trạng</span><span>Hiển thị</span><span>Thao tác</span></div>
-        {danhSachKho.map(({ san_pham, bien_the }) => { const trang_thai_kho = bien_the.so_luong_ton <= 0 ? "HẾT HÀNG" : bien_the.so_luong_ton <= 5 ? "SẮP HẾT" : "CÒN HÀNG"; const stock_key = bien_the.so_luong_ton <= 0 ? "out" : bien_the.so_luong_ton <= 5 ? "low" : "ok"; return <div className="cine-inventory-row-v214 cine-variant-row-v215" key={bien_the.id}>
+        <div className="cine-inventory-head-v214 cine-variant-head-v215"><span>Sản phẩm</span><span>Mã biến thể</span><span>Vật liệu</span><span>Màu</span><span>Chênh giá</span><span>Tồn</span><span>Tình trạng</span><span>Hiển thị</span><span>Lý do điều chỉnh</span><span>Thao tác</span></div>
+        {danhSachKho.map(({ san_pham, bien_the }) => { const trang_thai_kho = bien_the.so_luong_ton <= 0 ? "HẾT HÀNG" : bien_the.so_luong_ton <= nguongKho ? "SẮP HẾT" : "CÒN HÀNG"; const stock_key = bien_the.so_luong_ton <= 0 ? "out" : bien_the.so_luong_ton <= nguongKho ? "low" : "ok"; return <div className="cine-inventory-row-v214 cine-variant-row-v215" key={bien_the.id}>
           <span className="cine-inventory-product-v214"><b>{san_pham.ten_san_pham}</b><small>{san_pham.ma_san_pham}</small></span>
           <input value={bien_the.ma_bien_the} onChange={e => suaBienTheLocal(san_pham.id,bien_the.id,{ma_bien_the:e.target.value})}/>
           <select value={bien_the.vat_lieu?.id || ""} onChange={e => { const x=vat_lieu_qt.find(v=>v.id===e.target.value); suaBienTheLocal(san_pham.id,bien_the.id,{vat_lieu:x?{id:x.id,ten_vat_lieu:x.ten_vat_lieu}:null}); }}><option value="">Mặc định</option>{vat_lieu_qt.map(x => <option key={x.id} value={x.id}>{x.ten_vat_lieu}</option>)}</select>
@@ -999,12 +1024,16 @@ export default function QuanTriPage() {
           <input aria-label={`Tồn kho ${bien_the.ma_bien_the}`} type="number" min="0" max="1000000" value={bien_the.so_luong_ton} onChange={e => suaBienTheLocal(san_pham.id,bien_the.id,{so_luong_ton:Math.max(0,Number(e.target.value))})}/>
           <span className="cine-stock-state-v214" data-stock={stock_key}>{trang_thai_kho}</span>
           <label className="cine-stock-toggle-v212"><input type="checkbox" checked={bien_the.dang_hien_thi} onChange={e => suaBienTheLocal(san_pham.id,bien_the.id,{dang_hien_thi:e.target.checked})}/><span>{bien_the.dang_hien_thi ? "Hiện" : "Ẩn"}</span></label>
+          <input className="cine-stock-reason-v217" value={kho_ly_do[bien_the.id] || ""} onChange={e=>setKhoLyDo(x=>({...x,[bien_the.id]:e.target.value}))} maxLength={300} placeholder="Nhập kho, bán lẻ, kiểm kê…"/>
           <div className="cine-row-actions-v215"><button type="button" className="cine-btn cine-btn-secondary" onClick={() => luuTonKho(san_pham.id,bien_the.id)} disabled={dang_xu_ly === `kho-${bien_the.id}`}>Lưu kho</button><button type="button" className="cine-btn cine-btn-danger-outline" onClick={() => xoaBienThe(bien_the)} disabled={dang_xu_ly === `kho-${bien_the.id}`}>Xóa</button></div>
         </div>; })}
         {danhSachKho.length === 0 && <div className="cine-dashboard-empty">Không có biến thể phù hợp bộ lọc kho.</div>}
       </div></div>
 
-      <div className="cine-card cine-stock-history-v216"><div className="cine-stock-history-head-v216"><div><h3>Lịch sử điều chỉnh tồn</h3><p>Hiển thị các lần thay đổi số lượng gần nhất từ thao tác lưu biến thể/kho.</p></div><span>{lich_su_kho.length} lần gần nhất</span></div><div className="cine-stock-history-list-v216">{lich_su_kho.slice(0,12).map(item=>{ const ct=item.chi_tiet; const cu=Number(ct.ton_cu ?? 0); const moi=Number(ct.ton_moi ?? 0); const delta=moi-cu; return <div className="cine-stock-history-row-v216" key={item.id}><span><b>{String(ct.ma_bien_the_moi || ct.ma_bien_the || "Biến thể")}</b><small>{String(ct.ma_san_pham || "")} · {item.nguoi_thuc_hien?.ho_ten || "Admin"}</small></span><strong className={delta >= 0 ? "plus" : "minus"}>{cu} → {moi} ({delta >= 0 ? "+" : ""}{delta})</strong><time>{new Date(item.ngay_tao).toLocaleString("vi-VN")}</time></div>})}{lich_su_kho.length===0&&<div className="cine-dashboard-empty">Chưa có lần điều chỉnh tồn kho nào được ghi nhận.</div>}</div></div>
+      <div className="cine-card cine-stock-history-v216 cine-stock-history-v217">
+        <div className="cine-stock-history-head-v216"><div><h3>Lịch sử nhập / xuất / điều chỉnh kho</h3><p>Ghi rõ nguyên nhân, chênh lệch, người thao tác và thời điểm.</p></div><label className="cine-history-filter-v217"><span>Loại biến động</span><select value={lich_su_kho_loc_loai} onChange={e=>setLichSuKhoLocLoai(e.target.value)}><option value="">Tất cả</option><option value="NHAP_KHO">Nhập kho</option><option value="XUAT_KHO">Xuất kho</option><option value="DIEU_CHINH">Điều chỉnh</option></select></label></div>
+        <div className="cine-stock-history-list-v216">{lichSuKhoDaLoc.slice(0,24).map(item=> <div className="cine-stock-history-row-v216 cine-stock-history-row-v217" key={item.id}><span><b>{item.ma_bien_the || "Biến thể"}</b><small>{item.ma_san_pham} · {item.nguoi_thuc_hien?.ho_ten || "Admin"}</small><em>{item.ly_do}</em></span><span className="cine-stock-movement-v217" data-type={item.loai_bien_dong}>{item.loai_bien_dong === "NHAP_KHO" ? "Nhập kho" : item.loai_bien_dong === "XUAT_KHO" ? "Xuất kho" : "Điều chỉnh"}</span><strong className={item.chenh_lech >= 0 ? "plus" : "minus"}>{item.ton_cu} → {item.ton_moi} ({item.chenh_lech >= 0 ? "+" : ""}{item.chenh_lech})</strong><time>{new Date(item.ngay_tao).toLocaleString("vi-VN")}</time></div>)}{lichSuKhoDaLoc.length===0&&<div className="cine-dashboard-empty">Chưa có biến động kho phù hợp.</div>}</div>
+      </div>
     </section>}
 
     {tab === "tham-chieu" && <section className="cine-admin-operations cine-reference-admin-v216">
