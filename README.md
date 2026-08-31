@@ -1,6 +1,6 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v2.15.5** — 31/08/2026
+> Phiên bản hiện tại: **v2.16.0** — 31/08/2026
 
 NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **frontend Next.js** và **backend NestJS/Fastify** kết nối **PostgreSQL qua Prisma**.
 
@@ -20,6 +20,7 @@ NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **fro
 
 ## Điểm chính bản hiện tại
 
+- v2.16.0 bổ sung **CRUD Vật liệu & Màu sắc** trong Admin, chặn xóa dữ liệu tham chiếu đang được biến thể sử dụng; tab Kho có bộ lọc nâng cao theo tồn/vật liệu/màu/hiển thị và lịch sử điều chỉnh tồn gần nhất.
 - v2.15.5 chỉnh thanh chức năng Admin để **mọi hàng tự giãn kín 100% chiều ngang**, không còn khoảng trống lớn bên phải khi các nút xuống hàng; desktop dùng flex-wrap có flex-grow, mobile chuyển dần về nút toàn hàng.
 - v2.15.3 sửa lệch số liệu dashboard: số **đơn** nằm cạnh doanh thu giờ được đếm theo **ngày ghi nhận doanh thu/thanh toán**, không còn lấy ngày tạo đơn; đồng thời KPI tách rõ **đơn ghi nhận doanh thu** và **đơn mới phát sinh**.
 - v2.15.2 sửa lỗi `npm run typecheck` tại `prisma/seed.ts` do kiểu `don_hang_map` thiếu trường `trang_thai`, đồng thời bổ sung xuất **Excel (.xlsx)** cho Đơn hàng/Doanh thu/Tồn kho và bỏ ghi chú nền ảnh khỏi footer.
@@ -950,13 +951,26 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 
 ---
 
+## v2.16.0 — 31/08/2026
+
+- Bổ sung tab **Vật liệu & màu** trong Admin: tạo/sửa/xóa vật liệu và màu sắc dùng cho biến thể sản phẩm; mã tham chiếu được chuẩn hóa chữ hoa và kiểm tra trùng.
+- Vật liệu cho phép chỉnh tên, mô tả và `he_so_gia`; màu cho phép chỉnh tên và mã HEX, có color picker trực tiếp trên giao diện.
+- Khi xóa vật liệu/màu, backend kiểm tra `_count.bien_the` và **chặn xóa nếu vẫn còn biến thể tham chiếu**, tránh biến thể bị mất cấu hình ngoài ý muốn.
+- Tab **Kho** có bộ lọc nâng cao theo tình trạng tồn (`>5`, `1–5`, `0`), vật liệu, màu sắc và trạng thái hiển thị; các bộ lọc kết hợp được với tìm kiếm mã/tên hiện có.
+- Bổ sung API `GET /api/v1/quan-tri/kho/lich-su` và panel **Lịch sử điều chỉnh tồn**, lấy các lần thay đổi số lượng gần nhất từ audit `ADMIN_CAP_NHAT_TON_KHO` / `ADMIN_CAP_NHAT_BIEN_THE`.
+- Audit cập nhật biến thể giờ ghi `ton_cu` và `ton_moi`; thêm các sự kiện `ADMIN_TAO/CAP_NHAT/XOA_VAT_LIEU` và `ADMIN_TAO/CAP_NHAT/XOA_MAU_SAC` vào Nhật ký Admin.
+- Không thay đổi Prisma schema nên **không có migration database mới**.
+- Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm test` → `npm run typecheck` → `npm run build` → Docker Compose → `.\scripts\release.ps1 v2.16.0`.
+
+---
+
 # Lộ trình tiếp theo
 
-## v2.16.0
+## v2.17.0
 
-- CRUD bảng vật liệu/màu riêng và kiểm soát dữ liệu tham chiếu trước khi xóa.
-- Bộ lọc/báo cáo tồn kho nâng cao, cảnh báo sắp hết và lịch sử điều chỉnh tồn.
-- Mở rộng E2E cho CRUD catalog, kiểm duyệt đánh giá và xuất báo cáo.
+- Cảnh báo tồn kho sắp hết theo ngưỡng cấu hình và thông báo trong Dashboard.
+- Lịch sử nhập/xuất/điều chỉnh kho chi tiết hơn theo nguyên nhân và người thao tác.
+- Mở rộng E2E cho CRUD catalog, dữ liệu tham chiếu, kiểm duyệt đánh giá và xuất báo cáo.
 
 ## v3.0.0
 

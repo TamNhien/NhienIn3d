@@ -16,6 +16,7 @@ import {
   AdminMauSac,
   AdminDanhGia,
   NhatKyAdmin,
+  LichSuKhoAdmin,
   CaLam,
   capNhatCaLam,
   capNhatNguoiDung,
@@ -36,6 +37,13 @@ import {
   layDanhMucAdmin,
   layVatLieuAdmin,
   layMauSacAdmin,
+  taoVatLieuAdmin,
+  capNhatVatLieuAdmin,
+  xoaVatLieuAdmin,
+  taoMauSacAdmin,
+  capNhatMauSacAdmin,
+  xoaMauSacAdmin,
+  layLichSuKhoAdmin,
   layDanhGiaAdmin,
   taoDanhMucAdmin,
   capNhatDanhMucAdmin,
@@ -88,6 +96,8 @@ const nhanSuKienAudit = (loai: string) => ({
   ADMIN_TAO_SAN_PHAM: "Tạo sản phẩm", ADMIN_CAP_NHAT_SAN_PHAM: "Cập nhật sản phẩm", ADMIN_XOA_SAN_PHAM: "Xóa sản phẩm", ADMIN_CAP_NHAT_TON_KHO: "Cập nhật tồn kho",
   ADMIN_TAO_DANH_MUC: "Tạo danh mục", ADMIN_CAP_NHAT_DANH_MUC: "Cập nhật danh mục", ADMIN_XOA_DANH_MUC: "Xóa danh mục",
   ADMIN_TAO_BIEN_THE: "Tạo biến thể", ADMIN_CAP_NHAT_BIEN_THE: "Cập nhật biến thể", ADMIN_XOA_BIEN_THE: "Xóa biến thể",
+  ADMIN_TAO_VAT_LIEU: "Tạo vật liệu", ADMIN_CAP_NHAT_VAT_LIEU: "Cập nhật vật liệu", ADMIN_XOA_VAT_LIEU: "Xóa vật liệu",
+  ADMIN_TAO_MAU_SAC: "Tạo màu", ADMIN_CAP_NHAT_MAU_SAC: "Cập nhật màu", ADMIN_XOA_MAU_SAC: "Xóa màu",
   ADMIN_DUYET_DANH_GIA: "Duyệt đánh giá", ADMIN_AN_DANH_GIA: "Ẩn đánh giá", ADMIN_XOA_DANH_GIA: "Xóa đánh giá"
 }[loai] || loai.replaceAll("_", " "));
 
@@ -125,7 +135,7 @@ async function chuanHoaAnhSanPham(file: File) {
 }
 
 
-type TabQuanTri = "tong-quan" | "don-hang" | "san-pham" | "kho" | "danh-muc" | "danh-gia" | "bao-cao" | "khach-hang" | "nhan-vien" | "tao-nhan-vien" | "ca-lam" | "xep-ca" | "nhat-ky";
+type TabQuanTri = "tong-quan" | "don-hang" | "san-pham" | "kho" | "tham-chieu" | "danh-muc" | "danh-gia" | "bao-cao" | "khach-hang" | "nhan-vien" | "tao-nhan-vien" | "ca-lam" | "xep-ca" | "nhat-ky";
 
 export default function QuanTriPage() {
   const [tai_khoan, setTaiKhoan] = useState<TaiKhoan | null | undefined>(undefined);
@@ -140,6 +150,7 @@ export default function QuanTriPage() {
   const [danh_muc_qt, setDanhMucQt] = useState<AdminDanhMuc[]>([]);
   const [vat_lieu_qt, setVatLieuQt] = useState<AdminVatLieu[]>([]);
   const [mau_sac_qt, setMauSacQt] = useState<AdminMauSac[]>([]);
+  const [lich_su_kho, setLichSuKho] = useState<LichSuKhoAdmin[]>([]);
   const [danh_gia_qt, setDanhGiaQt] = useState<AdminDanhGia[]>([]);
   const [nhat_ky, setNhatKy] = useState<NhatKyAdmin[]>([]);
   const [thong_bao, setThongBao] = useState("");
@@ -153,6 +164,10 @@ export default function QuanTriPage() {
   const [don_ghi_chu, setDonGhiChu] = useState("");
   const [san_pham_tim_kiem, setSanPhamTimKiem] = useState("");
   const [kho_tim_kiem, setKhoTimKiem] = useState("");
+  const [kho_loc_ton, setKhoLocTon] = useState("");
+  const [kho_loc_vat_lieu, setKhoLocVatLieu] = useState("");
+  const [kho_loc_mau, setKhoLocMau] = useState("");
+  const [kho_loc_hien_thi, setKhoLocHienThi] = useState("");
   const [san_pham_chon_id, setSanPhamChonId] = useState("");
   const [tao_san_pham_mo, setTaoSanPhamMo] = useState(false);
   const [anh_sp_cho_luu, setAnhSpChoLuu] = useState<Record<string, string>>({});
@@ -160,6 +175,8 @@ export default function QuanTriPage() {
   const [sp_moi, setSpMoi] = useState({ ma_san_pham: "", ten_san_pham: "", danh_muc_id: "", mo_ta_ngan: "", gia_ban: 0, kich_thuoc: "", khoi_luong_gam: 0, thoi_gian_in_gio: 0, trang_thai: "DANG_BAN" });
   const [dm_moi, setDmMoi] = useState({ ma_danh_muc: "", ten_danh_muc: "", mo_ta: "", thu_tu: 0, dang_hien_thi: true });
   const [bt_moi, setBtMoi] = useState({ san_pham_id: "", ma_bien_the: "", vat_lieu_id: "", mau_sac_id: "", gia_chenh_lech: 0, so_luong_ton: 0, dang_hien_thi: true });
+  const [vl_moi, setVlMoi] = useState({ ma_vat_lieu: "", ten_vat_lieu: "", mo_ta: "", he_so_gia: 1 });
+  const [ms_moi, setMsMoi] = useState({ ma_mau: "", ten_mau: "", ma_hex: "#FFFFFF" });
   const [danh_gia_loc, setDanhGiaLoc] = useState("");
   const [bao_cao_tu_ngay, setBaoCaoTuNgay] = useState(sauNgay(-29));
   const [bao_cao_den_ngay, setBaoCaoDenNgay] = useState(homNay());
@@ -175,7 +192,7 @@ export default function QuanTriPage() {
     const tk = await layTaiKhoan();
     setTaiKhoan(tk);
     if (!tk || tk.vai_tro !== "ADMIN") return;
-    const [tq, nd, nvData, caData, pcData, donData, spData, dmData, vlData, msData, dgData, nkData] = await Promise.all([layTongQuan(), layNguoiDung(), layNhanVien(), layCaLam(), layPhanCa(), layDonHangAdmin(), laySanPhamAdmin(), layDanhMucAdmin(), layVatLieuAdmin(), layMauSacAdmin(), layDanhGiaAdmin(), layNhatKyAdmin()]);
+    const [tq, nd, nvData, caData, pcData, donData, spData, dmData, vlData, msData, lsKhoData, dgData, nkData] = await Promise.all([layTongQuan(), layNguoiDung(), layNhanVien(), layCaLam(), layPhanCa(), layDonHangAdmin(), laySanPhamAdmin(), layDanhMucAdmin(), layVatLieuAdmin(), layMauSacAdmin(), layLichSuKhoAdmin(), layDanhGiaAdmin(), layNhatKyAdmin()]);
     setTongQuan(tq);
     setNguoiDung(nd);
     setNhanVien(nvData);
@@ -186,6 +203,7 @@ export default function QuanTriPage() {
     setDanhMucQt(dmData);
     setVatLieuQt(vlData);
     setMauSacQt(msData);
+    setLichSuKho(lsKhoData);
     setDanhGiaQt(dgData);
     setSpMoi(x => ({ ...x, danh_muc_id: x.danh_muc_id || dmData[0]?.id || "" }));
     setBtMoi(x => ({ ...x, san_pham_id: x.san_pham_id || spData[0]?.id || "" }));
@@ -558,8 +576,8 @@ export default function QuanTriPage() {
         ma_bien_the: bt.ma_bien_the.trim(), vat_lieu_id: bt.vat_lieu?.id || null, mau_sac_id: bt.mau_sac?.id || null,
         gia_chenh_lech: Number(bt.gia_chenh_lech) || 0, so_luong_ton: Number(bt.so_luong_ton), dang_hien_thi: bt.dang_hien_thi
       });
-      const [ds, tq, nk] = await Promise.all([laySanPhamAdmin(), layTongQuan(), layNhatKyAdmin()]);
-      setSanPhamQt(ds); setTongQuan(tq); setNhatKy(nk);
+      const [ds, tq, nk, lsKho] = await Promise.all([laySanPhamAdmin(), layTongQuan(), layNhatKyAdmin(), layLichSuKhoAdmin()]);
+      setSanPhamQt(ds); setTongQuan(tq); setNhatKy(nk); setLichSuKho(lsKho);
       setThongBao(`Đã lưu biến thể ${bt.ma_bien_the}: tồn ${bt.so_luong_ton}.`);
     } catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể cập nhật biến thể/tồn kho"); }
     finally { setDangXuLy(null); }
@@ -592,18 +610,64 @@ export default function QuanTriPage() {
     catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể xóa danh mục"); } finally { setDangXuLy(null); }
   }
 
+  function suaVatLieuLocal(id: string, patch: Partial<AdminVatLieu>) { setVatLieuQt(ds => ds.map(x => x.id === id ? { ...x, ...patch } : x)); }
+  function suaMauSacLocal(id: string, patch: Partial<AdminMauSac>) { setMauSacQt(ds => ds.map(x => x.id === id ? { ...x, ...patch } : x)); }
+
+  async function taiLaiDuLieuThamChieu() {
+    const [vl, ms, sp, nk] = await Promise.all([layVatLieuAdmin(), layMauSacAdmin(), laySanPhamAdmin(), layNhatKyAdmin()]);
+    setVatLieuQt(vl); setMauSacQt(ms); setSanPhamQt(sp); setNhatKy(nk);
+  }
+
+  async function taoVatLieuMoi(e: FormEvent) {
+    e.preventDefault(); setDangXuLy("tao-vat-lieu"); setThongBao("");
+    try { await taoVatLieuAdmin({ ...vl_moi, ma_vat_lieu: vl_moi.ma_vat_lieu.trim(), ten_vat_lieu: vl_moi.ten_vat_lieu.trim(), mo_ta: vl_moi.mo_ta.trim(), he_so_gia: Number(vl_moi.he_so_gia) }); await taiLaiDuLieuThamChieu(); setVlMoi({ ma_vat_lieu: "", ten_vat_lieu: "", mo_ta: "", he_so_gia: 1 }); setThongBao("Đã tạo vật liệu mới."); }
+    catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể tạo vật liệu"); } finally { setDangXuLy(null); }
+  }
+
+  async function luuVatLieu(item: AdminVatLieu) {
+    setDangXuLy(`vl-${item.id}`); setThongBao("");
+    try { await capNhatVatLieuAdmin(item.id, { ten_vat_lieu: item.ten_vat_lieu.trim(), mo_ta: item.mo_ta?.trim() || "", he_so_gia: Number(item.he_so_gia) }); await taiLaiDuLieuThamChieu(); setThongBao(`Đã lưu vật liệu ${item.ten_vat_lieu}.`); }
+    catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể cập nhật vật liệu"); } finally { setDangXuLy(null); }
+  }
+
+  async function xoaVatLieu(item: AdminVatLieu) {
+    if (!window.confirm(`Xóa vật liệu ${item.ten_vat_lieu}? Chỉ xóa được khi không còn biến thể sử dụng.`)) return;
+    setDangXuLy(`vl-${item.id}`); setThongBao("");
+    try { const kq = await xoaVatLieuAdmin(item.id); await taiLaiDuLieuThamChieu(); setThongBao(kq.thong_bao); }
+    catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể xóa vật liệu"); } finally { setDangXuLy(null); }
+  }
+
+  async function taoMauMoi(e: FormEvent) {
+    e.preventDefault(); setDangXuLy("tao-mau-sac"); setThongBao("");
+    try { await taoMauSacAdmin({ ma_mau: ms_moi.ma_mau.trim(), ten_mau: ms_moi.ten_mau.trim(), ma_hex: ms_moi.ma_hex }); await taiLaiDuLieuThamChieu(); setMsMoi({ ma_mau: "", ten_mau: "", ma_hex: "#FFFFFF" }); setThongBao("Đã tạo màu mới."); }
+    catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể tạo màu"); } finally { setDangXuLy(null); }
+  }
+
+  async function luuMau(item: AdminMauSac) {
+    setDangXuLy(`ms-${item.id}`); setThongBao("");
+    try { await capNhatMauSacAdmin(item.id, { ten_mau: item.ten_mau.trim(), ma_hex: item.ma_hex }); await taiLaiDuLieuThamChieu(); setThongBao(`Đã lưu màu ${item.ten_mau}.`); }
+    catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể cập nhật màu"); } finally { setDangXuLy(null); }
+  }
+
+  async function xoaMau(item: AdminMauSac) {
+    if (!window.confirm(`Xóa màu ${item.ten_mau}? Chỉ xóa được khi không còn biến thể sử dụng.`)) return;
+    setDangXuLy(`ms-${item.id}`); setThongBao("");
+    try { const kq = await xoaMauSacAdmin(item.id); await taiLaiDuLieuThamChieu(); setThongBao(kq.thong_bao); }
+    catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể xóa màu"); } finally { setDangXuLy(null); }
+  }
+
   async function taoBienTheMoi(e: FormEvent) {
     e.preventDefault(); if (!bt_moi.san_pham_id) return; setDangXuLy("tao-bien-the"); setThongBao("");
     try {
       await taoBienTheAdmin(bt_moi.san_pham_id, { ma_bien_the: bt_moi.ma_bien_the.trim(), vat_lieu_id: bt_moi.vat_lieu_id || undefined, mau_sac_id: bt_moi.mau_sac_id || undefined, gia_chenh_lech: Number(bt_moi.gia_chenh_lech) || 0, so_luong_ton: Number(bt_moi.so_luong_ton) || 0, dang_hien_thi: bt_moi.dang_hien_thi });
-      const [sp, tq, nk] = await Promise.all([laySanPhamAdmin(), layTongQuan(), layNhatKyAdmin()]); setSanPhamQt(sp); setTongQuan(tq); setNhatKy(nk);
+      const [sp, tq, nk, lsKho] = await Promise.all([laySanPhamAdmin(), layTongQuan(), layNhatKyAdmin(), layLichSuKhoAdmin()]); setSanPhamQt(sp); setTongQuan(tq); setNhatKy(nk); setLichSuKho(lsKho);
       setBtMoi(x => ({ ...x, ma_bien_the: "", gia_chenh_lech: 0, so_luong_ton: 0 })); setThongBao("Đã tạo biến thể mới.");
     } catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể tạo biến thể"); } finally { setDangXuLy(null); }
   }
 
   async function xoaBienThe(bt: AdminSanPham["bien_the"][number]) {
     if (!window.confirm(`Xóa biến thể ${bt.ma_bien_the}?`)) return; setDangXuLy(`kho-${bt.id}`); setThongBao("");
-    try { const kq = await xoaBienTheAdmin(bt.id); const [sp, tq, nk] = await Promise.all([laySanPhamAdmin(), layTongQuan(), layNhatKyAdmin()]); setSanPhamQt(sp); setTongQuan(tq); setNhatKy(nk); setThongBao(kq.thong_bao); }
+    try { const kq = await xoaBienTheAdmin(bt.id); const [sp, tq, nk, lsKho] = await Promise.all([laySanPhamAdmin(), layTongQuan(), layNhatKyAdmin(), layLichSuKhoAdmin()]); setSanPhamQt(sp); setTongQuan(tq); setNhatKy(nk); setLichSuKho(lsKho); setThongBao(kq.thong_bao); }
     catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể xóa biến thể"); } finally { setDangXuLy(null); }
   }
 
@@ -653,9 +717,19 @@ export default function QuanTriPage() {
   const danhSachKho = useMemo(() => {
     const q = kho_tim_kiem.trim().toLocaleLowerCase("vi");
     const ds = san_pham_qt.flatMap(sp => sp.bien_the.map(bt => ({ san_pham: sp, bien_the: bt })));
-    return (q ? ds.filter(item => `${item.san_pham.ma_san_pham} ${item.san_pham.ten_san_pham} ${item.bien_the.ma_bien_the} ${item.bien_the.vat_lieu?.ten_vat_lieu || ""} ${item.bien_the.mau_sac?.ten_mau || ""}`.toLocaleLowerCase("vi").includes(q)) : ds)
-      .sort((a, b) => `${a.san_pham.ma_san_pham}-${a.bien_the.ma_bien_the}`.localeCompare(`${b.san_pham.ma_san_pham}-${b.bien_the.ma_bien_the}`, "vi"));
-  }, [san_pham_qt, kho_tim_kiem]);
+    return ds.filter(item => {
+      const bt = item.bien_the;
+      if (q && !`${item.san_pham.ma_san_pham} ${item.san_pham.ten_san_pham} ${bt.ma_bien_the} ${bt.vat_lieu?.ten_vat_lieu || ""} ${bt.mau_sac?.ten_mau || ""}`.toLocaleLowerCase("vi").includes(q)) return false;
+      if (kho_loc_ton === "CON_HANG" && bt.so_luong_ton <= 5) return false;
+      if (kho_loc_ton === "SAP_HET" && !(bt.so_luong_ton > 0 && bt.so_luong_ton <= 5)) return false;
+      if (kho_loc_ton === "HET_HANG" && bt.so_luong_ton > 0) return false;
+      if (kho_loc_vat_lieu && bt.vat_lieu?.id !== kho_loc_vat_lieu) return false;
+      if (kho_loc_mau && bt.mau_sac?.id !== kho_loc_mau) return false;
+      if (kho_loc_hien_thi === "HIEN" && !bt.dang_hien_thi) return false;
+      if (kho_loc_hien_thi === "AN" && bt.dang_hien_thi) return false;
+      return true;
+    }).sort((a, b) => `${a.san_pham.ma_san_pham}-${a.bien_the.ma_bien_the}`.localeCompare(`${b.san_pham.ma_san_pham}-${b.bien_the.ma_bien_the}`, "vi"));
+  }, [san_pham_qt, kho_tim_kiem, kho_loc_ton, kho_loc_vat_lieu, kho_loc_mau, kho_loc_hien_thi]);
   const thongKeKho = useMemo(() => {
     const ds = san_pham_qt.flatMap(sp => sp.bien_the);
     return {
@@ -705,6 +779,7 @@ export default function QuanTriPage() {
     ["san-pham", "Sản phẩm"],
     ["danh-muc", "Danh mục"],
     ["kho", "Kho"],
+    ["tham-chieu", "Vật liệu & màu"],
     ["danh-gia", "Đánh giá"],
     ["bao-cao", "Báo cáo"],
     ["khach-hang", "Khách hàng"],
@@ -717,7 +792,7 @@ export default function QuanTriPage() {
 
   return <main className="cine-admin-shell page-shell">
     <div className="cine-admin-heading">
-      <div><h1>Admin Dashboard</h1><p>Admin có toàn quyền hệ thống: catalog, danh mục, biến thể, kho, đánh giá, đơn hàng, báo cáo và nhân sự.</p></div>
+      <div><h1>Admin Dashboard</h1><p>Admin có toàn quyền hệ thống: catalog, danh mục, vật liệu/màu, biến thể, kho, đánh giá, đơn hàng, báo cáo và nhân sự.</p></div>
       <div className="cine-admin-heading-actions"><span>{tai_khoan.ho_ten} · Admin</span><Link className="cine-btn cine-btn-secondary" href="/tai-khoan">Tài khoản của tôi</Link></div>
     </div>
 
@@ -904,7 +979,14 @@ export default function QuanTriPage() {
         <button className="cine-btn cine-btn-primary" disabled={dang_xu_ly === "tao-bien-the"}>{dang_xu_ly === "tao-bien-the" ? "Đang tạo…" : "+ Thêm biến thể"}</button>
       </form>
 
-      <div className="cine-card cine-inventory-toolbar-v214"><label><span>Tìm trong kho</span><input value={kho_tim_kiem} onChange={e => setKhoTimKiem(e.target.value)} placeholder="Mã sản phẩm, tên, biến thể, vật liệu, màu..."/></label><div><b>{danhSachKho.length}</b><span>kết quả</span></div></div>
+      <div className="cine-card cine-stock-filters-v216">
+        <label className="wide"><span>Tìm trong kho</span><input value={kho_tim_kiem} onChange={e => setKhoTimKiem(e.target.value)} placeholder="Mã sản phẩm, tên, biến thể, vật liệu, màu..."/></label>
+        <label><span>Tình trạng tồn</span><select value={kho_loc_ton} onChange={e=>setKhoLocTon(e.target.value)}><option value="">Tất cả</option><option value="CON_HANG">Còn hàng &gt; 5</option><option value="SAP_HET">Sắp hết 1–5</option><option value="HET_HANG">Hết hàng 0</option></select></label>
+        <label><span>Vật liệu</span><select value={kho_loc_vat_lieu} onChange={e=>setKhoLocVatLieu(e.target.value)}><option value="">Tất cả</option>{vat_lieu_qt.map(x=><option key={x.id} value={x.id}>{x.ten_vat_lieu}</option>)}</select></label>
+        <label><span>Màu</span><select value={kho_loc_mau} onChange={e=>setKhoLocMau(e.target.value)}><option value="">Tất cả</option>{mau_sac_qt.map(x=><option key={x.id} value={x.id}>{x.ten_mau}</option>)}</select></label>
+        <label><span>Hiển thị</span><select value={kho_loc_hien_thi} onChange={e=>setKhoLocHienThi(e.target.value)}><option value="">Tất cả</option><option value="HIEN">Đang hiện</option><option value="AN">Đang ẩn</option></select></label>
+        <div className="cine-filter-result-v216"><b>{danhSachKho.length}</b><span>kết quả</span></div>
+      </div>
 
       <div className="cine-card cine-inventory-table-card-v214 cine-variant-table-v215"><div className="cine-inventory-scroll-v214">
         <div className="cine-inventory-head-v214 cine-variant-head-v215"><span>Sản phẩm</span><span>Mã biến thể</span><span>Vật liệu</span><span>Màu</span><span>Chênh giá</span><span>Tồn</span><span>Tình trạng</span><span>Hiển thị</span><span>Thao tác</span></div>
@@ -921,6 +1003,16 @@ export default function QuanTriPage() {
         </div>; })}
         {danhSachKho.length === 0 && <div className="cine-dashboard-empty">Không có biến thể phù hợp bộ lọc kho.</div>}
       </div></div>
+
+      <div className="cine-card cine-stock-history-v216"><div className="cine-stock-history-head-v216"><div><h3>Lịch sử điều chỉnh tồn</h3><p>Hiển thị các lần thay đổi số lượng gần nhất từ thao tác lưu biến thể/kho.</p></div><span>{lich_su_kho.length} lần gần nhất</span></div><div className="cine-stock-history-list-v216">{lich_su_kho.slice(0,12).map(item=>{ const ct=item.chi_tiet; const cu=Number(ct.ton_cu ?? 0); const moi=Number(ct.ton_moi ?? 0); const delta=moi-cu; return <div className="cine-stock-history-row-v216" key={item.id}><span><b>{String(ct.ma_bien_the_moi || ct.ma_bien_the || "Biến thể")}</b><small>{String(ct.ma_san_pham || "")} · {item.nguoi_thuc_hien?.ho_ten || "Admin"}</small></span><strong className={delta >= 0 ? "plus" : "minus"}>{cu} → {moi} ({delta >= 0 ? "+" : ""}{delta})</strong><time>{new Date(item.ngay_tao).toLocaleString("vi-VN")}</time></div>})}{lich_su_kho.length===0&&<div className="cine-dashboard-empty">Chưa có lần điều chỉnh tồn kho nào được ghi nhận.</div>}</div></div>
+    </section>}
+
+    {tab === "tham-chieu" && <section className="cine-admin-operations cine-reference-admin-v216">
+      <div className="cine-operations-heading"><div><h2>Vật liệu & màu sắc</h2><p>Quản lý dữ liệu tham chiếu dùng cho biến thể. Hệ thống chặn xóa khi vật liệu/màu vẫn đang được biến thể sử dụng.</p></div><span className="cine-admin-count">{vat_lieu_qt.length} vật liệu · {mau_sac_qt.length} màu</span></div>
+      <div className="cine-reference-grid-v216">
+        <div className="cine-reference-column-v216"><form className="cine-card cine-reference-create-v216" onSubmit={taoVatLieuMoi}><h3>Thêm vật liệu</h3><label><span>Mã</span><input required value={vl_moi.ma_vat_lieu} onChange={e=>setVlMoi(x=>({...x,ma_vat_lieu:e.target.value}))} placeholder="PLA_PLUS"/></label><label><span>Tên vật liệu</span><input required value={vl_moi.ten_vat_lieu} onChange={e=>setVlMoi(x=>({...x,ten_vat_lieu:e.target.value}))}/></label><label><span>Hệ số giá</span><input type="number" min="0.1" max="10" step="0.001" value={vl_moi.he_so_gia} onChange={e=>setVlMoi(x=>({...x,he_so_gia:Number(e.target.value)}))}/></label><label><span>Mô tả</span><textarea value={vl_moi.mo_ta} onChange={e=>setVlMoi(x=>({...x,mo_ta:e.target.value}))}/></label><button className="cine-btn cine-btn-primary" disabled={dang_xu_ly==="tao-vat-lieu"}>+ Thêm vật liệu</button></form><div className="cine-reference-list-v216">{vat_lieu_qt.map(item=><article className="cine-card cine-reference-row-v216" key={item.id}><div className="cine-reference-meta-v216"><b>{item.ma_vat_lieu}</b><small>{item.so_bien_the} biến thể đang dùng</small></div><label><span>Tên</span><input value={item.ten_vat_lieu} onChange={e=>suaVatLieuLocal(item.id,{ten_vat_lieu:e.target.value})}/></label><label><span>Hệ số giá</span><input type="number" min="0.1" max="10" step="0.001" value={item.he_so_gia} onChange={e=>suaVatLieuLocal(item.id,{he_so_gia:Number(e.target.value)})}/></label><label className="wide"><span>Mô tả</span><input value={item.mo_ta || ""} onChange={e=>suaVatLieuLocal(item.id,{mo_ta:e.target.value})}/></label><div className="cine-row-actions-v215"><button type="button" className="cine-btn cine-btn-secondary" onClick={()=>luuVatLieu(item)} disabled={dang_xu_ly===`vl-${item.id}`}>Lưu</button><button type="button" className="cine-btn cine-btn-danger-outline" onClick={()=>xoaVatLieu(item)} disabled={dang_xu_ly===`vl-${item.id}` || item.so_bien_the>0}>Xóa</button></div></article>)}</div></div>
+        <div className="cine-reference-column-v216"><form className="cine-card cine-reference-create-v216" onSubmit={taoMauMoi}><h3>Thêm màu</h3><label><span>Mã</span><input required value={ms_moi.ma_mau} onChange={e=>setMsMoi(x=>({...x,ma_mau:e.target.value}))} placeholder="XANH_NAVY"/></label><label><span>Tên màu</span><input required value={ms_moi.ten_mau} onChange={e=>setMsMoi(x=>({...x,ten_mau:e.target.value}))}/></label><label><span>Mã HEX</span><div className="cine-color-field-v216"><input type="color" value={ms_moi.ma_hex.slice(0,7)} onChange={e=>setMsMoi(x=>({...x,ma_hex:e.target.value.toUpperCase()}))}/><input required pattern="^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$" value={ms_moi.ma_hex} onChange={e=>setMsMoi(x=>({...x,ma_hex:e.target.value}))}/></div></label><button className="cine-btn cine-btn-primary" disabled={dang_xu_ly==="tao-mau-sac"}>+ Thêm màu</button></form><div className="cine-reference-list-v216">{mau_sac_qt.map(item=><article className="cine-card cine-reference-row-v216 cine-color-row-v216" key={item.id}><div className="cine-reference-meta-v216"><span className="cine-color-dot-v216" style={{background:item.ma_hex}}/><div><b>{item.ma_mau}</b><small>{item.so_bien_the} biến thể đang dùng</small></div></div><label><span>Tên</span><input value={item.ten_mau} onChange={e=>suaMauSacLocal(item.id,{ten_mau:e.target.value})}/></label><label><span>HEX</span><div className="cine-color-field-v216"><input type="color" value={item.ma_hex.slice(0,7)} onChange={e=>suaMauSacLocal(item.id,{ma_hex:e.target.value.toUpperCase()})}/><input value={item.ma_hex} onChange={e=>suaMauSacLocal(item.id,{ma_hex:e.target.value})}/></div></label><div className="cine-row-actions-v215"><button type="button" className="cine-btn cine-btn-secondary" onClick={()=>luuMau(item)} disabled={dang_xu_ly===`ms-${item.id}`}>Lưu</button><button type="button" className="cine-btn cine-btn-danger-outline" onClick={()=>xoaMau(item)} disabled={dang_xu_ly===`ms-${item.id}` || item.so_bien_the>0}>Xóa</button></div></article>)}</div></div>
+      </div>
     </section>}
 
     {tab === "danh-gia" && <section className="cine-admin-operations cine-review-admin-v215">

@@ -137,6 +137,16 @@ test("v2.15.5 tab Admin tu gian kin tung hang khong trong ben phai", () => {
   assert.match(css, /@media\(max-width:520px\)[\s\S]*flex-basis:100%/);
 });
 
+test("v2.16.0 co CRUD vat lieu mau va lich su ton kho", () => {
+  const controller = readFileSync("apps/api/src/quan-tri/quan-tri.controller.ts", "utf8");
+  const admin = readFileSync("apps/web/app/quan-tri/page.tsx", "utf8");
+  assert.match(controller, /@Post\("vat-lieu"\)/);
+  assert.match(controller, /@Post\("mau-sac"\)/);
+  assert.match(controller, /@Get\("kho\/lich-su"\)/);
+  assert.match(admin, /\["tham-chieu", "Vật liệu & màu"\]/u);
+  assert.match(admin, /Lịch sử điều chỉnh tồn/u);
+});
+
 test("root co lenh kiem tra so dong du lieu database", () => {
   const pkg = docJson("package.json");
   assert.equal(typeof pkg.scripts?.["db:kiem-tra-du-lieu"], "string");
@@ -147,16 +157,16 @@ test("V2 co migration nang cap khong ghi de migration V1", () => {
   assert.equal(existsSync("apps/api/prisma/migrations/202608290002_v002_gio_hang_thanh_toan/migration.sql"), true);
 });
 
-test("version v2.15.5 dong bo root API va Web", () => {
-  assert.equal(readFileSync("VERSION", "utf8").trim(), "2.15.5");
-  assert.equal(docJson("package.json").version, "2.15.5");
-  assert.equal(docJson("apps/api/package.json").version, "2.15.5");
-  assert.equal(docJson("apps/web/package.json").version, "2.15.5");
+test("version v2.16.0 dong bo root API va Web", () => {
+  assert.equal(readFileSync("VERSION", "utf8").trim(), "2.16.0");
+  assert.equal(docJson("package.json").version, "2.16.0");
+  assert.equal(docJson("apps/api/package.json").version, "2.16.0");
+  assert.equal(docJson("apps/web/package.json").version, "2.16.0");
 });
 
-test("README co lich su phien ban tang dan den v2.15.5", () => {
+test("README co lich su phien ban tang dan den v2.16.0", () => {
   const readme = readFileSync("README.md", "utf8");
-  const viTri = ["## v1.0.0", "## v1.0.1", "## v1.0.2", "## v1.0.3", "## v1.0.4", "## v1.0.5", "## v1.0.6", "## v1.0.7", "## v2.0.0", "## v2.1.0", "## v2.1.1", "## v2.2.0", "## v2.2.1", "## v2.3.0", "## v2.4.0", "## v2.4.1", "## v2.5.0", "## v2.6.0", "## v2.6.1", "## v2.7.0", "## v2.8.0", "## v2.8.1", "## v2.8.2", "## v2.8.3", "## v2.8.4", "## v2.8.5", "## v2.8.6", "## v2.8.7", "## v2.8.8", "## v2.8.9", "## v2.9.0", "## v2.9.1", "## v2.9.2", "## v2.9.3", "## v2.9.4", "## v2.9.5", "## v2.9.6", "## v2.9.7", "## v2.9.8", "## v2.9.9", "## v2.10.0", "## v2.10.1", "## v2.10.2", "## v2.11.0", "## v2.12.0", "## v2.12.1", "## v2.12.2", "## v2.12.3", "## v2.13.0", "## v2.14.0", "## v2.15.0", "## v2.15.1", "## v2.15.2", "## v2.15.3", "## v2.15.4", "## v2.15.5"].map(x => readme.indexOf(x));
+  const viTri = ["## v1.0.0", "## v1.0.1", "## v1.0.2", "## v1.0.3", "## v1.0.4", "## v1.0.5", "## v1.0.6", "## v1.0.7", "## v2.0.0", "## v2.1.0", "## v2.1.1", "## v2.2.0", "## v2.2.1", "## v2.3.0", "## v2.4.0", "## v2.4.1", "## v2.5.0", "## v2.6.0", "## v2.6.1", "## v2.7.0", "## v2.8.0", "## v2.8.1", "## v2.8.2", "## v2.8.3", "## v2.8.4", "## v2.8.5", "## v2.8.6", "## v2.8.7", "## v2.8.8", "## v2.8.9", "## v2.9.0", "## v2.9.1", "## v2.9.2", "## v2.9.3", "## v2.9.4", "## v2.9.5", "## v2.9.6", "## v2.9.7", "## v2.9.8", "## v2.9.9", "## v2.10.0", "## v2.10.1", "## v2.10.2", "## v2.11.0", "## v2.12.0", "## v2.12.1", "## v2.12.2", "## v2.12.3", "## v2.13.0", "## v2.14.0", "## v2.15.0", "## v2.15.1", "## v2.15.2", "## v2.15.3", "## v2.15.4", "## v2.15.5", "## v2.16.0"].map(x => readme.indexOf(x));
   assert.ok(viTri.every(x => x >= 0));
   assert.deepEqual([...viTri].sort((a,b)=>a-b), viTri);
 });

@@ -20,6 +20,10 @@ import { CapNhatDanhMucDto } from "./dto/cap-nhat-danh-muc.dto.js";
 import { TaoBienTheDto } from "./dto/tao-bien-the.dto.js";
 import { CapNhatBienTheDto } from "./dto/cap-nhat-bien-the.dto.js";
 import { CapNhatDanhGiaDto } from "./dto/cap-nhat-danh-gia.dto.js";
+import { TaoVatLieuDto } from "./dto/tao-vat-lieu.dto.js";
+import { CapNhatVatLieuDto } from "./dto/cap-nhat-vat-lieu.dto.js";
+import { TaoMauSacDto } from "./dto/tao-mau-sac.dto.js";
+import { CapNhatMauSacDto } from "./dto/cap-nhat-mau-sac.dto.js";
 import { QuanTriService } from "./quan-tri.service.js";
 
 @ApiTags("Quản trị")
@@ -68,7 +72,14 @@ export class QuanTriController {
   @Post("danh-muc/:id/xoa") xoa_danh_muc(@Req() req: YeuCauCoNguoiDung, @Param("id") id: string) { return this.service.xoa_danh_muc(req.nguoi_dung_xac_thuc!, id); }
 
   @Get("vat-lieu") vat_lieu_quan_tri() { return this.service.danh_sach_vat_lieu_quan_tri(); }
+  @Post("vat-lieu") tao_vat_lieu(@Req() req: YeuCauCoNguoiDung, @Body() dto: TaoVatLieuDto) { return this.service.tao_vat_lieu(req.nguoi_dung_xac_thuc!, dto); }
+  @Post("vat-lieu/:id/cap-nhat") cap_nhat_vat_lieu(@Req() req: YeuCauCoNguoiDung, @Param("id") id: string, @Body() dto: CapNhatVatLieuDto) { return this.service.cap_nhat_vat_lieu(req.nguoi_dung_xac_thuc!, id, dto); }
+  @Post("vat-lieu/:id/xoa") xoa_vat_lieu(@Req() req: YeuCauCoNguoiDung, @Param("id") id: string) { return this.service.xoa_vat_lieu(req.nguoi_dung_xac_thuc!, id); }
   @Get("mau-sac") mau_sac_quan_tri() { return this.service.danh_sach_mau_sac_quan_tri(); }
+  @Post("mau-sac") tao_mau_sac(@Req() req: YeuCauCoNguoiDung, @Body() dto: TaoMauSacDto) { return this.service.tao_mau_sac(req.nguoi_dung_xac_thuc!, dto); }
+  @Post("mau-sac/:id/cap-nhat") cap_nhat_mau_sac(@Req() req: YeuCauCoNguoiDung, @Param("id") id: string, @Body() dto: CapNhatMauSacDto) { return this.service.cap_nhat_mau_sac(req.nguoi_dung_xac_thuc!, id, dto); }
+  @Post("mau-sac/:id/xoa") xoa_mau_sac(@Req() req: YeuCauCoNguoiDung, @Param("id") id: string) { return this.service.xoa_mau_sac(req.nguoi_dung_xac_thuc!, id); }
+  @Get("kho/lich-su") lich_su_kho() { return this.service.lich_su_dieu_chinh_ton_kho(); }
 
   @Get("san-pham") san_pham_quan_tri() { return this.service.danh_sach_san_pham_quan_tri(); }
   @Post("san-pham") tao_san_pham_quan_tri(@Req() req: YeuCauCoNguoiDung, @Body() dto: TaoSanPhamQuanTriDto) { return this.service.tao_san_pham_quan_tri(req.nguoi_dung_xac_thuc!, dto); }

@@ -64,11 +64,11 @@ test("seed v2.12.0 theo doi 24 bang va cho phep du lieu van hanh bi xoa", () => 
 });
 
 
-test("API hien thi dung version v2.15.5 o health va OpenAPI", () => {
+test("API hien thi dung version v2.16.0 o health va OpenAPI", () => {
   const health = readFileSync("src/suc-khoe/suc-khoe.controller.ts", "utf8");
   const main = readFileSync("src/main.ts", "utf8");
-  assert.match(health, /phien_ban: "v2\.15\.5"/);
-  assert.match(main, /setVersion\("2\.15\.5"\)/);
+  assert.match(health, /phien_ban: "v2\.16\.0"/);
+  assert.match(main, /setVersion\("2\.16\.0"\)/);
 });
 
 test("V2 co migration gio hang, thanh toan va dia chi", () => {
@@ -600,4 +600,29 @@ test("v2.15.3 dashboard dem so don theo ngay ghi nhan doanh thu", () => {
   assert.match(service, /don_ghi_nhan_doanh_thu_theo_ky/);
   assert.match(service, /const so_don = doanhThuDaGhiNhan\.filter\(d => ngayVietNam\(d\.ngay_ghi_nhan\) === dateKey\)\.length/);
   assert.doesNotMatch(service, /const so_don = don_30_ngay\.filter\(d => ngayVietNam\(d\.ngay_tao\) === dateKey\)\.length/);
+});
+
+test("v2.16.0 API CRUD vat lieu mau co bao ve tham chieu", () => {
+  const controller = readFileSync("src/quan-tri/quan-tri.controller.ts", "utf8");
+  const service = readFileSync("src/quan-tri/quan-tri.service.ts", "utf8");
+  const dtoVatLieu = readFileSync("src/quan-tri/dto/tao-vat-lieu.dto.ts", "utf8");
+  const dtoMau = readFileSync("src/quan-tri/dto/tao-mau-sac.dto.ts", "utf8");
+  for (const route of ['@Post("vat-lieu")','@Post("vat-lieu/:id/cap-nhat")','@Post("vat-lieu/:id/xoa")','@Post("mau-sac")','@Post("mau-sac/:id/cap-nhat")','@Post("mau-sac/:id/xoa")']) assert.match(controller, new RegExp(route.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  assert.match(service, /_count: \{ select: \{ bien_the: true \} \}/);
+  assert.match(service, /ADMIN_TAO_VAT_LIEU/);
+  assert.match(service, /ADMIN_XOA_MAU_SAC/);
+  assert.match(service, /Hãy đổi vật liệu của các biến thể trước khi xóa/u);
+  assert.match(dtoVatLieu, /he_so_gia/);
+  assert.match(dtoMau, /0-9A-Fa-f/);
+});
+
+test("v2.16.0 API lich su kho ghi ton cu ton moi", () => {
+  const controller = readFileSync("src/quan-tri/quan-tri.controller.ts", "utf8");
+  const service = readFileSync("src/quan-tri/quan-tri.service.ts", "utf8");
+  assert.match(controller, /@Get\("kho\/lich-su"\)/);
+  assert.match(service, /lich_su_dieu_chinh_ton_kho/);
+  assert.match(service, /ton_cu: hien_tai\.so_luong_ton/);
+  assert.match(service, /ton_moi: item\.so_luong_ton/);
+  assert.match(service, /ADMIN_CAP_NHAT_TON_KHO/);
+  assert.match(service, /ADMIN_CAP_NHAT_BIEN_THE/);
 });

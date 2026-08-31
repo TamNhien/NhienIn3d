@@ -756,3 +756,30 @@ test("v2.15.5 tab Admin tu gian kin chieu ngang tung hang", () => {
   assert.match(css, /@media\(max-width:520px\)[\s\S]*flex-basis:100%/);
 });
 
+
+test("v2.16.0 web co tab CRUD vat lieu va mau sac", () => {
+  const admin = readFileSync("app/quan-tri/page.tsx", "utf8");
+  const lib = readFileSync("lib/quan-tri.ts", "utf8");
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.match(admin, /\["tham-chieu", "Vật liệu & màu"\]/u);
+  assert.match(admin, /Thêm vật liệu/u);
+  assert.match(admin, /Thêm màu/u);
+  assert.match(admin, /so_bien_the/);
+  assert.match(lib, /taoVatLieuAdmin/);
+  assert.match(lib, /xoaMauSacAdmin/);
+  assert.match(css, /cine-reference-grid-v216/);
+});
+
+test("v2.16.0 web loc kho nang cao va hien lich su dieu chinh ton", () => {
+  const admin = readFileSync("app/quan-tri/page.tsx", "utf8");
+  const lib = readFileSync("lib/quan-tri.ts", "utf8");
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.match(admin, /kho_loc_ton/);
+  assert.match(admin, /kho_loc_vat_lieu/);
+  assert.match(admin, /kho_loc_mau/);
+  assert.match(admin, /kho_loc_hien_thi/);
+  assert.match(admin, /Lịch sử điều chỉnh tồn/u);
+  assert.match(lib, /layLichSuKhoAdmin/);
+  assert.match(css, /cine-stock-filters-v216/);
+  assert.match(css, /cine-stock-history-v216/);
+});

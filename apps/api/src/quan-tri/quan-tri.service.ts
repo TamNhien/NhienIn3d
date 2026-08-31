@@ -19,6 +19,10 @@ import { CapNhatDanhMucDto } from "./dto/cap-nhat-danh-muc.dto.js";
 import { TaoBienTheDto } from "./dto/tao-bien-the.dto.js";
 import { CapNhatBienTheDto } from "./dto/cap-nhat-bien-the.dto.js";
 import { CapNhatDanhGiaDto } from "./dto/cap-nhat-danh-gia.dto.js";
+import { TaoVatLieuDto } from "./dto/tao-vat-lieu.dto.js";
+import { CapNhatVatLieuDto } from "./dto/cap-nhat-vat-lieu.dto.js";
+import { TaoMauSacDto } from "./dto/tao-mau-sac.dto.js";
+import { CapNhatMauSacDto } from "./dto/cap-nhat-mau-sac.dto.js";
 
 @Injectable()
 export class QuanTriService {
@@ -873,12 +877,88 @@ export class QuanTriService {
   }
 
   async danh_sach_vat_lieu_quan_tri() {
-    const ds = await this.db.vatLieu.findMany({ orderBy: { ten_vat_lieu: "asc" } });
-    return ds.map(x => ({ ...x, he_so_gia: Number(x.he_so_gia) }));
+    const ds = await this.db.vatLieu.findMany({ include: { _count: { select: { bien_the: true } } }, orderBy: { ten_vat_lieu: "asc" } });
+    return ds.map(x => ({ id: x.id, ma_vat_lieu: x.ma_vat_lieu, ten_vat_lieu: x.ten_vat_lieu, mo_ta: x.mo_ta, he_so_gia: Number(x.he_so_gia), so_bien_the: x._count.bien_the }));
+  }
+
+  async tao_vat_lieu(actor: NguoiDungXacThuc, dto: TaoVatLieuDto) {
+    const ma_vat_lieu = dto.ma_vat_lieu.trim().toUpperCase();
+    const trung = await this.db.vatLieu.findUnique({ where: { ma_vat_lieu }, select: { id: true } });
+    if (trung) throw new ConflictException("Mã vật liệu đã tồn tại");
+    const item = await this.db.vatLieu.create({ data: { ma_vat_lieu, ten_vat_lieu: dto.ten_vat_lieu.trim(), mo_ta: dto.mo_ta?.trim() || null, he_so_gia: dto.he_so_gia ?? 1 } });
+    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_TAO_VAT_LIEU", nguoi_dung_id: actor.id, chi_tiet: { vat_lieu_id: item.id, ma_vat_lieu, ten_vat_lieu: item.ten_vat_lieu } } });
+    return { ...item, he_so_gia: Number(item.he_so_gia), so_bien_the: 0 };
+  }
+
+  async cap_nhat_vat_lieu(actor: NguoiDungXacThuc, id: string, dto: CapNhatVatLieuDto) {
+    const hien_tai = await this.db.vatLieu.findUnique({ where: { id }, include: { _count: { select: { bien_the: true } } } });
+    if (!hien_tai) throw new NotFoundException("Không tìm thấy vật liệu");
+    const data = {
+      ...(dto.ten_vat_lieu !== undefined ? { ten_vat_lieu: dto.ten_vat_lieu.trim() } : {}),
+      ...(dto.mo_ta !== undefined ? { mo_ta: dto.mo_ta.trim() || null } : {}),
+      ...(dto.he_so_gia !== undefined ? { he_so_gia: dto.he_so_gia } : {})
+    };
+    if (!Object.keys(data).length) throw new BadRequestException("Không có dữ liệu vật liệu để cập nhật");
+    const item = await this.db.vatLieu.update({ where: { id }, data });
+    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_CAP_NHAT_VAT_LIEU", nguoi_dung_id: actor.id, chi_tiet: { vat_lieu_id: id, ma_vat_lieu: hien_tai.ma_vat_lieu, truong_cap_nhat: Object.keys(data) } } });
+    return { ...item, he_so_gia: Number(item.he_so_gia), so_bien_the: hien_tai._count.bien_the };
+  }
+
+  async xoa_vat_lieu(actor: NguoiDungXacThuc, id: string) {
+    const hien_tai = await this.db.vatLieu.findUnique({ where: { id }, include: { _count: { select: { bien_the: true } } } });
+    if (!hien_tai) throw new NotFoundException("Không tìm thấy vật liệu");
+    if (hien_tai._count.bien_the > 0) throw new BadRequestException(`Vật liệu đang được ${hien_tai._count.bien_the} biến thể sử dụng. Hãy đổi vật liệu của các biến thể trước khi xóa.`);
+    await this.db.vatLieu.delete({ where: { id } });
+    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_XOA_VAT_LIEU", nguoi_dung_id: actor.id, chi_tiet: { vat_lieu_id: id, ma_vat_lieu: hien_tai.ma_vat_lieu, ten_vat_lieu: hien_tai.ten_vat_lieu } } });
+    return { thong_bao: `Đã xóa vật liệu ${hien_tai.ten_vat_lieu}`, id };
   }
 
   async danh_sach_mau_sac_quan_tri() {
-    return this.db.mauSac.findMany({ orderBy: { ten_mau: "asc" } });
+    const ds = await this.db.mauSac.findMany({ include: { _count: { select: { bien_the: true } } }, orderBy: { ten_mau: "asc" } });
+    return ds.map(x => ({ id: x.id, ma_mau: x.ma_mau, ten_mau: x.ten_mau, ma_hex: x.ma_hex, so_bien_the: x._count.bien_the }));
+  }
+
+  async tao_mau_sac(actor: NguoiDungXacThuc, dto: TaoMauSacDto) {
+    const ma_mau = dto.ma_mau.trim().toUpperCase();
+    const trung = await this.db.mauSac.findUnique({ where: { ma_mau }, select: { id: true } });
+    if (trung) throw new ConflictException("Mã màu đã tồn tại");
+    const item = await this.db.mauSac.create({ data: { ma_mau, ten_mau: dto.ten_mau.trim(), ma_hex: dto.ma_hex.trim().toUpperCase() } });
+    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_TAO_MAU_SAC", nguoi_dung_id: actor.id, chi_tiet: { mau_sac_id: item.id, ma_mau, ten_mau: item.ten_mau, ma_hex: item.ma_hex } } });
+    return { ...item, so_bien_the: 0 };
+  }
+
+  async cap_nhat_mau_sac(actor: NguoiDungXacThuc, id: string, dto: CapNhatMauSacDto) {
+    const hien_tai = await this.db.mauSac.findUnique({ where: { id }, include: { _count: { select: { bien_the: true } } } });
+    if (!hien_tai) throw new NotFoundException("Không tìm thấy màu sắc");
+    const data = {
+      ...(dto.ten_mau !== undefined ? { ten_mau: dto.ten_mau.trim() } : {}),
+      ...(dto.ma_hex !== undefined ? { ma_hex: dto.ma_hex.trim().toUpperCase() } : {})
+    };
+    if (!Object.keys(data).length) throw new BadRequestException("Không có dữ liệu màu sắc để cập nhật");
+    const item = await this.db.mauSac.update({ where: { id }, data });
+    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_CAP_NHAT_MAU_SAC", nguoi_dung_id: actor.id, chi_tiet: { mau_sac_id: id, ma_mau: hien_tai.ma_mau, truong_cap_nhat: Object.keys(data) } } });
+    return { ...item, so_bien_the: hien_tai._count.bien_the };
+  }
+
+  async xoa_mau_sac(actor: NguoiDungXacThuc, id: string) {
+    const hien_tai = await this.db.mauSac.findUnique({ where: { id }, include: { _count: { select: { bien_the: true } } } });
+    if (!hien_tai) throw new NotFoundException("Không tìm thấy màu sắc");
+    if (hien_tai._count.bien_the > 0) throw new BadRequestException(`Màu đang được ${hien_tai._count.bien_the} biến thể sử dụng. Hãy đổi màu của các biến thể trước khi xóa.`);
+    await this.db.mauSac.delete({ where: { id } });
+    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_XOA_MAU_SAC", nguoi_dung_id: actor.id, chi_tiet: { mau_sac_id: id, ma_mau: hien_tai.ma_mau, ten_mau: hien_tai.ten_mau } } });
+    return { thong_bao: `Đã xóa màu ${hien_tai.ten_mau}`, id };
+  }
+
+  async lich_su_dieu_chinh_ton_kho() {
+    const ds = await this.db.nhatKyBaoMat.findMany({ where: { loai_su_kien: { in: ["ADMIN_CAP_NHAT_TON_KHO", "ADMIN_CAP_NHAT_BIEN_THE"] } }, orderBy: { ngay_tao: "desc" }, take: 80 });
+    const co_thay_doi_ton = ds.filter(item => {
+      const ct = item.chi_tiet as Record<string, unknown> | null;
+      return ct && typeof ct.ton_cu === "number" && typeof ct.ton_moi === "number" && ct.ton_cu !== ct.ton_moi;
+    });
+    const actorIds = [...new Set(co_thay_doi_ton.map(x => x.nguoi_dung_id).filter((x): x is string => Boolean(x)))];
+    const actors = actorIds.length ? await this.db.nguoiDung.findMany({ where: { id: { in: actorIds } }, select: { id: true, ho_ten: true } }) : [];
+    const actorMap = new Map(actors.map(x => [x.id, x]));
+    return co_thay_doi_ton.slice(0, 40).map(item => ({ id: item.id.toString(), loai_su_kien: item.loai_su_kien, chi_tiet: item.chi_tiet, nguoi_thuc_hien: item.nguoi_dung_id ? actorMap.get(item.nguoi_dung_id) || null : null, ngay_tao: item.ngay_tao }));
   }
 
   async danh_sach_san_pham_quan_tri() {
@@ -1042,7 +1122,7 @@ export class QuanTriService {
     };
     if (!Object.keys(data).length) throw new BadRequestException("Không có dữ liệu biến thể để cập nhật");
     const item = await this.db.bienTheSanPham.update({ where: { id }, data, include: { vat_lieu: true, mau_sac: true } });
-    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_CAP_NHAT_BIEN_THE", nguoi_dung_id: actor.id, chi_tiet: { bien_the_id: id, san_pham_id: hien_tai.san_pham.id, ma_san_pham: hien_tai.san_pham.ma_san_pham, ma_bien_the_cu: hien_tai.ma_bien_the, ma_bien_the_moi: item.ma_bien_the } } });
+    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_CAP_NHAT_BIEN_THE", nguoi_dung_id: actor.id, chi_tiet: { bien_the_id: id, san_pham_id: hien_tai.san_pham.id, ma_san_pham: hien_tai.san_pham.ma_san_pham, ma_bien_the_cu: hien_tai.ma_bien_the, ma_bien_the_moi: item.ma_bien_the, ton_cu: hien_tai.so_luong_ton, ton_moi: item.so_luong_ton } } });
     return { ...item, gia_chenh_lech: Number(item.gia_chenh_lech) };
   }
 
