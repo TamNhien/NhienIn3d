@@ -164,6 +164,8 @@ apps/web/tests/v2191-auth-dark.test.mjs
 apps/web/tests/v300-mfa-admin.test.mjs
 apps/web/tests/v320-operations.test.mjs
 apps/web/tests/v321-order-delivered.test.mjs
+apps/web/tests/v322-order-update-ux.test.mjs
+apps/web/tests/v323-order-payment-type.test.mjs
 apps/web/tsconfig.json
 docker-compose.https.yml
 docker-compose.yml
@@ -189,3 +191,5 @@ tests/e2e-admin-v219.test.mjs
 tests/v300-security.test.mjs
 tests/v320-operations.test.mjs
 tests/v321-order-delivered-typecheck.test.mjs
+tests/v322-order-update-ux.test.mjs
+tests/v323-order-payment-type.test.mjs

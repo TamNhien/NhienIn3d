@@ -1,6 +1,6 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v3.2.1** — 31/08/2026
+> Phiên bản hiện tại: **v3.2.3** — 31/08/2026
 
 NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **frontend Next.js** và **backend NestJS/Fastify** kết nối **PostgreSQL qua Prisma**.
 
@@ -19,6 +19,10 @@ NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **fro
 
 
 ## Điểm chính bản hiện tại
+
+- v3.2.3 sửa lỗi `npm run typecheck` ở optimistic order UI: `AdminDonHangChiTiet` không còn kế thừa đồng thời `thanh_toan` dạng object tóm tắt và array chi tiết; tách type thanh toán tóm tắt/chi tiết và dùng `Omit<AdminDonHang, "thanh_toan">` để model đúng dữ liệu API.
+
+- v3.2.2 sửa form **Cập nhật trạng thái** bị chồng field và chuyển thao tác xác nhận đơn sang optimistic UI: badge/trạng thái phản hồi ngay, rollback khi API lỗi, các refresh Dashboard/Sản phẩm/Nhật ký chạy nền không giữ nút `Đang lưu...`.
 
 - v3.2.1 sửa các lỗi `npm run typecheck` của v3.2.0 ở Prisma JSON audit/operation history: chuẩn hóa `chi_tiet` về `Prisma.InputJsonObject`, diff trước/sau có kiểu JSON tương thích Prisma và tách hai nhánh truy vấn audit phân trang để TypeScript không suy luận literal `take: 5000` sai kiểu.
 - Admin có thể chọn **Đã giao / hoàn tất** trực tiếp từ mọi trạng thái đơn hàng, kể cả đơn đang chờ xác nhận, đã xác nhận, đang sản xuất hoặc đã hủy. Các chuyển trạng thái khác vẫn giữ quy trình tuyến tính. Khi khôi phục đơn đã hủy sang hoàn tất, hệ thống trừ lại phần tồn kho đã hoàn trước đó và chặn nếu không đủ tồn; giao dịch còn `CHO_THANH_TOAN` tiếp tục được chốt `DA_THANH_TOAN` và ghi nhận doanh thu theo logic hiện có.
@@ -1211,6 +1215,21 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 - Cho phép Admin xác nhận **Đã giao / hoàn tất** trực tiếp từ mọi trạng thái đơn. Tùy chọn `HOAN_TAT` xuất hiện trong dropdown cho cả `CHO_XAC_NHAN`, `DA_XAC_NHAN`, `DANG_SAN_XUAT`, `DANG_GIAO` và `DA_HUY`; đơn khôi phục từ `DA_HUY` sẽ trừ lại tồn kho đã hoàn và không cho âm kho.
 - Giữ logic chốt thanh toán/doanh thu hiện có khi đơn được xác nhận hoàn tất; audit vẫn lưu trước/sau và diff. Không có migration mới.
 - Đồng bộ Root/API/Web/Health/OpenAPI lên **v3.2.1**. Quy trình release: `npm install` → `npm test` → `npm run typecheck` → `npm run build` → `docker compose up -d --build --remove-orphans` → `docker compose ps` → `./scripts/release.ps1 v3.2.1`.
+
+---
+
+## v3.2.2 — 31/08/2026
+
+- Sửa layout khu vực **Cập nhật trạng thái**: `label`, `input`, `select` có `min-width: 0`, control chiếm đúng 100% cột và chuyển 1 cột khi màn hình hẹp, không còn chồng lấn giữa Trạng thái mới và Ghi chú xử lý.
+- Cập nhật đơn hàng dùng **optimistic UI**: ngay khi Admin bấm xác nhận, trạng thái ở danh sách/chi tiết và thanh toán dự kiến được cập nhật tức thời; nếu API thất bại thì rollback về dữ liệu cũ.
+- Sau khi request chính thành công, các request làm mới danh sách đơn, Dashboard, Sản phẩm và Nhật ký chạy nền bằng `Promise.allSettled`, không chặn nút thao tác.
+- Không có migration database mới. Đồng bộ Root/API/Web/Health/OpenAPI lên **v3.2.2**.
+
+## v3.2.3 — 31/08/2026
+
+- Fix lỗi TypeScript Web tại `app/quan-tri/page.tsx` khi optimistic update gán `thanh_toan` dạng array cho `AdminDonHangChiTiet`.
+- Tách `AdminThanhToanTomTat` và `AdminThanhToanChiTiet`; `AdminDonHangChiTiet` dùng `Omit<AdminDonHang, "thanh_toan">` rồi khai báo lại `thanh_toan` đúng dạng array, loại bỏ intersection type bất khả thi.
+- Không thay đổi API, database hay migration. Đồng bộ Root/API/Web/Health/OpenAPI lên **v3.2.3**.
 
 ---
 

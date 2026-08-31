@@ -552,18 +552,58 @@ export default function QuanTriPage() {
 
   async function luuTrangThaiDon() {
     if (!don_chon || !don_trang_thai_moi) return;
-    setDangXuLy(`don-${don_chon.id}`);
-    setThongBao("");
+    const don_truoc = don_chon;
+    const id = don_truoc.id;
+    const trang_thai_moi = don_trang_thai_moi;
+    const ghi_chu = don_ghi_chu.trim() || undefined;
+    const chot_thanh_toan_tam = trang_thai_moi === "HOAN_TAT" && don_truoc.thanh_toan[0]?.trang_thai === "CHO_THANH_TOAN";
+    const thoi_diem_tam = new Date().toISOString();
+
+    setDangXuLy(`don-${id}`);
+    setThongBao("\u0110ang c\u1eadp nh\u1eadt tr\u1ea1ng th\u00e1i \u0111\u01a1n h\u00e0ng...");
+
+    // v3.2.2: optimistic UI - cap nhat ngay badge/detail, rollback neu API that bai.
+    setDonChon({
+      ...don_truoc,
+      trang_thai: trang_thai_moi,
+      thanh_toan: chot_thanh_toan_tam
+        ? don_truoc.thanh_toan.map((tt, index) => index === 0 ? { ...tt, trang_thai: "DA_THANH_TOAN", ngay_thanh_toan: thoi_diem_tam } : tt)
+        : don_truoc.thanh_toan
+    });
+    setDonHang(ds => ds.map(item => item.id === id ? {
+      ...item,
+      trang_thai: trang_thai_moi,
+      thanh_toan: chot_thanh_toan_tam && item.thanh_toan ? { ...item.thanh_toan, trang_thai: "DA_THANH_TOAN" } : item.thanh_toan
+    } : item));
+
     try {
-      const da_luu = await capNhatTrangThaiDonHangAdmin(don_chon.id, { trang_thai: don_trang_thai_moi, ghi_chu: don_ghi_chu.trim() || undefined });
-      setDonChon(da_luu);
+      const da_luu = await capNhatTrangThaiDonHangAdmin(id, { trang_thai: trang_thai_moi, ghi_chu });
+      setDonChon(hien_tai => hien_tai?.id === id ? da_luu : hien_tai);
       setDonTrangThaiMoi(da_luu.trang_thai);
       setDonGhiChu("");
-      const [ds, tq, sp, nk] = await Promise.all([layDonHangAdmin(don_loc_trang_thai, don_tim_kiem), layTongQuan(), laySanPhamAdmin(), layNhatKyAdmin()]);
-      setDonHang(ds); setTongQuan(tq); setSanPhamQt(sp); setNhatKy(nk);
-      setThongBao(`Đã cập nhật ${da_luu.ma_don_hang} → ${nhanTrangThaiDon(da_luu.trang_thai)}.`);
-    } catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể cập nhật trạng thái đơn hàng"); }
-    finally { setDangXuLy(null); }
+      setDonHang(ds => ds.map(item => item.id === id ? { ...item, trang_thai: da_luu.trang_thai, ngay_cap_nhat: da_luu.ngay_cap_nhat, thanh_toan: da_luu.thanh_toan[0] ? { trang_thai: da_luu.thanh_toan[0].trang_thai, ma_giao_dich: da_luu.thanh_toan[0].ma_giao_dich } : item.thanh_toan } : item));
+      setThongBao(`\u0110\u00e3 c\u1eadp nh\u1eadt ${da_luu.ma_don_hang} \u2192 ${nhanTrangThaiDon(da_luu.trang_thai)}.`);
+
+      // Khong giu nut o trang thai "Dang luu" trong luc refresh dashboard/audit phia sau.
+      void Promise.allSettled([
+        layDonHangAdmin(don_loc_trang_thai, don_tim_kiem),
+        layTongQuan(),
+        laySanPhamAdmin(),
+        layNhatKyAdmin()
+      ]).then(([ds_kq, tq_kq, sp_kq, nk_kq]) => {
+        if (ds_kq.status === "fulfilled") setDonHang(ds_kq.value);
+        if (tq_kq.status === "fulfilled") setTongQuan(tq_kq.value);
+        if (sp_kq.status === "fulfilled") setSanPhamQt(sp_kq.value);
+        if (nk_kq.status === "fulfilled") setNhatKy(nk_kq.value);
+      });
+    } catch (e) {
+      setDonChon(hien_tai => hien_tai?.id === id ? don_truoc : hien_tai);
+      setDonTrangThaiMoi(don_truoc.trang_thai);
+      setThongBao(e instanceof Error ? e.message : "Kh\u00f4ng th\u1ec3 c\u1eadp nh\u1eadt tr\u1ea1ng th\u00e1i \u0111\u01a1n h\u00e0ng");
+      void layDonHangAdmin(don_loc_trang_thai, don_tim_kiem).then(setDonHang).catch(() => undefined);
+    } finally {
+      setDangXuLy(null);
+    }
   }
 
   function suaSanPhamLocal(id: string, patch: Partial<AdminSanPham>) {

@@ -24,14 +24,16 @@ export type CaLam = { id: string; ma_ca: string; ten_ca: string; gio_bat_dau: st
 export type PhanCa = { id: string; ngay_lam: string; trang_thai: string; ghi_chu?: string | null; nhan_vien: AdminNhanVien; ca_lam_viec: CaLam };
 
 
+export type AdminThanhToanTomTat = { trang_thai: string; ma_giao_dich: string };
+export type AdminThanhToanChiTiet = { id: string; ma_giao_dich: string; so_tien: number; trang_thai: string; ngay_tao: string; ngay_thanh_toan?: string | null; phuong_thuc: { ten_phuong_thuc: string; ma_phuong_thuc: string } };
 export type AdminDonHang = {
   id: string; ma_don_hang: string; ho_ten_nguoi_nhan: string; so_dien_thoai: string; tong_tien: number; trang_thai: string; ngay_tao: string; ngay_cap_nhat: string;
-  khach_hang?: { id: string; thu_dien_tu: string; ho_ten: string } | null; so_mat_hang: number; tong_so_luong: number; thanh_toan?: { trang_thai: string; ma_giao_dich: string } | null;
+  khach_hang?: { id: string; thu_dien_tu: string; ho_ten: string } | null; so_mat_hang: number; tong_so_luong: number; thanh_toan?: AdminThanhToanTomTat | null;
 };
-export type AdminDonHangChiTiet = AdminDonHang & {
+export type AdminDonHangChiTiet = Omit<AdminDonHang, "thanh_toan"> & {
   dia_chi_giao_hang: string; ghi_chu?: string | null;
   chi_tiet: Array<{ id: string; ten_san_pham: string; ma_san_pham: string; so_luong: number; don_gia: number; thanh_tien: number; tuy_chon: Record<string, unknown> }>;
-  thanh_toan: Array<{ id: string; ma_giao_dich: string; so_tien: number; trang_thai: string; ngay_tao: string; ngay_thanh_toan?: string | null; phuong_thuc: { ten_phuong_thuc: string; ma_phuong_thuc: string } }>;
+  thanh_toan: AdminThanhToanChiTiet[];
   lich_su: Array<{ id: string; trang_thai_cu?: string | null; trang_thai_moi: string; ghi_chu?: string | null; ngay_tao: string; nguoi_thuc_hien?: { ho_ten: string; thu_dien_tu: string; vai_tro: string } | null }>;
 };
 export type AdminBienThe = { id: string; ma_bien_the: string; so_luong_ton: number; ton_toi_thieu: number; ton_toi_da: number; dang_hien_thi: boolean; gia_chenh_lech: number | string; vat_lieu?: { id: string; ten_vat_lieu: string } | null; mau_sac?: { id: string; ten_mau: string; ma_hex: string } | null };

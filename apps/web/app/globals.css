@@ -957,3 +957,12 @@ footer{border-top:1px solid var(--line);max-width:1240px;margin:auto;padding:30p
   color: var(--muted, #9aa8bd);
 }
 .cine-order-admin-override-v321 b { color: #dfe9f7; }
+
+
+/* v3.2.2 - order status form: no field overlap + clear instant save feedback. */
+.cine-order-update-fields-v212{grid-template-columns:minmax(0,.78fr) minmax(0,1.22fr)}
+.cine-order-update-fields-v212 label{min-width:0}
+.cine-order-update-fields-v212 input,.cine-order-update-fields-v212 select{box-sizing:border-box;width:100%;max-width:100%;min-width:0}
+.cine-order-update-fields-v212 select{font-size:13px;text-overflow:ellipsis}
+.cine-order-update-v212 .cine-btn[disabled]{cursor:wait}
+@media(max-width:980px){.cine-order-update-fields-v212{grid-template-columns:1fr}}
