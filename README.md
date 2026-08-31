@@ -1,6 +1,6 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v3.2.3** — 31/08/2026
+> Phiên bản hiện tại: **v3.3.0** — 31/08/2026
 
 NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **frontend Next.js** và **backend NestJS/Fastify** kết nối **PostgreSQL qua Prisma**.
 
@@ -19,6 +19,11 @@ NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **fro
 
 
 ## Điểm chính bản hiện tại
+
+- v3.3.0 mở rộng audit diff cho **danh mục, vật liệu, màu sắc, ca làm và phân ca**; tab Nhật ký Admin có thêm bộ lọc theo người thao tác và vẫn xuất CSV/Excel theo đúng bộ lọc.
+- Tab **Hệ thống** bổ sung thống kê vận hành 7/30 ngày: tỷ lệ health tốt, backup/restore thành công và số lần gửi cảnh báo; lịch sử vận hành có nút **Xuất Excel**.
+- Cảnh báo vận hành dùng chính sách **silence + escalation**: cùng một sự cố được im lặng theo `SYSTEM_HEALTH_ALERT_SILENCE_MINUTES`, sau đó chỉ gửi lại khi đạt cấp escalation mới theo `SYSTEM_HEALTH_ALERT_ESCALATION_MINUTES`, tránh spam nhưng vẫn nhắc khi sự cố kéo dài.
+- Migration `202608310007_v330_audit_ops_indexes` bổ sung index composite cho audit/đơn hàng/lịch sử vận hành để giữ truy vấn ổn định khi dữ liệu tăng. CI có thêm job Docker runtime chạy migration + API health + backup/restore cô lập.
 
 - v3.2.3 sửa lỗi `npm run typecheck` ở optimistic order UI: `AdminDonHangChiTiet` không còn kế thừa đồng thời `thanh_toan` dạng object tóm tắt và array chi tiết; tách type thanh toán tóm tắt/chi tiết và dùng `Omit<AdminDonHang, "thanh_toan">` để model đúng dữ liệu API.
 
@@ -1233,12 +1238,25 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 
 ---
 
+## v3.3.0 — 31/08/2026
+
+- Mở rộng audit diff `truoc` / `sau` / `thay_doi` cho cập nhật danh mục, vật liệu, màu sắc, ca làm và phân ca. Bộ lọc Nhật ký Admin có thêm **Người thao tác** và tham số `nguoi_dung_id` được truyền đồng bộ cho phân trang, CSV và Excel.
+- Thêm `GET /api/v1/quan-tri/he-thong/thong-ke` tổng hợp riêng 7 ngày và 30 ngày: health tốt/cảnh báo/lỗi, tỷ lệ health tốt, backup/restore thành công/thất bại và số cảnh báo email đã ghi nhận.
+- Thêm `GET /api/v1/quan-tri/he-thong/lich-su/excel`; Admin có thể xuất tối đa 5.000 bản ghi lịch sử vận hành theo bộ lọc loại/trạng thái ra `.xlsx`.
+- Cảnh báo vận hành thêm `SYSTEM_HEALTH_ALERT_SILENCE_MINUTES` và `SYSTEM_HEALTH_ALERT_ESCALATION_MINUTES`. Cùng một chữ ký sự cố sẽ không gửi lại trong thời gian im lặng; khi sự cố kéo dài đủ mốc escalation, email được gửi lại theo cấp tăng dần và trạng thái được lưu trong `CANH_BAO_HE_THONG_EMAIL` để restart API không làm mất nhịp chống spam.
+- Migration `202608310007_v330_audit_ops_indexes` thêm index `(nguoi_dung_id, ngay_tao)`, `(loai_su_kien, ngay_tao)` cho audit, index trạng thái/ngày cho đơn hàng và index ngày cho lịch sử vận hành.
+- GitHub Actions CI thêm job `runtime-docker`: dựng PostgreSQL + migrate + API bằng Docker Compose, chờ `/api/v1/suc-khoe`, sau đó chạy `scripts/e2e-runtime-v320.ps1` trên database tạm cô lập để kiểm tra `pg_dump` → SHA-256 → `pg_restore`.
+- Giao diện Hệ thống có thẻ thống kê 7/30 ngày, hiển thị silence/escalation và nút xuất Excel lịch sử vận hành. Đồng bộ Root/API/Web/Health/OpenAPI lên **v3.3.0**.
+
+---
+
 # Lộ trình tiếp theo
 
-## v3.3.0
+## v3.4.0
 
-- Mở rộng audit diff cho danh mục, vật liệu/màu, ca làm và phân ca; thêm bộ lọc theo người thao tác.
-- Xuất Excel lịch sử vận hành và thống kê tỷ lệ health/backup thành công theo 7/30 ngày.
-- Chính sách cảnh báo có thời gian im lặng/escalation để tránh spam khi sự cố kéo dài.
-- Kiểm thử runtime Docker tự động cho API + migration + backup/restore trong CI khi runner hỗ trợ Docker.
-- Tối ưu truy vấn dashboard Admin và index audit khi dữ liệu vận hành tăng lớn.
+- Thêm trang chi tiết sự cố vận hành theo chuỗi thời gian và nhóm cùng chữ ký cảnh báo.
+- Cho Admin cấu hình ngưỡng/silence/escalation từ giao diện thay vì chỉ qua `.env`, có audit trước/sau.
+- Bổ sung thống kê SLA/uptime theo ngày và biểu đồ 30/90 ngày.
+- Tối ưu phân trang cursor cho audit/lịch sử vận hành khi dữ liệu vượt hàng trăm nghìn bản ghi.
+- Mở rộng E2E Docker cho đăng nhập Admin, đơn hàng, nhập kho và xuất báo cáo.
+---

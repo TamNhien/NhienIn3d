@@ -79,10 +79,14 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const bat = ["1", "true", "yes", "on"].includes((process.env.SYSTEM_HEALTH_EMAIL_ENABLED || "false").trim().toLowerCase());
     const raw = Number(process.env.SYSTEM_HEALTH_EMAIL_INTERVAL_MINUTES || 30);
     const maxBackupRaw = Number(process.env.SYSTEM_HEALTH_BACKUP_MAX_AGE_HOURS || 36);
+    const silenceRaw = Number(process.env.SYSTEM_HEALTH_ALERT_SILENCE_MINUTES || 180);
+    const escalationRaw = Number(process.env.SYSTEM_HEALTH_ALERT_ESCALATION_MINUTES || 720);
     return {
       bat,
       chu_ky_phut: Number.isFinite(raw) ? Math.max(15, Math.min(1440, Math.floor(raw))) : 30,
       backup_qua_han_gio: Number.isFinite(maxBackupRaw) ? Math.max(6, Math.min(720, Math.floor(maxBackupRaw))) : 36,
+      im_lang_phut: Number.isFinite(silenceRaw) ? Math.max(15, Math.min(10080, Math.floor(silenceRaw))) : 180,
+      leo_thang_phut: Number.isFinite(escalationRaw) ? Math.max(60, Math.min(43200, Math.floor(escalationRaw))) : 720,
       nguoi_nhan_co_dinh: (process.env.SYSTEM_HEALTH_EMAIL_TO || "").split(",").map(x => x.trim().toLowerCase()).filter(Boolean)
     };
   }
@@ -151,14 +155,14 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const trang_thai = !database.ket_noi ? "LOI" : (backup_cu || (smtp.bat && !smtp.san_sang) ? "CANH_BAO" : "TOT");
     const ket_qua = {
       trang_thai,
-      phien_ban: "3.2.0",
+      phien_ban: "3.3.0",
       thoi_gian: new Date().toISOString(),
       api: { uptime_giay: Math.floor(process.uptime()), node: process.version, pid: process.pid, rss_bytes: bo_nho.rss, heap_used_bytes: bo_nho.heapUsed, heap_total_bytes: bo_nho.heapTotal },
       database,
       smtp,
       backup,
       canh_bao_kho,
-      canh_bao_he_thong: { bat: canh_bao_he_thong.bat, chu_ky_phut: canh_bao_he_thong.chu_ky_phut, backup_qua_han_gio: canh_bao_he_thong.backup_qua_han_gio }
+      canh_bao_he_thong: { bat: canh_bao_he_thong.bat, chu_ky_phut: canh_bao_he_thong.chu_ky_phut, backup_qua_han_gio: canh_bao_he_thong.backup_qua_han_gio, im_lang_phut: canh_bao_he_thong.im_lang_phut, leo_thang_phut: canh_bao_he_thong.leo_thang_phut }
     };
     if (ghi_lich_su && database.ket_noi) {
       await this.ghi_lich_su_van_hanh("HEALTH", trang_thai, trang_thai === "TOT" ? "Kiểm tra sức khỏe hệ thống đạt yêu cầu" : "Kiểm tra sức khỏe hệ thống phát hiện vấn đề", {
@@ -174,7 +178,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
 
   async kiem_tra_gui_canh_bao_he_thong_email(kiem_tra_thu_cong = false) {
     const cau_hinh = this.cau_hinh_canh_bao_he_thong_runtime();
-    if (!cau_hinh.bat && !kiem_tra_thu_cong) return { da_gui: false, ly_do: "Cảnh báo hệ thống qua email đang tắt", van_de: [] as string[] };
+    if (!cau_hinh.bat && !kiem_tra_thu_cong) return { da_gui: false, ly_do: "Cảnh báo hệ thống qua email đang tắt", van_de: [] as string[], cap_leo_thang: 0 };
     const health = await this.suc_khoe_he_thong(false);
     const van_de: string[] = [];
     if (!health.database.ket_noi) van_de.push(`PostgreSQL mất kết nối${health.database.loi ? `: ${health.database.loi}` : ""}`);
@@ -185,41 +189,65 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       this.chu_ky_canh_bao_he_thong = null;
       if (health.database.ket_noi) {
         try {
-          await this.db.cauHinhHeThong.upsert({ where: { khoa: "CANH_BAO_HE_THONG_EMAIL" }, create: { khoa: "CANH_BAO_HE_THONG_EMAIL", gia_tri: { chu_ky: null, trang_thai: "TOT", cap_nhat_luc: health.thoi_gian } }, update: { gia_tri: { chu_ky: null, trang_thai: "TOT", cap_nhat_luc: health.thoi_gian } } });
+          await this.db.cauHinhHeThong.upsert({ where: { khoa: "CANH_BAO_HE_THONG_EMAIL" }, create: { khoa: "CANH_BAO_HE_THONG_EMAIL", gia_tri: { chu_ky: null, trang_thai: "TOT", cap_nhat_luc: health.thoi_gian, cap_leo_thang: 0 } }, update: { gia_tri: { chu_ky: null, trang_thai: "TOT", cap_nhat_luc: health.thoi_gian, cap_leo_thang: 0 } } });
         } catch {}
       }
-      return { da_gui: false, ly_do: "Hệ thống đang hoạt động tốt", van_de };
+      return { da_gui: false, ly_do: "Hệ thống đang hoạt động tốt", van_de, cap_leo_thang: 0 };
     }
+
     const chu_ky = createHash("sha256").update(JSON.stringify(van_de)).digest("hex");
+    const now = new Date();
     let chu_ky_da_gui: string | null = this.chu_ky_canh_bao_he_thong;
+    let phat_hien_luc = now;
+    let lan_gui_luc: Date | null = null;
+    let cap_da_gui = -1;
     if (health.database.ket_noi) {
       try {
         const state = await this.db.cauHinhHeThong.findUnique({ where: { khoa: "CANH_BAO_HE_THONG_EMAIL" } });
         const raw = state?.gia_tri;
-        if (raw && typeof raw === "object" && !Array.isArray(raw) && typeof (raw as Record<string, unknown>).chu_ky === "string") chu_ky_da_gui = String((raw as Record<string, unknown>).chu_ky);
+        if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+          const obj = raw as Record<string, unknown>;
+          if (typeof obj.chu_ky === "string") chu_ky_da_gui = obj.chu_ky;
+          if (obj.chu_ky === chu_ky && typeof obj.phat_hien_luc === "string") {
+            const parsed = new Date(obj.phat_hien_luc); if (!Number.isNaN(parsed.getTime())) phat_hien_luc = parsed;
+          }
+          if (obj.chu_ky === chu_ky && typeof obj.lan_gui === "string") {
+            const parsed = new Date(obj.lan_gui); if (!Number.isNaN(parsed.getTime())) lan_gui_luc = parsed;
+          }
+          if (obj.chu_ky === chu_ky && typeof obj.cap_leo_thang === "number") cap_da_gui = Math.max(-1, Math.floor(obj.cap_leo_thang));
+        }
       } catch {}
     }
-    if (chu_ky === chu_ky_da_gui) return { da_gui: false, ly_do: "Trạng thái cảnh báo chưa thay đổi; đã chống gửi lặp", van_de };
+
+    const cung_su_co = chu_ky === chu_ky_da_gui;
+    if (!cung_su_co) { phat_hien_luc = now; lan_gui_luc = null; cap_da_gui = -1; }
+    const ton_tai_phut = Math.max(0, Math.floor((now.getTime() - phat_hien_luc.getTime()) / 60_000));
+    const cap_leo_thang = ton_tai_phut < cau_hinh.leo_thang_phut ? 0 : Math.floor(ton_tai_phut / cau_hinh.leo_thang_phut);
+    const tu_lan_gui_phut = lan_gui_luc ? Math.floor((now.getTime() - lan_gui_luc.getTime()) / 60_000) : Number.POSITIVE_INFINITY;
+    if (cung_su_co && tu_lan_gui_phut < cau_hinh.im_lang_phut) {
+      return { da_gui: false, ly_do: `Sự cố đang trong thời gian im lặng ${cau_hinh.im_lang_phut} phút`, van_de, cap_leo_thang, ton_tai_phut };
+    }
+    if (cung_su_co && cap_leo_thang <= cap_da_gui) {
+      return { da_gui: false, ly_do: cap_leo_thang > 0 ? `Sự cố kéo dài nhưng đã gửi escalation cấp ${cap_da_gui}` : "Trạng thái cảnh báo chưa thay đổi; chờ escalation nếu sự cố kéo dài", van_de, cap_leo_thang, ton_tai_phut };
+    }
 
     let nguoi_nhan = cau_hinh.nguoi_nhan_co_dinh;
     if (!nguoi_nhan.length && health.database.ket_noi) {
       try {
         const admins = await this.db.nguoiDung.findMany({ where: { vai_tro: VaiTro.ADMIN, da_kich_hoat: true }, select: { thu_dien_tu: true } });
         nguoi_nhan = admins.map(x => x.thu_dien_tu).filter(Boolean);
-      } catch {
-        nguoi_nhan = [];
-      }
+      } catch { nguoi_nhan = []; }
     }
-    if (!nguoi_nhan.length) return { da_gui: false, ly_do: "Không có SYSTEM_HEALTH_EMAIL_TO hoặc Admin khả dụng để nhận cảnh báo", van_de };
-    if (!health.smtp.san_sang) return { da_gui: false, ly_do: "SMTP chưa sẵn sàng nên không thể gửi cảnh báo vận hành", van_de };
+    if (!nguoi_nhan.length) return { da_gui: false, ly_do: "Không có SYSTEM_HEALTH_EMAIL_TO hoặc Admin khả dụng để nhận cảnh báo", van_de, cap_leo_thang, ton_tai_phut };
+    if (!health.smtp.san_sang) return { da_gui: false, ly_do: "SMTP chưa sẵn sàng nên không thể gửi cảnh báo vận hành", van_de, cap_leo_thang, ton_tai_phut };
 
-    await this.thu_dien_tu.guiCanhBaoHeThong({ thu_dien_tu: nguoi_nhan, trang_thai: health.trang_thai, van_de, thoi_gian: health.thoi_gian });
+    await this.thu_dien_tu.guiCanhBaoHeThong({ thu_dien_tu: nguoi_nhan, trang_thai: health.trang_thai, van_de, thoi_gian: health.thoi_gian, cap_leo_thang, ton_tai_phut });
     this.chu_ky_canh_bao_he_thong = chu_ky;
     if (health.database.ket_noi) {
-      try { await this.db.cauHinhHeThong.upsert({ where: { khoa: "CANH_BAO_HE_THONG_EMAIL" }, create: { khoa: "CANH_BAO_HE_THONG_EMAIL", gia_tri: { chu_ky, trang_thai: health.trang_thai, van_de, lan_gui: health.thoi_gian } }, update: { gia_tri: { chu_ky, trang_thai: health.trang_thai, van_de, lan_gui: health.thoi_gian } } }); } catch {}
-      await this.ghi_lich_su_van_hanh("ALERT", "THANH_CONG", "Đã gửi cảnh báo vận hành qua email", { van_de, so_nguoi_nhan: nguoi_nhan.length });
+      try { await this.db.cauHinhHeThong.upsert({ where: { khoa: "CANH_BAO_HE_THONG_EMAIL" }, create: { khoa: "CANH_BAO_HE_THONG_EMAIL", gia_tri: { chu_ky, trang_thai: health.trang_thai, van_de, phat_hien_luc: phat_hien_luc.toISOString(), lan_gui: health.thoi_gian, cap_leo_thang } }, update: { gia_tri: { chu_ky, trang_thai: health.trang_thai, van_de, phat_hien_luc: phat_hien_luc.toISOString(), lan_gui: health.thoi_gian, cap_leo_thang } } }); } catch {}
+      await this.ghi_lich_su_van_hanh("ALERT", "THANH_CONG", cap_leo_thang > 0 ? `Đã gửi escalation cảnh báo vận hành cấp ${cap_leo_thang}` : "Đã gửi cảnh báo vận hành qua email", { van_de, so_nguoi_nhan: nguoi_nhan.length, cap_leo_thang, ton_tai_phut });
     }
-    return { da_gui: true, van_de, so_nguoi_nhan: nguoi_nhan.length };
+    return { da_gui: true, van_de, so_nguoi_nhan: nguoi_nhan.length, cap_leo_thang, ton_tai_phut };
   }
 
   async danh_sach_lich_su_van_hanh(loai?: string, trang_thai?: string, tu_ngay?: string, den_ngay?: string, trangRaw?: string, kichThuocRaw?: string) {
@@ -237,6 +265,51 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       this.db.lichSuVanHanh.findMany({ where, orderBy: { ngay_tao: "desc" }, skip: (trang - 1) * kich_thuoc, take: kich_thuoc })
     ]);
     return { du_lieu: ds.map(x => ({ ...x, id: x.id.toString() })), phan_trang: { trang, kich_thuoc, tong, tong_trang: Math.max(1, Math.ceil(tong / kich_thuoc)) } };
+  }
+
+  async thong_ke_van_hanh() {
+    const tinh = async (so_ngay: number) => {
+      const tu = new Date(Date.now() - (so_ngay - 1) * 86_400_000);
+      tu.setUTCHours(0, 0, 0, 0);
+      const [health, backup, restore, alert] = await this.db.$transaction([
+        this.db.lichSuVanHanh.groupBy({ by: ["trang_thai"], where: { loai: "HEALTH", ngay_tao: { gte: tu } }, _count: { _all: true } }),
+        this.db.lichSuVanHanh.groupBy({ by: ["trang_thai"], where: { loai: "BACKUP", ngay_tao: { gte: tu } }, _count: { _all: true } }),
+        this.db.lichSuVanHanh.groupBy({ by: ["trang_thai"], where: { loai: "RESTORE", ngay_tao: { gte: tu } }, _count: { _all: true } }),
+        this.db.lichSuVanHanh.count({ where: { loai: "ALERT", ngay_tao: { gte: tu } } })
+      ]);
+      const dem = (rows: Array<{ trang_thai: string; _count: { _all: number } }>, status: string) => rows.find(x => x.trang_thai === status)?._count._all ?? 0;
+      const healthTong = health.reduce((t, x) => t + x._count._all, 0);
+      const backupTong = backup.reduce((t, x) => t + x._count._all, 0);
+      const restoreTong = restore.reduce((t, x) => t + x._count._all, 0);
+      const healthTot = dem(health, "TOT");
+      const backupOk = dem(backup, "THANH_CONG");
+      const restoreOk = dem(restore, "THANH_CONG");
+      return {
+        so_ngay,
+        tu_ngay: tu.toISOString(),
+        health: { tong: healthTong, tot: healthTot, canh_bao: dem(health, "CANH_BAO"), loi: dem(health, "LOI"), ty_le_tot: healthTong ? Math.round((healthTot / healthTong) * 1000) / 10 : null },
+        backup: { tong: backupTong, thanh_cong: backupOk, that_bai: dem(backup, "THAT_BAI"), ty_le_thanh_cong: backupTong ? Math.round((backupOk / backupTong) * 1000) / 10 : null },
+        restore: { tong: restoreTong, thanh_cong: restoreOk, that_bai: dem(restore, "THAT_BAI"), ty_le_thanh_cong: restoreTong ? Math.round((restoreOk / restoreTong) * 1000) / 10 : null },
+        canh_bao_email: alert
+      };
+    };
+    const [bay_ngay, ba_muoi_ngay] = await Promise.all([tinh(7), tinh(30)]);
+    return { bay_ngay, ba_muoi_ngay, tao_luc: new Date().toISOString() };
+  }
+
+  async xuat_excel_lich_su_van_hanh(loai?: string, trang_thai?: string, tu_ngay?: string, den_ngay?: string) {
+    const bat_dau = tu_ngay ? new Date(`${tu_ngay}T00:00:00.000Z`) : undefined;
+    const ket_thuc = den_ngay ? new Date(`${den_ngay}T23:59:59.999Z`) : undefined;
+    const where = {
+      ...(loai?.trim() ? { loai: loai.trim().toUpperCase() } : {}),
+      ...(trang_thai?.trim() ? { trang_thai: trang_thai.trim().toUpperCase() } : {}),
+      ...((bat_dau || ket_thuc) ? { ngay_tao: { ...(bat_dau ? { gte: bat_dau } : {}), ...(ket_thuc ? { lte: ket_thuc } : {}) } } : {})
+    };
+    const ds = await this.db.lichSuVanHanh.findMany({ where, orderBy: { ngay_tao: "desc" }, take: 5000 });
+    const rows: unknown[][] = [["Thời gian", "Loại", "Trạng thái", "Mô tả", "Bắt đầu", "Kết thúc", "Chi tiết"]];
+    for (const x of ds) rows.push([x.ngay_tao.toISOString(), x.loai, x.trang_thai, x.mo_ta || "", x.ngay_bat_dau?.toISOString() || "", x.ngay_ket_thuc?.toISOString() || "", JSON.stringify(x.chi_tiet)]);
+    const buffer = this.tao_xlsx(rows, "Lịch sử vận hành");
+    return { ten_file: `lich-su-van-hanh-${new Date().toISOString().slice(0, 10)}.xlsx`, mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", base64: buffer.toString("base64") };
   }
 
   private tao_diff(truoc: Record<string, unknown>, sau: Record<string, unknown>): Prisma.InputJsonObject {
@@ -1181,7 +1254,9 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       this.db.phanCa.count({ where: { ca_lam_viec_id: id } })
     ]);
     const da_cap_nhat = await this.db.caLamViec.findUniqueOrThrow({ where: { id } });
-    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_CAP_NHAT_CA_LAM", nguoi_dung_id: actor.id, chi_tiet: { ca_lam_id: id, ma_ca_cu: hien_tai.ma_ca, ma_ca_moi: da_cap_nhat.ma_ca, gio_cu: `${hien_tai.gio_bat_dau}-${hien_tai.gio_ket_thuc}`, gio_moi: `${da_cap_nhat.gio_bat_dau}-${da_cap_nhat.gio_ket_thuc}`, so_phan_ca_bi_anh_huong } } });
+    const truoc = { ma_ca: hien_tai.ma_ca, ten_ca: hien_tai.ten_ca, gio_bat_dau: hien_tai.gio_bat_dau, gio_ket_thuc: hien_tai.gio_ket_thuc, mau_hien_thi: hien_tai.mau_hien_thi, dang_hoat_dong: hien_tai.dang_hoat_dong };
+    const sau = { ma_ca: da_cap_nhat.ma_ca, ten_ca: da_cap_nhat.ten_ca, gio_bat_dau: da_cap_nhat.gio_bat_dau, gio_ket_thuc: da_cap_nhat.gio_ket_thuc, mau_hien_thi: da_cap_nhat.mau_hien_thi, dang_hoat_dong: da_cap_nhat.dang_hoat_dong };
+    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_CAP_NHAT_CA_LAM", nguoi_dung_id: actor.id, chi_tiet: { ca_lam_id: id, truoc, sau, thay_doi: this.tao_diff(truoc, sau), so_phan_ca_bi_anh_huong } } });
     return { ...da_cap_nhat, so_phan_ca_bi_anh_huong, da_doc_lai_sau_commit: true };
   }
 
@@ -1279,7 +1354,9 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
         ca_lam_viec: true
       }
     });
-    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_CAP_NHAT_PHAN_CA", nguoi_dung_id: actor.id, chi_tiet: { phan_ca_id: id, nhan_vien_cu: hien_tai.nhan_vien_id, nhan_vien_moi: da_cap_nhat.nhan_vien_id, ca_cu: hien_tai.ca_lam_viec_id, ca_moi: da_cap_nhat.ca_lam_viec_id, ngay_lam: da_cap_nhat.ngay_lam.toISOString().slice(0, 10) } } });
+    const truoc = { nhan_vien_id: hien_tai.nhan_vien_id, ca_lam_viec_id: hien_tai.ca_lam_viec_id, ngay_lam: hien_tai.ngay_lam.toISOString().slice(0, 10), trang_thai: hien_tai.trang_thai, ghi_chu: hien_tai.ghi_chu };
+    const sau = { nhan_vien_id: da_cap_nhat.nhan_vien_id, ca_lam_viec_id: da_cap_nhat.ca_lam_viec_id, ngay_lam: da_cap_nhat.ngay_lam.toISOString().slice(0, 10), trang_thai: da_cap_nhat.trang_thai, ghi_chu: da_cap_nhat.ghi_chu };
+    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_CAP_NHAT_PHAN_CA", nguoi_dung_id: actor.id, chi_tiet: { phan_ca_id: id, truoc, sau, thay_doi: this.tao_diff(truoc, sau) } } });
     return da_cap_nhat;
   }
 
@@ -1477,7 +1554,9 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     };
     if (!Object.keys(data).length) throw new BadRequestException("Không có dữ liệu danh mục để cập nhật");
     const item = await this.db.danhMuc.update({ where: { id }, data });
-    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_CAP_NHAT_DANH_MUC", nguoi_dung_id: actor.id, chi_tiet: { danh_muc_id: id, ma_danh_muc: hien_tai.ma_danh_muc, truong_cap_nhat: Object.keys(data) } } });
+    const truoc = { ten_danh_muc: hien_tai.ten_danh_muc, mo_ta: hien_tai.mo_ta, thu_tu: hien_tai.thu_tu, dang_hien_thi: hien_tai.dang_hien_thi };
+    const sau = { ten_danh_muc: item.ten_danh_muc, mo_ta: item.mo_ta, thu_tu: item.thu_tu, dang_hien_thi: item.dang_hien_thi };
+    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_CAP_NHAT_DANH_MUC", nguoi_dung_id: actor.id, chi_tiet: { danh_muc_id: id, ma_danh_muc: hien_tai.ma_danh_muc, truoc, sau, thay_doi: this.tao_diff(truoc, sau) } } });
     return { ...item, so_san_pham: hien_tai._count.san_pham };
   }
 
@@ -1514,7 +1593,9 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     };
     if (!Object.keys(data).length) throw new BadRequestException("Không có dữ liệu vật liệu để cập nhật");
     const item = await this.db.vatLieu.update({ where: { id }, data });
-    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_CAP_NHAT_VAT_LIEU", nguoi_dung_id: actor.id, chi_tiet: { vat_lieu_id: id, ma_vat_lieu: hien_tai.ma_vat_lieu, truong_cap_nhat: Object.keys(data) } } });
+    const truoc = { ten_vat_lieu: hien_tai.ten_vat_lieu, mo_ta: hien_tai.mo_ta, he_so_gia: Number(hien_tai.he_so_gia) };
+    const sau = { ten_vat_lieu: item.ten_vat_lieu, mo_ta: item.mo_ta, he_so_gia: Number(item.he_so_gia) };
+    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_CAP_NHAT_VAT_LIEU", nguoi_dung_id: actor.id, chi_tiet: { vat_lieu_id: id, ma_vat_lieu: hien_tai.ma_vat_lieu, truoc, sau, thay_doi: this.tao_diff(truoc, sau) } } });
     return { ...item, he_so_gia: Number(item.he_so_gia), so_bien_the: hien_tai._count.bien_the };
   }
 
@@ -1550,7 +1631,9 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     };
     if (!Object.keys(data).length) throw new BadRequestException("Không có dữ liệu màu sắc để cập nhật");
     const item = await this.db.mauSac.update({ where: { id }, data });
-    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_CAP_NHAT_MAU_SAC", nguoi_dung_id: actor.id, chi_tiet: { mau_sac_id: id, ma_mau: hien_tai.ma_mau, truong_cap_nhat: Object.keys(data) } } });
+    const truoc = { ten_mau: hien_tai.ten_mau, ma_hex: hien_tai.ma_hex };
+    const sau = { ten_mau: item.ten_mau, ma_hex: item.ma_hex };
+    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_CAP_NHAT_MAU_SAC", nguoi_dung_id: actor.id, chi_tiet: { mau_sac_id: id, ma_mau: hien_tai.ma_mau, truoc, sau, thay_doi: this.tao_diff(truoc, sau) } } });
     return { ...item, so_bien_the: hien_tai._count.bien_the };
   }
 

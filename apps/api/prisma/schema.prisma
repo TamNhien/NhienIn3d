@@ -252,6 +252,8 @@ model DonHang {
 
   @@index([nguoi_dung_id])
   @@index([trang_thai])
+  @@index([trang_thai, ngay_tao])
+  @@index([ngay_tao])
   @@map("don_hang")
 }
 
@@ -383,6 +385,8 @@ model NhatKyBaoMat {
 
   @@index([loai_su_kien])
   @@index([ngay_tao])
+  @@index([nguoi_dung_id, ngay_tao])
+  @@index([loai_su_kien, ngay_tao])
   @@map("nhat_ky_bao_mat")
 }
 
@@ -399,6 +403,7 @@ model LichSuVanHanh {
 
   @@index([loai, ngay_tao])
   @@index([trang_thai, ngay_tao])
+  @@index([ngay_tao])
   @@map("lich_su_van_hanh")
 }
 

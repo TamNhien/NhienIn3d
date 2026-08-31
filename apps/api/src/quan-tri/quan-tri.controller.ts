@@ -42,6 +42,8 @@ export class QuanTriController {
   @Get("tong-quan") tong_quan() { return this.service.tong_quan(); }
   @Get("he-thong/suc-khoe") suc_khoe_he_thong() { return this.service.suc_khoe_he_thong(); }
   @Get("he-thong/lich-su") lich_su_he_thong(@Query("loai") loai?: string, @Query("trang_thai") trang_thai?: string, @Query("tu_ngay") tu_ngay?: string, @Query("den_ngay") den_ngay?: string, @Query("trang") trang?: string, @Query("kich_thuoc") kich_thuoc?: string) { return this.service.danh_sach_lich_su_van_hanh(loai, trang_thai, tu_ngay, den_ngay, trang, kich_thuoc); }
+  @Get("he-thong/lich-su/excel") lich_su_he_thong_excel(@Query("loai") loai?: string, @Query("trang_thai") trang_thai?: string, @Query("tu_ngay") tu_ngay?: string, @Query("den_ngay") den_ngay?: string) { return this.service.xuat_excel_lich_su_van_hanh(loai, trang_thai, tu_ngay, den_ngay); }
+  @Get("he-thong/thong-ke") thong_ke_he_thong() { return this.service.thong_ke_van_hanh(); }
   @Post("he-thong/canh-bao-email/gui") gui_canh_bao_he_thong() { return this.service.kiem_tra_gui_canh_bao_he_thong_email(true); }
   @Get("nguoi-dung") nguoi_dung() { return this.service.danh_sach_nguoi_dung(); }
   @Patch("nguoi-dung/:id") cap_nhat_nguoi_dung(@Req() req: YeuCauCoNguoiDung, @Param("id") id: string, @Body() dto: CapNhatNguoiDungDto) { return this.service.cap_nhat_nguoi_dung(req.nguoi_dung_xac_thuc!, id, dto); }

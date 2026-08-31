@@ -966,3 +966,18 @@ footer{border-top:1px solid var(--line);max-width:1240px;margin:auto;padding:30p
 .cine-order-update-fields-v212 select{font-size:13px;text-overflow:ellipsis}
 .cine-order-update-v212 .cine-btn[disabled]{cursor:wait}
 @media(max-width:980px){.cine-order-update-fields-v212{grid-template-columns:1fr}}
+
+/* v3.3.0 - audit actor filter, operations stats and export actions */
+.cine-audit-filter-v320{grid-template-columns:minmax(210px,1.35fr) minmax(190px,1fr) minmax(220px,1.1fr) 145px 145px auto auto auto}
+.cine-ops-stats-v330{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:16px}
+.cine-ops-stats-v330 article{display:grid;gap:8px;padding:16px 18px}
+.cine-ops-stats-v330 article>div{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.cine-ops-stats-v330 span{color:#94a3b8;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
+.cine-ops-stats-v330 b{font-size:17px;color:#f8fafc}
+.cine-ops-stats-v330 p{margin:0;color:#cbd5e1;font-size:12px}
+.cine-ops-stats-v330 small{color:#8fa0b8}
+.cine-ops-history-actions-v330{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+.cine-ops-history-actions-v330>span{font-size:12px;font-weight:850;color:#c4b5fd}
+.cine-system-alert-card-v320 small{display:block;color:#8fa0b8;margin-top:2px;line-height:1.5}
+@media(max-width:1180px){.cine-audit-filter-v320{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){.cine-ops-stats-v330{grid-template-columns:1fr}.cine-ops-stats-v330 article>div{align-items:flex-start;flex-direction:column}.cine-ops-history-actions-v330{justify-content:flex-start}.cine-audit-filter-v320{grid-template-columns:1fr}}

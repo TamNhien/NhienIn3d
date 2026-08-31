@@ -21,6 +21,7 @@ import {
   TrangThaiCanhBaoKhoEmailAdmin,
   AdminSucKhoeHeThong,
   LichSuVanHanhAdmin,
+  ThongKeVanHanhAdmin,
   AdminDanhGia,
   NhatKyAdmin,
   LichSuKhoAdmin,
@@ -81,6 +82,8 @@ import {
   xuatNhatKyExcelAdmin,
   laySucKhoeHeThongAdmin,
   layLichSuVanHanhAdmin,
+  layThongKeVanHanhAdmin,
+  xuatLichSuVanHanhExcelAdmin,
   guiCanhBaoHeThongAdmin,
   PhanCa,
   taoCaLam,
@@ -240,9 +243,11 @@ export default function QuanTriPage() {
   const [bao_cao_den_ngay, setBaoCaoDenNgay] = useState(homNay());
   const [nhat_ky_tim_kiem, setNhatKyTimKiem] = useState("");
   const [nhat_ky_loai, setNhatKyLoai] = useState("");
+  const [nhat_ky_nguoi_dung_id, setNhatKyNguoiDungId] = useState("");
   const [nhat_ky_tu_ngay, setNhatKyTuNgay] = useState(sauNgay(-29));
   const [nhat_ky_den_ngay, setNhatKyDenNgay] = useState(homNay());
   const [suc_khoe_he_thong, setSucKhoeHeThong] = useState<AdminSucKhoeHeThong | null>(null);
+  const [thong_ke_van_hanh, setThongKeVanHanh] = useState<ThongKeVanHanhAdmin | null>(null);
   const [nhat_ky_phan_trang, setNhatKyPhanTrang] = useState({ trang: 1, kich_thuoc: 25, tong: 0, tong_trang: 1 });
   const [lich_su_van_hanh, setLichSuVanHanh] = useState<LichSuVanHanhAdmin[]>([]);
   const [van_hanh_phan_trang, setVanHanhPhanTrang] = useState({ trang: 1, kich_thuoc: 20, tong: 0, tong_trang: 1 });
@@ -259,7 +264,7 @@ export default function QuanTriPage() {
     const tk = await layTaiKhoan();
     setTaiKhoan(tk);
     if (!tk || tk.vai_tro !== "ADMIN") return;
-    const [tq, nd, nvData, caData, pcData, donData, spData, dmData, vlData, msData, chKhoData, lsKhoData, phieuNhapData, nccData, emailKhoData, dgData, nkPage, heThongData, vanHanhPage] = await Promise.all([layTongQuan(), layNguoiDung(), layNhanVien(), layCaLam(), layPhanCa(), layDonHangAdmin(), laySanPhamAdmin(), layDanhMucAdmin(), layVatLieuAdmin(), layMauSacAdmin(), layCauHinhKhoAdmin(), layLichSuKhoAdmin(), layPhieuNhapKhoAdmin(), layNhaCungCapAdmin(), layTrangThaiCanhBaoKhoEmailAdmin(), layDanhGiaAdmin(), layNhatKyPhanTrangAdmin({ trang: 1, kich_thuoc: 25 }), laySucKhoeHeThongAdmin(), layLichSuVanHanhAdmin({ trang: 1, kich_thuoc: 20 })]);
+    const [tq, nd, nvData, caData, pcData, donData, spData, dmData, vlData, msData, chKhoData, lsKhoData, phieuNhapData, nccData, emailKhoData, dgData, nkPage, heThongData, vanHanhPage, thongKeVanHanh] = await Promise.all([layTongQuan(), layNguoiDung(), layNhanVien(), layCaLam(), layPhanCa(), layDonHangAdmin(), laySanPhamAdmin(), layDanhMucAdmin(), layVatLieuAdmin(), layMauSacAdmin(), layCauHinhKhoAdmin(), layLichSuKhoAdmin(), layPhieuNhapKhoAdmin(), layNhaCungCapAdmin(), layTrangThaiCanhBaoKhoEmailAdmin(), layDanhGiaAdmin(), layNhatKyPhanTrangAdmin({ trang: 1, kich_thuoc: 25 }), laySucKhoeHeThongAdmin(), layLichSuVanHanhAdmin({ trang: 1, kich_thuoc: 20 }), layThongKeVanHanhAdmin()]);
     setTongQuan(tq);
     setNguoiDung(nd);
     setNhanVien(nvData);
@@ -281,6 +286,7 @@ export default function QuanTriPage() {
     setNhatKy(nkPage.du_lieu);
     setNhatKyPhanTrang(nkPage.phan_trang);
     setSucKhoeHeThong(heThongData);
+    setThongKeVanHanh(thongKeVanHanh);
     setLichSuVanHanh(vanHanhPage.du_lieu);
     setVanHanhPhanTrang(vanHanhPage.phan_trang);
     setPc(x => ({ ...x, nhan_vien_id: x.nhan_vien_id || nvData[0]?.id || "", ca_lam_viec_id: x.ca_lam_viec_id || caData[0]?.id || "" }));
@@ -960,7 +966,7 @@ export default function QuanTriPage() {
   async function taiNhatKyBoLoc(trang = 1) {
     setDangXuLy("loc-nhat-ky"); setThongBao("");
     try {
-      const kq = await layNhatKyPhanTrangAdmin({ tim_kiem: nhat_ky_tim_kiem, loai: nhat_ky_loai, tu_ngay: nhat_ky_tu_ngay, den_ngay: nhat_ky_den_ngay, trang, kich_thuoc: nhat_ky_phan_trang.kich_thuoc });
+      const kq = await layNhatKyPhanTrangAdmin({ tim_kiem: nhat_ky_tim_kiem, loai: nhat_ky_loai, nguoi_dung_id: nhat_ky_nguoi_dung_id, tu_ngay: nhat_ky_tu_ngay, den_ngay: nhat_ky_den_ngay, trang, kich_thuoc: nhat_ky_phan_trang.kich_thuoc });
       setNhatKy(kq.du_lieu);
       setNhatKyPhanTrang(kq.phan_trang);
       setThongBao(`Đã tải trang ${kq.phan_trang.trang}/${kq.phan_trang.tong_trang} · ${kq.phan_trang.tong} sự kiện.`);
@@ -971,7 +977,7 @@ export default function QuanTriPage() {
   async function taiNhatKyCsv() {
     setDangXuLy("xuat-nhat-ky"); setThongBao("");
     try {
-      const kq = await xuatNhatKyCsvAdmin({ tim_kiem: nhat_ky_tim_kiem, loai: nhat_ky_loai, tu_ngay: nhat_ky_tu_ngay, den_ngay: nhat_ky_den_ngay });
+      const kq = await xuatNhatKyCsvAdmin({ tim_kiem: nhat_ky_tim_kiem, loai: nhat_ky_loai, nguoi_dung_id: nhat_ky_nguoi_dung_id, tu_ngay: nhat_ky_tu_ngay, den_ngay: nhat_ky_den_ngay });
       const blob = new Blob(["\uFEFF", kq.csv], { type: "text/csv;charset=utf-8" });
       const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = kq.ten_file; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
       setThongBao(`Đã xuất ${kq.ten_file}.`);
@@ -982,7 +988,7 @@ export default function QuanTriPage() {
   async function taiNhatKyExcel() {
     setDangXuLy("xuat-nhat-ky-excel"); setThongBao("");
     try {
-      const kq = await xuatNhatKyExcelAdmin({ tim_kiem: nhat_ky_tim_kiem, loai: nhat_ky_loai, tu_ngay: nhat_ky_tu_ngay, den_ngay: nhat_ky_den_ngay });
+      const kq = await xuatNhatKyExcelAdmin({ tim_kiem: nhat_ky_tim_kiem, loai: nhat_ky_loai, nguoi_dung_id: nhat_ky_nguoi_dung_id, tu_ngay: nhat_ky_tu_ngay, den_ngay: nhat_ky_den_ngay });
       const binary = atob(kq.base64); const bytes = new Uint8Array(binary.length); for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
       const blob = new Blob([bytes], { type: kq.mime_type }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = kq.ten_file; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
       setThongBao(`Đã xuất Excel ${kq.ten_file}.`);
@@ -997,11 +1003,23 @@ export default function QuanTriPage() {
     } catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể tải lịch sử vận hành"); }
   }
 
+  async function taiLichSuVanHanhExcel() {
+    setDangXuLy("xuat-van-hanh-excel"); setThongBao("");
+    try {
+      const kq = await xuatLichSuVanHanhExcelAdmin({ loai: van_hanh_loai, trang_thai: van_hanh_trang_thai });
+      const binary = atob(kq.base64); const bytes = new Uint8Array(binary.length); for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const blob = new Blob([bytes], { type: kq.mime_type }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = kq.ten_file; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      setThongBao(`Đã xuất Excel ${kq.ten_file}.`);
+    } catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể xuất lịch sử vận hành"); }
+    finally { setDangXuLy(null); }
+  }
+
   async function taiSucKhoeHeThong() {
     setDangXuLy("suc-khoe-he-thong"); setThongBao("");
     try {
-      const kq = await laySucKhoeHeThongAdmin();
+      const [kq, thongKe] = await Promise.all([laySucKhoeHeThongAdmin(), layThongKeVanHanhAdmin()]);
       setSucKhoeHeThong(kq);
+      setThongKeVanHanh(thongKe);
       await taiLichSuVanHanh(1);
       setThongBao(`Đã cập nhật sức khỏe hệ thống lúc ${new Date(kq.thoi_gian).toLocaleTimeString("vi-VN")}.`);
     } catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể kiểm tra hệ thống"); }
@@ -1419,6 +1437,7 @@ export default function QuanTriPage() {
       <div className="cine-card cine-admin-filterbar-v212 cine-audit-filter-v300 cine-audit-filter-v320">
         <label><span>Tìm trong nhật ký</span><input value={nhat_ky_tim_kiem} onChange={e => setNhatKyTimKiem(e.target.value)} placeholder="Admin, email, IP, nội dung..."/></label>
         <label><span>Loại sự kiện</span><input value={nhat_ky_loai} onChange={e => setNhatKyLoai(e.target.value.toUpperCase())} placeholder="VD: ADMIN_CAP_NHAT_SAN_PHAM"/></label>
+        <label><span>Người thao tác</span><select value={nhat_ky_nguoi_dung_id} onChange={e => setNhatKyNguoiDungId(e.target.value)}><option value="">Tất cả</option>{nguoi_dung.map(u => <option key={u.id} value={u.id}>{u.ho_ten} · {u.thu_dien_tu}</option>)}</select></label>
         <label><span>Từ ngày</span><input type="date" value={nhat_ky_tu_ngay} onChange={e => setNhatKyTuNgay(e.target.value)}/></label>
         <label><span>Đến ngày</span><input type="date" value={nhat_ky_den_ngay} onChange={e => setNhatKyDenNgay(e.target.value)}/></label>
         <button type="button" className="cine-btn cine-btn-primary" onClick={()=>taiNhatKyBoLoc(1)} disabled={dang_xu_ly === "loc-nhat-ky"}>{dang_xu_ly === "loc-nhat-ky" ? "Đang lọc…" : "Lọc nhật ký"}</button>
@@ -1441,11 +1460,14 @@ export default function QuanTriPage() {
           <article className="cine-card"><span>SMTP</span><b>{!suc_khoe_he_thong.smtp.bat ? "Đang tắt" : suc_khoe_he_thong.smtp.san_sang ? "Sẵn sàng" : "Cấu hình lỗi"}</b><p>{suc_khoe_he_thong.smtp.host ? `${suc_khoe_he_thong.smtp.host}:${suc_khoe_he_thong.smtp.port}` : "MAIL_ENABLED=false"}</p><small>{suc_khoe_he_thong.smtp.from}</small></article>
           <article className="cine-card"><span>Backup PostgreSQL</span><b>{suc_khoe_he_thong.backup.gan_nhat ? `${suc_khoe_he_thong.backup.gan_nhat.tuoi_gio} giờ trước` : "Chưa có backup"}</b><p>{suc_khoe_he_thong.backup.so_daily} daily · {suc_khoe_he_thong.backup.so_weekly} weekly</p><small>{suc_khoe_he_thong.backup.so_ban_sao} file · {dinhDangDungLuong(suc_khoe_he_thong.backup.tong_dung_luong_bytes)}</small></article>
           <article className="cine-card"><span>Cảnh báo tồn kho</span><b>{suc_khoe_he_thong.canh_bao_kho.bat ? "Đang bật" : "Đang tắt"}</b><p>Chu kỳ {suc_khoe_he_thong.canh_bao_kho.chu_ky_phut} phút</p><small>Email chỉ gửi lại khi trạng thái cảnh báo thay đổi.</small></article>
-          <article className="cine-card cine-system-alert-card-v320"><span>Cảnh báo vận hành</span><b>{suc_khoe_he_thong.canh_bao_he_thong.bat ? "Đang bật" : "Đang tắt"}</b><p>Chu kỳ {suc_khoe_he_thong.canh_bao_he_thong.chu_ky_phut} phút · backup quá {suc_khoe_he_thong.canh_bao_he_thong.backup_qua_han_gio} giờ sẽ cảnh báo</p><button type="button" className="cine-btn cine-btn-secondary" onClick={guiCanhBaoHeThongNgay} disabled={dang_xu_ly === "gui-canh-bao-he-thong"}>{dang_xu_ly === "gui-canh-bao-he-thong" ? "Đang kiểm tra…" : "Kiểm tra & gửi ngay"}</button></article>
+          <article className="cine-card cine-system-alert-card-v320"><span>Cảnh báo vận hành</span><b>{suc_khoe_he_thong.canh_bao_he_thong.bat ? "Đang bật" : "Đang tắt"}</b><p>Chu kỳ {suc_khoe_he_thong.canh_bao_he_thong.chu_ky_phut} phút · backup quá {suc_khoe_he_thong.canh_bao_he_thong.backup_qua_han_gio} giờ sẽ cảnh báo</p><small>Im lặng {suc_khoe_he_thong.canh_bao_he_thong.im_lang_phut} phút · escalation mỗi {suc_khoe_he_thong.canh_bao_he_thong.leo_thang_phut} phút nếu sự cố kéo dài.</small><button type="button" className="cine-btn cine-btn-secondary" onClick={guiCanhBaoHeThongNgay} disabled={dang_xu_ly === "gui-canh-bao-he-thong"}>{dang_xu_ly === "gui-canh-bao-he-thong" ? "Đang kiểm tra…" : "Kiểm tra & gửi ngay"}</button></article>
         </div>
+        {thong_ke_van_hanh && <div className="cine-ops-stats-v330">
+          {[thong_ke_van_hanh.bay_ngay, thong_ke_van_hanh.ba_muoi_ngay].map(ky => <article key={ky.so_ngay} className="cine-card"><div><span>{ky.so_ngay} ngày gần nhất</span><b>Health {ky.health.ty_le_tot == null ? "—" : `${ky.health.ty_le_tot}%`} tốt</b></div><p>Health: {ky.health.tot}/{ky.health.tong} tốt · {ky.health.loi} lỗi · {ky.health.canh_bao} cảnh báo</p><p>Backup: {ky.backup.thanh_cong}/{ky.backup.tong} thành công ({ky.backup.ty_le_thanh_cong == null ? "—" : `${ky.backup.ty_le_thanh_cong}%`})</p><small>Restore {ky.restore.thanh_cong}/{ky.restore.tong} · {ky.canh_bao_email} email cảnh báo</small></article>)}
+        </div>}
         <div className="cine-card cine-backup-ops-v310"><div><h3>Backup tự động trên Windows</h3><p>Daily backup có SHA-256, mỗi Chủ nhật giữ thêm weekly snapshot. Mặc định giữ daily 14 ngày và weekly 8 tuần. Từ v3.2.0, backup/restore được ghi vào lịch sử vận hành PostgreSQL.</p></div><div className="cine-backup-command-v310"><code>{String.raw`.\scripts\backup-db.ps1`}</code><code>{String.raw`.\scripts\backup-schedule.ps1 -At 02:00`}</code><code>{String.raw`.\scripts\backup-verify.ps1`}</code><code>{String.raw`.\scripts\restore-db.ps1 -File .\backups\<ten-file>.dump -XacNhan`}</code></div></div>
         <div className="cine-card cine-ops-history-v320">
-          <div className="cine-ops-history-head-v320"><div><h3>Lịch sử vận hành</h3><p>Health check, backup, restore và email cảnh báo được lưu để truy vết.</p></div><span>{van_hanh_phan_trang.tong} bản ghi</span></div>
+          <div className="cine-ops-history-head-v320"><div><h3>Lịch sử vận hành</h3><p>Health check, backup, restore và email cảnh báo được lưu để truy vết.</p></div><div className="cine-ops-history-actions-v330"><span>{van_hanh_phan_trang.tong} bản ghi</span><button type="button" className="cine-btn cine-btn-secondary" onClick={taiLichSuVanHanhExcel} disabled={dang_xu_ly === "xuat-van-hanh-excel"}>{dang_xu_ly === "xuat-van-hanh-excel" ? "Đang xuất…" : "Xuất Excel"}</button></div></div>
           <div className="cine-ops-filter-v320"><label><span>Loại</span><select value={van_hanh_loai} onChange={e=>setVanHanhLoai(e.target.value)}><option value="">Tất cả</option><option value="HEALTH">Health</option><option value="BACKUP">Backup</option><option value="RESTORE">Restore</option><option value="ALERT">Cảnh báo</option></select></label><label><span>Trạng thái</span><select value={van_hanh_trang_thai} onChange={e=>setVanHanhTrangThai(e.target.value)}><option value="">Tất cả</option><option value="TOT">Tốt</option><option value="CANH_BAO">Cảnh báo</option><option value="LOI">Lỗi</option><option value="THANH_CONG">Thành công</option><option value="THAT_BAI">Thất bại</option></select></label><button type="button" className="cine-btn cine-btn-primary" onClick={()=>taiLichSuVanHanh(1)}>Lọc lịch sử</button></div>
           <div className="cine-ops-list-v320">{lich_su_van_hanh.map(item=><article key={item.id}><span className={`status-badge ${["TOT","THANH_CONG"].includes(item.trang_thai)?"active":"locked"}`}>{item.trang_thai.replaceAll("_"," ")}</span><div><b>{item.loai} · {item.mo_ta || "Sự kiện vận hành"}</b><small>{new Date(item.ngay_tao).toLocaleString("vi-VN")}</small><code>{JSON.stringify(item.chi_tiet)}</code></div></article>)}{lich_su_van_hanh.length===0&&<div className="cine-dashboard-empty">Chưa có lịch sử vận hành phù hợp.</div>}</div>
           <div className="cine-pagination-v320"><button type="button" className="cine-btn cine-btn-secondary" disabled={van_hanh_phan_trang.trang<=1} onClick={()=>taiLichSuVanHanh(van_hanh_phan_trang.trang-1)}>← Trước</button><span>Trang <b>{van_hanh_phan_trang.trang}</b> / {van_hanh_phan_trang.tong_trang}</span><button type="button" className="cine-btn cine-btn-secondary" disabled={van_hanh_phan_trang.trang>=van_hanh_phan_trang.tong_trang} onClick={()=>taiLichSuVanHanh(van_hanh_phan_trang.trang+1)}>Sau →</button></div>

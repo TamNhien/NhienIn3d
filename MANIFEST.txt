@@ -31,6 +31,7 @@ apps/api/prisma/migrations/202608310003_v219_nha_cung_cap_dinh_muc_kho/migration
 apps/api/prisma/migrations/202608310004_v300_mfa_admin/migration.sql
 apps/api/prisma/migrations/202608310005_v310_remove_mfa_system_health/migration.sql
 apps/api/prisma/migrations/202608310006_v320_audit_ops_history/migration.sql
+apps/api/prisma/migrations/202608310007_v330_audit_ops_indexes/migration.sql
 apps/api/prisma/migrations/migration_lock.toml
 apps/api/prisma/schema.prisma
 apps/api/prisma/seed.ts
@@ -113,6 +114,7 @@ apps/api/tests/v219-nha-cung-cap-kho.test.mjs
 apps/api/tests/v300-mfa-security.test.mjs
 apps/api/tests/v320-operations.test.mjs
 apps/api/tests/v321-order-delivered-typecheck.test.mjs
+apps/api/tests/v330-audit-ops.test.mjs
 apps/api/tsconfig.build.json
 apps/api/tsconfig.json
 apps/web/.dockerignore
@@ -166,6 +168,7 @@ apps/web/tests/v320-operations.test.mjs
 apps/web/tests/v321-order-delivered.test.mjs
 apps/web/tests/v322-order-update-ux.test.mjs
 apps/web/tests/v323-order-payment-type.test.mjs
+apps/web/tests/v330-audit-ops.test.mjs
 apps/web/tsconfig.json
 docker-compose.https.yml
 docker-compose.yml
@@ -193,3 +196,4 @@ tests/v320-operations.test.mjs
 tests/v321-order-delivered-typecheck.test.mjs
 tests/v322-order-update-ux.test.mjs
 tests/v323-order-payment-type.test.mjs
+tests/v330-audit-ops.test.mjs

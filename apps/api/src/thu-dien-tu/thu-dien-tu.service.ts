@@ -88,6 +88,8 @@ export class ThuDienTuService {
     trang_thai: string;
     van_de: string[];
     thoi_gian: string;
+    cap_leo_thang?: number;
+    ton_tai_phut?: number;
   }) {
     if (!this.truyen) throw new Error("Dịch vụ email chưa sẵn sàng để gửi cảnh báo hệ thống.");
     if (!input.thu_dien_tu.length) throw new Error("Không có địa chỉ nhận cảnh báo hệ thống.");
@@ -96,9 +98,9 @@ export class ThuDienTuService {
     await this.truyen.sendMail({
       from: this.from,
       to: input.thu_dien_tu,
-      subject: `[NhienIn3d] Cảnh báo vận hành: ${input.trang_thai}`,
-      text: ["Cảnh báo vận hành NhienIn3d", `Trạng thái: ${input.trang_thai}`, `Thời gian: ${input.thoi_gian}`, "", listText, "", "Hệ thống chỉ gửi lại khi tập vấn đề thay đổi."].join("\n"),
-      html: `<div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;max-width:680px;margin:auto;padding:28px;color:#111827"><h1 style="font-size:24px;margin:0 0 10px">Cảnh báo vận hành NhienIn3d</h1><p>Trạng thái: <strong>${thoatHtml(input.trang_thai)}</strong></p><p>Thời gian: ${thoatHtml(input.thoi_gian)}</p><ul>${listHtml}</ul><p style="font-size:12px;color:#64748b;margin-top:20px">Chống gửi lặp: email chỉ gửi lại khi tập vấn đề thay đổi.</p></div>`
+      subject: `[NhienIn3d] ${input.cap_leo_thang && input.cap_leo_thang > 0 ? `ESCALATION ${input.cap_leo_thang} · ` : ""}Cảnh báo vận hành: ${input.trang_thai}`,
+      text: ["Cảnh báo vận hành NhienIn3d", `Trạng thái: ${input.trang_thai}`, `Thời gian: ${input.thoi_gian}`, ...(input.cap_leo_thang && input.cap_leo_thang > 0 ? [`Escalation: cấp ${input.cap_leo_thang}`, `Sự cố tồn tại: ${input.ton_tai_phut || 0} phút`] : []), "", listText, "", "Hệ thống áp dụng thời gian im lặng và escalation khi sự cố kéo dài."].join("\n"),
+      html: `<div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;max-width:680px;margin:auto;padding:28px;color:#111827"><h1 style="font-size:24px;margin:0 0 10px">Cảnh báo vận hành NhienIn3d</h1><p>Trạng thái: <strong>${thoatHtml(input.trang_thai)}</strong></p><p>Thời gian: ${thoatHtml(input.thoi_gian)}</p>${input.cap_leo_thang && input.cap_leo_thang > 0 ? `<p><strong>Escalation cấp ${input.cap_leo_thang}</strong> · sự cố tồn tại khoảng ${input.ton_tai_phut || 0} phút</p>` : ""}<ul>${listHtml}</ul><p style="font-size:12px;color:#64748b;margin-top:20px">Hệ thống áp dụng thời gian im lặng và escalation để tránh spam khi sự cố kéo dài.</p></div>`
     });
   }
 

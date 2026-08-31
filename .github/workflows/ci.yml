@@ -60,3 +60,44 @@ jobs:
 
       - name: Kiểm tra lỗ hổng dependency nghiêm trọng
         run: npm run audit:security
+
+  runtime-docker:
+    name: Runtime Docker smoke
+    runs-on: ubuntu-latest
+    env:
+      POSTGRES_DB: nhienin3d
+      POSTGRES_USER: nhienin3d_app
+      POSTGRES_PASSWORD: NhienIn3d_Docker_CI_2026
+      ADMIN_EMAIL: docker-ci@nhienin3d.local
+      ADMIN_PASSWORD: NhienIn3d_Docker_Admin_2026
+      ADMIN_NAME: Docker CI
+      JWT_SECRET: 4fe8de85fb4b4f7ea750876adbeb47163e54ac3e5ed58dbe50d25249be7b0a12
+      COOKIE_SECRET: ci-cookie-secret-nhienin3d-v330-2026
+      MAIL_ENABLED: "false"
+      SYSTEM_HEALTH_EMAIL_ENABLED: "false"
+    steps:
+      - uses: actions/checkout@v6
+      - name: Docker Compose migration + API
+        run: |
+          docker compose up -d --build postgres migrate api
+          docker compose ps
+      - name: Chờ API health
+        shell: bash
+        run: |
+          for i in {1..30}; do
+            if curl -fsS http://localhost:3001/api/v1/suc-khoe >/dev/null; then exit 0; fi
+            sleep 2
+          done
+          docker compose logs api --tail 150
+          exit 1
+      - name: Backup restore cô lập
+        shell: pwsh
+        run: ./scripts/e2e-runtime-v320.ps1
+      - name: Docker logs khi thất bại
+        if: failure()
+        run: |
+          docker compose logs migrate --tail 150 || true
+          docker compose logs api --tail 150 || true
+      - name: Dọn Docker
+        if: always()
+        run: docker compose down -v --remove-orphans
