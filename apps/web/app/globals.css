@@ -717,3 +717,33 @@ footer{border-top:1px solid var(--line);max-width:1240px;margin:auto;padding:30p
 /* v2.15.2 - xuất Excel và tinh gọn footer. */
 .cine-report-actions-v2152 { display:flex; gap:10px; flex-wrap:wrap; margin-top:14px; }
 .cine-report-actions-v2152 .cine-btn { flex:1 1 140px; }
+
+/* v2.15.5 - tab Admin tự giãn kín chiều ngang từng hàng, không để khoảng trống bên phải. */
+.cine-admin-tabs{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:stretch;
+  justify-content:flex-start;
+  gap:8px;
+  width:100%;
+  overflow:visible;
+  padding-bottom:0;
+}
+.cine-admin-tabs .cine-btn{
+  flex:1 1 150px;
+  min-width:130px;
+  min-height:44px;
+  padding:8px 12px;
+  font-size:12px;
+  line-height:1.2;
+  white-space:nowrap;
+  justify-content:center;
+  text-align:center;
+}
+@media(max-width:820px){
+  .cine-admin-tabs{gap:7px}
+  .cine-admin-tabs .cine-btn{flex-basis:140px;min-width:120px;white-space:normal}
+}
+@media(max-width:520px){
+  .cine-admin-tabs .cine-btn{flex-basis:100%;min-width:0}
+}

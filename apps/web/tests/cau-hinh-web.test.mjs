@@ -743,3 +743,16 @@ test("v2.15.3 dashboard ghi ro don ghi nhan doanh thu va don moi", () => {
   assert.match(admin, /Số đơn và doanh thu đều theo thời điểm thanh toán\/ghi nhận/u);
   assert.match(lib, /don_ghi_nhan_doanh_thu_theo_ky/);
 });
+
+test("v2.15.5 tab Admin tu gian kin chieu ngang tung hang", () => {
+  const css = readFileSync("app/globals.css", "utf8");
+  const admin = readFileSync("app/quan-tri/page.tsx", "utf8");
+  assert.match(admin, /className="cine-admin-tabs"/);
+  assert.match(css, /v2\.15\.5 - tab Admin tự giãn kín chiều ngang từng hàng/u);
+  assert.match(css, /\.cine-admin-tabs\{[\s\S]*flex-wrap:wrap/);
+  assert.match(css, /justify-content:flex-start/);
+  assert.match(css, /width:100%/);
+  assert.match(css, /flex:1 1 150px/);
+  assert.match(css, /@media\(max-width:520px\)[\s\S]*flex-basis:100%/);
+});
+

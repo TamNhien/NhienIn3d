@@ -1,6 +1,6 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v2.15.3** — 31/08/2026
+> Phiên bản hiện tại: **v2.15.5** — 31/08/2026
 
 NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **frontend Next.js** và **backend NestJS/Fastify** kết nối **PostgreSQL qua Prisma**.
 
@@ -17,18 +17,10 @@ NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **fro
 - CI/Release: GitHub Actions + GitHub CLI.
 
 
-## Giao diện dựng lại theo bố cục CineBooking Pro
-
-Bản source v2.15.3 tiếp tục dùng **frontend layout** theo cấu trúc CineBooking Pro, giữ nguyên nghiệp vụ NhienIn3d và sửa lệch số liệu **số đơn ↔ doanh thu** trên Dashboard khi đơn được ghi nhận thanh toán khác ngày tạo:
-
-- Dùng `RootLayout` chung với **header sticky**, vùng nội dung `max-w-7xl`, **footer dùng chung** và menu drawer responsive; không còn lặp navbar ở từng route.
-- Bổ sung **Tailwind CSS 4 + `@tailwindcss/postcss`** giống lớp công nghệ frontend tham chiếu, đồng thời giữ toàn bộ CSS/logic nghiệp vụ cũ để tránh phá luồng sản phẩm, giỏ hàng, tài khoản và quản trị.
-- Giữ Next.js App Router, React 19, Motion, Three.js/React Three Fiber/Drei, NestJS/Fastify, Prisma và PostgreSQL của NhienIn3d.
-- Nền toàn site dùng đúng ảnh người dùng cung cấp tại `apps/web/public/backgrounds/nhienin3d-main.jpg`, phủ gradient tối nhẹ để chữ và panel vẫn dễ đọc.
-- Các route hiện có (`/san-pham`, `/gio-hang`, `/thanh-toan`, `/dang-nhap`, `/tai-khoan`, `/quan-tri`...) giữ nguyên URL và luồng dữ liệu.
 
 ## Điểm chính bản hiện tại
 
+- v2.15.5 chỉnh thanh chức năng Admin để **mọi hàng tự giãn kín 100% chiều ngang**, không còn khoảng trống lớn bên phải khi các nút xuống hàng; desktop dùng flex-wrap có flex-grow, mobile chuyển dần về nút toàn hàng.
 - v2.15.3 sửa lệch số liệu dashboard: số **đơn** nằm cạnh doanh thu giờ được đếm theo **ngày ghi nhận doanh thu/thanh toán**, không còn lấy ngày tạo đơn; đồng thời KPI tách rõ **đơn ghi nhận doanh thu** và **đơn mới phát sinh**.
 - v2.15.2 sửa lỗi `npm run typecheck` tại `prisma/seed.ts` do kiểu `don_hang_map` thiếu trường `trang_thai`, đồng thời bổ sung xuất **Excel (.xlsx)** cho Đơn hàng/Doanh thu/Tồn kho và bỏ ghi chú nền ảnh khỏi footer.
 - v2.15.1 sửa **ghi nhận doanh thu theo thanh toán**: non-COD đã thanh toán được cộng doanh thu ngay; COD chỉ cộng khi Admin xác nhận **Đã giao / hoàn tất**, lúc đó giao dịch tự chuyển sang `DA_THANH_TOAN`.
@@ -935,6 +927,26 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 - Ví dụ: đơn tạo ngày 29/08 nhưng Admin xác nhận COD đã giao ngày 31/08 sẽ được tính là **1 đơn ghi nhận doanh thu ngày 31/08**, trong khi vẫn là **0 đơn mới phát sinh ngày 31/08** nếu hôm đó không có đơn mới.
 - Không thay đổi Prisma schema nên **không có migration database mới**.
 - Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm test` → `npm run typecheck` → `npm run build` → Docker Compose → `.\scripts\release.ps1 v2.15.3`.
+
+---
+
+
+## v2.15.4 — 31/08/2026
+
+- Đồng bộ version source/API/OpenAPI lên **v2.15.4**.
+- Không thay đổi Prisma schema nên **không có migration database mới**.
+- Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm test` → `npm run typecheck` → `npm run build` → Docker Compose → `.\scripts\release.ps1 v2.15.4`.
+
+---
+
+
+## v2.15.5 — 31/08/2026
+
+- Sửa thanh tab **Quản trị** bị chừa khoảng trống lớn bên phải khi các nút tự xuống dòng.
+- Chuyển layout tab sang `flex-wrap: wrap` và cho từng nút `flex-grow`, nhờ đó **hàng cuối cũng tự giãn kín toàn bộ chiều ngang** thay vì dồn nút về bên trái.
+- Desktop dùng basis 150px để phân bố số nút cân đối theo chiều rộng; màn hình nhỏ giảm basis và mobile cho nút chiếm toàn hàng để tránh chữ bị ép/tràn.
+- Không thay đổi nghiệp vụ, API hoặc Prisma schema nên **không có migration database mới**.
+- Quy trình release chuẩn: `cd D:\LienThongDH\DoAn\NhienIn3d` → `npm test` → `npm run typecheck` → `npm run build` → Docker Compose → `.\scripts\release.ps1 v2.15.5`.
 
 ---
 

@@ -64,11 +64,11 @@ test("seed v2.12.0 theo doi 24 bang va cho phep du lieu van hanh bi xoa", () => 
 });
 
 
-test("API hien thi dung version v2.15.2 o health va OpenAPI", () => {
+test("API hien thi dung version v2.15.5 o health va OpenAPI", () => {
   const health = readFileSync("src/suc-khoe/suc-khoe.controller.ts", "utf8");
   const main = readFileSync("src/main.ts", "utf8");
-  assert.match(health, /phien_ban: "v2\.15\.2"/);
-  assert.match(main, /setVersion\("2\.15\.2"\)/);
+  assert.match(health, /phien_ban: "v2\.15\.5"/);
+  assert.match(main, /setVersion\("2\.15\.5"\)/);
 });
 
 test("V2 co migration gio hang, thanh toan va dia chi", () => {
