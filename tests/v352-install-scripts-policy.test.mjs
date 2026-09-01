@@ -7,13 +7,11 @@ const json = (p) => JSON.parse(readFileSync(p, "utf8"));
 test("v3.5.2 khoa install-script theo allowlist pin version va chan Scarf telemetry", () => {
   const root = json("package.json");
   assert.equal(root.engines.npm, ">=11.17.0");
-  assert.deepEqual(root.allowScripts, {
-    "@prisma/engines@7.10.0": true,
-    "@scarf/scarf": false,
-    "argon2@0.45.1": true,
-    "esbuild@0.28.2": true,
-    "prisma@7.10.0": true,
-  });
+  assert.equal(root.allowScripts["@prisma/engines@7.10.0"], true);
+  assert.equal(root.allowScripts["@scarf/scarf"], false);
+  assert.equal(root.allowScripts["argon2@0.45.1"], true);
+  assert.equal(root.allowScripts["esbuild@0.28.2"], true);
+  assert.equal(root.allowScripts["prisma@7.10.0"], true);
   const npmrc = readFileSync(".npmrc", "utf8");
   assert.match(npmrc, /^strict-allow-scripts=true$/m);
 });

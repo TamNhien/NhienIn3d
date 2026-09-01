@@ -15,8 +15,10 @@ FROM node:24.19.0-bookworm-slim AS run
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=build --chown=node:node /app/apps/web/.next/standalone ./
-COPY --from=build --chown=node:node /app/apps/web/.next/static ./.next/static
-COPY --from=build --chown=node:node /app/apps/web/public ./public
+COPY --from=build --chown=node:node /app/apps/web/.next/static ./apps/web/.next/static
+COPY --from=build --chown=node:node /app/apps/web/public ./apps/web/public
+RUN test -f /app/apps/web/server.js
+WORKDIR /app/apps/web
 USER node
 EXPOSE 3000
-CMD ["node", "server.js"]
+CMD ["sh", "-c", "HOSTNAME=0.0.0.0 PORT=3000 exec node server.js"]

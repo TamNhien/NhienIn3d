@@ -52,6 +52,7 @@ apps/api/src/gio-hang/gio-hang.controller.ts
 apps/api/src/gio-hang/gio-hang.module.ts
 apps/api/src/gio-hang/gio-hang.service.ts
 apps/api/src/main.ts
+apps/api/src/quan-tri/dto/cap-nhat-bao-tri-he-thong.dto.ts
 apps/api/src/quan-tri/dto/cap-nhat-bien-the.dto.ts
 apps/api/src/quan-tri/dto/cap-nhat-ca-lam.dto.ts
 apps/api/src/quan-tri/dto/cap-nhat-cau-hinh-canh-bao-he-thong.dto.ts
@@ -123,6 +124,7 @@ apps/api/tests/v331-session-revenue.test.mjs
 apps/api/tests/v332-revenue-delivery-reconcile.test.mjs
 apps/api/tests/v340-incident-sla-cursor.test.mjs
 apps/api/tests/v350-incident-slo-rollup.test.mjs
+apps/api/tests/v360-maintenance-error-budget-webhook.test.mjs
 apps/api/tsconfig.build.json
 apps/api/tsconfig.json
 apps/web/.dockerignore
@@ -181,6 +183,7 @@ apps/web/tests/v331-session-revenue.test.mjs
 apps/web/tests/v332-revenue-delivery-reconcile.test.mjs
 apps/web/tests/v340-incident-sla-cursor.test.mjs
 apps/web/tests/v350-incident-slo-rollup.test.mjs
+apps/web/tests/v360-maintenance-error-budget-webhook.test.mjs
 apps/web/tsconfig.json
 docker-compose.https.yml
 docker-compose.yml
@@ -197,6 +200,11 @@ scripts/e2e-browser-v351.mjs
 scripts/e2e-browser-v352.mjs
 scripts/e2e-browser-v353.mjs
 scripts/e2e-browser-v354.mjs
+scripts/e2e-browser-v360.mjs
+scripts/e2e-browser-v361.mjs
+scripts/e2e-browser-v362.mjs
+scripts/e2e-browser-v363.mjs
+scripts/e2e-browser-v364.mjs
 scripts/e2e-runtime-v320.ps1
 scripts/e2e-runtime-v340.ps1
 scripts/e2e-runtime-v341.ps1
@@ -205,6 +213,11 @@ scripts/e2e-runtime-v351.ps1
 scripts/e2e-runtime-v352.ps1
 scripts/e2e-runtime-v353.ps1
 scripts/e2e-runtime-v354.ps1
+scripts/e2e-runtime-v360.ps1
+scripts/e2e-runtime-v361.ps1
+scripts/e2e-runtime-v362.ps1
+scripts/e2e-runtime-v363.ps1
+scripts/e2e-runtime-v364.ps1
 scripts/https-local-bo-tin-cay.ps1
 scripts/https-local.ps1
 scripts/khoi-tao-github.ps1
@@ -230,3 +243,8 @@ tests/v351-playwright-docker-security.test.mjs
 tests/v352-install-scripts-policy.test.mjs
 tests/v353-root-allow-scripts-policy.test.mjs
 tests/v354-overlay-workspace-npmrc-cleanup.test.mjs
+tests/v360-maintenance-error-budget-webhook.test.mjs
+tests/v361-fsevents-strict-allow-scripts-docker.test.mjs
+tests/v362-web-standalone-runtime.test.mjs
+tests/v363-web-healthcheck-bind.test.mjs
+tests/v364-runtime-health-version-assertion.test.mjs

@@ -92,6 +92,9 @@ services:
       SYSTEM_SLO_SLA_TARGET_PERCENT: ${SYSTEM_SLO_SLA_TARGET_PERCENT:-99}
       SYSTEM_SLO_UPTIME_TARGET_PERCENT: ${SYSTEM_SLO_UPTIME_TARGET_PERCENT:-99.9}
       SYSTEM_SLO_TREND_ALERT_ENABLED: ${SYSTEM_SLO_TREND_ALERT_ENABLED:-true}
+      SYSTEM_ALERT_WEBHOOK_ENABLED: ${SYSTEM_ALERT_WEBHOOK_ENABLED:-false}
+      SYSTEM_ALERT_WEBHOOK_URL: ${SYSTEM_ALERT_WEBHOOK_URL:-}
+      SYSTEM_ALERT_WEBHOOK_BEARER_TOKEN: ${SYSTEM_ALERT_WEBHOOK_BEARER_TOKEN:-}
     ports:
       - "${API_PORT:-3001}:3001"
     volumes:
@@ -111,6 +114,12 @@ services:
     restart: unless-stopped
     expose:
       - "3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
     depends_on:
       api:
         condition: service_started
@@ -128,7 +137,7 @@ services:
       - nhienin3d-caddy-config:/config
     depends_on:
       web:
-        condition: service_started
+        condition: service_healthy
       api:
         condition: service_started
     networks: [nhienin3d-noi-bo]

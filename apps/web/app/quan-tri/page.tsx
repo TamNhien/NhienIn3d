@@ -24,6 +24,7 @@ import {
   ThongKeVanHanhAdmin,
   CauHinhCanhBaoHeThongAdmin,
   CauHinhSloVanHanhAdmin,
+  BaoTriHeThongAdmin,
   SuCoVanHanhTomTat,
   ChiTietSuCoVanHanh,
   SlaVanHanhAdmin,
@@ -92,9 +93,13 @@ import {
   capNhatCauHinhCanhBaoHeThongAdmin,
   layCauHinhSloVanHanhAdmin,
   capNhatCauHinhSloVanHanhAdmin,
+  layBaoTriHeThongAdmin,
+  capNhatBaoTriHeThongAdmin,
   laySlaVanHanhAdmin,
   layDanhSachSuCoVanHanhAdmin,
   layChiTietSuCoVanHanhAdmin,
+  xuatDanhSachSuCoExcelAdmin,
+  xuatChiTietSuCoExcelAdmin,
   tiepNhanSuCoVanHanhAdmin,
   khacPhucSuCoVanHanhAdmin,
   layThongKeVanHanhAdmin,
@@ -125,6 +130,17 @@ const dinhDangDungLuong = (bytes: number) => {
   const don_vi = ["B", "KB", "MB", "GB", "TB"];
   const bac = Math.min(don_vi.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)));
   return `${(bytes / (1024 ** bac)).toFixed(bac === 0 ? 0 : 1)} ${don_vi[bac]}`;
+};
+const dinhDangInputNgayGio = (gia_tri?: string | null) => {
+  if (!gia_tri) return "";
+  const d = new Date(gia_tri);
+  if (Number.isNaN(d.getTime())) return gia_tri.slice(0, 16);
+  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 16);
+};
+const taiTepBase64 = (kq: { base64: string; mime_type: string; ten_file: string }) => {
+  const binary = atob(kq.base64); const bytes = new Uint8Array(binary.length); for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  const blob = new Blob([bytes], { type: kq.mime_type }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = kq.ten_file; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
 };
 const layThayDoiAudit = (chi_tiet: Record<string, unknown>) => {
   const raw = chi_tiet?.thay_doi;
@@ -317,6 +333,7 @@ export default function QuanTriPage() {
   const [van_hanh_trang_thai, setVanHanhTrangThai] = useState("");
   const [cau_hinh_canh_bao_he_thong, setCauHinhCanhBaoHeThong] = useState<CauHinhCanhBaoHeThongAdmin>({ bat: false, chu_ky_phut: 30, backup_qua_han_gio: 36, im_lang_phut: 180, leo_thang_phut: 720, nguoi_nhan: "", nguon_cau_hinh: "ENV" });
   const [cau_hinh_slo, setCauHinhSlo] = useState<CauHinhSloVanHanhAdmin>({ sla_muc_tieu_percent: 99, uptime_muc_tieu_percent: 99.9, canh_bao_xu_huong: true, nguon_cau_hinh: "ENV" });
+  const [bao_tri_he_thong, setBaoTriHeThong] = useState<BaoTriHeThongAdmin>({ bat: false, bat_dau: null, ket_thuc: null, ly_do: "", dang_bao_tri: false, sap_bao_tri: false, da_ket_thuc: false, nguon_cau_hinh: "MAC_DINH" });
   const [sla_van_hanh, setSlaVanHanh] = useState<SlaVanHanhAdmin | null>(null);
   const [sla_so_ngay, setSlaSoNgay] = useState<30 | 90>(90);
   const [su_co_van_hanh, setSuCoVanHanh] = useState<SuCoVanHanhTomTat[]>([]);
@@ -340,7 +357,7 @@ export default function QuanTriPage() {
     }
     setTaiKhoan(tk);
     if (!tk || tk.vai_tro !== "ADMIN") return;
-    const [tq, nd, nvData, caData, pcData, donData, spData, dmData, vlData, msData, chKhoData, lsKhoData, phieuNhapData, nccData, emailKhoData, dgData, nkPage, heThongData, vanHanhPage, thongKeVanHanh, cauHinhCanhBao, cauHinhSlo, slaVanHanh, suCoVanHanh] = await Promise.all([layTongQuan(), layNguoiDung(), layNhanVien(), layCaLam(), layPhanCa(), layDonHangAdmin(), laySanPhamAdmin(), layDanhMucAdmin(), layVatLieuAdmin(), layMauSacAdmin(), layCauHinhKhoAdmin(), layLichSuKhoAdmin(), layPhieuNhapKhoAdmin(), layNhaCungCapAdmin(), layTrangThaiCanhBaoKhoEmailAdmin(), layDanhGiaAdmin(), layNhatKyCursorAdmin({ kich_thuoc: 25 }), laySucKhoeHeThongAdmin(), layLichSuVanHanhCursorAdmin({ kich_thuoc: 20 }), layThongKeVanHanhAdmin(), layCauHinhCanhBaoHeThongAdmin(), layCauHinhSloVanHanhAdmin(), laySlaVanHanhAdmin(90), layDanhSachSuCoVanHanhAdmin(20)]);
+    const [tq, nd, nvData, caData, pcData, donData, spData, dmData, vlData, msData, chKhoData, lsKhoData, phieuNhapData, nccData, emailKhoData, dgData, nkPage, heThongData, vanHanhPage, thongKeVanHanh, cauHinhCanhBao, cauHinhSlo, baoTriHeThong, slaVanHanh, suCoVanHanh] = await Promise.all([layTongQuan(), layNguoiDung(), layNhanVien(), layCaLam(), layPhanCa(), layDonHangAdmin(), laySanPhamAdmin(), layDanhMucAdmin(), layVatLieuAdmin(), layMauSacAdmin(), layCauHinhKhoAdmin(), layLichSuKhoAdmin(), layPhieuNhapKhoAdmin(), layNhaCungCapAdmin(), layTrangThaiCanhBaoKhoEmailAdmin(), layDanhGiaAdmin(), layNhatKyCursorAdmin({ kich_thuoc: 25 }), laySucKhoeHeThongAdmin(), layLichSuVanHanhCursorAdmin({ kich_thuoc: 20 }), layThongKeVanHanhAdmin(), layCauHinhCanhBaoHeThongAdmin(), layCauHinhSloVanHanhAdmin(), layBaoTriHeThongAdmin(), laySlaVanHanhAdmin(90), layDanhSachSuCoVanHanhAdmin(20)]);
     setTongQuan(tq);
     setNguoiDung(nd);
     setNhanVien(nvData);
@@ -367,6 +384,7 @@ export default function QuanTriPage() {
     setVanHanhCursor(vanHanhPage.cursor);
     setCauHinhCanhBaoHeThong(cauHinhCanhBao);
     setCauHinhSlo(cauHinhSlo);
+    setBaoTriHeThong(baoTriHeThong);
     setSlaVanHanh(slaVanHanh);
     setSuCoVanHanh(suCoVanHanh.du_lieu);
     setPc(x => ({ ...x, nhan_vien_id: x.nhan_vien_id || nvData[0]?.id || "", ca_lam_viec_id: x.ca_lam_viec_id || caData[0]?.id || "" }));
@@ -1188,6 +1206,19 @@ export default function QuanTriPage() {
     finally { setDangXuLy(null); }
   }
 
+  async function luuBaoTriHeThong() {
+    setDangXuLy("luu-bao-tri-he-thong"); setThongBao("");
+    try {
+      const bat_dau = bao_tri_he_thong.bat && bao_tri_he_thong.bat_dau ? new Date(bao_tri_he_thong.bat_dau).toISOString() : undefined;
+      const ket_thuc = bao_tri_he_thong.bat && bao_tri_he_thong.ket_thuc ? new Date(bao_tri_he_thong.ket_thuc).toISOString() : undefined;
+      const kq = await capNhatBaoTriHeThongAdmin({ bat: bao_tri_he_thong.bat, bat_dau, ket_thuc, ly_do: bao_tri_he_thong.ly_do.trim() });
+      setBaoTriHeThong(kq);
+      setSucKhoeHeThong(await laySucKhoeHeThongAdmin());
+      setThongBao(kq.dang_bao_tri ? "Maintenance window đang hoạt động; cảnh báo tự động được tạm ngưng." : kq.sap_bao_tri ? "Đã lên lịch maintenance window." : "Đã lưu cấu hình maintenance window.");
+    } catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể lưu maintenance window"); }
+    finally { setDangXuLy(null); }
+  }
+
   async function capNhatXuLySuCo(hanh_dong: "tiep-nhan" | "khac-phuc") {
     if (!su_co_chon) return;
     setDangXuLy(`xu-ly-su-co-${hanh_dong}`); setThongBao("");
@@ -1198,6 +1229,21 @@ export default function QuanTriPage() {
       await taiLichSuVanHanh(true);
       setThongBao(hanh_dong === "tiep-nhan" ? "Đã tiếp nhận incident và ghi người xử lý." : "Đã đánh dấu incident khắc phục và ghi audit.");
     } catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể cập nhật incident"); }
+    finally { setDangXuLy(null); }
+  }
+
+  async function taiDanhSachSuCoExcel() {
+    setDangXuLy("xuat-incident-excel"); setThongBao("");
+    try { const kq = await xuatDanhSachSuCoExcelAdmin(); taiTepBase64(kq); setThongBao(`Đã xuất Excel incident: ${kq.ten_file}.`); }
+    catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể xuất danh sách incident"); }
+    finally { setDangXuLy(null); }
+  }
+
+  async function taiChiTietSuCoExcel() {
+    if (!su_co_chon) return;
+    setDangXuLy("xuat-incident-timeline-excel"); setThongBao("");
+    try { const kq = await xuatChiTietSuCoExcelAdmin(su_co_chon.chu_ky); taiTepBase64(kq); setThongBao(`Đã xuất timeline incident: ${kq.ten_file}.`); }
+    catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể xuất timeline incident"); }
     finally { setDangXuLy(null); }
   }
 
@@ -1215,11 +1261,12 @@ export default function QuanTriPage() {
   async function taiSucKhoeHeThong() {
     setDangXuLy("suc-khoe-he-thong"); setThongBao("");
     try {
-      const [kq, thongKe, cauHinh, sloConfig, sla, suCo] = await Promise.all([laySucKhoeHeThongAdmin(), layThongKeVanHanhAdmin(), layCauHinhCanhBaoHeThongAdmin(), layCauHinhSloVanHanhAdmin(), laySlaVanHanhAdmin(sla_so_ngay), layDanhSachSuCoVanHanhAdmin(20)]);
+      const [kq, thongKe, cauHinh, sloConfig, baoTri, sla, suCo] = await Promise.all([laySucKhoeHeThongAdmin(), layThongKeVanHanhAdmin(), layCauHinhCanhBaoHeThongAdmin(), layCauHinhSloVanHanhAdmin(), layBaoTriHeThongAdmin(), laySlaVanHanhAdmin(sla_so_ngay), layDanhSachSuCoVanHanhAdmin(20)]);
       setSucKhoeHeThong(kq);
       setThongKeVanHanh(thongKe);
       setCauHinhCanhBaoHeThong(cauHinh);
       setCauHinhSlo(sloConfig);
+      setBaoTriHeThong(baoTri);
       setSlaVanHanh(sla);
       setSuCoVanHanh(suCo.du_lieu);
       await taiLichSuVanHanh(true);
@@ -1658,7 +1705,7 @@ export default function QuanTriPage() {
     </section>}
 
     {tab === "he-thong" && <section className="cine-admin-operations cine-system-admin-v310">
-      <div className="cine-operations-heading"><div><h2>Sức khỏe hệ thống & vận hành</h2><p>v3.5.4 tự dọn .npmrc workspace còn sót khi chép source đè phiên bản cũ; allowScripts vẫn chỉ nằm ở project root và local, CI, Docker dùng cùng policy fail-closed.</p></div><div className="cine-system-heading-actions-v310"><span className={`status-badge ${suc_khoe_he_thong?.trang_thai === "TOT" ? "active" : "locked"}`}>{suc_khoe_he_thong?.trang_thai === "TOT" ? "Hệ thống tốt" : suc_khoe_he_thong?.trang_thai === "LOI" ? "Có lỗi" : "Cần chú ý"}</span><button type="button" className="cine-btn cine-btn-primary" onClick={taiSucKhoeHeThong} disabled={dang_xu_ly === "suc-khoe-he-thong"}>{dang_xu_ly === "suc-khoe-he-thong" ? "Đang kiểm tra…" : "Kiểm tra lại"}</button></div></div>
+      <div className="cine-operations-heading"><div><h2>Sức khỏe hệ thống & vận hành</h2><p>v3.6.4 sửa Runtime E2E so sánh nhầm version Admin health; giữ Docker Web healthy, maintenance window, error budget/burn-rate 1h·6h·24h, Incident/Timeline Excel, webhook và browser E2E persistence.</p></div><div className="cine-system-heading-actions-v310"><span className={`status-badge ${suc_khoe_he_thong?.trang_thai === "TOT" ? "active" : "locked"}`}>{suc_khoe_he_thong?.trang_thai === "TOT" ? "Hệ thống tốt" : suc_khoe_he_thong?.trang_thai === "LOI" ? "Có lỗi" : "Cần chú ý"}</span><button type="button" className="cine-btn cine-btn-primary" onClick={taiSucKhoeHeThong} disabled={dang_xu_ly === "suc-khoe-he-thong"}>{dang_xu_ly === "suc-khoe-he-thong" ? "Đang kiểm tra…" : "Kiểm tra lại"}</button></div></div>
       {suc_khoe_he_thong ? <>
         <div className="cine-system-grid-v310 cine-system-grid-v320">
           <article className="cine-card"><span>API</span><b>v{suc_khoe_he_thong.phien_ban}</b><p>Node {suc_khoe_he_thong.api.node} · uptime {Math.floor(suc_khoe_he_thong.api.uptime_giay / 3600)} giờ</p><small>RAM RSS {dinhDangDungLuong(suc_khoe_he_thong.api.rss_bytes)} · Heap {dinhDangDungLuong(suc_khoe_he_thong.api.heap_used_bytes)}</small></article>
@@ -1666,6 +1713,8 @@ export default function QuanTriPage() {
           <article className="cine-card"><span>SMTP</span><b>{!suc_khoe_he_thong.smtp.bat ? "Đang tắt" : suc_khoe_he_thong.smtp.san_sang ? "Sẵn sàng" : "Cấu hình lỗi"}</b><p>{suc_khoe_he_thong.smtp.host ? `${suc_khoe_he_thong.smtp.host}:${suc_khoe_he_thong.smtp.port}` : "MAIL_ENABLED=false"}</p><small>{suc_khoe_he_thong.smtp.from}</small></article>
           <article className="cine-card"><span>Backup PostgreSQL</span><b>{suc_khoe_he_thong.backup.gan_nhat ? `${suc_khoe_he_thong.backup.gan_nhat.tuoi_gio} giờ trước` : "Chưa có backup"}</b><p>{suc_khoe_he_thong.backup.so_daily} daily · {suc_khoe_he_thong.backup.so_weekly} weekly</p><small>{suc_khoe_he_thong.backup.so_ban_sao} file · {dinhDangDungLuong(suc_khoe_he_thong.backup.tong_dung_luong_bytes)}</small></article>
           <article className="cine-card"><span>Cảnh báo tồn kho</span><b>{suc_khoe_he_thong.canh_bao_kho.bat ? "Đang bật" : "Đang tắt"}</b><p>Chu kỳ {suc_khoe_he_thong.canh_bao_kho.chu_ky_phut} phút</p><small>Email chỉ gửi lại khi trạng thái cảnh báo thay đổi.</small></article>
+          <article className={`cine-card ${suc_khoe_he_thong.bao_tri.dang_bao_tri ? "cine-maintenance-active-v360" : ""}`}><span>Maintenance window</span><b>{suc_khoe_he_thong.bao_tri.dang_bao_tri ? "Đang bảo trì" : suc_khoe_he_thong.bao_tri.sap_bao_tri ? "Đã lên lịch" : "Không hoạt động"}</b><p>{suc_khoe_he_thong.bao_tri.bat_dau ? `${new Date(suc_khoe_he_thong.bao_tri.bat_dau).toLocaleString("vi-VN")} → ${suc_khoe_he_thong.bao_tri.ket_thuc ? new Date(suc_khoe_he_thong.bao_tri.ket_thuc).toLocaleString("vi-VN") : "—"}` : "Chưa có lịch bảo trì"}</p><small>{suc_khoe_he_thong.bao_tri.ly_do || "Cảnh báo tự động chỉ tạm ngưng khi cửa sổ đang hoạt động."}</small></article>
+          <article className="cine-card"><span>Webhook cảnh báo</span><b>{suc_khoe_he_thong.webhook.san_sang ? "Sẵn sàng" : suc_khoe_he_thong.webhook.bat ? "Chưa hợp lệ" : "Đang tắt"}</b><p>{suc_khoe_he_thong.webhook.endpoint || "SYSTEM_ALERT_WEBHOOK_ENABLED=false"}</p><small>Token bearer chỉ đọc từ môi trường và không được trả về UI.</small></article>
           <article className="cine-card cine-system-alert-card-v320"><span>Cảnh báo vận hành</span><b>{suc_khoe_he_thong.canh_bao_he_thong.bat ? "Đang bật" : "Đang tắt"}</b><p>Chu kỳ {suc_khoe_he_thong.canh_bao_he_thong.chu_ky_phut} phút · backup quá {suc_khoe_he_thong.canh_bao_he_thong.backup_qua_han_gio} giờ sẽ cảnh báo</p><small>Nguồn: {suc_khoe_he_thong.canh_bao_he_thong.nguon_cau_hinh || "ENV"} · Im lặng {suc_khoe_he_thong.canh_bao_he_thong.im_lang_phut} phút · escalation {suc_khoe_he_thong.canh_bao_he_thong.leo_thang_phut} phút.</small><button type="button" className="cine-btn cine-btn-secondary" onClick={guiCanhBaoHeThongNgay} disabled={dang_xu_ly === "gui-canh-bao-he-thong"}>{dang_xu_ly === "gui-canh-bao-he-thong" ? "Đang kiểm tra…" : "Kiểm tra & gửi ngay"}</button></article>
         </div>
 
@@ -1682,8 +1731,19 @@ export default function QuanTriPage() {
           <div className="cine-system-config-actions-v340"><small>{cau_hinh_canh_bao_he_thong.ngay_cap_nhat ? `Cập nhật gần nhất: ${new Date(cau_hinh_canh_bao_he_thong.ngay_cap_nhat).toLocaleString("vi-VN")}` : "Chưa có cấu hình lưu trong database."}</small><button type="button" className="cine-btn cine-btn-primary" onClick={luuCauHinhCanhBaoHeThong} disabled={dang_xu_ly === "luu-cau-hinh-canh-bao-he-thong"}>{dang_xu_ly === "luu-cau-hinh-canh-bao-he-thong" ? "Đang lưu…" : "Lưu & áp dụng"}</button></div>
         </div>
 
+        <div className="cine-card cine-maintenance-config-v360">
+          <div className="cine-ops-history-head-v320"><div><h3>Maintenance window</h3><p>Lên lịch bảo trì có chủ đích. Trong khoảng thời gian này job cảnh báo tự động tạm ngưng, nhưng Admin vẫn có thể kiểm tra/gửi thủ công.</p></div><span className={`status-badge ${bao_tri_he_thong.dang_bao_tri ? "locked" : "active"}`}>{bao_tri_he_thong.dang_bao_tri ? "Đang bảo trì" : bao_tri_he_thong.sap_bao_tri ? "Đã lên lịch" : "Không hoạt động"}</span></div>
+          <div className="cine-maintenance-grid-v360">
+            <label className="cine-toggle-field-v340"><span>Bật maintenance</span><input type="checkbox" checked={bao_tri_he_thong.bat} onChange={e=>setBaoTriHeThong(x=>({...x,bat:e.target.checked}))}/><b>{bao_tri_he_thong.bat ? "Đang bật" : "Đang tắt"}</b></label>
+            <label><span>Bắt đầu</span><input aria-label="Bảo trì bắt đầu" type="datetime-local" value={dinhDangInputNgayGio(bao_tri_he_thong.bat_dau)} onChange={e=>setBaoTriHeThong(x=>({...x,bat_dau:e.target.value || null}))}/></label>
+            <label><span>Kết thúc</span><input aria-label="Bảo trì kết thúc" type="datetime-local" value={dinhDangInputNgayGio(bao_tri_he_thong.ket_thuc)} onChange={e=>setBaoTriHeThong(x=>({...x,ket_thuc:e.target.value || null}))}/></label>
+            <label className="cine-maintenance-reason-v360"><span>Lý do / phạm vi</span><input aria-label="Lý do bảo trì" maxLength={500} value={bao_tri_he_thong.ly_do} onChange={e=>setBaoTriHeThong(x=>({...x,ly_do:e.target.value}))} placeholder="VD: nâng PostgreSQL, bảo trì mạng, thay đổi hạ tầng..."/></label>
+          </div>
+          <div className="cine-system-config-actions-v340"><small>{bao_tri_he_thong.ngay_cap_nhat ? `Cập nhật gần nhất: ${new Date(bao_tri_he_thong.ngay_cap_nhat).toLocaleString("vi-VN")}` : "Chưa có maintenance window lưu trong database."}</small><button type="button" className="cine-btn cine-btn-primary" onClick={luuBaoTriHeThong} disabled={dang_xu_ly === "luu-bao-tri-he-thong"}>{dang_xu_ly === "luu-bao-tri-he-thong" ? "Đang lưu…" : "Lưu maintenance window"}</button></div>
+        </div>
+
         <div className="cine-card cine-slo-config-v350">
-          <div className="cine-ops-history-head-v320"><div><h3>Mục tiêu SLO vận hành</h3><p>Đặt mục tiêu riêng cho SLA/Uptime. Hệ thống đánh giá xu hướng 7 và 30 ngày, đồng thời đưa vi phạm vào luồng cảnh báo email khi bật.</p></div><span className="cine-admin-count">{cau_hinh_slo.nguon_cau_hinh}</span></div>
+          <div className="cine-ops-history-head-v320"><div><h3>Mục tiêu SLO vận hành</h3><p>Đặt mục tiêu riêng cho SLA/Uptime. Hệ thống tính error budget 30 ngày và burn-rate 1h/6h/24h để phát hiện tốc độ tiêu ngân sách lỗi trước khi SLO dài hạn bị phá vỡ.</p></div><span className="cine-admin-count">{cau_hinh_slo.nguon_cau_hinh}</span></div>
           <div className="cine-slo-config-grid-v350">
             <label><span>SLA mục tiêu (%)</span><input type="number" min="90" max="100" step="0.01" value={cau_hinh_slo.sla_muc_tieu_percent} onChange={e=>setCauHinhSlo(x=>({...x,sla_muc_tieu_percent:Number(e.target.value)}))}/></label>
             <label><span>Uptime mục tiêu (%)</span><input type="number" min="90" max="100" step="0.01" value={cau_hinh_slo.uptime_muc_tieu_percent} onChange={e=>setCauHinhSlo(x=>({...x,uptime_muc_tieu_percent:Number(e.target.value)}))}/></label>
@@ -1699,23 +1759,24 @@ export default function QuanTriPage() {
         {sla_van_hanh && <div className="cine-card cine-sla-v340">
           <div className="cine-ops-history-head-v320"><div><h3>SLA / Uptime theo ngày</h3><p>SLA = tỷ lệ HEALTH ở trạng thái TỐT; uptime = tỷ lệ HEALTH không ở trạng thái LỖI.</p></div><div className="cine-sla-actions-v340"><button type="button" className={`cine-btn ${sla_so_ngay===30?"cine-btn-primary":"cine-btn-secondary"}`} onClick={()=>void taiSlaVanHanh(30)} disabled={dang_xu_ly === "sla-van-hanh"}>30 ngày</button><button type="button" className={`cine-btn ${sla_so_ngay===90?"cine-btn-primary":"cine-btn-secondary"}`} onClick={()=>void taiSlaVanHanh(90)} disabled={dang_xu_ly === "sla-van-hanh"}>90 ngày</button></div></div>
           <div className="cine-sla-summary-v340"><article className={sla_van_hanh.tong_quan.dat_sla===false?"slo-breach":""}><span>SLA</span><b>{sla_van_hanh.tong_quan.sla_percent == null ? "—" : `${sla_van_hanh.tong_quan.sla_percent}%`}</b><small>Mục tiêu {sla_van_hanh.muc_tieu.sla_muc_tieu_percent}% · {sla_van_hanh.tong_quan.tot}/{sla_van_hanh.tong_quan.tong} mẫu tốt</small></article><article className={sla_van_hanh.tong_quan.dat_uptime===false?"slo-breach":""}><span>Uptime</span><b>{sla_van_hanh.tong_quan.uptime_percent == null ? "—" : `${sla_van_hanh.tong_quan.uptime_percent}%`}</b><small>Mục tiêu {sla_van_hanh.muc_tieu.uptime_muc_tieu_percent}% · {sla_van_hanh.tong_quan.loi} mẫu lỗi</small></article><article><span>Xu hướng 7 / 30 ngày</span><b>{sla_van_hanh.xu_huong.bay_ngay.uptime_percent ?? "—"}% / {sla_van_hanh.xu_huong.ba_muoi_ngay.uptime_percent ?? "—"}%</b><small>{sla_van_hanh.canh_bao.length ? `${sla_van_hanh.canh_bao.length} cảnh báo SLO` : "Đang đạt mục tiêu hoặc chưa đủ mẫu"}</small></article></div>
+          <div className="cine-error-budget-v360"><article><span>Error budget SLA · 30 ngày</span><b>{sla_van_hanh.ngan_sach_loi.sla.con_lai_percent == null ? "—" : `${sla_van_hanh.ngan_sach_loi.sla.con_lai_percent}% còn lại`}</b><small>Đã tiêu {sla_van_hanh.ngan_sach_loi.sla.da_tieu_thu_percent ?? "—"}% ngân sách · {sla_van_hanh.ngan_sach_loi.sla.mau_xau}/{sla_van_hanh.ngan_sach_loi.sla.tong_mau} mẫu xấu</small></article><article><span>Error budget Uptime · 30 ngày</span><b>{sla_van_hanh.ngan_sach_loi.uptime.con_lai_percent == null ? "—" : `${sla_van_hanh.ngan_sach_loi.uptime.con_lai_percent}% còn lại`}</b><small>Đã tiêu {sla_van_hanh.ngan_sach_loi.uptime.da_tieu_thu_percent ?? "—"}% ngân sách · {sla_van_hanh.ngan_sach_loi.uptime.mau_xau}/{sla_van_hanh.ngan_sach_loi.uptime.tong_mau} mẫu lỗi</small></article><article><span>Burn-rate SLA · 1h / 6h / 24h</span><b>{sla_van_hanh.burn_rate.sla.mot_gio.burn_rate ?? "—"}x · {sla_van_hanh.burn_rate.sla.sau_gio.burn_rate ?? "—"}x · {sla_van_hanh.burn_rate.sla.hai_muoi_bon_gio.burn_rate ?? "—"}x</b><small>Burn-rate &gt; 1x nghĩa là đang tiêu ngân sách nhanh hơn tốc độ bền vững.</small></article><article><span>Burn-rate Uptime · 1h / 6h / 24h</span><b>{sla_van_hanh.burn_rate.uptime.mot_gio.burn_rate ?? "—"}x · {sla_van_hanh.burn_rate.uptime.sau_gio.burn_rate ?? "—"}x · {sla_van_hanh.burn_rate.uptime.hai_muoi_bon_gio.burn_rate ?? "—"}x</b><small>Mức hiện tại: {sla_van_hanh.burn_rate.uptime.mot_gio.muc_do.replaceAll("_", " ")}</small></article></div>
           {sla_van_hanh.canh_bao.length>0&&<div className="cine-slo-warnings-v350">{sla_van_hanh.canh_bao.map(item=><span key={item}>⚠ {item}</span>)}</div>}
           <div className="cine-sla-chart-v340" aria-label={`Biểu đồ uptime ${sla_van_hanh.so_ngay} ngày`}>{sla_van_hanh.theo_ngay.map(item=><span key={item.ngay} style={{height:`${Math.max(4,item.uptime_percent ?? 4)}%`}} title={`${item.ngay}: uptime ${item.uptime_percent ?? "—"}% · SLA ${item.sla_percent ?? "—"}%`}/>)}</div>
           <div className="cine-sla-legend-v340"><span>{new Date(sla_van_hanh.tu_ngay).toLocaleDateString("vi-VN")}</span><span>{sla_van_hanh.so_ngay} ngày</span><span>{new Date(sla_van_hanh.tao_luc).toLocaleDateString("vi-VN")}</span></div>
         </div>}
 
         <div className="cine-card cine-incidents-v340 cine-incidents-v350">
-          <div className="cine-ops-history-head-v320"><div><h3>Incident vận hành</h3><p>Chuỗi sự cố theo chữ ký đọc trực tiếp bảng tổng hợp `su_co_van_hanh`; Admin có thể tiếp nhận, ghi chú người xử lý và đánh dấu đã khắc phục.</p></div><span>{su_co_van_hanh.length} incident gần nhất</span></div>
+          <div className="cine-ops-history-head-v320"><div><h3>Incident vận hành</h3><p>Chuỗi sự cố theo chữ ký đọc trực tiếp bảng tổng hợp `su_co_van_hanh`; Admin có thể tiếp nhận, khắc phục và xuất Incident/Timeline ra Excel.</p></div><div className="cine-ops-history-actions-v330"><span>{su_co_van_hanh.length} incident gần nhất</span><button type="button" className="cine-btn cine-btn-secondary" onClick={taiDanhSachSuCoExcel} disabled={dang_xu_ly === "xuat-incident-excel"}>{dang_xu_ly === "xuat-incident-excel" ? "Đang xuất…" : "Xuất Incident Excel"}</button></div></div>
           <div className="cine-incidents-layout-v340">
             <div className="cine-incident-list-v340">{su_co_van_hanh.map(item=><button type="button" key={item.chu_ky} className={`cine-incident-item-v340 ${su_co_chon?.chu_ky===item.chu_ky?"selected":""}`} onClick={()=>void moChiTietSuCo(item.chu_ky)} disabled={dang_xu_ly===`su-co-${item.chu_ky}`}><span className={`status-badge ${item.trang_thai_xu_ly==="DA_KHAC_PHUC"?"active":"locked"}`}>{item.trang_thai_xu_ly.replaceAll("_"," ")}</span><b>{item.van_de.join(" · ") || "Không có mô tả"}</b><small>#{item.chu_ky.slice(0,12)} · {item.so_su_kien} sự kiện · {item.thoi_luong_phut} phút</small><em>{item.nguoi_khac_phuc_ten ? `Khắc phục: ${item.nguoi_khac_phuc_ten}` : item.nguoi_tiep_nhan_ten ? `Xử lý: ${item.nguoi_tiep_nhan_ten}` : new Date(item.gan_nhat).toLocaleString("vi-VN")}</em></button>)}{su_co_van_hanh.length===0&&<div className="cine-dashboard-empty">Chưa ghi nhận incident có chữ ký.</div>}</div>
-            <div className="cine-incident-detail-v340">{su_co_chon ? <><div><b>Incident #{su_co_chon.chu_ky.slice(0,16)}</b><button type="button" className="cine-btn cine-btn-secondary" onClick={()=>{setSuCoChon(null);setSuCoGhiChu("");}}>Đóng</button></div><p>{su_co_chon.van_de.join(" · ") || "Không có mô tả vấn đề."}</p><div className="cine-incident-meta-v350"><span className={`status-badge ${su_co_chon.trang_thai_xu_ly==="DA_KHAC_PHUC"?"active":"locked"}`}>{su_co_chon.trang_thai_xu_ly.replaceAll("_"," ")}</span><small>{new Date(su_co_chon.bat_dau).toLocaleString("vi-VN")} → {new Date(su_co_chon.gan_nhat).toLocaleString("vi-VN")} · {su_co_chon.thoi_luong_phut} phút</small>{su_co_chon.nguoi_tiep_nhan_ten&&<small>Tiếp nhận: {su_co_chon.nguoi_tiep_nhan_ten}{su_co_chon.tiep_nhan_luc?` · ${new Date(su_co_chon.tiep_nhan_luc).toLocaleString("vi-VN")}`:""}</small>}{su_co_chon.nguoi_khac_phuc_ten&&<small>Khắc phục: {su_co_chon.nguoi_khac_phuc_ten}{su_co_chon.khac_phuc_luc?` · ${new Date(su_co_chon.khac_phuc_luc).toLocaleString("vi-VN")}`:""}</small>}</div><label className="cine-incident-note-v350"><span>Ghi chú xử lý / khắc phục</span><textarea rows={3} value={su_co_ghi_chu} onChange={e=>setSuCoGhiChu(e.target.value)} maxLength={2000} placeholder="Nguyên nhân, thao tác xử lý, kết quả kiểm tra..."/></label><div className="cine-incident-actions-v350">{su_co_chon.trang_thai_xu_ly==="MOI"&&<button type="button" className="cine-btn cine-btn-primary" onClick={()=>void capNhatXuLySuCo("tiep-nhan")} disabled={dang_xu_ly?.startsWith("xu-ly-su-co")}>Tiếp nhận incident</button>}{su_co_chon.trang_thai_xu_ly!=="DA_KHAC_PHUC"&&<button type="button" className="cine-btn cine-btn-success" onClick={()=>void capNhatXuLySuCo("khac-phuc")} disabled={dang_xu_ly?.startsWith("xu-ly-su-co")}>Đánh dấu đã khắc phục</button>}</div><div className="cine-incident-timeline-v340">{su_co_chon.su_kien.map(item=><article key={item.id}><i/><div><b>{item.loai} · {item.trang_thai.replaceAll("_"," ")}</b><span>{new Date(item.ngay_tao).toLocaleString("vi-VN")}</span><small>{item.mo_ta || JSON.stringify(item.chi_tiet)}</small></div></article>)}</div></> : <div className="cine-dashboard-empty">Chọn một incident để xem timeline và xử lý.</div>}</div>
+            <div className="cine-incident-detail-v340">{su_co_chon ? <><div><b>Incident #{su_co_chon.chu_ky.slice(0,16)}</b><span className="cine-incident-head-actions-v360"><button type="button" className="cine-btn cine-btn-secondary" onClick={taiChiTietSuCoExcel} disabled={dang_xu_ly === "xuat-incident-timeline-excel"}>{dang_xu_ly === "xuat-incident-timeline-excel" ? "Đang xuất…" : "Xuất Timeline Excel"}</button><button type="button" className="cine-btn cine-btn-secondary" onClick={()=>{setSuCoChon(null);setSuCoGhiChu("");}}>Đóng</button></span></div><p>{su_co_chon.van_de.join(" · ") || "Không có mô tả vấn đề."}</p><div className="cine-incident-meta-v350"><span className={`status-badge ${su_co_chon.trang_thai_xu_ly==="DA_KHAC_PHUC"?"active":"locked"}`}>{su_co_chon.trang_thai_xu_ly.replaceAll("_"," ")}</span><small>{new Date(su_co_chon.bat_dau).toLocaleString("vi-VN")} → {new Date(su_co_chon.gan_nhat).toLocaleString("vi-VN")} · {su_co_chon.thoi_luong_phut} phút</small>{su_co_chon.nguoi_tiep_nhan_ten&&<small>Tiếp nhận: {su_co_chon.nguoi_tiep_nhan_ten}{su_co_chon.tiep_nhan_luc?` · ${new Date(su_co_chon.tiep_nhan_luc).toLocaleString("vi-VN")}`:""}</small>}{su_co_chon.nguoi_khac_phuc_ten&&<small>Khắc phục: {su_co_chon.nguoi_khac_phuc_ten}{su_co_chon.khac_phuc_luc?` · ${new Date(su_co_chon.khac_phuc_luc).toLocaleString("vi-VN")}`:""}</small>}</div><label className="cine-incident-note-v350"><span>Ghi chú xử lý / khắc phục</span><textarea rows={3} value={su_co_ghi_chu} onChange={e=>setSuCoGhiChu(e.target.value)} maxLength={2000} placeholder="Nguyên nhân, thao tác xử lý, kết quả kiểm tra..."/></label><div className="cine-incident-actions-v350">{su_co_chon.trang_thai_xu_ly==="MOI"&&<button type="button" className="cine-btn cine-btn-primary" onClick={()=>void capNhatXuLySuCo("tiep-nhan")} disabled={dang_xu_ly?.startsWith("xu-ly-su-co")}>Tiếp nhận incident</button>}{su_co_chon.trang_thai_xu_ly!=="DA_KHAC_PHUC"&&<button type="button" className="cine-btn cine-btn-success" onClick={()=>void capNhatXuLySuCo("khac-phuc")} disabled={dang_xu_ly?.startsWith("xu-ly-su-co")}>Đánh dấu đã khắc phục</button>}</div><div className="cine-incident-timeline-v340">{su_co_chon.su_kien.map(item=><article key={item.id}><i/><div><b>{item.loai} · {item.trang_thai.replaceAll("_"," ")}</b><span>{new Date(item.ngay_tao).toLocaleString("vi-VN")}</span><small>{item.mo_ta || JSON.stringify(item.chi_tiet)}</small></div></article>)}</div></> : <div className="cine-dashboard-empty">Chọn một incident để xem timeline và xử lý.</div>}</div>
           </div>
         </div>
 
         <div className="cine-card cine-backup-ops-v310"><div><h3>Backup tự động trên Windows</h3><p>Daily backup có SHA-256, mỗi Chủ nhật giữ thêm weekly snapshot. Mặc định giữ daily 14 ngày và weekly 8 tuần. Backup/restore được ghi vào lịch sử vận hành PostgreSQL.</p></div><div className="cine-backup-command-v310"><code>{String.raw`\.\scripts\backup-db.ps1`}</code><code>{String.raw`\.\scripts\backup-schedule.ps1 -At 02:00`}</code><code>{String.raw`\.\scripts\backup-verify.ps1`}</code><code>{String.raw`\.\scripts\restore-db.ps1 -File .\backups\<ten-file>.dump -XacNhan`}</code></div></div>
         <div className="cine-card cine-ops-history-v320">
           <div className="cine-ops-history-head-v320"><div><h3>Lịch sử vận hành</h3><p>Cursor pagination phù hợp lịch sử hàng trăm nghìn bản ghi mà không trượt trang khi có sự kiện mới.</p></div><div className="cine-ops-history-actions-v330"><span>{lich_su_van_hanh.length} bản ghi đã tải</span><button type="button" className="cine-btn cine-btn-secondary" onClick={taiLichSuVanHanhExcel} disabled={dang_xu_ly === "xuat-van-hanh-excel"}>{dang_xu_ly === "xuat-van-hanh-excel" ? "Đang xuất…" : "Xuất Excel"}</button></div></div>
-          <div className="cine-ops-filter-v320"><label><span>Loại</span><select value={van_hanh_loai} onChange={e=>setVanHanhLoai(e.target.value)}><option value="">Tất cả</option><option value="HEALTH">Health</option><option value="BACKUP">Backup</option><option value="RESTORE">Restore</option><option value="ALERT">Cảnh báo</option></select></label><label><span>Trạng thái</span><select value={van_hanh_trang_thai} onChange={e=>setVanHanhTrangThai(e.target.value)}><option value="">Tất cả</option><option value="TOT">Tốt</option><option value="CANH_BAO">Cảnh báo</option><option value="LOI">Lỗi</option><option value="THANH_CONG">Thành công</option><option value="THAT_BAI">Thất bại</option></select></label><button type="button" className="cine-btn cine-btn-primary" onClick={()=>void taiLichSuVanHanh(true)}>Lọc lịch sử</button></div>
+          <div className="cine-ops-filter-v320"><label><span>Loại</span><select value={van_hanh_loai} onChange={e=>setVanHanhLoai(e.target.value)}><option value="">Tất cả</option><option value="HEALTH">Health</option><option value="BACKUP">Backup</option><option value="RESTORE">Restore</option><option value="ALERT">Cảnh báo</option><option value="MAINTENANCE">Bảo trì</option></select></label><label><span>Trạng thái</span><select value={van_hanh_trang_thai} onChange={e=>setVanHanhTrangThai(e.target.value)}><option value="">Tất cả</option><option value="TOT">Tốt</option><option value="CANH_BAO">Cảnh báo</option><option value="LOI">Lỗi</option><option value="THANH_CONG">Thành công</option><option value="THAT_BAI">Thất bại</option></select></label><button type="button" className="cine-btn cine-btn-primary" onClick={()=>void taiLichSuVanHanh(true)}>Lọc lịch sử</button></div>
           <div className="cine-ops-list-v320">{lich_su_van_hanh.map(item=><article key={item.id}><span className={`status-badge ${["TOT","THANH_CONG"].includes(item.trang_thai)?"active":"locked"}`}>{item.trang_thai.replaceAll("_"," ")}</span><div><b>{item.loai} · {item.mo_ta || "Sự kiện vận hành"}</b><small>{new Date(item.ngay_tao).toLocaleString("vi-VN")}{item.chu_ky_canh_bao ? ` · #${item.chu_ky_canh_bao.slice(0,12)}` : ""}</small><code>{JSON.stringify(item.chi_tiet)}</code>{item.chu_ky_canh_bao&&<button type="button" className="cine-link-button-v340" onClick={()=>void moChiTietSuCo(item.chu_ky_canh_bao!)}>Xem chuỗi sự cố →</button>}</div></article>)}{lich_su_van_hanh.length===0&&<div className="cine-dashboard-empty">Chưa có lịch sử vận hành phù hợp.</div>}</div>
           <div className="cine-pagination-v320 cine-cursor-pagination-v340"><span>Đã tải <b>{lich_su_van_hanh.length}</b> bản ghi.</span>{van_hanh_cursor.co_them ? <button type="button" className="cine-btn cine-btn-secondary" onClick={()=>void taiLichSuVanHanh(false)}>Tải thêm lịch sử</button> : <small>Đã đến cuối danh sách.</small>}</div>
         </div>

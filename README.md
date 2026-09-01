@@ -1,6 +1,6 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v3.5.4** — 01/09/2026
+> Phiên bản hiện tại: **v3.6.4** — 01/09/2026
 
 NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **frontend Next.js** và **backend NestJS/Fastify** kết nối **PostgreSQL qua Prisma**.
 
@@ -19,6 +19,17 @@ NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **fro
 
 
 ## Điểm chính bản hiện tại
+
+- **v3.6.4 sửa lỗi Runtime E2E dừng giả tại bước Ops dù API/Docker v3.6.3 đã chạy đúng**: `e2e-runtime-v363.ps1` kế thừa nhầm assertion `health.phien_ban -eq "3.6.1"` trong khi Admin health thực tế trả `3.6.3`. Bản mới đồng bộ cả public health `v3.6.4` và Admin health `3.6.4`, đồng thời sửa assertion lịch sử tương ứng ở v3.6.2/v3.6.3 để không tái hiện lỗi khi chạy script versioned.
+- Runtime/browser smoke chuyển sang `scripts/e2e-runtime-v364.ps1` / `scripts/e2e-browser-v364.mjs`; CI dùng đúng script v3.6.4. **Không có migration database mới**; migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`.
+- **v3.6.3 vá healthcheck Docker Web bị `unhealthy` sau khi v3.6.2 đã sửa đúng đường dẫn standalone**: Next standalone đọc biến môi trường `HOSTNAME`; trong container biến này có thể là hostname/container-ID nên server bind vào interface container thay vì loopback. Healthcheck v3.6.2 lại gọi `127.0.0.1:3000`, dẫn tới false-negative dù `server.js` tồn tại và image build thành công.
+- Runtime Web nay khởi động bằng `HOSTNAME=0.0.0.0 PORT=3000 exec node server.js`, giữ `WORKDIR /app/apps/web` và toàn bộ cây standalone/static/public của v3.6.2. Healthcheck loopback tiếp tục được giữ để kiểm tra thật HTTP readiness; Caddy HTTPS vẫn chỉ khởi động khi Web `service_healthy`. Security gate npm/allowScripts/fsevents của v3.6.1 được giữ nguyên.
+- **v3.6.1 vá Docker strict install-script cho dependency tùy chọn `fsevents` và giữ nguyên Maintenance Window của v3.6.0**: cấu hình bảo trì vẫn lưu trong `cau_hinh_he_thong`, Admin bật/tắt, chọn thời gian bắt đầu/kết thúc và lý do. Trong thời gian bảo trì, job cảnh báo vận hành tự động tạm ngưng để không tạo spam giả; thao tác kiểm tra/gửi thủ công vẫn được phép. Health API trả trạng thái `dang_bao_tri` / `sap_bao_tri` để UI hiển thị rõ.
+- **SLO có Error Budget 30 ngày và burn-rate 1h / 6h / 24h** cho cả SLA lẫn Uptime. Burn-rate > 1x nghĩa là tốc độ tiêu ngân sách lỗi đang vượt tốc độ bền vững; các cửa sổ ngắn được đưa vào cảnh báo xu hướng để phát hiện suy giảm sớm hơn trước khi KPI 30/90 ngày tụt mạnh.
+- **Incident/Timeline xuất Excel**: có endpoint/file riêng cho danh sách incident tổng hợp và timeline chi tiết của một chữ ký. Tab Hệ thống có nút `Xuất Incident Excel` và `Xuất Timeline Excel`.
+- Chuẩn bị **Webhook cảnh báo ngoài** bằng `SYSTEM_ALERT_WEBHOOK_ENABLED`, `SYSTEM_ALERT_WEBHOOK_URL`, `SYSTEM_ALERT_WEBHOOK_BEARER_TOKEN`. Token chỉ đọc từ môi trường và không trả ra Admin UI; production chỉ chấp nhận HTTPS. Webhook dùng payload `nhienin3d.system.alert` và đi cùng cơ chế silence/escalation hiện tại.
+- Browser E2E v3.6.3 cập nhật SLO, reload kiểm tra persistence rồi restore cấu hình ban đầu. Incident acknowledge/resolve chỉ mutate synthetic incident khi chạy CI hoặc bật `E2E_MUTATE_INCIDENT=true`, tránh thay đổi incident thật khi chạy local. Runtime E2E kiểm tra Maintenance/Error Budget/Burn-rate/Incident Excel/Webhook và CI seed synthetic incident riêng cho browser test.
+- **Không có migration database mới ở v3.6.3**: maintenance dùng bảng cấu hình JSON hiện có, error budget/burn-rate tính từ `lich_su_van_hanh`, Incident Excel đọc bảng `su_co_van_hanh`. Migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`.
 
 - **v3.5.4 sửa regression khi nâng cấp bằng cách chép source đè thư mục cũ**: `apps/api/.npmrc` hoặc `apps/web/.npmrc` từ v3.5.2 có thể còn sót dù v3.5.3 archive không còn chứa các file này. `scripts/don-dep-legacy.mjs` nay tự xóa hai file policy legacy trước khi chạy test, nên regression root-only `allowScripts` không còn fail giả ở dòng `existsSync(...)`.
 - Root `allowScripts` và `.npmrc` vẫn là policy duy nhất; không nới security gate và `npm audit` vẫn phải đạt 0 High. Runtime/browser E2E chuyển sang `e2e-runtime-v354.ps1` / `e2e-browser-v354.mjs`. **Không có migration database mới ở v3.5.4**; migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`.
@@ -1374,13 +1385,67 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 
 ---
 
+## v3.6.0 — 01/09/2026
+
+- Thêm `GET/POST /api/v1/quan-tri/he-thong/bao-tri` để quản lý một maintenance window có lịch trong `cau_hinh_he_thong`, gồm bật/tắt, bắt đầu, kết thúc và lý do. Backend validate thời gian kết thúc phải sau bắt đầu và giới hạn mỗi cửa sổ tối đa 30 ngày; mọi thay đổi ghi Audit và lịch sử `MAINTENANCE`.
+- Job cảnh báo hệ thống tự động kiểm tra maintenance trước khi chạy health/SLO alert. Khi cửa sổ đang hoạt động, scheduler trả trạng thái im lặng và không gửi email/webhook; thao tác kiểm tra/gửi thủ công vẫn có thể chạy khi Admin chủ động yêu cầu. Health Admin trả thêm trạng thái maintenance và webhook.
+- `GET /he-thong/sla` bổ sung **error budget 30 ngày** cho SLA/Uptime và **burn-rate 1h, 6h, 24h**. Burn-rate >= 1x được đưa vào danh sách cảnh báo SLO khi bật cảnh báo xu hướng; UI hiển thị ngân sách còn lại, phần đã tiêu và tốc độ burn theo từng cửa sổ.
+- Thêm `GET /he-thong/su-co/excel` và `GET /he-thong/su-co/:chu_ky/excel` để xuất danh sách Incident và Timeline chi tiết ra XLSX, sử dụng bộ tạo Excel nội bộ hiện có, không thêm dependency.
+- Chuẩn bị kênh webhook ngoài qua `SYSTEM_ALERT_WEBHOOK_ENABLED`, `SYSTEM_ALERT_WEBHOOK_URL`, `SYSTEM_ALERT_WEBHOOK_BEARER_TOKEN`; production yêu cầu HTTPS và Bearer token không bao giờ được phản hồi qua API/UI. Khi email cảnh báo được gửi, hệ thống đồng thời phát payload `nhienin3d.system.alert` tới webhook nếu cấu hình hợp lệ.
+- Thêm `scripts/e2e-runtime-v360.ps1` kiểm tra maintenance/error budget/burn-rate/Incident Excel/webhook. Trong CI, runtime script seed một synthetic incident riêng; `scripts/e2e-browser-v360.mjs` dùng synthetic incident đó để kiểm tra `MOI → DA_TIEP_NHAN → DA_KHAC_PHUC` và persistence sau reload. Khi chạy local, mutation incident mặc định bị skip để bảo vệ dữ liệu thật.
+- Browser E2E luôn kiểm tra cập nhật SLO + reload persistence và restore lại SLO ban đầu trong `finally`. CI chuyển runtime/browser smoke lên v3.6.0.
+- Không có migration database mới; migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`. Đồng bộ Root/API/Web/Health/OpenAPI lên **v3.6.0**.
+- Quy trình release: `npm install` → `npm audit` → `npm test` → `npm run typecheck` → `npm run build` → `./scripts/backup-db.ps1` → `docker compose up -d --build --remove-orphans` → `docker compose ps` → `./scripts/e2e-runtime-v360.ps1` → `npm run e2e:browser` → `./scripts/release.ps1 v3.6.0`.
+
+---
+
+## v3.6.1 — 01/09/2026
+
+- Sửa lỗi Docker Web trên Linux dừng với `ESTRICTALLOWSCRIPTS` vì dependency tùy chọn `fsevents@2.3.2` và `fsevents@2.3.3` có install script nhưng chưa có quyết định trong allowlist gốc. Hai phiên bản `fsevents` được **deny tường minh** (`false`) vì chỉ phục vụ macOS file watching và không cần chạy native build trong Linux container.
+- Giữ `strict-allow-scripts=true`; không dùng `--dangerously-allow-all-scripts`, không tắt security gate và không cho phép install script `fsevents`. Regression v3.5.2 được đổi từ so sánh toàn bộ object sang kiểm tra các quyết định bảo mật bắt buộc để các patch sau có thể thêm deny/allow đã review.
+- Runtime/browser smoke chuyển sang `scripts/e2e-runtime-v361.ps1` / `scripts/e2e-browser-v361.mjs`; preflight tiếp tục phát hiện container cũ nếu một lần Docker build trước đó thất bại.
+- Không có migration database mới. Migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`. Đồng bộ Root/API/Web/Health/OpenAPI lên **v3.6.1**.
+- Quy trình release: `npm install` → `npm audit` → `npm test` → `npm run typecheck` → `npm run build` → `./scripts/backup-db.ps1` → `docker compose up -d --build --remove-orphans` → `docker compose ps` → `./scripts/e2e-runtime-v361.ps1` → `npm run e2e:browser` → `./scripts/release.ps1 v3.6.1`.
+
+---
+
+## v3.6.2 — 01/09/2026
+
+- Sửa lỗi image Web v3.6.1 build thành công nhưng container `nhienin3d-web` restart với `MODULE_NOT_FOUND: Cannot find module '/app/server.js'`. Với Next.js `output: "standalone"` trong npm workspace, standalone giữ cấu trúc monorepo và entrypoint nằm tại `apps/web/server.js`; Dockerfile cũ copy toàn bộ cây vào `/app` nhưng lại chạy từ `/app`.
+- Runtime stage Web nay copy `.next/static` vào `/app/apps/web/.next/static`, `public` vào `/app/apps/web/public`, kiểm tra `RUN test -f /app/apps/web/server.js`, chuyển `WORKDIR /app/apps/web` rồi mới `CMD ["node", "server.js"]`. Cách này giữ đúng đường dẫn module/node_modules mà Next standalone tạo ra.
+- `docker-compose.yml` thêm healthcheck HTTP nội bộ cho Web và HTTPS phụ thuộc `service_healthy`, giúp container lỗi bị phát hiện rõ trước khi Caddy phục vụ request. Giữ nguyên strict `allowScripts`, deny `fsevents`, Docker npm audit và toàn bộ tính năng Maintenance/Error Budget/Burn-rate/Incident Excel/Webhook của v3.6.0.
+- Runtime/browser smoke chuyển sang `scripts/e2e-runtime-v362.ps1` / `scripts/e2e-browser-v362.mjs`; CI cũng dùng nhãn/version v3.6.2. Không có migration database mới; migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`. Đồng bộ Root/API/Web/Health/OpenAPI lên **v3.6.2**.
+- Quy trình release: `npm install` → `npm audit` → `npm test` → `npm run typecheck` → `npm run build` → `./scripts/backup-db.ps1` → `docker compose up -d --build --remove-orphans` → `docker compose ps` → `./scripts/e2e-runtime-v362.ps1` → `npm run e2e:browser` → `./scripts/release.ps1 v3.6.2`.
+
+---
+
+
+## v3.6.3 — 01/09/2026
+
+- Sửa healthcheck Web v3.6.2 bị `unhealthy` dù image đã build đúng và `/app/apps/web/server.js` tồn tại. Next standalone đọc biến `HOSTNAME` của container; khi nó bind vào hostname/container-IP, healthcheck gọi `127.0.0.1:3000` có thể không chạm được server và Compose chặn HTTPS với `dependency web failed to start`.
+- Runtime Web nay khởi động bằng `HOSTNAME=0.0.0.0 PORT=3000 exec node server.js`, buộc Next lắng nghe trên mọi interface nhưng vẫn giữ `WORKDIR /app/apps/web`, cấu trúc standalone monorepo và healthcheck loopback. HTTPS tiếp tục phụ thuộc `service_healthy` để phát hiện lỗi sớm.
+- Runtime/browser smoke chuyển sang `scripts/e2e-runtime-v363.ps1` / `scripts/e2e-browser-v363.mjs`; CI đồng bộ nhãn/version v3.6.3. Không có migration database mới; migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`. Đồng bộ Root/API/Web/Health/OpenAPI lên **v3.6.3**.
+- Quy trình release: `npm install` → `npm audit` → `npm test` → `npm run typecheck` → `npm run build` → `./scripts/backup-db.ps1` → `docker compose up -d --build --remove-orphans` → `docker compose ps` → `./scripts/e2e-runtime-v363.ps1` → `npm run e2e:browser` → `./scripts/release.ps1 v3.6.3`.
+
+---
+
+## v3.6.4 — 01/09/2026
+
+- Sửa lỗi `scripts/e2e-runtime-v363.ps1` báo `Health endpoint chưa lên v3.6.3` dù preflight public health đã xác nhận API v3.6.3. Nguyên nhân là assertion Admin health bị kế thừa sai từ v3.6.1: kiểm tra `health.phien_ban -eq "3.6.1"` thay vì version hiện tại.
+- `e2e-runtime-v364.ps1` nay đối chiếu hai contract rõ ràng: public `/suc-khoe` phải trả `v3.6.4`, còn Admin `/quan-tri/he-thong/suc-khoe` phải trả `3.6.4`. Đồng thời sửa assertion version trong script lịch sử v3.6.2 và v3.6.3 để tránh false-negative tương tự.
+- Thêm regression test khóa đúng hai version contract, CI chuyển sang runtime/browser E2E v3.6.4. Giữ nguyên Docker Web healthy fix v3.6.3, strict allowScripts/fsevents, Maintenance Window, Error Budget/Burn-rate, Incident Excel và Webhook.
+- Không có migration database mới; migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`. Đồng bộ Root/API/Web/Health/OpenAPI lên **v3.6.4**.
+- Quy trình release: `npm install` → `npm audit` → `npm test` → `npm run typecheck` → `npm run build` → `./scripts/backup-db.ps1` → `docker compose up -d --build --remove-orphans` → `docker compose ps` → `./scripts/e2e-runtime-v364.ps1` → `npm run e2e:browser` → `./scripts/release.ps1 v3.6.4`.
+
+---
+
 # Lộ trình tiếp theo
 
-## v3.6.0
+## v3.7.0
 
-- Thêm maintenance window để chủ động tạm ngưng cảnh báo trong thời gian bảo trì có lịch.
-- Bổ sung error budget theo SLO và burn-rate 1h/6h/24h để phát hiện suy giảm sớm hơn.
-- Cho phép xuất Incident/Timeline ra Excel và chuẩn bị webhook tích hợp hệ thống thông báo ngoài.
-- Mở rộng browser E2E cho thao tác cập nhật SLO, acknowledge/resolve incident và kiểm tra persistence sau reload.
+- Hỗ trợ nhiều maintenance window và lịch lặp theo ngày/tuần thay vì một cửa sổ hiện tại.
+- Nâng burn-rate thành multi-window alert policy có ngưỡng cấu hình, theo dõi MTTA/MTTR và error-budget policy theo từng loại dịch vụ.
+- Mở rộng webhook thành delivery log + retry/backoff + HMAC signature để tích hợp Slack/Teams/Discord/gateway nội bộ an toàn hơn.
+- Bổ sung trang Ops dashboard riêng với filter incident theo thời gian/trạng thái và export tổng hợp SLO/Incident.
 
 ---
