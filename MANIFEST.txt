@@ -190,6 +190,7 @@ scripts/cap-nhat.ps1
 scripts/don-dep-legacy.mjs
 scripts/e2e-runtime-v320.ps1
 scripts/e2e-runtime-v340.ps1
+scripts/e2e-runtime-v341.ps1
 scripts/https-local-bo-tin-cay.ps1
 scripts/https-local.ps1
 scripts/khoi-tao-github.ps1
@@ -209,3 +210,4 @@ tests/v330-audit-ops.test.mjs
 tests/v331-session-revenue.test.mjs
 tests/v332-revenue-delivery-reconcile.test.mjs
 tests/v340-incident-sla-cursor.test.mjs
+tests/v341-runtime-secure-cookie.test.mjs

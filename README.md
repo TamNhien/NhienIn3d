@@ -1,6 +1,6 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v3.4.0** — 31/08/2026
+> Phiên bản hiện tại: **v3.4.1** — 01/09/2026
 
 NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **frontend Next.js** và **backend NestJS/Fastify** kết nối **PostgreSQL qua Prisma**.
 
@@ -19,6 +19,10 @@ NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **fro
 
 
 ## Điểm chính bản hiện tại
+
+- **v3.4.1 vá Runtime Docker E2E bị 401 sau đăng nhập Admin trên GitHub Actions**: Docker phát access cookie có cờ `Secure` vì `WEB_PUBLIC_URL=https://localhost:3000`, trong khi job smoke chỉ gọi trực tiếp API qua `http://localhost:3001`; PowerShell vì vậy không tự gửi cookie Secure ở request kế tiếp.
+- `scripts/e2e-runtime-v341.ps1` đọc `nhienin3d_phien` từ header `Set-Cookie` sau login và gắn cookie tường minh cho các request loopback nội bộ. Cách này chỉ dùng trong smoke test; chính sách cookie Secure của ứng dụng không bị hạ xuống. `e2e-runtime-v340.ps1` cũng được vá tương thích để có thể chạy lại trên nhánh v3.4.x.
+- CI chuyển sang `scripts/e2e-runtime-v341.ps1`; bổ sung regression test khóa đúng lỗi `login PASS -> /quan-tri/don-hang 401`. **Không có migration database mới** ở v3.4.1.
 
 - v3.4.0 nâng cấp vận hành: Admin cấu hình trực tiếp chu kỳ/backup threshold/silence/escalation/người nhận cảnh báo; cấu hình lưu PostgreSQL, áp dụng timer ngay và audit đầy đủ trước/sau.
 - Health/Alert được gắn **chữ ký SHA-256 của tập vấn đề** để nhóm thành chuỗi sự cố; tab Hệ thống có danh sách incident, timeline chi tiết và thời lượng.
@@ -1291,6 +1295,16 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 - Thêm `scripts/e2e-runtime-v340.ps1`: chạy regression backup/SHA/restore v3.2.0, đăng nhập Admin bằng cookie session, đọc đơn hàng/sản phẩm, preview import kho CSV không ghi tồn, kiểm tra phiếu nhập + xuất Excel tồn kho và xác minh các endpoint config/SLA/incident/cursor. CI Docker chuyển sang script v3.4.0.
 - Vì source release không kèm `package-lock.json`, CI/Release dùng `npm install` thay cho `npm ci`, thống nhất với quy trình release Windows hiện tại.
 - Đồng bộ Root/API/Web/Health/OpenAPI lên **v3.4.0**. Quy trình release: `npm install` → `npm test` → `npm run typecheck` → `npm run build` → `./scripts/backup-db.ps1` → `docker compose up -d --build --remove-orphans` → `docker compose ps` → `./scripts/e2e-runtime-v340.ps1` → `./scripts/release.ps1 v3.4.0`.
+
+---
+
+## v3.4.1 — 01/09/2026
+
+- Fix GitHub Actions `runtime-docker`: login Admin trả 200 nhưng request `GET /api/v1/quan-tri/don-hang` bị 401 do access cookie `nhienin3d_phien` có cờ `Secure` và PowerShell không gửi cookie đó khi smoke test gọi trực tiếp `http://localhost:3001`.
+- `scripts/e2e-runtime-v341.ps1` dùng `Invoke-WebRequest` ở bước login để đọc `Set-Cookie`, lấy access JWT cookie và gắn `Cookie: nhienin3d_phien=...` tường minh cho các request loopback Admin. Vẫn kiểm tra đầy đủ JWT, session PostgreSQL và quyền ADMIN; không thay đổi cấu hình cookie production.
+- Vá tương tự cho `scripts/e2e-runtime-v340.ps1` để người dùng chạy lại script cũ không còn gặp 401; health check của script v3.4.0 chấp nhận các patch release `3.4.x`.
+- CI chuyển runtime smoke sang `scripts/e2e-runtime-v341.ps1`; thêm regression test cho chính lỗi Secure-cookie/HTTP-loopback.
+- Không có migration database mới. Đồng bộ Root/API/Web/Health/OpenAPI lên **v3.4.1**. Quy trình release: `npm install` → `npm test` → `npm run typecheck` → `npm run build` → `./scripts/backup-db.ps1` → `docker compose up -d --build --remove-orphans` → `docker compose ps` → `./scripts/e2e-runtime-v341.ps1` → `./scripts/release.ps1 v3.4.1`.
 
 ---
 
