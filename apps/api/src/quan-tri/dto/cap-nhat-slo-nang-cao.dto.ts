@@ -1,4 +1,4 @@
-import { IsArray, IsObject } from "class-validator";
+import { IsArray, IsObject, IsOptional } from "class-validator";
 
 export class CapNhatSloNangCaoDto {
   @IsArray()
@@ -6,4 +6,8 @@ export class CapNhatSloNangCaoDto {
 
   @IsObject()
   service_targets!: Record<string, unknown>;
+
+  @IsOptional()
+  @IsArray()
+  endpoint_checks?: Array<Record<string, unknown>>;
 }

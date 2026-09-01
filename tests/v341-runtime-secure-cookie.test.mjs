@@ -14,5 +14,5 @@ test("v3.4.1 runtime E2E khong mat Secure access cookie khi CI goi HTTP loopback
 
 test("v3.4.1 CI dung runtime script da va Secure-cookie", () => {
   const ci = doc(".github/workflows/ci.yml");
-  assert.match(ci, /run: \.\/scripts\/e2e-runtime-v(?:341|35[01234]|36[01234567]|37[012])\.ps1/);
+  assert.match(ci, /run: \.\/scripts\/e2e-runtime-v(?:341|35[01234]|36[01234567]|37[012]|380)\.ps1/);
 });

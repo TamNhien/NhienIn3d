@@ -18,13 +18,13 @@ test("v3.6.3 healthcheck fix duoc giu khi nang patch tiep theo", () => {
   const runtime = readFileSync("scripts/e2e-runtime-v363.ps1", "utf8");
   const browser = readFileSync("scripts/e2e-browser-v363.mjs", "utf8");
   const ci = readFileSync(".github/workflows/ci.yml", "utf8");
-  assert.match(root.version, /^(?:3\.6\.[34567]|3\.7\.[012])$/);
+  assert.match(root.version, /^(?:3\.6\.[34567]|3\.7\.[012]|3\.8\.0)$/);
   assert.equal(api.version, root.version);
   assert.equal(web.version, root.version);
-  assert.match(root.scripts["e2e:browser"], /^node scripts\/e2e-browser-v(?:36[34567]|37[012])\.mjs$/);
+  assert.match(root.scripts["e2e:browser"], /^node scripts\/e2e-browser-v(?:36[34567]|37[012]|380)\.mjs$/);
   assert.match(runtime, /không phải v3\.6\.3/);
   assert.match(runtime, /health\.phien_ban -eq "3\.6\.3"/);
   assert.match(browser, /không phải v3\.6\.3/);
-  assert.match(ci, /e2e-runtime-v(?:36[34567]|37[012])\.ps1/);
-  assert.match(ci, /Browser E2E Admin HTTPS v(?:3\.6\.[34567]|3\.7\.[012])/);
+  assert.match(ci, /e2e-runtime-v(?:36[34567]|37[012]|380)\.ps1/);
+  assert.match(ci, /Browser E2E Admin HTTPS v(?:3\.6\.[34567]|3\.7\.[012]|3\.8\.0)/);
 });

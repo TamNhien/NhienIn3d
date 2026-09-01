@@ -9,7 +9,7 @@ test("v3.7.0 Web co Ops Dashboard rieng", () => {
   assert.match(page, /Ops Dashboard/);
   assert.match(page, /Multi-window burn-rate policy/);
   assert.match(page, /Error budget theo dịch vụ/);
-  assert.match(page, /Webhook delivery log/);
+  assert.match(page, /Webhook delivery(?: log| \+ dead-letter)/);
   assert.match(page, /Maintenance windows/);
 });
 

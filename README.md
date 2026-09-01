@@ -1,6 +1,6 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v3.7.2** — 01/09/2026
+> Phiên bản hiện tại: **v3.8.0** — 01/09/2026
 
 NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **frontend Next.js** và **backend NestJS/Fastify** kết nối **PostgreSQL qua Prisma**.
 
@@ -16,18 +16,14 @@ NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **fro
 - Container: Docker Compose.
 - CI/Release: GitHub Actions + GitHub CLI.
 
-
-
 ## Điểm chính bản hiện tại
 
-- **v3.7.2 production-build stabilization**: sửa CSS Module của Ops Dashboard để selector `table`/`th`/`td` luôn được scope qua local class `.tableWrap`, tương thích Next.js 16/Turbopack pure-selector rule. Giữ nguyên fix Prisma JSON và null-safe Admin của v3.7.1.
-- Runtime/browser smoke hiện dùng `scripts/e2e-runtime-v372.ps1` / `scripts/e2e-browser-v372.mjs`; CI/Health/OpenAPI đồng bộ v3.7.2.
-- **Ops Dashboard riêng tại `/quan-tri/ops`**: gom SLO/Uptime, error budget, multi-window burn-rate, MTTA/MTTR, incident theo bộ lọc thời gian/trạng thái, maintenance và webhook delivery log vào một màn hình vận hành độc lập. Có nút **Xuất Ops Excel** để xuất tổng hợp SLO + service budget + burn policy + incident.
-- **Nhiều maintenance window + lịch lặp**: ngoài API tương thích `/he-thong/bao-tri`, v3.7.0 thêm CRUD `/he-thong/bao-tri/danh-sach`, cho phép nhiều cửa sổ, bật/tắt riêng, lặp `HANG_NGAY` hoặc `HANG_TUAN`. Alert scheduler tự nhận window đang active và suppress cảnh báo tự động như trước; manual check vẫn được phép.
-- **SLO nâng cao**: `GET/POST /he-thong/cau-hinh-slo-nang-cao` lưu multi-window burn-rate policy trong `cau_hinh_he_thong`, mặc định 1h/14.4x, 6h/6x, 24h/1x. `GET /he-thong/sla` trả thêm `burn_rate_policy`, error budget theo `api/postgresql/backup/smtp`, cùng **MTTA/MTTR + P95** từ bảng tổng hợp incident.
-- **Webhook delivery v3.7.0**: webhook được tách khỏi điều kiện email, nên nếu SMTP không sẵn sàng nhưng webhook hợp lệ thì cảnh báo vẫn có thể phát. Có retry/backoff cấu hình bằng `SYSTEM_ALERT_WEBHOOK_MAX_RETRIES` / `SYSTEM_ALERT_WEBHOOK_BACKOFF_MS`, HMAC SHA-256 qua `SYSTEM_ALERT_WEBHOOK_SECRET`, header `x-nhienin3d-signature`, và mỗi attempt được ghi `WEBHOOK` vào lịch sử vận hành; xem qua `/he-thong/webhook/delivery`.
-- Incident list/Excel hỗ trợ thêm `tu_ngay`, `den_ngay`, `trang_thai_xu_ly`; Ops Excel dùng cùng bộ lọc. Không tạo bảng mới: maintenance/SLO policy dùng `cau_hinh_he_thong`, delivery log dùng `lich_su_van_hanh`, MTTA/MTTR dùng `su_co_van_hanh`.
-- Runtime/browser smoke của feature v3.7.0 được giữ làm regression; bản hiện tại chạy `scripts/e2e-runtime-v372.ps1` / `scripts/e2e-browser-v372.mjs`. Browser E2E kiểm tra thêm `/quan-tri/ops`; Runtime E2E kiểm tra maintenance list, SLO policy, service budgets, MTTA/MTTR, webhook delivery và Ops Excel. **Không có migration database mới**; migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`.
+- **Endpoint SLO thực tế + time-weighted availability**: v3.8.0 probe các endpoint HTTP cấu hình được, mặc định public health/danh mục/sản phẩm, ghi `SLO_ENDPOINT` và tính availability/error budget theo thời lượng giữa các sample. Scheduler riêng dùng `SYSTEM_SLO_ENDPOINT_INTERVAL_MINUTES` (mặc định 5 phút), không phụ thuộc việc bật email alert.
+- **Ops Dashboard v3.8.0** tại `/quan-tri/ops`: so sánh SLO 7/30/90 ngày, bảng endpoint SLO time-weighted, burn-rate timeline 30 ngày, annotation maintenance, MTTA/MTTR, service budget và editor endpoint probe. Ops Excel xuất thêm comparison 7/30/90 và endpoint SLO.
+- **Webhook adapter + dead-letter/replay**: `SYSTEM_ALERT_WEBHOOK_ADAPTER` hỗ trợ `GENERIC`, `SLACK`, `TEAMS`, `DISCORD`; giữ retry/backoff/HMAC. Delivery thất bại cuối cùng được ghi `WEBHOOK_DLQ`; Admin xem/replay từ Ops Dashboard, replay được audit bằng `WEBHOOK_REPLAY`.
+- **Incident timeline lớn**: `GET /he-thong/su-co/:chu_ky/timeline` hỗ trợ cursor, kích thước trang và PostgreSQL full-text search trên mô tả/JSON; UI có tìm kiếm và tải thêm.
+- Maintenance multi-window/recurring, multi-window burn policy, service budgets, Incident Excel và các fix v3.7.x được giữ nguyên. **Không có migration database mới**; migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`.
+- Runtime/browser smoke hiện dùng `scripts/e2e-runtime-v380.ps1` / `scripts/e2e-browser-v380.mjs`; CI/Health/OpenAPI đồng bộ **v3.8.0**.
 
 ## Tài khoản và bảo mật
 
@@ -1378,11 +1374,20 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 - Runtime/Browser E2E, CI, Health/OpenAPI chuyển sang v3.7.2. Không có migration database mới; migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`.
 - Quy trình release: `npm install` → `npm audit` → `npm test` → `npm run typecheck` → `npm run build` → `./scripts/backup-db.ps1` → `docker compose up -d --build --remove-orphans` → `docker compose ps` → `./scripts/e2e-runtime-v372.ps1` → `npm run e2e:browser` → `./scripts/release.ps1 v3.7.2`.
 
+## v3.8.0 — 01/09/2026
+
+- Thêm endpoint SLO probe HTTP thật với scheduler riêng `SYSTEM_SLO_ENDPOINT_INTERVAL_MINUTES`; endpoint list/target/timeout cấu hình qua SLO policy hiện có. `GET /he-thong/sla` trả `endpoint_slo.time_weighted`, availability, downtime và error budget theo endpoint.
+- Ops Dashboard thêm comparison 7/30/90, burn-rate timeline, maintenance annotation và endpoint SLO editor; Ops Excel xuất cùng dữ liệu comparison/endpoint time-weighted.
+- Webhook thêm adapter preset `GENERIC/SLACK/TEAMS/DISCORD`, dead-letter `WEBHOOK_DLQ` khi hết retry và API/UI replay có audit `WEBHOOK_REPLAY`.
+- Incident timeline thêm cursor pagination và PostgreSQL full-text search; UI Ops có search/tải thêm timeline thay vì phải nạp tối đa 1000 sự kiện một lần.
+- Runtime/Browser E2E, CI, Health/OpenAPI chuyển sang v3.8.0. Không có migration database mới; migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`.
+- Quy trình release: `npm install` → `npm audit` → `npm test` → `npm run typecheck` → `npm run build` → `./scripts/backup-db.ps1` → `docker compose up -d --build --remove-orphans` → `docker compose ps` → `./scripts/e2e-runtime-v380.ps1` → `npm run e2e:browser` → `./scripts/release.ps1 v3.8.0`.
+
 # Lộ trình tiếp theo
 
-## v3.8.0
+## v3.9.0
 
-- Phân loại SLO theo service endpoint thực tế thay vì chỉ suy luận từ health snapshot; thêm time-weighted availability cho cửa sổ dài.
-- Webhook adapter preset cho Slack/Teams/Discord và dead-letter/replay delivery thất bại từ Ops Dashboard.
-- Incident timeline cursor pagination và search/full-text cho lịch sử vận hành lớn.
-- Dashboard Ops thêm biểu đồ burn-rate theo thời gian, annotation maintenance và comparison 7/30/90 ngày.
+- Nâng endpoint probe lên HTTP method/header/auth template, latency SLI và rolling percentile/histogram thay vì chỉ availability.
+- Dead-letter lifecycle: retention, acknowledge, bulk replay và idempotency/replay policy cho webhook gateway lớn.
+- Tối ưu incident full-text cho dữ liệu lớn bằng index/search vector và aggregate/materialized metrics cho Ops Dashboard.
+- SLO policy maintenance-aware: tùy chọn loại trừ maintenance khỏi availability/error budget và quy tắc time-weighted chi tiết hơn.
