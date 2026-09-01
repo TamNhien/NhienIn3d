@@ -1,6 +1,6 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v3.6.6** — 01/09/2026
+> Phiên bản hiện tại: **v3.6.7** — 01/09/2026
 
 NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **frontend Next.js** và **backend NestJS/Fastify** kết nối **PostgreSQL qua Prisma**.
 
@@ -20,8 +20,8 @@ NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **fro
 
 ## Điểm chính bản hiện tại
 
-- **v3.6.6 sửa GitHub Release build/push Web image thất bại vì sai Docker build context**: `apps/web/Dockerfile` từ v3.5.3 đã được thiết kế dùng repository root để đọc `package.json`, `.npmrc`, `apps/api/package.json` và `apps/web`, nhưng `.github/workflows/release.yml` vẫn truyền `context: ./apps/web`. Release workflow nay dùng `context: .` và `file: ./apps/web/Dockerfile`, đồng bộ với Docker Compose/local/CI runtime.
-- Cảnh báo GitHub Actions về Node 20 deprecation không phải nguyên nhân fail vì workflow đã dùng `actions/setup-node@v6` với Node `24.19.0`; warning `punycode` từ action dependency cũng không làm build dừng. Runtime/browser smoke chuyển sang `scripts/e2e-runtime-v366.ps1` / `scripts/e2e-browser-v366.mjs`. **Không có migration database mới**; migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`.
+- **v3.6.7 sửa Browser E2E incident lifecycle bị Playwright strict-mode khi trạng thái `DA TIEP NHAN` / `DA KHAC PHUC` xuất hiện ở nhiều incident**: assertion trạng thái không còn `page.getByText(...)` trên toàn trang mà đọc duy nhất badge trong `.cine-incident-detail-v340 .cine-incident-meta-v350`, tức panel chi tiết synthetic incident đang chọn.
+- Các browser E2E lịch sử v3.6.0-v3.6.6 cũng được backport scoped status assertion để chẩn đoán lại không tái hiện lỗi strict locator. Runtime/browser smoke hiện dùng `scripts/e2e-runtime-v367.ps1` / `scripts/e2e-browser-v367.mjs`. **Không có migration database mới**; migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`.
 - **v3.6.5 sửa Browser E2E GitHub Actions fail `strict mode violation` khi click synthetic incident**: selector cũ `getByText(#<12 ký tự>)` đồng thời khớp chữ ký trong card Incident và một dòng Lịch sử vận hành, nên Playwright từ chối click vì có 2 phần tử. Browser E2E nay scope locator vào `.cine-incident-list-v340 .cine-incident-item-v340`, lọc đúng card theo chữ ký và chủ động kiểm tra phải có đúng 1 match trước khi click.
 - Runtime/browser smoke chuyển sang `scripts/e2e-runtime-v365.ps1` / `scripts/e2e-browser-v365.mjs`; CI dùng đúng v3.6.5. Các browser script versioned v3.6.0-v3.6.4 trong source mới cũng được sửa cùng locator để không tái hiện lỗi khi chạy chẩn đoán lịch sử. **Không có migration database mới**; migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`.
 - **v3.6.4 sửa lỗi Runtime E2E dừng giả tại bước Ops dù API/Docker v3.6.3 đã chạy đúng**: `e2e-runtime-v363.ps1` kế thừa nhầm assertion `health.phien_ban -eq "3.6.1"` trong khi Admin health thực tế trả `3.6.3`. Bản mới đồng bộ cả public health `v3.6.4` và Admin health `3.6.4`, đồng thời sửa assertion lịch sử tương ứng ở v3.6.2/v3.6.3 để không tái hiện lỗi khi chạy script versioned.
@@ -1463,6 +1463,13 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 
 ---
 
+## v3.6.7 — 01/09/2026
+
+- Browser E2E incident lifecycle scope kiểm tra trạng thái vào panel chi tiết synthetic incident đang chọn, tránh Playwright strict-mode khi nhiều card/list/timeline cùng hiển thị `DA TIEP NHAN` hoặc `DA KHAC PHUC`.
+- Backport cùng scoped status assertion cho `e2e-browser-v360.mjs` đến `e2e-browser-v366.mjs`; CI/runtime/browser hiện dùng v3.6.7 và vẫn giữ GitHub Release Web root Docker context từ v3.6.6.
+- Không có migration database mới; migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`.
+- Quy trình release: `npm install` → `npm audit` → `npm test` → `npm run typecheck` → `npm run build` → `./scripts/backup-db.ps1` → `docker compose up -d --build --remove-orphans` → `docker compose ps` → `./scripts/e2e-runtime-v367.ps1` → `npm run e2e:browser` → `./scripts/release.ps1 v3.6.7`.
+
 # Lộ trình tiếp theo
 
 ## v3.7.0
@@ -1472,4 +1479,3 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 - Mở rộng webhook thành delivery log + retry/backoff + HMAC signature để tích hợp Slack/Teams/Discord/gateway nội bộ an toàn hơn.
 - Bổ sung trang Ops dashboard riêng với filter incident theo thời gian/trạng thái và export tổng hợp SLO/Incident.
 
----

@@ -277,7 +277,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const cau_hinh = this.cau_hinh_webhook_canh_bao();
     if (!cau_hinh.san_sang) return { da_gui: false, ly_do: cau_hinh.bat ? "Webhook chưa có URL hợp lệ" : "Webhook đang tắt" };
     const token = process.env.SYSTEM_ALERT_WEBHOOK_BEARER_TOKEN?.trim();
-    const headers: Record<string, string> = { "content-type": "application/json", "user-agent": "NhienIn3d-Ops/3.6.6" };
+    const headers: Record<string, string> = { "content-type": "application/json", "user-agent": "NhienIn3d-Ops/3.6.7" };
     if (token) headers.authorization = `Bearer ${token}`;
     try {
       const response = await fetch(process.env.SYSTEM_ALERT_WEBHOOK_URL!.trim(), { method: "POST", headers, body: JSON.stringify(payload), signal: AbortSignal.timeout(cau_hinh.timeout_ms) });
@@ -388,7 +388,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const trang_thai = !database.ket_noi ? "LOI" : (van_de.length ? "CANH_BAO" : "TOT");
     const ket_qua = {
       trang_thai,
-      phien_ban: "3.6.6",
+      phien_ban: "3.6.7",
       thoi_gian: new Date().toISOString(),
       api: { uptime_giay: Math.floor(process.uptime()), node: process.version, pid: process.pid, rss_bytes: bo_nho.rss, heap_used_bytes: bo_nho.heapUsed, heap_total_bytes: bo_nho.heapTotal },
       database,
@@ -484,7 +484,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
 
     await this.thu_dien_tu.guiCanhBaoHeThong({ thu_dien_tu: nguoi_nhan, trang_thai: trang_thai_canh_bao, van_de, thoi_gian: health.thoi_gian, cap_leo_thang, ton_tai_phut });
     const webhook = await this.gui_webhook_canh_bao({
-      event: "nhienin3d.system.alert", version: "3.6.6", trang_thai: trang_thai_canh_bao, chu_ky, van_de, thoi_gian: health.thoi_gian, cap_leo_thang, ton_tai_phut
+      event: "nhienin3d.system.alert", version: "3.6.7", trang_thai: trang_thai_canh_bao, chu_ky, van_de, thoi_gian: health.thoi_gian, cap_leo_thang, ton_tai_phut
     });
     this.chu_ky_canh_bao_he_thong = chu_ky;
     if (health.database.ket_noi) {

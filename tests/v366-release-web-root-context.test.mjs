@@ -18,15 +18,9 @@ test("v3.6.6 root context cung cap du file Dockerfile Web can COPY", () => {
   assert.match(dockerfile, /COPY apps\/web \.\/apps\/web/);
 });
 
-test("v3.6.6 CI va E2E dong bo version patch release", () => {
-  const pkg = JSON.parse(readFileSync("package.json", "utf8"));
-  const ci = readFileSync(".github/workflows/ci.yml", "utf8");
+test("v3.6.6 runtime browser versioned giu dung contract lich su", () => {
   const runtime = readFileSync("scripts/e2e-runtime-v366.ps1", "utf8");
   const browser = readFileSync("scripts/e2e-browser-v366.mjs", "utf8");
-  assert.equal(pkg.version, "3.6.6");
-  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v366.mjs");
-  assert.match(ci, /e2e-runtime-v366\.ps1/);
-  assert.match(ci, /Browser E2E Admin HTTPS v3\.6\.6/);
   assert.match(runtime, /publicHealth\.phien_ban -eq "v3\.6\.6"/);
   assert.match(runtime, /health\.phien_ban -eq "3\.6\.6"/);
   assert.match(browser, /health\.phien_ban !== "v3\.6\.6"/);

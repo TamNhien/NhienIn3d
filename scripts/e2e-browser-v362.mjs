@@ -79,6 +79,12 @@ try {
       await incidentButton.click();
       await page.getByText(`Incident #${syntheticSignature.slice(0, 16)}`, { exact: false }).waitFor();
     };
+    const waitSyntheticStatus = async (expected) => {
+      const status = page.locator(".cine-incident-detail-v340 .cine-incident-meta-v350 .status-badge");
+      await status.waitFor({ timeout: 30_000 });
+      const actual = (await status.textContent())?.trim() || "";
+      if (actual !== expected) throw new Error(`Synthetic incident status mong ${expected}, nhận ${actual || "trống"}.`);
+    };
     await openSynthetic();
     await page.getByLabel("Ghi chú xử lý / khắc phục", { exact: true }).fill("Browser E2E v3.6.2 acknowledge persistence");
     await page.getByRole("button", { name: "Tiếp nhận incident", exact: true }).click();
@@ -87,14 +93,14 @@ try {
     await page.getByRole("button", { name: "Hệ thống", exact: true }).click();
     await page.getByRole("heading", { name: "Incident vận hành" }).waitFor();
     await openSynthetic();
-    await page.getByText("DA TIEP NHAN", { exact: true }).waitFor();
+    await waitSyntheticStatus("DA TIEP NHAN");
     await page.getByRole("button", { name: "Đánh dấu đã khắc phục", exact: true }).click();
     await page.getByText("Đã đánh dấu incident khắc phục", { exact: false }).waitFor({ timeout: 30_000 });
     await page.reload({ waitUntil: "domcontentloaded" });
     await page.getByRole("button", { name: "Hệ thống", exact: true }).click();
     await page.getByRole("heading", { name: "Incident vận hành" }).waitFor();
     await openSynthetic();
-    await page.getByText("DA KHAC PHUC", { exact: true }).waitFor();
+    await waitSyntheticStatus("DA KHAC PHUC");
   }
 
   console.log("Browser E2E v3.6.2 PASS ✅");

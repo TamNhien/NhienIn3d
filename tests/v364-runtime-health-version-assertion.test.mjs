@@ -22,9 +22,9 @@ test("v3.6.4 health-version fix duoc giu khi nang patch tiep theo", () => {
   const pkg = JSON.parse(readFileSync("package.json", "utf8"));
   const ci = readFileSync(".github/workflows/ci.yml", "utf8");
   const browser = readFileSync("scripts/e2e-browser-v364.mjs", "utf8");
-  assert.match(pkg.version, /^3\.6\.[456]$/);
-  assert.match(pkg.scripts["e2e:browser"], /^node scripts\/e2e-browser-v36[456]\.mjs$/);
-  assert.match(ci, /e2e-runtime-v36[456]\.ps1/);
-  assert.match(ci, /Browser E2E Admin HTTPS v3\.6\.[456]/);
+  assert.match(pkg.version, /^3\.6\.[4567]$/);
+  assert.match(pkg.scripts["e2e:browser"], /^node scripts\/e2e-browser-v36[4567]\.mjs$/);
+  assert.match(ci, /e2e-runtime-v36[4567]\.ps1/);
+  assert.match(ci, /Browser E2E Admin HTTPS v3\.6\.[4567]/);
   assert.match(browser, /v3\.6\.4/);
 });
