@@ -1,6 +1,6 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v3.4.1** — 01/09/2026
+> Phiên bản hiện tại: **v3.5.4** — 01/09/2026
 
 NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **frontend Next.js** và **backend NestJS/Fastify** kết nối **PostgreSQL qua Prisma**.
 
@@ -20,9 +20,25 @@ NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **fro
 
 ## Điểm chính bản hiện tại
 
-- **v3.4.1 vá Runtime Docker E2E bị 401 sau đăng nhập Admin trên GitHub Actions**: Docker phát access cookie có cờ `Secure` vì `WEB_PUBLIC_URL=https://localhost:3000`, trong khi job smoke chỉ gọi trực tiếp API qua `http://localhost:3001`; PowerShell vì vậy không tự gửi cookie Secure ở request kế tiếp.
-- `scripts/e2e-runtime-v341.ps1` đọc `nhienin3d_phien` từ header `Set-Cookie` sau login và gắn cookie tường minh cho các request loopback nội bộ. Cách này chỉ dùng trong smoke test; chính sách cookie Secure của ứng dụng không bị hạ xuống. `e2e-runtime-v340.ps1` cũng được vá tương thích để có thể chạy lại trên nhánh v3.4.x.
-- CI chuyển sang `scripts/e2e-runtime-v341.ps1`; bổ sung regression test khóa đúng lỗi `login PASS -> /quan-tri/don-hang 401`. **Không có migration database mới** ở v3.4.1.
+- **v3.5.4 sửa regression khi nâng cấp bằng cách chép source đè thư mục cũ**: `apps/api/.npmrc` hoặc `apps/web/.npmrc` từ v3.5.2 có thể còn sót dù v3.5.3 archive không còn chứa các file này. `scripts/don-dep-legacy.mjs` nay tự xóa hai file policy legacy trước khi chạy test, nên regression root-only `allowScripts` không còn fail giả ở dòng `existsSync(...)`.
+- Root `allowScripts` và `.npmrc` vẫn là policy duy nhất; không nới security gate và `npm audit` vẫn phải đạt 0 High. Runtime/browser E2E chuyển sang `e2e-runtime-v354.ps1` / `e2e-browser-v354.mjs`. **Không có migration database mới ở v3.5.4**; migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`.
+
+- **v3.5.3 dọn sạch warning `allowScripts in workspace ... is ignored` của npm 12**: `allowScripts` chỉ còn khai báo một lần tại `package.json` gốc, đúng phạm vi npm workspace. `apps/api/package.json` và `apps/web/package.json` không còn policy bị npm bỏ qua; `.npmrc` gốc tiếp tục bật `strict-allow-scripts=true`.
+- Docker Web đổi build context từ `./apps/web` về repository root và cài dependency bằng `npm install --workspace=@nhienin3d/web --include-workspace-root=false`, nên local, CI, API Docker và Web Docker đều dùng đúng **một allowlist gốc**. Security gate `npm audit --workspace=@nhienin3d/web --audit-level=high` được chạy ngay trong image build.
+- Runtime/browser E2E chuyển sang `e2e-runtime-v353.ps1` / `e2e-browser-v353.mjs`; preflight vẫn chặn stale container. **Không có migration database mới ở v3.5.3**; migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`.
+
+- **v3.5.2 xử lý triệt để cảnh báo install-script của npm 11.17+/12**: root/API/Web khai báo `allowScripts` theo phiên bản đã duyệt; Prisma/Prisma Engines, Argon2 và esbuild được phép chạy install script đúng phiên bản, còn `@scarf/scarf` bị từ chối vì chỉ phục vụ telemetry.
+- `.npmrc` bật `strict-allow-scripts=true`, nên dependency mới có install script nhưng chưa được review sẽ làm `npm install` thất bại thay vì âm thầm chạy hoặc chỉ cảnh báo. Docker API/Web copy policy này **trước bước npm install**, bảo đảm local, CI và image build dùng cùng chuỗi kiểm soát. Yêu cầu npm tối thiểu là **11.17.0**.
+- Runtime/browser E2E được nâng thành `e2e-runtime-v352.ps1` / `e2e-browser-v352.mjs` và tiếp tục có preflight version để chặn stale container. **Không có migration database mới ở v3.5.2**; migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`.
+
+- **v3.5.1 vá lỗi security audit làm Docker build dừng ở API/migrate**: nâng `@playwright/test` từ `1.55.0` lên `1.62.1` để loại cảnh báo mức High `GHSA-7mvr-c777-76hp`; `npm audit` trong Docker API được scope đúng workspace API, còn CI root vẫn audit toàn bộ dependency tree.
+- Runtime/browser E2E v3.5.1 có **preflight version**. Nếu một lần `docker compose up --build` thất bại nhưng container v3.4.x/v3.5.0 cũ vẫn còn chạy, script dừng ngay với thông báo container/image cũ thay vì báo sai thành lỗi 404 ở `/quan-tri/he-thong/cau-hinh-slo`.
+- **Không có migration mới ở v3.5.1**. Migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`; sau khi Docker build thành công, migrate mới áp dụng migration v3.5.0 nếu database chưa có.
+
+- **v3.5.0 hoàn thiện vòng đời Incident**: mỗi chữ ký cảnh báo có trạng thái `MOI` → `DA_TIEP_NHAN` → `DA_KHAC_PHUC`, lưu người tiếp nhận/người khắc phục, thời điểm và ghi chú xử lý; mọi thao tác đều có Audit riêng. Khi cùng sự cố tái xuất hiện sau khi đã khắc phục, hệ thống tự mở lại incident.
+- Danh sách incident không còn quét tối đa 5.000 dòng `lich_su_van_hanh` mỗi lần. Migration `202609010001_v350_incident_slo_rollup` tạo bảng tổng hợp `su_co_van_hanh`, backfill các chữ ký cũ và cập nhật aggregate ngay khi phát sinh HEALTH/ALERT mới.
+- Admin có **Mục tiêu SLO vận hành** riêng cho SLA/Uptime, cấu hình runtime lưu PostgreSQL với `.env` fallback; thống kê bổ sung xu hướng 7/30 ngày và phát cảnh báo khi tụt dưới mục tiêu. Cảnh báo xu hướng SLO được ghép vào cơ chế email silence/escalation hiện có với chữ ký riêng đúng tập vấn đề.
+- Tab Hệ thống hiển thị mục tiêu, trạng thái đạt/không đạt, xu hướng 7/30 ngày và workflow Incident trực tiếp trên UI. Bổ sung `scripts/e2e-browser-v350.mjs` dùng Playwright kiểm tra đăng nhập Admin qua HTTPS local, SLO và Incident; CI Docker chạy cả runtime E2E v3.5.0 lẫn browser E2E.
 
 - v3.4.0 nâng cấp vận hành: Admin cấu hình trực tiếp chu kỳ/backup threshold/silence/escalation/người nhận cảnh báo; cấu hình lưu PostgreSQL, áp dụng timer ngay và audit đầy đủ trước/sau.
 - Health/Alert được gắn **chữ ký SHA-256 của tập vấn đề** để nhóm thành chuỗi sự cố; tab Hệ thống có danh sách incident, timeline chi tiết và thời lượng.
@@ -1308,13 +1324,63 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 
 ---
 
+## v3.5.0 — 01/09/2026
+
+- Thêm workflow Incident `MOI` / `DA_TIEP_NHAN` / `DA_KHAC_PHUC`, lưu người tiếp nhận, người khắc phục, thời điểm và ghi chú remediation. Hai API mới `POST /api/v1/quan-tri/he-thong/su-co/:chu_ky/tiep-nhan` và `/khac-phuc` đều ghi audit trước/sau.
+- Migration `202609010001_v350_incident_slo_rollup` tạo bảng `su_co_van_hanh` và backfill từ lịch sử có chữ ký. Mỗi HEALTH/ALERT mới cập nhật aggregate theo chữ ký, nên API danh sách incident đọc trực tiếp bảng tổng hợp thay vì scan 5.000 sự kiện gần nhất.
+- Thêm cấu hình runtime `SLO_VAN_HANH_CAU_HINH` với `SYSTEM_SLO_SLA_TARGET_PERCENT`, `SYSTEM_SLO_UPTIME_TARGET_PERCENT`, `SYSTEM_SLO_TREND_ALERT_ENABLED`. Admin chỉnh trực tiếp mục tiêu SLA/Uptime; thống kê trả thêm xu hướng 7/30 ngày, trạng thái đạt mục tiêu và danh sách cảnh báo.
+- Cơ chế email vận hành nhận thêm cảnh báo SLO. Khi chỉ SLO vi phạm nhưng health tức thời vẫn tốt, email vẫn chuyển trạng thái cảnh báo và chữ ký SHA-256 được tính trên toàn bộ tập vấn đề để silence/escalation không gộp nhầm sự cố.
+- UI Hệ thống có thẻ cấu hình SLO, cảnh báo xu hướng và thao tác tiếp nhận/khắc phục Incident kèm ghi chú. Bổ sung Playwright browser E2E trên HTTPS local và `scripts/e2e-runtime-v350.ps1`; GitHub Actions runtime job chạy cả hai lớp E2E.
+- Đồng bộ Root/API/Web/Health/OpenAPI lên **v3.5.0**. Quy trình release: `npm install` → `npm test` → `npm run typecheck` → `npm run build` → `./scripts/backup-db.ps1` → `docker compose up -d --build --remove-orphans` → `docker compose ps` → `./scripts/e2e-runtime-v350.ps1` → `npm run e2e:browser` → `./scripts/release.ps1 v3.5.0`.
+
+---
+
+## v3.5.1 — 01/09/2026
+
+- Sửa lỗi `docker compose up -d --build --remove-orphans` dừng ở target `api/migrate` do `npm audit --audit-level=high` nhìn thấy `@playwright/test 1.55.0` / `playwright <1.55.1` và advisory `GHSA-7mvr-c777-76hp`. Nâng Playwright browser E2E lên **1.62.1**.
+- Dockerfile API vẫn giữ security gate nhưng `npm audit` được scope bằng `--workspace=@nhienin3d/api`, tránh dependency chỉ dùng cho browser E2E ở root chặn việc build API/migrate; CI root tiếp tục chạy `npm run audit:security` để không bỏ sót lỗ hổng toàn repository.
+- Thêm `scripts/e2e-runtime-v351.ps1` và `scripts/e2e-browser-v351.mjs`. Hai script kiểm tra API đang thực sự chạy **v3.5.1** trước khi gọi các endpoint SLO/Incident; nếu build trước đó thất bại và Docker giữ container cũ, lỗi sẽ chỉ rõ stale image/container thay vì 404 `cau-hinh-slo`.
+- GitHub Actions chuyển runtime/browser smoke sang v3.5.1 và audit lại dependency sau `npm install` trước khi tải Chromium.
+- Không có migration database mới. Migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`. Đồng bộ Root/API/Web/Health/OpenAPI lên **v3.5.1**.
+- Quy trình release: `npm install` → `npm audit` → `npm test` → `npm run typecheck` → `npm run build` → `./scripts/backup-db.ps1` → `docker compose up -d --build --remove-orphans` → `docker compose ps` → `./scripts/e2e-runtime-v351.ps1` → `npm run e2e:browser` → `./scripts/release.ps1 v3.5.1`.
+
+---
+
+## v3.5.2 — 01/09/2026
+
+- Khóa dependency install script theo `allowScripts` pin phiên bản sau khi npm 12 báo 5 package chưa được duyệt: cho phép `@prisma/engines@7.10.0`, `prisma@7.10.0`, `argon2@0.45.1`, `esbuild@0.28.2`; từ chối `@scarf/scarf` để không chạy telemetry postinstall.
+- Bật `strict-allow-scripts=true` ở root, API và Web. Thêm `engines.npm >=11.17.0` để tài liệu hóa mốc npm hỗ trợ policy này. Dockerfile API/Web copy `.npmrc` trước `npm install`, vì vậy build container cũng fail-closed nếu xuất hiện package install-script mới chưa được duyệt.
+- Thêm regression test v3.5.2 kiểm tra allowlist, Scarf deny, `.npmrc` strict và Docker copy policy. Runtime/browser smoke chuyển sang `scripts/e2e-runtime-v352.ps1` / `scripts/e2e-browser-v352.mjs`.
+- Không có migration database mới. Migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`. Đồng bộ Root/API/Web/Health/OpenAPI lên **v3.5.2**.
+- Quy trình release: `npm install` → `npm audit` → `npm test` → `npm run typecheck` → `npm run build` → `./scripts/backup-db.ps1` → `docker compose up -d --build --remove-orphans` → `docker compose ps` → `./scripts/e2e-runtime-v352.ps1` → `npm run e2e:browser` → `./scripts/release.ps1 v3.5.2`.
+
+---
+
+## v3.5.3 — 01/09/2026
+
+- Sửa warning npm 12 `allowScripts in workspace ... is ignored`: xóa `allowScripts` khỏi `apps/api/package.json` và `apps/web/package.json`, chỉ giữ allowlist pin phiên bản ở `package.json` gốc. Xóa `.npmrc` trùng trong hai workspace; `.npmrc` gốc là policy duy nhất và vẫn bật `strict-allow-scripts=true`.
+- Docker Web chuyển build context về repository root, copy root `package.json` + `.npmrc` rồi cài riêng workspace Web. Nhờ đó Web image cũng áp dụng chính xác allowlist gốc thay vì cần một `allowScripts` cục bộ mà npm workspace sẽ cảnh báo khi cài ở root.
+- Bổ sung regression test v3.5.3 để khóa yêu cầu root-only policy và Docker Web root-context. Runtime/browser smoke chuyển sang `scripts/e2e-runtime-v353.ps1` / `scripts/e2e-browser-v353.mjs`.
+- Không có migration database mới. Migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`. Đồng bộ Root/API/Web/Health/OpenAPI lên **v3.5.3**.
+- Quy trình release: `npm install` → `npm audit` → `npm test` → `npm run typecheck` → `npm run build` → `./scripts/backup-db.ps1` → `docker compose up -d --build --remove-orphans` → `docker compose ps` → `./scripts/e2e-runtime-v353.ps1` → `npm run e2e:browser` → `./scripts/release.ps1 v3.5.3`.
+
+## v3.5.4 — 01/09/2026
+
+- Sửa lỗi regression `v3.5.3 allowScripts chi khai bao o project root...` có thể fail tại `existsSync("apps/api/.npmrc")` khi người dùng chép source mới đè lên thư mục dự án đã từng chạy v3.5.2. Archive mới không chứa `.npmrc` workspace nhưng thao tác chép đè không tự xóa file cũ, nên test nhìn thấy file legacy còn sót.
+- `scripts/don-dep-legacy.mjs` bổ sung tự động xóa `apps/api/.npmrc` và `apps/web/.npmrc` trước root test. Giữ nguyên `allowScripts` duy nhất ở `package.json` gốc và `strict-allow-scripts=true` ở `.npmrc` gốc; không hạ mức bảo vệ install-script.
+- Bổ sung regression test v3.5.4 khóa cleanup overlay; Runtime/browser smoke chuyển sang `scripts/e2e-runtime-v354.ps1` / `scripts/e2e-browser-v354.mjs`, CI cũng dùng script mới.
+- Không có migration database mới. Migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`. Đồng bộ Root/API/Web/Health/OpenAPI lên **v3.5.4**.
+- Quy trình release: `npm install` → `npm audit` → `npm test` → `npm run typecheck` → `npm run build` → `./scripts/backup-db.ps1` → `docker compose up -d --build --remove-orphans` → `docker compose ps` → `./scripts/e2e-runtime-v354.ps1` → `npm run e2e:browser` → `./scripts/release.ps1 v3.5.4`.
+
+---
+
 # Lộ trình tiếp theo
 
-## v3.5.0
+## v3.6.0
 
-- Thêm trạng thái acknowledge/resolve cho incident và ghi người xử lý, ghi chú khắc phục.
-- Cho phép đặt mục tiêu SLO riêng (SLA/Uptime) và cảnh báo khi xu hướng 7/30 ngày xuống dưới ngưỡng.
-- Tối ưu truy vấn incident theo bảng tổng hợp khi lịch sử vận hành tăng lên hàng triệu bản ghi.
-- Mở rộng E2E browser cho luồng Admin trên giao diện HTTPS local.
+- Thêm maintenance window để chủ động tạm ngưng cảnh báo trong thời gian bảo trì có lịch.
+- Bổ sung error budget theo SLO và burn-rate 1h/6h/24h để phát hiện suy giảm sớm hơn.
+- Cho phép xuất Incident/Timeline ra Excel và chuẩn bị webhook tích hợp hệ thống thông báo ngoài.
+- Mở rộng browser E2E cho thao tác cập nhật SLO, acknowledge/resolve incident và kiểm tra persistence sau reload.
 
 ---

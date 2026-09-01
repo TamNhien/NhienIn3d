@@ -1,16 +1,16 @@
 https://localhost {
-    tls internal
-    encode zstd gzip
+	tls internal
+	encode zstd gzip
 
-    header {
-        X-Content-Type-Options "nosniff"
-        X-Frame-Options "DENY"
-        Referrer-Policy "strict-origin-when-cross-origin"
-        Permissions-Policy "camera=(), microphone=(), geolocation=()"
-        -Server
-    }
+	header {
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		-Server
+	}
 
-    @api path /api/* /tai-lieu*
-    reverse_proxy @api api:3001
-    reverse_proxy web:3000
+	@api path /api/* /tai-lieu*
+	reverse_proxy @api api:3001
+	reverse_proxy web:3000
 }

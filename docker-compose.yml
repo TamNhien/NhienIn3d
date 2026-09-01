@@ -89,6 +89,9 @@ services:
       SYSTEM_HEALTH_BACKUP_MAX_AGE_HOURS: ${SYSTEM_HEALTH_BACKUP_MAX_AGE_HOURS:-36}
       SYSTEM_HEALTH_ALERT_SILENCE_MINUTES: ${SYSTEM_HEALTH_ALERT_SILENCE_MINUTES:-180}
       SYSTEM_HEALTH_ALERT_ESCALATION_MINUTES: ${SYSTEM_HEALTH_ALERT_ESCALATION_MINUTES:-720}
+      SYSTEM_SLO_SLA_TARGET_PERCENT: ${SYSTEM_SLO_SLA_TARGET_PERCENT:-99}
+      SYSTEM_SLO_UPTIME_TARGET_PERCENT: ${SYSTEM_SLO_UPTIME_TARGET_PERCENT:-99.9}
+      SYSTEM_SLO_TREND_ALERT_ENABLED: ${SYSTEM_SLO_TREND_ALERT_ENABLED:-true}
     ports:
       - "${API_PORT:-3001}:3001"
     volumes:
@@ -100,7 +103,8 @@ services:
 
   web:
     build:
-      context: ./apps/web
+      context: .
+      dockerfile: apps/web/Dockerfile
       args:
         NEXT_PUBLIC_API_URL: /api/v1
     container_name: nhienin3d-web

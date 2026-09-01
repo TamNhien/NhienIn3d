@@ -409,6 +409,31 @@ model LichSuVanHanh {
   @@map("lich_su_van_hanh")
 }
 
+model SuCoVanHanh {
+  chu_ky                    String   @id @db.VarChar(64)
+  trang_thai_xu_ly          String   @default("MOI") @db.VarChar(30)
+  van_de                    Json     @default("[]") @db.JsonB
+  bat_dau                   DateTime @db.Timestamptz(6)
+  gan_nhat                  DateTime @db.Timestamptz(6)
+  so_su_kien                Int      @default(0)
+  so_health                 Int      @default(0)
+  so_alert                  Int      @default(0)
+  trang_thai_gan_nhat       String   @db.VarChar(30)
+  ghi_chu                   String?  @db.Text
+  nguoi_tiep_nhan_id        String?  @db.Uuid
+  nguoi_tiep_nhan_ten       String?  @db.VarChar(150)
+  tiep_nhan_luc             DateTime? @db.Timestamptz(6)
+  nguoi_khac_phuc_id        String?  @db.Uuid
+  nguoi_khac_phuc_ten       String?  @db.VarChar(150)
+  khac_phuc_luc             DateTime? @db.Timestamptz(6)
+  ngay_tao                  DateTime @default(now()) @db.Timestamptz(6)
+  ngay_cap_nhat             DateTime @updatedAt @db.Timestamptz(6)
+
+  @@index([trang_thai_xu_ly, gan_nhat])
+  @@index([gan_nhat])
+  @@map("su_co_van_hanh")
+}
+
 model PhienBanSeed {
   id          BigInt   @id @default(autoincrement())
   phien_ban   String   @unique @db.VarChar(60)

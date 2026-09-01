@@ -7,6 +7,10 @@ const tepCu = [
   // hai file v3.0.x vẫn có thể còn sót và làm regression test/release thất bại.
   "apps/api/src/xac-thuc/mfa-totp.ts",
   "apps/api/src/xac-thuc/dto/xac-nhan-mfa.dto.ts",
+  // v3.5.4: khi chép source mới đè lên v3.5.2, .npmrc workspace cũ vẫn còn
+  // dù archive v3.5.3 đã không chứa chúng; xóa để root-only allowScripts regression ổn định.
+  "apps/api/.npmrc",
+  "apps/web/.npmrc",
 ];
 
 for (const tep of tepCu) {

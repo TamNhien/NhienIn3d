@@ -34,6 +34,8 @@ import { NhapKhoLoDto } from "./dto/nhap-kho-lo.dto.js";
 import { TaoNhaCungCapDto } from "./dto/tao-nha-cung-cap.dto.js";
 import { CapNhatNhaCungCapDto } from "./dto/cap-nhat-nha-cung-cap.dto.js";
 import { CapNhatCauHinhCanhBaoHeThongDto } from "./dto/cap-nhat-cau-hinh-canh-bao-he-thong.dto.js";
+import { CapNhatSuCoVanHanhDto } from "./dto/cap-nhat-su-co-van-hanh.dto.js";
+import { CapNhatSloVanHanhDto } from "./dto/cap-nhat-slo-van-hanh.dto.js";
 
 @Injectable()
 export class QuanTriService implements OnModuleInit, OnModuleDestroy {
@@ -142,6 +144,59 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     return { ...runtime, nguoi_nhan: runtime.nguoi_nhan_co_dinh.join(", "), nguoi_nhan_co_dinh: undefined };
   }
 
+  private cau_hinh_slo_van_hanh_env() {
+    const slaRaw = Number(process.env.SYSTEM_SLO_SLA_TARGET_PERCENT || 99);
+    const uptimeRaw = Number(process.env.SYSTEM_SLO_UPTIME_TARGET_PERCENT || 99.9);
+    const canhBaoRaw = (process.env.SYSTEM_SLO_TREND_ALERT_ENABLED || "true").trim().toLowerCase();
+    const chuan = (n: number, fallback: number) => Number.isFinite(n) ? Math.max(90, Math.min(100, Math.round(n * 1000) / 1000)) : fallback;
+    return {
+      sla_muc_tieu_percent: chuan(slaRaw, 99),
+      uptime_muc_tieu_percent: chuan(uptimeRaw, 99.9),
+      canh_bao_xu_huong: ["1", "true", "yes", "on"].includes(canhBaoRaw),
+      nguon_cau_hinh: "ENV" as const
+    };
+  }
+
+  private async cau_hinh_slo_van_hanh_runtime() {
+    const mac_dinh = this.cau_hinh_slo_van_hanh_env();
+    try {
+      const item = await this.db.cauHinhHeThong.findUnique({ where: { khoa: "SLO_VAN_HANH_CAU_HINH" } });
+      const raw = item?.gia_tri;
+      if (!raw || typeof raw !== "object" || Array.isArray(raw)) return mac_dinh;
+      const x = raw as Record<string, unknown>;
+      const chuan = (value: unknown, fallback: number) => { const n = Number(value); return Number.isFinite(n) ? Math.max(90, Math.min(100, Math.round(n * 1000) / 1000)) : fallback; };
+      return {
+        sla_muc_tieu_percent: chuan(x.sla_muc_tieu_percent, mac_dinh.sla_muc_tieu_percent),
+        uptime_muc_tieu_percent: chuan(x.uptime_muc_tieu_percent, mac_dinh.uptime_muc_tieu_percent),
+        canh_bao_xu_huong: typeof x.canh_bao_xu_huong === "boolean" ? x.canh_bao_xu_huong : mac_dinh.canh_bao_xu_huong,
+        nguon_cau_hinh: "DATABASE" as const,
+        ngay_cap_nhat: item.ngay_cap_nhat
+      };
+    } catch (error) {
+      this.logger.debug(`Không đọc được cấu hình SLO từ DB, dùng .env: ${error instanceof Error ? error.message : String(error)}`);
+      return mac_dinh;
+    }
+  }
+
+  async lay_cau_hinh_slo_van_hanh() {
+    return this.cau_hinh_slo_van_hanh_runtime();
+  }
+
+  async cap_nhat_cau_hinh_slo_van_hanh(actor: NguoiDungXacThuc, dto: CapNhatSloVanHanhDto) {
+    const truocRuntime = await this.cau_hinh_slo_van_hanh_runtime();
+    const truoc = { sla_muc_tieu_percent: truocRuntime.sla_muc_tieu_percent, uptime_muc_tieu_percent: truocRuntime.uptime_muc_tieu_percent, canh_bao_xu_huong: truocRuntime.canh_bao_xu_huong };
+    const sau = {
+      sla_muc_tieu_percent: Math.round(dto.sla_muc_tieu_percent * 1000) / 1000,
+      uptime_muc_tieu_percent: Math.round(dto.uptime_muc_tieu_percent * 1000) / 1000,
+      canh_bao_xu_huong: dto.canh_bao_xu_huong
+    };
+    await this.db.$transaction([
+      this.db.cauHinhHeThong.upsert({ where: { khoa: "SLO_VAN_HANH_CAU_HINH" }, create: { khoa: "SLO_VAN_HANH_CAU_HINH", gia_tri: sau, nguoi_cap_nhat_id: actor.id }, update: { gia_tri: sau, nguoi_cap_nhat_id: actor.id } }),
+      this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_CAP_NHAT_CAU_HINH_SLO_VAN_HANH", nguoi_dung_id: actor.id, chi_tiet: { truoc, sau, thay_doi: this.tao_diff(truoc, sau) } } })
+    ]);
+    return this.cau_hinh_slo_van_hanh_runtime();
+  }
+
   private async thong_tin_backup() {
     const thu_muc = process.env.BACKUP_DIRECTORY?.trim() || "/app/backups";
     try {
@@ -169,9 +224,38 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     return JSON.parse(JSON.stringify(value, (_key, item) => typeof item === "bigint" ? item.toString() : item)) as Prisma.InputJsonObject;
   }
 
+  private async dong_bo_tong_hop_su_co(chu_ky: string, loai: string, trang_thai: string, chi_tiet: Record<string, unknown>, ngay_tao: Date) {
+    const rawVanDe = chi_tiet.van_de;
+    const van_de = Array.isArray(rawVanDe) ? rawVanDe.map(x => String(x)) : [];
+    const tong_hop = await this.db.suCoVanHanh.upsert({
+      where: { chu_ky },
+      create: {
+        chu_ky, trang_thai_xu_ly: "MOI", van_de, bat_dau: ngay_tao, gan_nhat: ngay_tao,
+        so_su_kien: 1, so_health: loai === "HEALTH" ? 1 : 0, so_alert: loai === "ALERT" ? 1 : 0, trang_thai_gan_nhat: trang_thai
+      },
+      update: {
+        gan_nhat: ngay_tao,
+        so_su_kien: { increment: 1 },
+        ...(loai === "HEALTH" ? { so_health: { increment: 1 } } : {}),
+        ...(loai === "ALERT" ? { so_alert: { increment: 1 } } : {}),
+        trang_thai_gan_nhat: trang_thai,
+        ...(van_de.length ? { van_de } : {})
+      }
+    });
+    const mo_lai = tong_hop.trang_thai_xu_ly === "DA_KHAC_PHUC" && loai !== "INCIDENT";
+    if (mo_lai) {
+      await this.db.suCoVanHanh.update({ where: { chu_ky }, data: {
+        trang_thai_xu_ly: "MOI", ghi_chu: null,
+        nguoi_tiep_nhan_id: null, nguoi_tiep_nhan_ten: null, tiep_nhan_luc: null,
+        nguoi_khac_phuc_id: null, nguoi_khac_phuc_ten: null, khac_phuc_luc: null
+      } });
+    }
+  }
+
   private async ghi_lich_su_van_hanh(loai: string, trang_thai: string, mo_ta: string, chi_tiet: Record<string, unknown>, ngay_bat_dau?: Date, chu_ky_canh_bao?: string | null) {
     try {
-      await this.db.lichSuVanHanh.create({ data: { loai, trang_thai, mo_ta, chi_tiet: this.chuan_hoa_json_object(chi_tiet), chu_ky_canh_bao: chu_ky_canh_bao || null, ngay_bat_dau: ngay_bat_dau || null, ngay_ket_thuc: new Date() } });
+      const item = await this.db.lichSuVanHanh.create({ data: { loai, trang_thai, mo_ta, chi_tiet: this.chuan_hoa_json_object(chi_tiet), chu_ky_canh_bao: chu_ky_canh_bao || null, ngay_bat_dau: ngay_bat_dau || null, ngay_ket_thuc: new Date() } });
+      if (chu_ky_canh_bao) await this.dong_bo_tong_hop_su_co(chu_ky_canh_bao, loai, trang_thai, chi_tiet, item.ngay_tao);
     } catch (error) {
       this.logger.debug(`Không ghi được lịch sử vận hành ${loai}: ${error instanceof Error ? error.message : String(error)}`);
     }
@@ -211,7 +295,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const trang_thai = !database.ket_noi ? "LOI" : (van_de.length ? "CANH_BAO" : "TOT");
     const ket_qua = {
       trang_thai,
-      phien_ban: "3.4.1",
+      phien_ban: "3.5.4",
       thoi_gian: new Date().toISOString(),
       api: { uptime_giay: Math.floor(process.uptime()), node: process.version, pid: process.pid, rss_bytes: bo_nho.rss, heap_used_bytes: bo_nho.heapUsed, heap_total_bytes: bo_nho.heapTotal },
       database,
@@ -239,7 +323,10 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const cau_hinh = await this.cau_hinh_canh_bao_he_thong_runtime();
     if (!cau_hinh.bat && !kiem_tra_thu_cong) return { da_gui: false, ly_do: "Cảnh báo hệ thống qua email đang tắt", van_de: [] as string[], cap_leo_thang: 0 };
     const health = await this.suc_khoe_he_thong(false);
-    const van_de = health.van_de;
+    const slo = await this.thong_ke_sla_van_hanh("30");
+    const canh_bao_slo = slo.muc_tieu.canh_bao_xu_huong ? slo.canh_bao.map(x => `SLO: ${x}`) : [];
+    const van_de = [...health.van_de, ...canh_bao_slo];
+    const trang_thai_canh_bao = health.trang_thai === "TOT" && van_de.length ? "CANH_BAO" : health.trang_thai;
     if (!van_de.length) {
       this.chu_ky_canh_bao_he_thong = null;
       if (health.database.ket_noi) {
@@ -250,7 +337,9 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       return { da_gui: false, ly_do: "Hệ thống đang hoạt động tốt", van_de, cap_leo_thang: 0 };
     }
 
-    const chu_ky = health.chu_ky_canh_bao || createHash("sha256").update(JSON.stringify(van_de)).digest("hex");
+    const chu_ky = canh_bao_slo.length
+      ? createHash("sha256").update(JSON.stringify(van_de)).digest("hex")
+      : (health.chu_ky_canh_bao || createHash("sha256").update(JSON.stringify(van_de)).digest("hex"));
     const now = new Date();
     let chu_ky_da_gui: string | null = this.chu_ky_canh_bao_he_thong;
     let phat_hien_luc = now;
@@ -296,10 +385,10 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     if (!nguoi_nhan.length) return { da_gui: false, ly_do: "Không có SYSTEM_HEALTH_EMAIL_TO hoặc Admin khả dụng để nhận cảnh báo", van_de, cap_leo_thang, ton_tai_phut };
     if (!health.smtp.san_sang) return { da_gui: false, ly_do: "SMTP chưa sẵn sàng nên không thể gửi cảnh báo vận hành", van_de, cap_leo_thang, ton_tai_phut };
 
-    await this.thu_dien_tu.guiCanhBaoHeThong({ thu_dien_tu: nguoi_nhan, trang_thai: health.trang_thai, van_de, thoi_gian: health.thoi_gian, cap_leo_thang, ton_tai_phut });
+    await this.thu_dien_tu.guiCanhBaoHeThong({ thu_dien_tu: nguoi_nhan, trang_thai: trang_thai_canh_bao, van_de, thoi_gian: health.thoi_gian, cap_leo_thang, ton_tai_phut });
     this.chu_ky_canh_bao_he_thong = chu_ky;
     if (health.database.ket_noi) {
-      try { await this.db.cauHinhHeThong.upsert({ where: { khoa: "CANH_BAO_HE_THONG_EMAIL" }, create: { khoa: "CANH_BAO_HE_THONG_EMAIL", gia_tri: { chu_ky, trang_thai: health.trang_thai, van_de, phat_hien_luc: phat_hien_luc.toISOString(), lan_gui: health.thoi_gian, cap_leo_thang } }, update: { gia_tri: { chu_ky, trang_thai: health.trang_thai, van_de, phat_hien_luc: phat_hien_luc.toISOString(), lan_gui: health.thoi_gian, cap_leo_thang } } }); } catch {}
+      try { await this.db.cauHinhHeThong.upsert({ where: { khoa: "CANH_BAO_HE_THONG_EMAIL" }, create: { khoa: "CANH_BAO_HE_THONG_EMAIL", gia_tri: { chu_ky, trang_thai: trang_thai_canh_bao, van_de, phat_hien_luc: phat_hien_luc.toISOString(), lan_gui: health.thoi_gian, cap_leo_thang } }, update: { gia_tri: { chu_ky, trang_thai: trang_thai_canh_bao, van_de, phat_hien_luc: phat_hien_luc.toISOString(), lan_gui: health.thoi_gian, cap_leo_thang } } }); } catch {}
       await this.ghi_lich_su_van_hanh("ALERT", "THANH_CONG", cap_leo_thang > 0 ? `Đã gửi escalation cảnh báo vận hành cấp ${cap_leo_thang}` : "Đã gửi cảnh báo vận hành qua email", { van_de, so_nguoi_nhan: nguoi_nhan.length, cap_leo_thang, ton_tai_phut, chu_ky }, undefined, chu_ky);
     }
     return { da_gui: true, van_de, so_nguoi_nhan: nguoi_nhan.length, cap_leo_thang, ton_tai_phut };
@@ -345,54 +434,83 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     };
   }
 
-  async danh_sach_su_co_van_hanh(gioiHanRaw?: string) {
+  private chuan_hoa_chu_ky_su_co(chu_kyRaw: string) {
+    const chu_ky = chu_kyRaw.trim().toLowerCase();
+    if (!/^[a-f0-9]{64}$/.test(chu_ky)) throw new BadRequestException("Chữ ký sự cố không hợp lệ");
+    return chu_ky;
+  }
+
+  private van_de_su_co(raw: unknown) {
+    return Array.isArray(raw) ? raw.map(x => String(x)) : [];
+  }
+
+  async danh_sach_su_co_van_hanh(gioiHanRaw?: string, trangThaiXuLyRaw?: string) {
     const gioi_han = Math.max(5, Math.min(100, Number.parseInt(gioiHanRaw || "20", 10) || 20));
-    const ds = await this.db.lichSuVanHanh.findMany({
-      where: { chu_ky_canh_bao: { not: null } },
-      orderBy: { id: "desc" },
-      take: 5000
+    const trang_thai_xu_ly = trangThaiXuLyRaw?.trim().toUpperCase();
+    if (trang_thai_xu_ly && !["MOI", "DA_TIEP_NHAN", "DA_KHAC_PHUC"].includes(trang_thai_xu_ly)) throw new BadRequestException("Trạng thái xử lý sự cố không hợp lệ");
+    const ds = await this.db.suCoVanHanh.findMany({
+      where: trang_thai_xu_ly ? { trang_thai_xu_ly } : undefined,
+      orderBy: { gan_nhat: "desc" },
+      take: gioi_han
     });
-    const nhom = new Map<string, { chu_ky: string; bat_dau: Date; gan_nhat: Date; so_su_kien: number; so_health: number; so_alert: number; trang_thai_gan_nhat: string; van_de: string[] }>();
-    for (const item of ds) {
-      const key = item.chu_ky_canh_bao; if (!key) continue;
-      const ct = item.chi_tiet && typeof item.chi_tiet === "object" && !Array.isArray(item.chi_tiet) ? item.chi_tiet as Record<string, unknown> : {};
-      const van_de = Array.isArray(ct.van_de) ? ct.van_de.map(x => String(x)) : [];
-      const cu = nhom.get(key);
-      if (!cu) {
-        nhom.set(key, { chu_ky: key, bat_dau: item.ngay_tao, gan_nhat: item.ngay_tao, so_su_kien: 1, so_health: item.loai === "HEALTH" ? 1 : 0, so_alert: item.loai === "ALERT" ? 1 : 0, trang_thai_gan_nhat: item.trang_thai, van_de });
-      } else {
-        cu.bat_dau = item.ngay_tao < cu.bat_dau ? item.ngay_tao : cu.bat_dau;
-        cu.so_su_kien += 1; cu.so_health += item.loai === "HEALTH" ? 1 : 0; cu.so_alert += item.loai === "ALERT" ? 1 : 0;
-        if (!cu.van_de.length && van_de.length) cu.van_de = van_de;
-      }
-    }
-    const du_lieu = [...nhom.values()].sort((a, b) => b.gan_nhat.getTime() - a.gan_nhat.getTime()).slice(0, gioi_han).map(x => ({ ...x, thoi_luong_phut: Math.max(0, Math.round((x.gan_nhat.getTime() - x.bat_dau.getTime()) / 60_000)) }));
-    return { du_lieu, gioi_han, gioi_han_quet: 5000 };
+    return {
+      du_lieu: ds.map(x => ({ ...x, van_de: this.van_de_su_co(x.van_de), thoi_luong_phut: Math.max(0, Math.round((x.gan_nhat.getTime() - x.bat_dau.getTime()) / 60_000)) })),
+      gioi_han,
+      nguon: "BANG_TONG_HOP" as const
+    };
   }
 
   async chi_tiet_su_co_van_hanh(chu_kyRaw: string) {
-    const chu_ky = chu_kyRaw.trim().toLowerCase();
-    if (!/^[a-f0-9]{64}$/.test(chu_ky)) throw new BadRequestException("Chữ ký sự cố không hợp lệ");
+    const chu_ky = this.chuan_hoa_chu_ky_su_co(chu_kyRaw);
+    const tong_hop = await this.db.suCoVanHanh.findUnique({ where: { chu_ky } });
+    if (!tong_hop) throw new NotFoundException("Không tìm thấy chuỗi sự cố vận hành");
     const ds = await this.db.lichSuVanHanh.findMany({ where: { chu_ky_canh_bao: chu_ky }, orderBy: { id: "asc" }, take: 1000 });
-    if (!ds.length) throw new NotFoundException("Không tìm thấy chuỗi sự cố vận hành");
-    const dau = ds[0], cuoi = ds[ds.length - 1];
-    const van_de = ds.map(x => x.chi_tiet && typeof x.chi_tiet === "object" && !Array.isArray(x.chi_tiet) ? (x.chi_tiet as Record<string, unknown>).van_de : null).find(Array.isArray) as unknown[] | undefined;
     return {
-      chu_ky,
-      bat_dau: dau.ngay_tao,
-      gan_nhat: cuoi.ngay_tao,
-      thoi_luong_phut: Math.max(0, Math.round((cuoi.ngay_tao.getTime() - dau.ngay_tao.getTime()) / 60_000)),
-      van_de: van_de?.map(x => String(x)) || [],
-      so_su_kien: ds.length,
+      ...tong_hop,
+      van_de: this.van_de_su_co(tong_hop.van_de),
+      thoi_luong_phut: Math.max(0, Math.round((tong_hop.gan_nhat.getTime() - tong_hop.bat_dau.getTime()) / 60_000)),
       su_kien: ds.map(x => ({ ...x, id: x.id.toString() }))
     };
+  }
+
+  async tiep_nhan_su_co_van_hanh(actor: NguoiDungXacThuc, chu_kyRaw: string, dto: CapNhatSuCoVanHanhDto) {
+    const chu_ky = this.chuan_hoa_chu_ky_su_co(chu_kyRaw);
+    const hien_tai = await this.db.suCoVanHanh.findUnique({ where: { chu_ky } });
+    if (!hien_tai) throw new NotFoundException("Không tìm thấy chuỗi sự cố vận hành");
+    if (hien_tai.trang_thai_xu_ly === "DA_KHAC_PHUC") throw new BadRequestException("Sự cố đã được khắc phục; không thể tiếp nhận lại");
+    const ghi_chu = dto.ghi_chu?.trim() || hien_tai.ghi_chu || null;
+    const tiep_nhan_luc = new Date();
+    await this.db.$transaction([
+      this.db.suCoVanHanh.update({ where: { chu_ky }, data: { trang_thai_xu_ly: "DA_TIEP_NHAN", ghi_chu, nguoi_tiep_nhan_id: actor.id, nguoi_tiep_nhan_ten: actor.ho_ten, tiep_nhan_luc } }),
+      this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_TIEP_NHAN_SU_CO_VAN_HANH", nguoi_dung_id: actor.id, chi_tiet: { chu_ky, trang_thai_cu: hien_tai.trang_thai_xu_ly, trang_thai_moi: "DA_TIEP_NHAN", ghi_chu } } })
+    ]);
+    await this.ghi_lich_su_van_hanh("INCIDENT", "DA_TIEP_NHAN", `Admin ${actor.ho_ten} đã tiếp nhận sự cố`, { van_de: this.van_de_su_co(hien_tai.van_de), ghi_chu, nguoi_xu_ly: actor.ho_ten }, undefined, chu_ky);
+    return this.chi_tiet_su_co_van_hanh(chu_ky);
+  }
+
+  async khac_phuc_su_co_van_hanh(actor: NguoiDungXacThuc, chu_kyRaw: string, dto: CapNhatSuCoVanHanhDto) {
+    const chu_ky = this.chuan_hoa_chu_ky_su_co(chu_kyRaw);
+    const hien_tai = await this.db.suCoVanHanh.findUnique({ where: { chu_ky } });
+    if (!hien_tai) throw new NotFoundException("Không tìm thấy chuỗi sự cố vận hành");
+    if (hien_tai.trang_thai_xu_ly === "DA_KHAC_PHUC") return this.chi_tiet_su_co_van_hanh(chu_ky);
+    const ghi_chu = dto.ghi_chu?.trim() || hien_tai.ghi_chu || null;
+    const khac_phuc_luc = new Date();
+    await this.db.$transaction([
+      this.db.suCoVanHanh.update({ where: { chu_ky }, data: { trang_thai_xu_ly: "DA_KHAC_PHUC", ghi_chu, nguoi_khac_phuc_id: actor.id, nguoi_khac_phuc_ten: actor.ho_ten, khac_phuc_luc } }),
+      this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_KHAC_PHUC_SU_CO_VAN_HANH", nguoi_dung_id: actor.id, chi_tiet: { chu_ky, trang_thai_cu: hien_tai.trang_thai_xu_ly, trang_thai_moi: "DA_KHAC_PHUC", ghi_chu } } })
+    ]);
+    await this.ghi_lich_su_van_hanh("INCIDENT", "DA_KHAC_PHUC", `Admin ${actor.ho_ten} đã đánh dấu sự cố khắc phục`, { van_de: this.van_de_su_co(hien_tai.van_de), ghi_chu, nguoi_xu_ly: actor.ho_ten }, undefined, chu_ky);
+    return this.chi_tiet_su_co_van_hanh(chu_ky);
   }
 
   async thong_ke_sla_van_hanh(soNgayRaw?: string) {
     const raw = Number.parseInt(soNgayRaw || "90", 10) || 90;
     const so_ngay = raw <= 30 ? 30 : 90;
     const tu = new Date(); tu.setUTCDate(tu.getUTCDate() - (so_ngay - 1)); tu.setUTCHours(0, 0, 0, 0);
-    const ds = await this.db.lichSuVanHanh.findMany({ where: { loai: "HEALTH", ngay_tao: { gte: tu } }, orderBy: { ngay_tao: "asc" }, select: { trang_thai: true, ngay_tao: true } });
+    const [ds, muc_tieu] = await Promise.all([
+      this.db.lichSuVanHanh.findMany({ where: { loai: "HEALTH", ngay_tao: { gte: tu } }, orderBy: { ngay_tao: "asc" }, select: { trang_thai: true, ngay_tao: true } }),
+      this.cau_hinh_slo_van_hanh_runtime()
+    ]);
     const map = new Map<string, { tong: number; tot: number; canh_bao: number; loi: number }>();
     for (const item of ds) {
       const ngay = item.ngay_tao.toISOString().slice(0, 10);
@@ -403,11 +521,29 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       const d = new Date(tu); d.setUTCDate(tu.getUTCDate() + i); const ngay = d.toISOString().slice(0, 10); const x = map.get(ngay) || { tong: 0, tot: 0, canh_bao: 0, loi: 0 };
       return { ngay, ...x, sla_percent: x.tong ? Math.round((x.tot / x.tong) * 10000) / 100 : null, uptime_percent: x.tong ? Math.round(((x.tot + x.canh_bao) / x.tong) * 10000) / 100 : null };
     });
-    const tong = theo_ngay.reduce((a, x) => ({ tong: a.tong + x.tong, tot: a.tot + x.tot, canh_bao: a.canh_bao + x.canh_bao, loi: a.loi + x.loi }), { tong: 0, tot: 0, canh_bao: 0, loi: 0 });
+    const tinh = (rows: typeof theo_ngay) => {
+      const tong = rows.reduce((a, x) => ({ tong: a.tong + x.tong, tot: a.tot + x.tot, canh_bao: a.canh_bao + x.canh_bao, loi: a.loi + x.loi }), { tong: 0, tot: 0, canh_bao: 0, loi: 0 });
+      const sla_percent = tong.tong ? Math.round((tong.tot / tong.tong) * 10000) / 100 : null;
+      const uptime_percent = tong.tong ? Math.round(((tong.tot + tong.canh_bao) / tong.tong) * 10000) / 100 : null;
+      return { ...tong, sla_percent, uptime_percent, dat_sla: sla_percent == null ? null : sla_percent >= muc_tieu.sla_muc_tieu_percent, dat_uptime: uptime_percent == null ? null : uptime_percent >= muc_tieu.uptime_muc_tieu_percent };
+    };
+    const tong_quan = tinh(theo_ngay);
+    const bay_ngay = tinh(theo_ngay.slice(-7));
+    const ba_muoi_ngay = tinh(theo_ngay.slice(-30));
+    const canh_bao: string[] = [];
+    if (muc_tieu.canh_bao_xu_huong) {
+      if (bay_ngay.dat_sla === false) canh_bao.push(`SLA 7 ngày ${bay_ngay.sla_percent}% dưới mục tiêu ${muc_tieu.sla_muc_tieu_percent}%`);
+      if (bay_ngay.dat_uptime === false) canh_bao.push(`Uptime 7 ngày ${bay_ngay.uptime_percent}% dưới mục tiêu ${muc_tieu.uptime_muc_tieu_percent}%`);
+      if (ba_muoi_ngay.dat_sla === false) canh_bao.push(`SLA 30 ngày ${ba_muoi_ngay.sla_percent}% dưới mục tiêu ${muc_tieu.sla_muc_tieu_percent}%`);
+      if (ba_muoi_ngay.dat_uptime === false) canh_bao.push(`Uptime 30 ngày ${ba_muoi_ngay.uptime_percent}% dưới mục tiêu ${muc_tieu.uptime_muc_tieu_percent}%`);
+    }
     return {
       so_ngay, tu_ngay: tu.toISOString(), tao_luc: new Date().toISOString(),
       dinh_nghia: { sla: "Tỷ lệ mẫu health ở trạng thái TỐT", uptime: "Tỷ lệ mẫu health không ở trạng thái LỖI" },
-      tong_quan: { ...tong, sla_percent: tong.tong ? Math.round((tong.tot / tong.tong) * 10000) / 100 : null, uptime_percent: tong.tong ? Math.round(((tong.tot + tong.canh_bao) / tong.tong) * 10000) / 100 : null },
+      muc_tieu: { sla_muc_tieu_percent: muc_tieu.sla_muc_tieu_percent, uptime_muc_tieu_percent: muc_tieu.uptime_muc_tieu_percent, canh_bao_xu_huong: muc_tieu.canh_bao_xu_huong, nguon_cau_hinh: muc_tieu.nguon_cau_hinh },
+      tong_quan,
+      xu_huong: { bay_ngay, ba_muoi_ngay },
+      canh_bao,
       theo_ngay
     };
   }
