@@ -1,4 +1,4 @@
-FROM node:24.19.0-bookworm-slim AS build
+FROM node:26.8.1-bookworm-slim AS build
 WORKDIR /app
 ENV DATABASE_URL=postgresql://user:pass@localhost:5432/nhienin3d
 RUN apt-get update \
@@ -13,7 +13,7 @@ COPY apps/api ./apps/api
 WORKDIR /app/apps/api
 RUN npm run build
 
-FROM node:24.19.0-bookworm-slim AS run
+FROM node:26.8.1-bookworm-slim AS run
 WORKDIR /app
 ENV NODE_ENV=production
 RUN apt-get update \
