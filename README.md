@@ -1,6 +1,6 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v3.6.4** — 01/09/2026
+> Phiên bản hiện tại: **v3.6.5** — 01/09/2026
 
 NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **frontend Next.js** và **backend NestJS/Fastify** kết nối **PostgreSQL qua Prisma**.
 
@@ -20,6 +20,8 @@ NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **fro
 
 ## Điểm chính bản hiện tại
 
+- **v3.6.5 sửa Browser E2E GitHub Actions fail `strict mode violation` khi click synthetic incident**: selector cũ `getByText(#<12 ký tự>)` đồng thời khớp chữ ký trong card Incident và một dòng Lịch sử vận hành, nên Playwright từ chối click vì có 2 phần tử. Browser E2E nay scope locator vào `.cine-incident-list-v340 .cine-incident-item-v340`, lọc đúng card theo chữ ký và chủ động kiểm tra phải có đúng 1 match trước khi click.
+- Runtime/browser smoke chuyển sang `scripts/e2e-runtime-v365.ps1` / `scripts/e2e-browser-v365.mjs`; CI dùng đúng v3.6.5. Các browser script versioned v3.6.0-v3.6.4 trong source mới cũng được sửa cùng locator để không tái hiện lỗi khi chạy chẩn đoán lịch sử. **Không có migration database mới**; migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`.
 - **v3.6.4 sửa lỗi Runtime E2E dừng giả tại bước Ops dù API/Docker v3.6.3 đã chạy đúng**: `e2e-runtime-v363.ps1` kế thừa nhầm assertion `health.phien_ban -eq "3.6.1"` trong khi Admin health thực tế trả `3.6.3`. Bản mới đồng bộ cả public health `v3.6.4` và Admin health `3.6.4`, đồng thời sửa assertion lịch sử tương ứng ở v3.6.2/v3.6.3 để không tái hiện lỗi khi chạy script versioned.
 - Runtime/browser smoke chuyển sang `scripts/e2e-runtime-v364.ps1` / `scripts/e2e-browser-v364.mjs`; CI dùng đúng script v3.6.4. **Không có migration database mới**; migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`.
 - **v3.6.3 vá healthcheck Docker Web bị `unhealthy` sau khi v3.6.2 đã sửa đúng đường dẫn standalone**: Next standalone đọc biến môi trường `HOSTNAME`; trong container biến này có thể là hostname/container-ID nên server bind vào interface container thay vì loopback. Healthcheck v3.6.2 lại gọi `127.0.0.1:3000`, dẫn tới false-negative dù `server.js` tồn tại và image build thành công.
@@ -1436,6 +1438,16 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 - Thêm regression test khóa đúng hai version contract, CI chuyển sang runtime/browser E2E v3.6.4. Giữ nguyên Docker Web healthy fix v3.6.3, strict allowScripts/fsevents, Maintenance Window, Error Budget/Burn-rate, Incident Excel và Webhook.
 - Không có migration database mới; migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`. Đồng bộ Root/API/Web/Health/OpenAPI lên **v3.6.4**.
 - Quy trình release: `npm install` → `npm audit` → `npm test` → `npm run typecheck` → `npm run build` → `./scripts/backup-db.ps1` → `docker compose up -d --build --remove-orphans` → `docker compose ps` → `./scripts/e2e-runtime-v364.ps1` → `npm run e2e:browser` → `./scripts/release.ps1 v3.6.4`.
+
+---
+
+## v3.6.5 — 01/09/2026
+
+- Sửa GitHub Actions Browser E2E `strict mode violation`: `getByText(`#${syntheticSignature.slice(0, 12)}`)` có thể khớp cả chữ ký trong card Incident lẫn chữ ký ở Lịch sử vận hành, nên Playwright strict locator trả 2 phần tử và dừng tại `openSynthetic`.
+- `e2e-browser-v365.mjs` scope locator vào riêng `.cine-incident-list-v340 .cine-incident-item-v340`, lọc theo nhãn chữ ký và assert đúng 1 card trước khi click. Cách này không phụ thuộc việc cùng chữ ký có xuất hiện ở timeline/lịch sử bên ngoài danh sách Incident.
+- Đồng thời vá locator tương tự trong browser script versioned v3.6.0-v3.6.4 của source mới và thêm regression test để cấm quay lại selector toàn trang gây mơ hồ. Runtime E2E/CI/version chuyển sang v3.6.5.
+- Không có migration database mới; migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`. Đồng bộ Root/API/Web/Health/OpenAPI lên **v3.6.5**.
+- Quy trình release: `npm install` → `npm audit` → `npm test` → `npm run typecheck` → `npm run build` → `./scripts/backup-db.ps1` → `docker compose up -d --build --remove-orphans` → `docker compose ps` → `./scripts/e2e-runtime-v365.ps1` → `npm run e2e:browser` → `./scripts/release.ps1 v3.6.5`.
 
 ---
 

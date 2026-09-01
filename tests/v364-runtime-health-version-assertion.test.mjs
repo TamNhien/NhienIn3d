@@ -18,13 +18,13 @@ test("v3.6.4 sua ca assertion version bi ke thua trong runtime v3.6.2 va v3.6.3"
   assert.match(runtime("3.6.3"), /health\.phien_ban -eq "3\.6\.3"/);
 });
 
-test("v3.6.4 CI va browser E2E dung script patch moi", () => {
+test("v3.6.4 health-version fix duoc giu khi nang patch tiep theo", () => {
   const pkg = JSON.parse(readFileSync("package.json", "utf8"));
   const ci = readFileSync(".github/workflows/ci.yml", "utf8");
   const browser = readFileSync("scripts/e2e-browser-v364.mjs", "utf8");
-  assert.equal(pkg.version, "3.6.4");
-  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v364.mjs");
-  assert.match(ci, /e2e-runtime-v364\.ps1/);
-  assert.match(ci, /Browser E2E Admin HTTPS v3\.6\.4/);
+  assert.match(pkg.version, /^3\.6\.[45]$/);
+  assert.match(pkg.scripts["e2e:browser"], /^node scripts\/e2e-browser-v36[45]\.mjs$/);
+  assert.match(ci, /e2e-runtime-v36[45]\.ps1/);
+  assert.match(ci, /Browser E2E Admin HTTPS v3\.6\.[45]/);
   assert.match(browser, /v3\.6\.4/);
 });

@@ -70,7 +70,13 @@ try {
     const synthetic = incidents.du_lieu?.find((x) => x.chu_ky === syntheticSignature);
     if (!synthetic) throw new Error("Không tìm thấy synthetic incident v3.6.2 do runtime E2E seed cho browser CI.");
     const openSynthetic = async () => {
-      await page.getByText(`#${syntheticSignature.slice(0, 12)}`, { exact: false }).click();
+      const signatureLabel = `#${syntheticSignature.slice(0, 12)}`;
+      const incidentButton = page
+        .locator(".cine-incident-list-v340 .cine-incident-item-v340")
+        .filter({ hasText: signatureLabel });
+      const matched = await incidentButton.count();
+      if (matched !== 1) throw new Error(`Synthetic incident ${signatureLabel} phải khớp đúng 1 card trong danh sách Incident, nhận ${matched}.`);
+      await incidentButton.click();
       await page.getByText(`Incident #${syntheticSignature.slice(0, 16)}`, { exact: false }).waitFor();
     };
     await openSynthetic();
