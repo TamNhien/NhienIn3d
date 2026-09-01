@@ -18,15 +18,9 @@ test("v3.6.5 patch ca browser E2E versioned v3.6.0-v3.6.4 de khong lap loi stric
   }
 });
 
-test("v3.6.5 CI va version dung runtime browser patch moi", () => {
-  const pkg = JSON.parse(readFileSync("package.json", "utf8"));
-  const ci = readFileSync(".github/workflows/ci.yml", "utf8");
+test("v3.6.5 runtime browser versioned giu dung contract lich su", () => {
   const runtime = readFileSync("scripts/e2e-runtime-v365.ps1", "utf8");
   const browser = readFileSync("scripts/e2e-browser-v365.mjs", "utf8");
-  assert.equal(pkg.version, "3.6.5");
-  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v365.mjs");
-  assert.match(ci, /e2e-runtime-v365\.ps1/);
-  assert.match(ci, /Browser E2E Admin HTTPS v3\.6\.5/);
   assert.match(runtime, /publicHealth\.phien_ban -eq "v3\.6\.5"/);
   assert.match(runtime, /health\.phien_ban -eq "3\.6\.5"/);
   assert.match(browser, /health\.phien_ban !== "v3\.6\.5"/);

@@ -1,6 +1,6 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v3.6.5** — 01/09/2026
+> Phiên bản hiện tại: **v3.6.6** — 01/09/2026
 
 NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **frontend Next.js** và **backend NestJS/Fastify** kết nối **PostgreSQL qua Prisma**.
 
@@ -20,6 +20,8 @@ NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **fro
 
 ## Điểm chính bản hiện tại
 
+- **v3.6.6 sửa GitHub Release build/push Web image thất bại vì sai Docker build context**: `apps/web/Dockerfile` từ v3.5.3 đã được thiết kế dùng repository root để đọc `package.json`, `.npmrc`, `apps/api/package.json` và `apps/web`, nhưng `.github/workflows/release.yml` vẫn truyền `context: ./apps/web`. Release workflow nay dùng `context: .` và `file: ./apps/web/Dockerfile`, đồng bộ với Docker Compose/local/CI runtime.
+- Cảnh báo GitHub Actions về Node 20 deprecation không phải nguyên nhân fail vì workflow đã dùng `actions/setup-node@v6` với Node `24.19.0`; warning `punycode` từ action dependency cũng không làm build dừng. Runtime/browser smoke chuyển sang `scripts/e2e-runtime-v366.ps1` / `scripts/e2e-browser-v366.mjs`. **Không có migration database mới**; migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`.
 - **v3.6.5 sửa Browser E2E GitHub Actions fail `strict mode violation` khi click synthetic incident**: selector cũ `getByText(#<12 ký tự>)` đồng thời khớp chữ ký trong card Incident và một dòng Lịch sử vận hành, nên Playwright từ chối click vì có 2 phần tử. Browser E2E nay scope locator vào `.cine-incident-list-v340 .cine-incident-item-v340`, lọc đúng card theo chữ ký và chủ động kiểm tra phải có đúng 1 match trước khi click.
 - Runtime/browser smoke chuyển sang `scripts/e2e-runtime-v365.ps1` / `scripts/e2e-browser-v365.mjs`; CI dùng đúng v3.6.5. Các browser script versioned v3.6.0-v3.6.4 trong source mới cũng được sửa cùng locator để không tái hiện lỗi khi chạy chẩn đoán lịch sử. **Không có migration database mới**; migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`.
 - **v3.6.4 sửa lỗi Runtime E2E dừng giả tại bước Ops dù API/Docker v3.6.3 đã chạy đúng**: `e2e-runtime-v363.ps1` kế thừa nhầm assertion `health.phien_ban -eq "3.6.1"` trong khi Admin health thực tế trả `3.6.3`. Bản mới đồng bộ cả public health `v3.6.4` và Admin health `3.6.4`, đồng thời sửa assertion lịch sử tương ứng ở v3.6.2/v3.6.3 để không tái hiện lỗi khi chạy script versioned.
@@ -1448,6 +1450,16 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 - Đồng thời vá locator tương tự trong browser script versioned v3.6.0-v3.6.4 của source mới và thêm regression test để cấm quay lại selector toàn trang gây mơ hồ. Runtime E2E/CI/version chuyển sang v3.6.5.
 - Không có migration database mới; migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`. Đồng bộ Root/API/Web/Health/OpenAPI lên **v3.6.5**.
 - Quy trình release: `npm install` → `npm audit` → `npm test` → `npm run typecheck` → `npm run build` → `./scripts/backup-db.ps1` → `docker compose up -d --build --remove-orphans` → `docker compose ps` → `./scripts/e2e-runtime-v365.ps1` → `npm run e2e:browser` → `./scripts/release.ps1 v3.6.5`.
+
+---
+
+## v3.6.6 — 01/09/2026
+
+- Sửa Release workflow build Web image fail với `COPY ... not found`. Nguyên nhân: Web Dockerfile cần repository root context, nhưng `docker/build-push-action@v6` ở `.github/workflows/release.yml` vẫn dùng `context: ./apps/web`, khiến build context chỉ có nội dung workspace Web và không thể thấy `.npmrc`, `apps/api/package.json` hay đường dẫn `apps/web`.
+- Bước `Build và push Web image` nay dùng `context: .` và `file: ./apps/web/Dockerfile`, khớp với `docker-compose.yml` đã chạy thành công ở local. Thêm regression test khóa root context để tránh release workflow lệch khỏi Dockerfile lần nữa.
+- Runtime/browser smoke chuyển sang `scripts/e2e-runtime-v366.ps1` / `scripts/e2e-browser-v366.mjs`; CI/version/Health/OpenAPI đồng bộ **v3.6.6**. Cảnh báo Node 20 deprecation và `punycode` trong GitHub Actions là warning không chặn job, không dùng biến `ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION`.
+- Không có migration database mới; migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`.
+- Quy trình release: `npm install` → `npm audit` → `npm test` → `npm run typecheck` → `npm run build` → `./scripts/backup-db.ps1` → `docker compose up -d --build --remove-orphans` → `docker compose ps` → `./scripts/e2e-runtime-v366.ps1` → `npm run e2e:browser` → `./scripts/release.ps1 v3.6.6`.
 
 ---
 
