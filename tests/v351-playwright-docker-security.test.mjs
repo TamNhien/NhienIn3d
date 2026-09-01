@@ -23,6 +23,6 @@ test("v3.5.1 runtime va browser E2E chan container cu truoc khi kiem tra SLO", (
   assert.match(runtime, /phien_ban -eq "v3\.5\.1"/);
   assert.match(runtime, /container cũ/u);
   assert.match(browser, /health\.phien_ban !== "v3\.5\.1"/);
-  assert.match(ci, /e2e-runtime-v(?:35[1234]|36[01234567])\.ps1/);
-  assert.match(ci, /Browser E2E Admin HTTPS v(?:3\.5\.[1234]|3\.6\.[01234567])/);
+  assert.match(ci, /e2e-runtime-v(?:35[1234]|36[01234567]|37[012])\.ps1/);
+  assert.match(ci, /Browser E2E Admin HTTPS v(?:3\.5\.[1234]|3\.6\.[01234567]|3\.7\.[012])/);
 });

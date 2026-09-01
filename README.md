@@ -1,6 +1,6 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v3.6.7** — 01/09/2026
+> Phiên bản hiện tại: **v3.7.2** — 01/09/2026
 
 NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **frontend Next.js** và **backend NestJS/Fastify** kết nối **PostgreSQL qua Prisma**.
 
@@ -20,131 +20,14 @@ NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **fro
 
 ## Điểm chính bản hiện tại
 
-- **v3.6.7 sửa Browser E2E incident lifecycle bị Playwright strict-mode khi trạng thái `DA TIEP NHAN` / `DA KHAC PHUC` xuất hiện ở nhiều incident**: assertion trạng thái không còn `page.getByText(...)` trên toàn trang mà đọc duy nhất badge trong `.cine-incident-detail-v340 .cine-incident-meta-v350`, tức panel chi tiết synthetic incident đang chọn.
-- Các browser E2E lịch sử v3.6.0-v3.6.6 cũng được backport scoped status assertion để chẩn đoán lại không tái hiện lỗi strict locator. Runtime/browser smoke hiện dùng `scripts/e2e-runtime-v367.ps1` / `scripts/e2e-browser-v367.mjs`. **Không có migration database mới**; migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`.
-- **v3.6.5 sửa Browser E2E GitHub Actions fail `strict mode violation` khi click synthetic incident**: selector cũ `getByText(#<12 ký tự>)` đồng thời khớp chữ ký trong card Incident và một dòng Lịch sử vận hành, nên Playwright từ chối click vì có 2 phần tử. Browser E2E nay scope locator vào `.cine-incident-list-v340 .cine-incident-item-v340`, lọc đúng card theo chữ ký và chủ động kiểm tra phải có đúng 1 match trước khi click.
-- Runtime/browser smoke chuyển sang `scripts/e2e-runtime-v365.ps1` / `scripts/e2e-browser-v365.mjs`; CI dùng đúng v3.6.5. Các browser script versioned v3.6.0-v3.6.4 trong source mới cũng được sửa cùng locator để không tái hiện lỗi khi chạy chẩn đoán lịch sử. **Không có migration database mới**; migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`.
-- **v3.6.4 sửa lỗi Runtime E2E dừng giả tại bước Ops dù API/Docker v3.6.3 đã chạy đúng**: `e2e-runtime-v363.ps1` kế thừa nhầm assertion `health.phien_ban -eq "3.6.1"` trong khi Admin health thực tế trả `3.6.3`. Bản mới đồng bộ cả public health `v3.6.4` và Admin health `3.6.4`, đồng thời sửa assertion lịch sử tương ứng ở v3.6.2/v3.6.3 để không tái hiện lỗi khi chạy script versioned.
-- Runtime/browser smoke chuyển sang `scripts/e2e-runtime-v364.ps1` / `scripts/e2e-browser-v364.mjs`; CI dùng đúng script v3.6.4. **Không có migration database mới**; migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`.
-- **v3.6.3 vá healthcheck Docker Web bị `unhealthy` sau khi v3.6.2 đã sửa đúng đường dẫn standalone**: Next standalone đọc biến môi trường `HOSTNAME`; trong container biến này có thể là hostname/container-ID nên server bind vào interface container thay vì loopback. Healthcheck v3.6.2 lại gọi `127.0.0.1:3000`, dẫn tới false-negative dù `server.js` tồn tại và image build thành công.
-- Runtime Web nay khởi động bằng `HOSTNAME=0.0.0.0 PORT=3000 exec node server.js`, giữ `WORKDIR /app/apps/web` và toàn bộ cây standalone/static/public của v3.6.2. Healthcheck loopback tiếp tục được giữ để kiểm tra thật HTTP readiness; Caddy HTTPS vẫn chỉ khởi động khi Web `service_healthy`. Security gate npm/allowScripts/fsevents của v3.6.1 được giữ nguyên.
-- **v3.6.1 vá Docker strict install-script cho dependency tùy chọn `fsevents` và giữ nguyên Maintenance Window của v3.6.0**: cấu hình bảo trì vẫn lưu trong `cau_hinh_he_thong`, Admin bật/tắt, chọn thời gian bắt đầu/kết thúc và lý do. Trong thời gian bảo trì, job cảnh báo vận hành tự động tạm ngưng để không tạo spam giả; thao tác kiểm tra/gửi thủ công vẫn được phép. Health API trả trạng thái `dang_bao_tri` / `sap_bao_tri` để UI hiển thị rõ.
-- **SLO có Error Budget 30 ngày và burn-rate 1h / 6h / 24h** cho cả SLA lẫn Uptime. Burn-rate > 1x nghĩa là tốc độ tiêu ngân sách lỗi đang vượt tốc độ bền vững; các cửa sổ ngắn được đưa vào cảnh báo xu hướng để phát hiện suy giảm sớm hơn trước khi KPI 30/90 ngày tụt mạnh.
-- **Incident/Timeline xuất Excel**: có endpoint/file riêng cho danh sách incident tổng hợp và timeline chi tiết của một chữ ký. Tab Hệ thống có nút `Xuất Incident Excel` và `Xuất Timeline Excel`.
-- Chuẩn bị **Webhook cảnh báo ngoài** bằng `SYSTEM_ALERT_WEBHOOK_ENABLED`, `SYSTEM_ALERT_WEBHOOK_URL`, `SYSTEM_ALERT_WEBHOOK_BEARER_TOKEN`. Token chỉ đọc từ môi trường và không trả ra Admin UI; production chỉ chấp nhận HTTPS. Webhook dùng payload `nhienin3d.system.alert` và đi cùng cơ chế silence/escalation hiện tại.
-- Browser E2E v3.6.3 cập nhật SLO, reload kiểm tra persistence rồi restore cấu hình ban đầu. Incident acknowledge/resolve chỉ mutate synthetic incident khi chạy CI hoặc bật `E2E_MUTATE_INCIDENT=true`, tránh thay đổi incident thật khi chạy local. Runtime E2E kiểm tra Maintenance/Error Budget/Burn-rate/Incident Excel/Webhook và CI seed synthetic incident riêng cho browser test.
-- **Không có migration database mới ở v3.6.3**: maintenance dùng bảng cấu hình JSON hiện có, error budget/burn-rate tính từ `lich_su_van_hanh`, Incident Excel đọc bảng `su_co_van_hanh`. Migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`.
-
-- **v3.5.4 sửa regression khi nâng cấp bằng cách chép source đè thư mục cũ**: `apps/api/.npmrc` hoặc `apps/web/.npmrc` từ v3.5.2 có thể còn sót dù v3.5.3 archive không còn chứa các file này. `scripts/don-dep-legacy.mjs` nay tự xóa hai file policy legacy trước khi chạy test, nên regression root-only `allowScripts` không còn fail giả ở dòng `existsSync(...)`.
-- Root `allowScripts` và `.npmrc` vẫn là policy duy nhất; không nới security gate và `npm audit` vẫn phải đạt 0 High. Runtime/browser E2E chuyển sang `e2e-runtime-v354.ps1` / `e2e-browser-v354.mjs`. **Không có migration database mới ở v3.5.4**; migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`.
-
-- **v3.5.3 dọn sạch warning `allowScripts in workspace ... is ignored` của npm 12**: `allowScripts` chỉ còn khai báo một lần tại `package.json` gốc, đúng phạm vi npm workspace. `apps/api/package.json` và `apps/web/package.json` không còn policy bị npm bỏ qua; `.npmrc` gốc tiếp tục bật `strict-allow-scripts=true`.
-- Docker Web đổi build context từ `./apps/web` về repository root và cài dependency bằng `npm install --workspace=@nhienin3d/web --include-workspace-root=false`, nên local, CI, API Docker và Web Docker đều dùng đúng **một allowlist gốc**. Security gate `npm audit --workspace=@nhienin3d/web --audit-level=high` được chạy ngay trong image build.
-- Runtime/browser E2E chuyển sang `e2e-runtime-v353.ps1` / `e2e-browser-v353.mjs`; preflight vẫn chặn stale container. **Không có migration database mới ở v3.5.3**; migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`.
-
-- **v3.5.2 xử lý triệt để cảnh báo install-script của npm 11.17+/12**: root/API/Web khai báo `allowScripts` theo phiên bản đã duyệt; Prisma/Prisma Engines, Argon2 và esbuild được phép chạy install script đúng phiên bản, còn `@scarf/scarf` bị từ chối vì chỉ phục vụ telemetry.
-- `.npmrc` bật `strict-allow-scripts=true`, nên dependency mới có install script nhưng chưa được review sẽ làm `npm install` thất bại thay vì âm thầm chạy hoặc chỉ cảnh báo. Docker API/Web copy policy này **trước bước npm install**, bảo đảm local, CI và image build dùng cùng chuỗi kiểm soát. Yêu cầu npm tối thiểu là **11.17.0**.
-- Runtime/browser E2E được nâng thành `e2e-runtime-v352.ps1` / `e2e-browser-v352.mjs` và tiếp tục có preflight version để chặn stale container. **Không có migration database mới ở v3.5.2**; migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`.
-
-- **v3.5.1 vá lỗi security audit làm Docker build dừng ở API/migrate**: nâng `@playwright/test` từ `1.55.0` lên `1.62.1` để loại cảnh báo mức High `GHSA-7mvr-c777-76hp`; `npm audit` trong Docker API được scope đúng workspace API, còn CI root vẫn audit toàn bộ dependency tree.
-- Runtime/browser E2E v3.5.1 có **preflight version**. Nếu một lần `docker compose up --build` thất bại nhưng container v3.4.x/v3.5.0 cũ vẫn còn chạy, script dừng ngay với thông báo container/image cũ thay vì báo sai thành lỗi 404 ở `/quan-tri/he-thong/cau-hinh-slo`.
-- **Không có migration mới ở v3.5.1**. Migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`; sau khi Docker build thành công, migrate mới áp dụng migration v3.5.0 nếu database chưa có.
-
-- **v3.5.0 hoàn thiện vòng đời Incident**: mỗi chữ ký cảnh báo có trạng thái `MOI` → `DA_TIEP_NHAN` → `DA_KHAC_PHUC`, lưu người tiếp nhận/người khắc phục, thời điểm và ghi chú xử lý; mọi thao tác đều có Audit riêng. Khi cùng sự cố tái xuất hiện sau khi đã khắc phục, hệ thống tự mở lại incident.
-- Danh sách incident không còn quét tối đa 5.000 dòng `lich_su_van_hanh` mỗi lần. Migration `202609010001_v350_incident_slo_rollup` tạo bảng tổng hợp `su_co_van_hanh`, backfill các chữ ký cũ và cập nhật aggregate ngay khi phát sinh HEALTH/ALERT mới.
-- Admin có **Mục tiêu SLO vận hành** riêng cho SLA/Uptime, cấu hình runtime lưu PostgreSQL với `.env` fallback; thống kê bổ sung xu hướng 7/30 ngày và phát cảnh báo khi tụt dưới mục tiêu. Cảnh báo xu hướng SLO được ghép vào cơ chế email silence/escalation hiện có với chữ ký riêng đúng tập vấn đề.
-- Tab Hệ thống hiển thị mục tiêu, trạng thái đạt/không đạt, xu hướng 7/30 ngày và workflow Incident trực tiếp trên UI. Bổ sung `scripts/e2e-browser-v350.mjs` dùng Playwright kiểm tra đăng nhập Admin qua HTTPS local, SLO và Incident; CI Docker chạy cả runtime E2E v3.5.0 lẫn browser E2E.
-
-- v3.4.0 nâng cấp vận hành: Admin cấu hình trực tiếp chu kỳ/backup threshold/silence/escalation/người nhận cảnh báo; cấu hình lưu PostgreSQL, áp dụng timer ngay và audit đầy đủ trước/sau.
-- Health/Alert được gắn **chữ ký SHA-256 của tập vấn đề** để nhóm thành chuỗi sự cố; tab Hệ thống có danh sách incident, timeline chi tiết và thời lượng.
-- Bổ sung **SLA/Uptime 30 hoặc 90 ngày** theo mẫu HEALTH và biểu đồ theo ngày. Audit + lịch sử vận hành chuyển giao diện sang **cursor pagination** để tải tiếp ổn định khi dữ liệu tăng lớn; endpoint offset cũ vẫn giữ tương thích.
-- Migration `202608310008_v340_incident_signature_cursor_sla` thêm cột/index chữ ký sự cố. `scripts/e2e-runtime-v340.ps1` mở rộng Docker E2E cho đăng nhập Admin, đơn hàng, sản phẩm, preview nhập kho, phiếu nhập, báo cáo Excel, Ops/SLA/incident/cursor, đồng thời chạy lại regression backup/restore v3.2.0.
-
-- v3.3.1 sửa lỗi F5 nhiều lần ở Admin có thể chạm rate limit rồi bị hiểu nhầm là hết phiên: tăng ngưỡng API mặc định lên 600 request/phút, cho phép cấu hình `API_RATE_LIMIT_MAX`, dùng single-flight cho `layTaiKhoan`/`lamMoiPhien` và không coi 429/5xx là tín hiệu đăng xuất.
-- v3.3.2 đối soát doanh thu khi giao hàng: chốt đúng giao dịch COD đang chờ dù có giao dịch thất bại mới hơn, tách KPI số đơn đã giao khỏi số đơn ghi nhận doanh thu và làm rõ đơn thanh toán trước không được cộng doanh thu lần hai.
-- Sau khi Admin xác nhận đã giao, API trả metadata `cap_nhat_doanh_thu`; Dashboard cập nhật doanh thu ngay trên UI rồi đồng bộ lại từ PostgreSQL. Đơn đã thanh toán online từ trước được ghi rõ là không cộng doanh thu lần hai.
-- Truy vấn doanh thu 30 ngày không còn chỉ lấy giao dịch mới nhất; hệ thống chọn đúng giao dịch `DA_THANH_TOAN` và lọc theo thời điểm ghi nhận thực tế.
-
-- v3.3.0 mở rộng audit diff cho **danh mục, vật liệu, màu sắc, ca làm và phân ca**; tab Nhật ký Admin có thêm bộ lọc theo người thao tác và vẫn xuất CSV/Excel theo đúng bộ lọc.
-- Tab **Hệ thống** bổ sung thống kê vận hành 7/30 ngày: tỷ lệ health tốt, backup/restore thành công và số lần gửi cảnh báo; lịch sử vận hành có nút **Xuất Excel**.
-- Cảnh báo vận hành dùng chính sách **silence + escalation**: cùng một sự cố được im lặng theo `SYSTEM_HEALTH_ALERT_SILENCE_MINUTES`, sau đó chỉ gửi lại khi đạt cấp escalation mới theo `SYSTEM_HEALTH_ALERT_ESCALATION_MINUTES`, tránh spam nhưng vẫn nhắc khi sự cố kéo dài.
-- Migration `202608310007_v330_audit_ops_indexes` bổ sung index composite cho audit/đơn hàng/lịch sử vận hành để giữ truy vấn ổn định khi dữ liệu tăng. CI có thêm job Docker runtime chạy migration + API health + backup/restore cô lập.
-
-- v3.2.3 sửa lỗi `npm run typecheck` ở optimistic order UI: `AdminDonHangChiTiet` không còn kế thừa đồng thời `thanh_toan` dạng object tóm tắt và array chi tiết; tách type thanh toán tóm tắt/chi tiết và dùng `Omit<AdminDonHang, "thanh_toan">` để model đúng dữ liệu API.
-
-- v3.2.2 sửa form **Cập nhật trạng thái** bị chồng field và chuyển thao tác xác nhận đơn sang optimistic UI: badge/trạng thái phản hồi ngay, rollback khi API lỗi, các refresh Dashboard/Sản phẩm/Nhật ký chạy nền không giữ nút `Đang lưu...`.
-
-- v3.2.1 sửa các lỗi `npm run typecheck` của v3.2.0 ở Prisma JSON audit/operation history: chuẩn hóa `chi_tiet` về `Prisma.InputJsonObject`, diff trước/sau có kiểu JSON tương thích Prisma và tách hai nhánh truy vấn audit phân trang để TypeScript không suy luận literal `take: 5000` sai kiểu.
-- Admin có thể chọn **Đã giao / hoàn tất** trực tiếp từ mọi trạng thái đơn hàng, kể cả đơn đang chờ xác nhận, đã xác nhận, đang sản xuất hoặc đã hủy. Các chuyển trạng thái khác vẫn giữ quy trình tuyến tính. Khi khôi phục đơn đã hủy sang hoàn tất, hệ thống trừ lại phần tồn kho đã hoàn trước đó và chặn nếu không đủ tồn; giao dịch còn `CHO_THANH_TOAN` tiếp tục được chốt `DA_THANH_TOAN` và ghi nhận doanh thu theo logic hiện có.
-- Giao diện Đơn hàng hiển thị tùy chọn **Đã giao / hoàn tất** cho mọi đơn chưa hoàn tất và có ghi chú rõ quyền xác nhận trực tiếp của Admin. Không có migration database mới ở v3.2.1.
-- v3.2.0 sửa lỗi release khi nâng cấp theo kiểu **chép source mới đè lên thư mục cũ**: `scripts/don-dep-legacy.mjs` chủ động xóa hai file MFA v3.0.x còn sót trước khi chạy test, nên regression “MFA runtime phải được gỡ” không còn fail vì file legacy ngoài gói source.
-- Giao diện **Nhà cung cấp** làm gọn checkbox `Đang hoạt động`: checkbox 16px, nhãn một dòng, không còn khối tick lớn chiếm gần hết cột như style checkbox dùng chung.
-- Nhật ký Admin v3.2.0 có **phân trang phía server**, bộ lọc dữ liệu lớn, hiển thị diff `trước → sau` cho các thao tác nhạy cảm và xuất Excel bên cạnh CSV. Diff đã được thêm cho cập nhật khách hàng/người dùng, nhà cung cấp, sản phẩm, biến thể, tồn kho và trạng thái đơn hàng/thanh toán.
-- Thêm bảng `lich_su_van_hanh` và tab **Hệ thống** mở rộng: lưu health check, kết quả backup/restore và email cảnh báo; có lọc loại/trạng thái + phân trang trực tiếp trong Admin.
-- Cảnh báo vận hành qua email dùng `SYSTEM_HEALTH_EMAIL_*`: theo dõi PostgreSQL mất kết nối, backup quá hạn/chưa có backup và SMTP lỗi; chống gửi lặp theo chữ ký tập vấn đề.
-- `backup-db.ps1`/`restore-db.ps1` ghi kết quả thành công/thất bại vào PostgreSQL theo cơ chế best-effort. Thêm `scripts/e2e-runtime-v320.ps1` kiểm tra runtime backup → SHA-256 → restore trên **database tạm cô lập**, không ghi đè database vận hành.
-- v3.1.0 **loại bỏ hoàn toàn MFA/TOTP khỏi runtime** theo yêu cầu: đăng nhập quay về một bước email + mật khẩu, không còn challenge 6 số, setup key, route MFA, biến `MFA_ENCRYPTION_KEY` hay tab Bảo mật. Migration `202608310005_v310_remove_mfa_system_health` xóa ba cột MFA khỏi `nguoi_dung`; migration v3.0.0 vẫn được giữ nguyên trong lịch sử để các database nâng cấp tuần tự an toàn.
-- Admin có tab **Hệ thống** mới hiển thị sức khỏe API, PostgreSQL, SMTP, backup gần nhất và lịch cảnh báo tồn kho. API chỉ đọc thư mục `backups/` qua volume read-only, không expose password SMTP hay secret cấu hình.
-- Backup PostgreSQL được nâng thành cơ chế vận hành thực tế: daily backup, snapshot weekly vào Chủ nhật, retention 14 ngày/8 tuần, SHA-256 sidecar, script kiểm tra toàn bộ checksum và script Windows Scheduled Task chạy tự động lúc 02:00. Restore vẫn bắt buộc `-XacNhan`.
-- v2.19.3 hợp nhất Docker local theo **HTTPS mặc định**: `docker compose up -d --build` giờ khởi động Caddy cùng stack, Web chỉ `expose` cổng 3000 nội bộ và **chỉ Caddy bind `127.0.0.1:3000`**, loại bỏ lỗi `Bind for 127.0.0.1:3000 failed: port is already allocated` khi chuyển qua lại giữa compose thường và HTTPS.
-- Frontend Docker dùng API cùng origin `/api/v1`, tránh mixed-content; `WEB_PUBLIC_URL` mặc định chuyển sang `https://localhost:3000`. `docker-compose.https.yml` được đồng bộ cùng topology để file cũ không còn tạo orphan `nhienin3d-https`.
-- `scripts/https-local.ps1` chạy `docker compose up -d --build --remove-orphans`, tự dọn service legacy/orphan, cài CA CurrentUser như trước và báo lệnh kiểm tra cổng khi 3000 bị một chương trình ngoài Docker chiếm.
-- v2.19.0 bổ sung **quản lý nhà cung cấp** đầy đủ trong Admin, liên kết nhà cung cấp với phiếu nhập/lô hàng và chặn xóa nhà cung cấp đã có lịch sử nhập kho; có thể chuyển sang trạng thái ngừng hoạt động để giữ nguyên dữ liệu đối soát.
-- Lịch sử **phiếu nhập kho** hỗ trợ tìm kiếm/lọc theo nhà cung cấp và khoảng ngày, xem chi tiết từng dòng tồn trước → tồn sau, đồng thời xuất Excel để đối soát.
-- Mỗi biến thể có **tồn tối thiểu/tối đa**; Kho tự xác định biến thể cần nhập và tính **gợi ý số lượng cần nhập = tồn tối đa - tồn hiện tại** khi tồn chạm ngưỡng tối thiểu. Báo cáo tồn kho Excel/CSV cũng mang theo định mức và gợi ý nhập.
-- v2.18.3 bổ sung **HTTPS local được Windows/Chromium tin cậy** cho `localhost:3000`: Caddy reverse proxy TLS cùng origin cho Web + `/api/*`, script PowerShell tự lấy CA nội bộ và cài vào Trusted Root của `CurrentUser`, loại bỏ cảnh báo “Kết nối không an toàn” khi chạy đúng chế độ HTTPS.
-- v2.18.2 làm rõ danh sách xổ xuống **Vật liệu/Màu** trong Admin: nền tối tương phản cao, chữ lớn hơn, mục đang chọn nổi bật và option hiển thị cả mã + tên; đồng thời giữ toàn bộ logo/favicon thương hiệu từ v2.18.1.
-- v2.18.1 bổ sung **logo NhienIn3d** đồng bộ trên favicon/tab trình duyệt, thanh điều hướng, menu drawer và footer; logo khối 3D dùng SVG local nên sắc nét ở mọi DPI và không cần tải tài nguyên ngoài.
-- v2.18.0 bổ sung **nhập kho nhanh theo lô**: Admin có thể chọn CSV/XLSX, xem trước và kiểm tra toàn bộ mã biến thể/số lượng/lỗi trùng trước khi ghi; chỉ khi tất cả dòng hợp lệ mới cho phép xác nhận nhập kho trong một transaction.
-- Mỗi lần nhập lô tạo **phiếu nhập kho** và chi tiết tồn trước → tồn sau, mã lô/nhà cung cấp/ghi chú; lịch sử gần nhất hiển thị ngay trong tab Kho và audit liên kết theo mã phiếu.
-- Cảnh báo tồn kho qua email có thể chạy theo lịch bằng `LOW_STOCK_EMAIL_*`; hệ thống lưu chữ ký trạng thái trong `cau_hinh_he_thong` để **không gửi lặp** khi danh sách tồn thấp chưa thay đổi, đồng thời Admin có nút kiểm tra/gửi ngay.
-- v2.17.1 sửa form **Tạo biến thể mới** trong tab Kho: chia lại grid desktop 4 cột, field co đúng chiều rộng, nhãn không bị che và responsive 2/1 cột để không còn hiện tượng chữ/ô nhập chồng lên nhau.
-- v2.17.0 bổ sung **cảnh báo tồn kho theo ngưỡng cấu hình**: Admin chỉnh ngưỡng ngay trong tab Kho, Dashboard cảnh báo số biến thể sắp hết/hết hàng; lịch sử kho phân loại Nhập/Xuất/Điều chỉnh, lưu nguyên nhân, chênh lệch và người thao tác.
-- v2.16.0 bổ sung **CRUD Vật liệu & Màu sắc** trong Admin, chặn xóa dữ liệu tham chiếu đang được biến thể sử dụng; tab Kho có bộ lọc nâng cao theo tồn/vật liệu/màu/hiển thị và lịch sử điều chỉnh tồn gần nhất.
-- v2.15.5 chỉnh thanh chức năng Admin để **mọi hàng tự giãn kín 100% chiều ngang**, không còn khoảng trống lớn bên phải khi các nút xuống hàng; desktop dùng flex-wrap có flex-grow, mobile chuyển dần về nút toàn hàng.
-- v2.15.3 sửa lệch số liệu dashboard: số **đơn** nằm cạnh doanh thu giờ được đếm theo **ngày ghi nhận doanh thu/thanh toán**, không còn lấy ngày tạo đơn; đồng thời KPI tách rõ **đơn ghi nhận doanh thu** và **đơn mới phát sinh**.
-- v2.15.2 sửa lỗi `npm run typecheck` tại `prisma/seed.ts` do kiểu `don_hang_map` thiếu trường `trang_thai`, đồng thời bổ sung xuất **Excel (.xlsx)** cho Đơn hàng/Doanh thu/Tồn kho và bỏ ghi chú nền ảnh khỏi footer.
-- v2.15.1 sửa **ghi nhận doanh thu theo thanh toán**: non-COD đã thanh toán được cộng doanh thu ngay; COD chỉ cộng khi Admin xác nhận **Đã giao / hoàn tất**, lúc đó giao dịch tự chuyển sang `DA_THANH_TOAN`.
-- v2.15.0 bổ sung **CRUD Danh mục**: tạo, sửa tên/mô tả/thứ tự/hiển thị và xóa danh mục trống; không cho xóa khi vẫn còn sản phẩm để tránh mất liên kết dữ liệu.
-- Tab **Kho** được nâng thành quản lý biến thể đầy đủ: tạo/sửa/xóa mã biến thể, chọn vật liệu, màu sắc, giá chênh lệch, tồn kho và trạng thái hiển thị; sản phẩm luôn phải còn ít nhất một biến thể.
-- Thêm tab **Đánh giá**: đánh giá mới ở trạng thái chờ duyệt; Admin có thể Duyệt, Ẩn hoặc Xóa. Storefront chỉ đọc đánh giá đã duyệt.
-- Tab **Báo cáo** hỗ trợ song song **Excel (.xlsx)** và **CSV UTF-8** cho Đơn hàng, Doanh thu theo thời điểm ghi nhận thanh toán và snapshot Tồn kho. File XLSX được backend tạo trực tiếp, có header định dạng, freeze hàng đầu, auto-filter và độ rộng cột phù hợp; CSV vẫn có BOM để mở đúng tiếng Việt trong Excel.
-- Các thao tác Danh mục/Biến thể/Đánh giá được ghi vào `nhat_ky_bao_mat` dưới nhóm sự kiện `ADMIN_*`.
-- v2.14.0 tách tab **Sản phẩm** và **Kho**: Sản phẩm chỉ phụ trách thêm/sửa/xóa, ảnh và thông tin bán hàng; Kho chỉ phụ trách tồn kho/hiển thị từng biến thể.
-- Admin có thể **chọn ảnh JPEG/PNG/WebP trực tiếp từ máy**. Frontend crop/căn giữa và chuẩn hóa ảnh thành **1000 × 800 (tỉ lệ 5:4)** trước khi lưu, đồng bộ đúng khung ảnh product card; ảnh tải lên được lưu cùng dữ liệu sản phẩm trong PostgreSQL dưới dạng data URL nên không phụ thuộc đường dẫn file tạm trên máy người dùng.
-- Hai sản phẩm `N3D-ORG-011` và `N3D-MAKER-012` chuyển sang **ảnh chụp sản phẩm thật** từ trang tham khảo MakerWorld thay cho SVG minh họa v2.12.3.
-- Seed sản phẩm/biến thể vẫn **bootstrap-only**: không ghi đè ảnh, giá, tồn kho, trạng thái hoặc nội dung Admin đã chỉnh; sản phẩm mẫu bị Admin xóa cũng không tự xuất hiện lại sau khi restart Docker/chạy seed.
-- v2.12.0 bổ sung **Quản trị đơn hàng**: tìm kiếm/lọc, xem chi tiết, cập nhật trạng thái theo luồng hợp lệ và xem lịch sử xử lý; khi hủy đơn hệ thống hoàn tồn kho các biến thể có mã được lưu trong `tuy_chon`.
-- v2.12.0 bổ sung **Quản trị sản phẩm & tồn kho** ở mức cơ bản: sửa tên, mô tả ngắn, giá bán, trạng thái sản phẩm; sửa tồn kho và bật/tắt hiển thị từng biến thể.
-- v2.12.1 tinh gọn tab **Sản phẩm & kho**: danh sách sản phẩm chuyển thành **ô chọn xổ xuống**, chỉ hiển thị một sản phẩm được chọn để chỉnh sửa; tìm kiếm vẫn lọc danh sách lựa chọn.
-- v2.12.2 chuẩn hóa storefront thành **6 sản phẩm mỗi hàng trên desktop** và bổ sung đủ **12 sản phẩm mẫu**, nhờ đó danh sách mặc định hiển thị trọn **2 hàng × 6 sản phẩm**.
-- v2.12.0 bổ sung tab **Nhật ký Admin** lấy 200 sự kiện `ADMIN_*` gần nhất. Các thao tác khách hàng, nhân viên, ca làm, phân ca, đơn hàng, sản phẩm và tồn kho đều có audit trail trong `nhat_ky_bao_mat`.
-- Migration `202608300004_v212_quan_tri_don_hang_audit` tạo bảng `lich_su_don_hang`, backfill mốc đầu tiên cho đơn hiện có và checkout mới tự ghi lịch sử ngay khi tạo đơn.
-- Giữ Dashboard v2.11.0: doanh thu hôm nay/7 ngày/30 ngày, số đơn theo kỳ, giá trị đơn trung bình, khách hàng mới, biểu đồ doanh thu 7 ngày, top sản phẩm, tồn kho thấp và đơn gần nhất.
-- v2.10.0 cho phép **chỉnh sửa/xóa phân ca đã xếp** ngay trên lịch: đổi nhân viên, ngày làm, mẫu ca, ghi chú; mỗi dòng lịch có nút **Chỉnh sửa** và **Xóa**.
-- v2.10.1 tách **Khách hàng** và **Nhân viên bán hàng** thành hai khu quản trị riêng; khách hàng được sửa họ tên/email/SĐT/địa chỉ, đồng thời ca làm và phân ca chuyển sang endpoint POST cập nhật ổn định và xác minh lại PostgreSQL sau khi lưu.
-- v2.10.2 sửa lỗi **Lưu thay đổi hồ sơ/địa chỉ** và **Đổi mật khẩu** báo `Failed to fetch`: Fastify CORS cho phép tường minh `GET/HEAD/POST/PUT/PATCH/DELETE/OPTIONS`, frontend tài khoản chuyển hai thao tác này sang POST alias ổn định; PATCH cũ vẫn giữ tương thích.
-- Seed Admin không còn có nhánh nào reset `ADMIN_PASSWORD` lên tài khoản đã tồn tại; mật khẩu môi trường chỉ được dùng đúng lúc bootstrap tài khoản Admin lần đầu.
-- Mẫu ca đã có phân công vẫn **chỉnh sửa được**; tên/giờ/màu mới áp dụng tức thời cho các phân ca đang tham chiếu. Xóa mẫu ca sẽ xóa kèm các phân ca liên quan trong transaction.
-- Các thao tác xóa mẫu ca/phân ca trên web dùng endpoint `POST .../:id/xoa` có JSON body để ổn định với Fastify/proxy; endpoint `DELETE` vẫn giữ cho tương thích API.
-- Đã bỏ nhãn **STAFF OPERATIONS** khỏi cả màn hình Ca làm và Xếp ca.
-- Bỏ dòng kicker `NHIENIN3D · ADMIN` phía trên tiêu đề Admin Dashboard để giao diện gọn hơn.
-- Chuẩn hóa lịch làm việc mặc định còn **2 ca**: `CA01 · Ca sáng · 06:00–14:00` và `CA02 · Ca chiều · 14:00–22:00`. Migration v2.9.9 gom các mẫu ca cũ về hai khung này và giữ phân ca cũ hợp lệ.
-- Admin có thể **chỉnh sửa** mã ca, tên ca, giờ bắt đầu/kết thúc, màu hiển thị; có thể **xóa ca** trực tiếp trong tab Ca làm. Khi xóa ca, các phân ca đang tham chiếu ca đó được xóa cùng trong transaction để không bị lỗi khóa ngoại.
-- Seed ca/phân ca chuyển sang **bootstrap-only**. Sau khi Admin chỉnh sửa hoặc xóa, chạy Docker/seed lại sẽ không tạo lại ca đã xóa hay ghi đè giờ ca đã chỉnh.
-- Kiểm tra dữ liệu không còn ép `nguoi_dung`, `nhan_vien`, `ca_lam_viec`, `phan_ca` phải luôn >= 10 vì đây là dữ liệu vận hành được phép xóa/chỉnh; các bảng dữ liệu mẫu tĩnh vẫn giữ yêu cầu tối thiểu.
-- Đổi nền nút **Giỏ hàng** trên thanh điều hướng từ trắng sang **dark glass xanh đen** đồng bộ với nút Tài khoản/CineBooking Pro; badge số lượng dùng gradient tím → cyan và có hover viền tím nhẹ.
-- Sửa dứt điểm luồng **Lưu thay đổi** tại `/tai-khoan`: `PATCH /tai-khoan/ho-so` ghi và đọc lại dữ liệu trong **cùng transaction PostgreSQL**; frontend dùng trực tiếp phản hồi vừa commit và **không GET lại ngay sau khi lưu**, tránh state cũ ghi đè họ tên/email/số điện thoại/địa chỉ mới.
-- Tăng kích thước toàn bộ form CineBooking: input/select/textarea tối thiểu khoảng 46–48px, chữ nhập 14–15px, label 13–14px, button 14px; card Tài khoản, Đăng nhập/Đăng ký, Quản trị, Ca làm và Xếp ca đều rộng/dễ đọc hơn.
-- Sửa xóa tài khoản Admin bằng endpoint ghi an toàn `POST /api/v1/quan-tri/nguoi-dung/:id/xoa` có JSON body; vẫn giữ `DELETE /api/v1/quan-tri/nguoi-dung/:id` để tương thích. Backend dọn tường minh session/reset token/địa chỉ/hồ sơ nhân viên/phân ca và đặt liên kết đơn hàng/giỏ hàng về `NULL` trước khi xóa.
-- Hồ sơ nhân sự chỉ còn **Nhân viên bán hàng**. Chức danh cố định `Nhân viên bán hàng`, bộ phận cố định `Bán hàng`; Admin chỉ đổi trạng thái `Đang làm / Tạm nghỉ / Nghỉ việc`.
-- Khi Admin đổi trạng thái nhân viên: `Đang làm` tự kích hoạt tài khoản + reset lockout; `Tạm nghỉ`/`Nghỉ việc` tự khóa tài khoản và thu hồi phiên đăng nhập.
-- Form **Tạo nhân viên bán hàng** làm lại theo bố cục CineBooking Pro dạng một card lớn căn giữa, có mã nhân viên/ngày vào làm/họ tên/email/SĐT/mật khẩu/xác nhận mật khẩu. Không còn panel phân quyền, không còn chọn vai trò, chức danh hay bộ phận.
-- Hệ thống hiện hành chỉ còn ba vai trò: `ADMIN`, `NHAN_VIEN`, `KHACH_HANG`. `ADMIN` là quyền quản trị duy nhất và có toàn quyền hệ thống; `NHAN_VIEN` là nhân viên bán hàng.
-- Migration `202608300002_v295_nhan_vien_ban_hang` chuyển `QUAN_LY` legacy về `KHACH_HANG`, giữ `ADMIN`, đồng bộ mọi tài khoản có hồ sơ nhân viên thành `NHAN_VIEN`, và chuẩn hóa dữ liệu nhân sự cũ thành `Nhân viên bán hàng / Bán hàng`.
-- Seed mới giữ cơ chế **bootstrap-only**: dữ liệu người dùng đã sửa, trạng thái tài khoản và trạng thái nhân viên không bị reset khi chạy Docker lại. 10 hồ sơ nhân viên mẫu đều được chuẩn hóa thành nhân viên bán hàng.
-- Giữ thay đổi v2.9.1: trang chi tiết sản phẩm không yêu cầu chọn màu; tự dùng biến thể mặc định còn hàng.
-- Giữ nền 3D tại `apps/web/public/backgrounds/nhienin3d-main.jpg` và toàn bộ luồng JWT/HttpOnly cookie, Argon2id, SMTP, giỏ hàng, thanh toán, ca làm, xếp ca hiện có.
+- **v3.7.2 production-build stabilization**: sửa CSS Module của Ops Dashboard để selector `table`/`th`/`td` luôn được scope qua local class `.tableWrap`, tương thích Next.js 16/Turbopack pure-selector rule. Giữ nguyên fix Prisma JSON và null-safe Admin của v3.7.1.
+- Runtime/browser smoke hiện dùng `scripts/e2e-runtime-v372.ps1` / `scripts/e2e-browser-v372.mjs`; CI/Health/OpenAPI đồng bộ v3.7.2.
+- **Ops Dashboard riêng tại `/quan-tri/ops`**: gom SLO/Uptime, error budget, multi-window burn-rate, MTTA/MTTR, incident theo bộ lọc thời gian/trạng thái, maintenance và webhook delivery log vào một màn hình vận hành độc lập. Có nút **Xuất Ops Excel** để xuất tổng hợp SLO + service budget + burn policy + incident.
+- **Nhiều maintenance window + lịch lặp**: ngoài API tương thích `/he-thong/bao-tri`, v3.7.0 thêm CRUD `/he-thong/bao-tri/danh-sach`, cho phép nhiều cửa sổ, bật/tắt riêng, lặp `HANG_NGAY` hoặc `HANG_TUAN`. Alert scheduler tự nhận window đang active và suppress cảnh báo tự động như trước; manual check vẫn được phép.
+- **SLO nâng cao**: `GET/POST /he-thong/cau-hinh-slo-nang-cao` lưu multi-window burn-rate policy trong `cau_hinh_he_thong`, mặc định 1h/14.4x, 6h/6x, 24h/1x. `GET /he-thong/sla` trả thêm `burn_rate_policy`, error budget theo `api/postgresql/backup/smtp`, cùng **MTTA/MTTR + P95** từ bảng tổng hợp incident.
+- **Webhook delivery v3.7.0**: webhook được tách khỏi điều kiện email, nên nếu SMTP không sẵn sàng nhưng webhook hợp lệ thì cảnh báo vẫn có thể phát. Có retry/backoff cấu hình bằng `SYSTEM_ALERT_WEBHOOK_MAX_RETRIES` / `SYSTEM_ALERT_WEBHOOK_BACKOFF_MS`, HMAC SHA-256 qua `SYSTEM_ALERT_WEBHOOK_SECRET`, header `x-nhienin3d-signature`, và mỗi attempt được ghi `WEBHOOK` vào lịch sử vận hành; xem qua `/he-thong/webhook/delivery`.
+- Incident list/Excel hỗ trợ thêm `tu_ngay`, `den_ngay`, `trang_thai_xu_ly`; Ops Excel dùng cùng bộ lọc. Không tạo bảng mới: maintenance/SLO policy dùng `cau_hinh_he_thong`, delivery log dùng `lich_su_van_hanh`, MTTA/MTTR dùng `su_co_van_hanh`.
+- Runtime/browser smoke của feature v3.7.0 được giữ làm regression; bản hiện tại chạy `scripts/e2e-runtime-v372.ps1` / `scripts/e2e-browser-v372.mjs`. Browser E2E kiểm tra thêm `/quan-tri/ops`; Runtime E2E kiểm tra maintenance list, SLO policy, service budgets, MTTA/MTTR, webhook delivery và Ops Excel. **Không có migration database mới**; migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`.
 
 ## Tài khoản và bảo mật
 
@@ -1470,12 +1353,36 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 - Không có migration database mới; migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`.
 - Quy trình release: `npm install` → `npm audit` → `npm test` → `npm run typecheck` → `npm run build` → `./scripts/backup-db.ps1` → `docker compose up -d --build --remove-orphans` → `docker compose ps` → `./scripts/e2e-runtime-v367.ps1` → `npm run e2e:browser` → `./scripts/release.ps1 v3.6.7`.
 
+## v3.7.0 — 01/09/2026
+
+- Thêm Ops Dashboard riêng `/quan-tri/ops` với bộ lọc incident theo thời gian/trạng thái, tổng hợp SLO/Uptime, error budget, MTTA/MTTR, maintenance, webhook delivery và xuất Excel tổng hợp.
+- Maintenance nâng từ một window thành danh sách tối đa 50 window, hỗ trợ bật/tắt riêng, lịch lặp hằng ngày/hằng tuần và API CRUD; endpoint cũ vẫn tương thích bằng window `legacy`.
+- SLO nâng cao lưu multi-window burn-rate policy và service target cho API/PostgreSQL/backup/SMTP trong `cau_hinh_he_thong`; thống kê trả error budget theo dịch vụ và MTTA/MTTR/P95 từ incident aggregate.
+- Webhook tách khỏi email transport, có retry/backoff, HMAC SHA-256 và delivery log trong `lich_su_van_hanh`. Thêm `SYSTEM_ALERT_WEBHOOK_SECRET`, `SYSTEM_ALERT_WEBHOOK_MAX_RETRIES`, `SYSTEM_ALERT_WEBHOOK_BACKOFF_MS` cho local/Docker.
+- Incident list/Excel thêm filter `tu_ngay`, `den_ngay`; thêm endpoint `GET /he-thong/ops/excel` và `GET /he-thong/webhook/delivery`.
+- Runtime/browser E2E chuyển sang v3.7.0. Không có migration mới; migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`.
+- Quy trình release: `npm install` → `npm audit` → `npm test` → `npm run typecheck` → `npm run build` → `./scripts/backup-db.ps1` → `docker compose up -d --build --remove-orphans` → `docker compose ps` → `./scripts/e2e-runtime-v370.ps1` → `npm run e2e:browser` → `./scripts/release.ps1 v3.7.0`.
+
+
+## v3.7.1 — 01/09/2026
+
+- Sửa `npm run typecheck` API: `gia_tri: { windows }` trước đó nhận `Record<string, unknown>[]`, không thỏa Prisma 7 `InputJsonValue`. v3.7.1 định nghĩa `BaoTriV370Luu` với các field JSON-safe, ghi qua `Prisma.InputJsonObject` và tái sử dụng cùng payload cho create/update.
+- Sửa `npm run typecheck` Web: `/quan-tri/ops` nay kiểm tra `!taiKhoan || taiKhoan.vai_tro !== "ADMIN"` trước khi đọc role, loại lỗi TS18047 khi `layTaiKhoan()` có thể trả `null`.
+- Thêm regression test cho cả hai lỗi typecheck; Runtime/Browser E2E và CI chuyển sang v3.7.1. Không có migration database mới; migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`.
+- Quy trình release: `npm install` → `npm audit` → `npm test` → `npm run typecheck` → `npm run build` → `./scripts/backup-db.ps1` → `docker compose up -d --build --remove-orphans` → `docker compose ps` → `./scripts/e2e-runtime-v371.ps1` → `npm run e2e:browser` → `./scripts/release.ps1 v3.7.1`.
+
+## v3.7.2 — 01/09/2026
+
+- Sửa `npm run build` Web trên Next.js 16/Turbopack: CSS Module `/quan-tri/ops/page.module.css` không còn selector global thuần `table`, `th`, `td`; các rule được scope thành `.tableWrap table`, `.tableWrap th`, `.tableWrap td` để đáp ứng pure-selector rule.
+- Giữ nguyên fix typecheck v3.7.1 cho Prisma JSON `BaoTriV370Luu[]` và kiểm tra `taiKhoan` null trước role; thêm regression test chặn selector CSS Module thuần quay lại.
+- Runtime/Browser E2E, CI, Health/OpenAPI chuyển sang v3.7.2. Không có migration database mới; migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`.
+- Quy trình release: `npm install` → `npm audit` → `npm test` → `npm run typecheck` → `npm run build` → `./scripts/backup-db.ps1` → `docker compose up -d --build --remove-orphans` → `docker compose ps` → `./scripts/e2e-runtime-v372.ps1` → `npm run e2e:browser` → `./scripts/release.ps1 v3.7.2`.
+
 # Lộ trình tiếp theo
 
-## v3.7.0
+## v3.8.0
 
-- Hỗ trợ nhiều maintenance window và lịch lặp theo ngày/tuần thay vì một cửa sổ hiện tại.
-- Nâng burn-rate thành multi-window alert policy có ngưỡng cấu hình, theo dõi MTTA/MTTR và error-budget policy theo từng loại dịch vụ.
-- Mở rộng webhook thành delivery log + retry/backoff + HMAC signature để tích hợp Slack/Teams/Discord/gateway nội bộ an toàn hơn.
-- Bổ sung trang Ops dashboard riêng với filter incident theo thời gian/trạng thái và export tổng hợp SLO/Incident.
-
+- Phân loại SLO theo service endpoint thực tế thay vì chỉ suy luận từ health snapshot; thêm time-weighted availability cho cửa sổ dài.
+- Webhook adapter preset cho Slack/Teams/Discord và dead-letter/replay delivery thất bại từ Ops Dashboard.
+- Incident timeline cursor pagination và search/full-text cho lịch sử vận hành lớn.
+- Dashboard Ops thêm biểu đồ burn-rate theo thời gian, annotation maintenance và comparison 7/30/90 ngày.

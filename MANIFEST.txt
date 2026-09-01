@@ -5,6 +5,7 @@
 .github/workflows/release.yml
 .gitignore
 .npmrc
+MANIFEST.txt
 README.md
 VERSION
 apps/api/.dockerignore
@@ -53,6 +54,7 @@ apps/api/src/gio-hang/gio-hang.module.ts
 apps/api/src/gio-hang/gio-hang.service.ts
 apps/api/src/main.ts
 apps/api/src/quan-tri/dto/cap-nhat-bao-tri-he-thong.dto.ts
+apps/api/src/quan-tri/dto/cap-nhat-bao-tri-nang-cao.dto.ts
 apps/api/src/quan-tri/dto/cap-nhat-bien-the.dto.ts
 apps/api/src/quan-tri/dto/cap-nhat-ca-lam.dto.ts
 apps/api/src/quan-tri/dto/cap-nhat-cau-hinh-canh-bao-he-thong.dto.ts
@@ -65,6 +67,7 @@ apps/api/src/quan-tri/dto/cap-nhat-nha-cung-cap.dto.ts
 apps/api/src/quan-tri/dto/cap-nhat-nhan-vien.dto.ts
 apps/api/src/quan-tri/dto/cap-nhat-phan-ca.dto.ts
 apps/api/src/quan-tri/dto/cap-nhat-san-pham-quan-tri.dto.ts
+apps/api/src/quan-tri/dto/cap-nhat-slo-nang-cao.dto.ts
 apps/api/src/quan-tri/dto/cap-nhat-slo-van-hanh.dto.ts
 apps/api/src/quan-tri/dto/cap-nhat-su-co-van-hanh.dto.ts
 apps/api/src/quan-tri/dto/cap-nhat-ton-kho.dto.ts
@@ -125,6 +128,7 @@ apps/api/tests/v332-revenue-delivery-reconcile.test.mjs
 apps/api/tests/v340-incident-sla-cursor.test.mjs
 apps/api/tests/v350-incident-slo-rollup.test.mjs
 apps/api/tests/v360-maintenance-error-budget-webhook.test.mjs
+apps/api/tests/v370-ops-dashboard-maintenance-slo-webhook.test.mjs
 apps/api/tsconfig.build.json
 apps/api/tsconfig.json
 apps/web/.dockerignore
@@ -139,6 +143,8 @@ apps/web/app/globals.css
 apps/web/app/icon.svg
 apps/web/app/layout.tsx
 apps/web/app/page.tsx
+apps/web/app/quan-tri/ops/page.module.css
+apps/web/app/quan-tri/ops/page.tsx
 apps/web/app/quan-tri/page.tsx
 apps/web/app/quen-mat-khau/page.tsx
 apps/web/app/san-pham/[duong_dan]/page.tsx
@@ -184,6 +190,7 @@ apps/web/tests/v332-revenue-delivery-reconcile.test.mjs
 apps/web/tests/v340-incident-sla-cursor.test.mjs
 apps/web/tests/v350-incident-slo-rollup.test.mjs
 apps/web/tests/v360-maintenance-error-budget-webhook.test.mjs
+apps/web/tests/v370-ops-dashboard-maintenance-slo-webhook.test.mjs
 apps/web/tsconfig.json
 docker-compose.https.yml
 docker-compose.yml
@@ -208,6 +215,9 @@ scripts/e2e-browser-v364.mjs
 scripts/e2e-browser-v365.mjs
 scripts/e2e-browser-v366.mjs
 scripts/e2e-browser-v367.mjs
+scripts/e2e-browser-v370.mjs
+scripts/e2e-browser-v371.mjs
+scripts/e2e-browser-v372.mjs
 scripts/e2e-runtime-v320.ps1
 scripts/e2e-runtime-v340.ps1
 scripts/e2e-runtime-v341.ps1
@@ -224,6 +234,9 @@ scripts/e2e-runtime-v364.ps1
 scripts/e2e-runtime-v365.ps1
 scripts/e2e-runtime-v366.ps1
 scripts/e2e-runtime-v367.ps1
+scripts/e2e-runtime-v370.ps1
+scripts/e2e-runtime-v371.ps1
+scripts/e2e-runtime-v372.ps1
 scripts/https-local-bo-tin-cay.ps1
 scripts/https-local.ps1
 scripts/khoi-tao-github.ps1
@@ -257,3 +270,6 @@ tests/v364-runtime-health-version-assertion.test.mjs
 tests/v365-browser-incident-strict-locator.test.mjs
 tests/v366-release-web-root-context.test.mjs
 tests/v367-browser-e2e-incident-status-scope.test.mjs
+tests/v370-ops-dashboard-maintenance-slo-webhook.test.mjs
+tests/v371-typecheck-prisma-json-ops-auth.test.mjs
+tests/v372-ops-css-module-pure-selector.test.mjs

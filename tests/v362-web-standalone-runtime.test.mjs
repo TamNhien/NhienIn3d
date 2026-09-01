@@ -23,9 +23,9 @@ test("v3.6.2 E2E va CI dung phien ban patch moi", () => {
   const runtime = readFileSync("scripts/e2e-runtime-v362.ps1", "utf8");
   const browser = readFileSync("scripts/e2e-browser-v362.mjs", "utf8");
   const ci = readFileSync(".github/workflows/ci.yml", "utf8");
-  assert.match(root.scripts["e2e:browser"], /^node scripts\/e2e-browser-v36[234567]\.mjs$/);
+  assert.match(root.scripts["e2e:browser"], /^node scripts\/e2e-browser-v(?:36[234567]|37[012])\.mjs$/);
   assert.match(runtime, /không phải v3\.6\.2/);
   assert.match(browser, /không phải v3\.6\.2/);
-  assert.match(ci, /e2e-runtime-v36[234567]\.ps1/);
-  assert.match(ci, /Browser E2E Admin HTTPS v3\.6\.[234567]/);
+  assert.match(ci, /e2e-runtime-v(?:36[234567]|37[012])\.ps1/);
+  assert.match(ci, /Browser E2E Admin HTTPS v(?:3\.6\.[234567]|3\.7\.[012])/);
 });

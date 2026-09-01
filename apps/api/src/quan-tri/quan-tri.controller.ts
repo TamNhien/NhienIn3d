@@ -33,6 +33,8 @@ import { CapNhatCauHinhCanhBaoHeThongDto } from "./dto/cap-nhat-cau-hinh-canh-ba
 import { CapNhatSuCoVanHanhDto } from "./dto/cap-nhat-su-co-van-hanh.dto.js";
 import { CapNhatSloVanHanhDto } from "./dto/cap-nhat-slo-van-hanh.dto.js";
 import { CapNhatBaoTriHeThongDto } from "./dto/cap-nhat-bao-tri-he-thong.dto.js";
+import { CapNhatBaoTriNangCaoDto, TaoBaoTriNangCaoDto } from "./dto/cap-nhat-bao-tri-nang-cao.dto.js";
+import { CapNhatSloNangCaoDto } from "./dto/cap-nhat-slo-nang-cao.dto.js";
 import { QuanTriService } from "./quan-tri.service.js";
 
 @ApiTags("Quản trị")
@@ -49,15 +51,23 @@ export class QuanTriController {
   @Post("he-thong/cau-hinh-canh-bao") cap_nhat_cau_hinh_canh_bao_he_thong(@Req() req: YeuCauCoNguoiDung, @Body() dto: CapNhatCauHinhCanhBaoHeThongDto) { return this.service.cap_nhat_cau_hinh_canh_bao_he_thong(req.nguoi_dung_xac_thuc!, dto); }
   @Get("he-thong/cau-hinh-slo") cau_hinh_slo_van_hanh() { return this.service.lay_cau_hinh_slo_van_hanh(); }
   @Post("he-thong/cau-hinh-slo") cap_nhat_cau_hinh_slo_van_hanh(@Req() req: YeuCauCoNguoiDung, @Body() dto: CapNhatSloVanHanhDto) { return this.service.cap_nhat_cau_hinh_slo_van_hanh(req.nguoi_dung_xac_thuc!, dto); }
+  @Get("he-thong/cau-hinh-slo-nang-cao") cau_hinh_slo_nang_cao() { return this.service.lay_cau_hinh_slo_nang_cao(); }
+  @Post("he-thong/cau-hinh-slo-nang-cao") cap_nhat_cau_hinh_slo_nang_cao(@Req() req: YeuCauCoNguoiDung, @Body() dto: CapNhatSloNangCaoDto) { return this.service.cap_nhat_cau_hinh_slo_nang_cao(req.nguoi_dung_xac_thuc!, dto); }
   @Get("he-thong/bao-tri") bao_tri_he_thong() { return this.service.lay_bao_tri_he_thong(); }
   @Post("he-thong/bao-tri") cap_nhat_bao_tri_he_thong(@Req() req: YeuCauCoNguoiDung, @Body() dto: CapNhatBaoTriHeThongDto) { return this.service.cap_nhat_bao_tri_he_thong(req.nguoi_dung_xac_thuc!, dto); }
+  @Get("he-thong/bao-tri/danh-sach") danh_sach_bao_tri_he_thong() { return this.service.lay_danh_sach_bao_tri_he_thong(); }
+  @Post("he-thong/bao-tri/danh-sach") tao_bao_tri_he_thong(@Req() req: YeuCauCoNguoiDung, @Body() dto: TaoBaoTriNangCaoDto) { return this.service.tao_bao_tri_he_thong(req.nguoi_dung_xac_thuc!, dto); }
+  @Post("he-thong/bao-tri/:id/cap-nhat") cap_nhat_bao_tri_nang_cao(@Req() req: YeuCauCoNguoiDung, @Param("id") id: string, @Body() dto: CapNhatBaoTriNangCaoDto) { return this.service.cap_nhat_bao_tri_nang_cao(req.nguoi_dung_xac_thuc!, id, dto); }
+  @Post("he-thong/bao-tri/:id/xoa") xoa_bao_tri_he_thong(@Req() req: YeuCauCoNguoiDung, @Param("id") id: string) { return this.service.xoa_bao_tri_he_thong(req.nguoi_dung_xac_thuc!, id); }
   @Get("he-thong/lich-su") lich_su_he_thong(@Query("loai") loai?: string, @Query("trang_thai") trang_thai?: string, @Query("tu_ngay") tu_ngay?: string, @Query("den_ngay") den_ngay?: string, @Query("trang") trang?: string, @Query("kich_thuoc") kich_thuoc?: string) { return this.service.danh_sach_lich_su_van_hanh(loai, trang_thai, tu_ngay, den_ngay, trang, kich_thuoc); }
   @Get("he-thong/lich-su/cursor") lich_su_he_thong_cursor(@Query("loai") loai?: string, @Query("trang_thai") trang_thai?: string, @Query("tu_ngay") tu_ngay?: string, @Query("den_ngay") den_ngay?: string, @Query("cursor") cursor?: string, @Query("kich_thuoc") kich_thuoc?: string) { return this.service.danh_sach_lich_su_van_hanh_cursor(loai, trang_thai, tu_ngay, den_ngay, cursor, kich_thuoc); }
   @Get("he-thong/lich-su/excel") lich_su_he_thong_excel(@Query("loai") loai?: string, @Query("trang_thai") trang_thai?: string, @Query("tu_ngay") tu_ngay?: string, @Query("den_ngay") den_ngay?: string) { return this.service.xuat_excel_lich_su_van_hanh(loai, trang_thai, tu_ngay, den_ngay); }
   @Get("he-thong/thong-ke") thong_ke_he_thong() { return this.service.thong_ke_van_hanh(); }
   @Get("he-thong/sla") sla_he_thong(@Query("so_ngay") so_ngay?: string) { return this.service.thong_ke_sla_van_hanh(so_ngay); }
-  @Get("he-thong/su-co") su_co_he_thong(@Query("gioi_han") gioi_han?: string, @Query("trang_thai_xu_ly") trang_thai_xu_ly?: string) { return this.service.danh_sach_su_co_van_hanh(gioi_han, trang_thai_xu_ly); }
-  @Get("he-thong/su-co/excel") su_co_he_thong_excel(@Query("trang_thai_xu_ly") trang_thai_xu_ly?: string) { return this.service.xuat_excel_danh_sach_su_co_van_hanh(trang_thai_xu_ly); }
+  @Get("he-thong/su-co") su_co_he_thong(@Query("gioi_han") gioi_han?: string, @Query("trang_thai_xu_ly") trang_thai_xu_ly?: string, @Query("tu_ngay") tu_ngay?: string, @Query("den_ngay") den_ngay?: string) { return this.service.danh_sach_su_co_van_hanh(gioi_han, trang_thai_xu_ly, tu_ngay, den_ngay); }
+  @Get("he-thong/su-co/excel") su_co_he_thong_excel(@Query("trang_thai_xu_ly") trang_thai_xu_ly?: string, @Query("tu_ngay") tu_ngay?: string, @Query("den_ngay") den_ngay?: string) { return this.service.xuat_excel_danh_sach_su_co_van_hanh(trang_thai_xu_ly, tu_ngay, den_ngay); }
+  @Get("he-thong/ops/excel") ops_excel(@Query("trang_thai_xu_ly") trang_thai_xu_ly?: string, @Query("tu_ngay") tu_ngay?: string, @Query("den_ngay") den_ngay?: string) { return this.service.xuat_excel_ops_tong_hop(trang_thai_xu_ly, tu_ngay, den_ngay); }
+  @Get("he-thong/webhook/delivery") webhook_delivery(@Query("gioi_han") gioi_han?: string, @Query("trang_thai") trang_thai?: string) { return this.service.danh_sach_webhook_delivery(gioi_han, trang_thai); }
   @Get("he-thong/su-co/:chu_ky/excel") chi_tiet_su_co_he_thong_excel(@Param("chu_ky") chu_ky: string) { return this.service.xuat_excel_chi_tiet_su_co_van_hanh(chu_ky); }
   @Get("he-thong/su-co/:chu_ky") chi_tiet_su_co_he_thong(@Param("chu_ky") chu_ky: string) { return this.service.chi_tiet_su_co_van_hanh(chu_ky); }
   @Post("he-thong/su-co/:chu_ky/tiep-nhan") tiep_nhan_su_co_he_thong(@Req() req: YeuCauCoNguoiDung, @Param("chu_ky") chu_ky: string, @Body() dto: CapNhatSuCoVanHanhDto) { return this.service.tiep_nhan_su_co_van_hanh(req.nguoi_dung_xac_thuc!, chu_ky, dto); }
