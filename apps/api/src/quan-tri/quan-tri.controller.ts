@@ -35,6 +35,7 @@ import { CapNhatSloVanHanhDto } from "./dto/cap-nhat-slo-van-hanh.dto.js";
 import { CapNhatBaoTriHeThongDto } from "./dto/cap-nhat-bao-tri-he-thong.dto.js";
 import { CapNhatBaoTriNangCaoDto, TaoBaoTriNangCaoDto } from "./dto/cap-nhat-bao-tri-nang-cao.dto.js";
 import { CapNhatSloNangCaoDto } from "./dto/cap-nhat-slo-nang-cao.dto.js";
+import { AckWebhookDeadLetterDto, ReplayBulkWebhookDeadLetterDto } from "./dto/webhook-dead-letter.dto.js";
 import { QuanTriService } from "./quan-tri.service.js";
 
 @ApiTags("Quản trị")
@@ -68,7 +69,9 @@ export class QuanTriController {
   @Get("he-thong/su-co/excel") su_co_he_thong_excel(@Query("trang_thai_xu_ly") trang_thai_xu_ly?: string, @Query("tu_ngay") tu_ngay?: string, @Query("den_ngay") den_ngay?: string) { return this.service.xuat_excel_danh_sach_su_co_van_hanh(trang_thai_xu_ly, tu_ngay, den_ngay); }
   @Get("he-thong/ops/excel") ops_excel(@Query("trang_thai_xu_ly") trang_thai_xu_ly?: string, @Query("tu_ngay") tu_ngay?: string, @Query("den_ngay") den_ngay?: string) { return this.service.xuat_excel_ops_tong_hop(trang_thai_xu_ly, tu_ngay, den_ngay); }
   @Get("he-thong/webhook/delivery") webhook_delivery(@Query("gioi_han") gioi_han?: string, @Query("trang_thai") trang_thai?: string) { return this.service.danh_sach_webhook_delivery(gioi_han, trang_thai); }
-  @Get("he-thong/webhook/dead-letter") webhook_dead_letter(@Query("gioi_han") gioi_han?: string) { return this.service.danh_sach_webhook_dead_letter(gioi_han); }
+  @Get("he-thong/webhook/dead-letter") webhook_dead_letter(@Query("gioi_han") gioi_han?: string, @Query("trang_thai") trang_thai?: string) { return this.service.danh_sach_webhook_dead_letter(gioi_han, trang_thai); }
+  @Post("he-thong/webhook/dead-letter/replay-bulk") webhook_dead_letter_replay_bulk(@Req() req: YeuCauCoNguoiDung, @Body() dto: ReplayBulkWebhookDeadLetterDto) { return this.service.replay_bulk_webhook_dead_letter(req.nguoi_dung_xac_thuc!, dto.ids, dto.bo_qua_idempotency === true); }
+  @Post("he-thong/webhook/dead-letter/:id/ack") webhook_dead_letter_ack(@Req() req: YeuCauCoNguoiDung, @Param("id") id: string, @Body() dto: AckWebhookDeadLetterDto) { return this.service.acknowledge_webhook_dead_letter(req.nguoi_dung_xac_thuc!, id, dto.ghi_chu); }
   @Post("he-thong/webhook/dead-letter/:id/replay") webhook_dead_letter_replay(@Req() req: YeuCauCoNguoiDung, @Param("id") id: string) { return this.service.replay_webhook_dead_letter(req.nguoi_dung_xac_thuc!, id); }
   @Get("he-thong/su-co/:chu_ky/excel") chi_tiet_su_co_he_thong_excel(@Param("chu_ky") chu_ky: string) { return this.service.xuat_excel_chi_tiet_su_co_van_hanh(chu_ky); }
   @Get("he-thong/su-co/:chu_ky/timeline") timeline_su_co_he_thong(@Param("chu_ky") chu_ky: string, @Query("q") q?: string, @Query("cursor") cursor?: string, @Query("kich_thuoc") kich_thuoc?: string) { return this.service.timeline_su_co_van_hanh(chu_ky, q, cursor, kich_thuoc); }

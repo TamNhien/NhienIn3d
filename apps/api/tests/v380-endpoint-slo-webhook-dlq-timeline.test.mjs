@@ -5,7 +5,7 @@ const read = p => readFileSync(p, "utf8");
 
 test("v3.8.0 API probe endpoint that va tinh availability time-weighted", () => {
   const svc = read("src/quan-tri/quan-tri.service.ts");
-  assert.match(svc, /SloEndpointCheckV380/);
+  assert.match(svc, /SloEndpointCheckV390/);
   assert.match(svc, /kiem_tra_slo_endpoints/);
   assert.match(svc, /"SLO_ENDPOINT"/);
   assert.match(svc, /endpoint_slo/);
@@ -41,8 +41,8 @@ test("v3.8.0 incident timeline dung cursor va PostgreSQL full-text", () => {
   const ctl = read("src/quan-tri/quan-tri.controller.ts");
   assert.match(svc, /timeline_su_co_van_hanh/);
   assert.match(svc, /to_tsvector\('simple'/);
-  assert.match(svc, /plainto_tsquery\('simple'/);
-  assert.match(svc, /POSTGRES_FULL_TEXT/);
+  assert.match(svc, /websearch_to_tsquery\('simple'/);
+  assert.match(svc, /GIN_TSVECTOR_V390|FULL_TEXT_FALLBACK/);
   assert.match(ctl, /su-co\/:chu_ky\/timeline/);
 });
 

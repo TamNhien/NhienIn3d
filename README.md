@@ -1,6 +1,6 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v3.8.0** — 01/09/2026
+> Phiên bản hiện tại: **v3.9.0** — 01/09/2026
 
 NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **frontend Next.js** và **backend NestJS/Fastify** kết nối **PostgreSQL qua Prisma**.
 
@@ -18,12 +18,11 @@ NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **fro
 
 ## Điểm chính bản hiện tại
 
-- **Endpoint SLO thực tế + time-weighted availability**: v3.8.0 probe các endpoint HTTP cấu hình được, mặc định public health/danh mục/sản phẩm, ghi `SLO_ENDPOINT` và tính availability/error budget theo thời lượng giữa các sample. Scheduler riêng dùng `SYSTEM_SLO_ENDPOINT_INTERVAL_MINUTES` (mặc định 5 phút), không phụ thuộc việc bật email alert.
-- **Ops Dashboard v3.8.0** tại `/quan-tri/ops`: so sánh SLO 7/30/90 ngày, bảng endpoint SLO time-weighted, burn-rate timeline 30 ngày, annotation maintenance, MTTA/MTTR, service budget và editor endpoint probe. Ops Excel xuất thêm comparison 7/30/90 và endpoint SLO.
-- **Webhook adapter + dead-letter/replay**: `SYSTEM_ALERT_WEBHOOK_ADAPTER` hỗ trợ `GENERIC`, `SLACK`, `TEAMS`, `DISCORD`; giữ retry/backoff/HMAC. Delivery thất bại cuối cùng được ghi `WEBHOOK_DLQ`; Admin xem/replay từ Ops Dashboard, replay được audit bằng `WEBHOOK_REPLAY`.
-- **Incident timeline lớn**: `GET /he-thong/su-co/:chu_ky/timeline` hỗ trợ cursor, kích thước trang và PostgreSQL full-text search trên mô tả/JSON; UI có tìm kiếm và tải thêm.
-- Maintenance multi-window/recurring, multi-window burn policy, service budgets, Incident Excel và các fix v3.7.x được giữ nguyên. **Không có migration database mới**; migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`.
-- Runtime/browser smoke hiện dùng `scripts/e2e-runtime-v380.ps1` / `scripts/e2e-browser-v380.mjs`; CI/Health/OpenAPI đồng bộ **v3.8.0**.
+- **Endpoint SLO v3.9.0**: probe hỗ trợ `GET/HEAD`, header template `${ENV:...}`, Bearer token từ biến môi trường, latency target và SLI P50/P95/P99 + histogram; time-weighted availability có quy tắc cap gap. Các header nhạy cảm như `Authorization`/`X-API-Key` bắt buộc tham chiếu ENV, không lưu secret dạng literal trong cấu hình.
+- **Maintenance-aware SLO**: policy có thể loại maintenance khỏi availability và/hoặc error budget; thống kê trả số phút maintenance bị loại theo từng mục đích.
+- **Webhook DLQ lifecycle**: retention, trạng thái chờ replay/đã replay/đã acknowledge/hết hạn, bulk replay tối đa 20 item và idempotency key chống replay trùng; Admin có thể acknowledge dead-letter.
+- **Incident search/metrics lớn**: migration `202609010002_v390_ops_search_metrics` tạo generated `tsvector`, GIN index, incident cursor index và materialized Ops incident metrics MTTA/MTTR/P95 với runtime fallback.
+- **Ops Dashboard v3.9.0**: hiển thị endpoint latency, maintenance-aware policy, GIN full-text timeline và DLQ lifecycle. Runtime/browser smoke dùng `scripts/e2e-runtime-v390.ps1` / `scripts/e2e-browser-v390.mjs`; CI/Health/OpenAPI đồng bộ **v3.9.0**.
 
 ## Tài khoản và bảo mật
 
@@ -1383,11 +1382,20 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 - Runtime/Browser E2E, CI, Health/OpenAPI chuyển sang v3.8.0. Không có migration database mới; migration mới nhất vẫn là `202609010001_v350_incident_slo_rollup`.
 - Quy trình release: `npm install` → `npm audit` → `npm test` → `npm run typecheck` → `npm run build` → `./scripts/backup-db.ps1` → `docker compose up -d --build --remove-orphans` → `docker compose ps` → `./scripts/e2e-runtime-v380.ps1` → `npm run e2e:browser` → `./scripts/release.ps1 v3.8.0`.
 
+## v3.9.0 — 01/09/2026
+
+- Endpoint probe nâng lên `GET/HEAD`, header template `${ENV:NAME}`, Bearer token từ env, latency target, latency SLI/P50/P95/P99 và histogram; log chỉ lưu tên header/auth template, không lưu secret.
+- SLO time-weighted trở thành maintenance-aware: tùy chọn loại maintenance khỏi availability/error budget, giới hạn gap bằng `max_gap_multiplier`, trả phút maintenance bị loại và cảnh báo latency P95.
+- Webhook DLQ có retention, derived status, acknowledge, bulk replay 1-20 item và idempotency key; có policy cho phép replay trùng khi Admin chủ động bật.
+- Migration `202609010002_v390_ops_search_metrics` thêm generated `search_vector`, GIN full-text index, incident cursor index và materialized view `ops_incident_metrics_v390` cho MTTA/MTTR/P95; service có runtime fallback nếu view chưa sẵn sàng.
+- Ops Dashboard hiển endpoint latency + maintenance-aware policy, incident GIN full-text và DLQ lifecycle. Runtime/Browser E2E, CI, Health/OpenAPI chuyển sang v3.9.0.
+- Quy trình release: `npm install` → `npm audit` → `npm test` → `npm run typecheck` → `npm run build` → `./scripts/backup-db.ps1` → `docker compose up -d --build --remove-orphans` → `docker compose ps` → `./scripts/e2e-runtime-v390.ps1` → `npm run e2e:browser` → `./scripts/release.ps1 v3.9.0`.
+
 # Lộ trình tiếp theo
 
-## v3.9.0
+## v3.10.0
 
-- Nâng endpoint probe lên HTTP method/header/auth template, latency SLI và rolling percentile/histogram thay vì chỉ availability.
-- Dead-letter lifecycle: retention, acknowledge, bulk replay và idempotency/replay policy cho webhook gateway lớn.
-- Tối ưu incident full-text cho dữ liệu lớn bằng index/search vector và aggregate/materialized metrics cho Ops Dashboard.
-- SLO policy maintenance-aware: tùy chọn loại trừ maintenance khỏi availability/error budget và quy tắc time-weighted chi tiết hơn.
+- Persistence histogram/latency SLI theo endpoint, Apdex và probe agent phân tán cho nhiều node/region.
+- DLQ payload reference mã hóa, scheduled retry policy, retention cleanup job và bulk operations có progress/audit chi tiết.
+- Tách refresh materialized Ops metrics thành scheduler/cache, bổ sung retention/partitioning cho `lich_su_van_hanh` khi dữ liệu lớn.
+- RBAC Ops/on-call, escalation ownership và dashboard theo dịch vụ/nhóm trực.

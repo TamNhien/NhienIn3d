@@ -14,13 +14,13 @@ test("v3.7.0 co Ops Dashboard rieng va export tong hop", () => {
   assert.match(ctl, /he-thong\/ops\/excel/);
 });
 
-test("v3.7.0 runtime browser E2E contract duoc giu khi patch v3.8.0", () => {
+test("v3.7.0 runtime browser E2E contract duoc giu khi patch v3.9.0", () => {
   const pkg = JSON.parse(read("package.json"));
   const ci = read(".github/workflows/ci.yml");
-  assert.equal(pkg.version, "3.8.0");
-  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v380.mjs");
-  assert.match(ci, /e2e-runtime-v380\.ps1/);
-  assert.match(ci, /Browser E2E Admin HTTPS v3\.8\.0/);
+  assert.equal(pkg.version, "3.9.0");
+  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v390.mjs");
+  assert.match(ci, /e2e-runtime-v390\.ps1/);
+  assert.match(ci, /Browser E2E Admin HTTPS v3\.9\.0/);
   const historicalRuntime = read("scripts/e2e-runtime-v370.ps1");
   assert.match(historicalRuntime, /publicHealth\.phien_ban -eq "v3\.7\.0"/);
   assert.match(historicalRuntime, /health\.phien_ban -eq "3\.7\.0"/);

@@ -50,15 +50,26 @@ type BaoTriV370Luu = {
   ly_do: string;
 };
 
-type SloEndpointCheckV380 = {
+type SloEndpointCheckV390 = {
   id: string;
   ten: string;
   path: string;
+  method: "GET" | "HEAD";
+  headers: Record<string, string>;
+  auth_template: "NONE" | "BEARER_ENV";
+  auth_env: string;
   muc_tieu_percent: number;
+  latency_target_ms: number;
   timeout_ms: number;
 };
 
-type WebhookSendResultV380 = {
+type SloMaintenancePolicyV390 = {
+  exclude_from_availability: boolean;
+  exclude_from_error_budget: boolean;
+  max_gap_multiplier: number;
+};
+
+type WebhookSendResultV390 = {
   da_gui: boolean;
   ly_do?: string;
   http_status?: number;
@@ -438,7 +449,10 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const co_hmac = !!process.env.SYSTEM_ALERT_WEBHOOK_SECRET?.trim();
     const adapterRaw = (process.env.SYSTEM_ALERT_WEBHOOK_ADAPTER || "GENERIC").trim().toUpperCase();
     const adapter = (["GENERIC", "SLACK", "TEAMS", "DISCORD"].includes(adapterRaw) ? adapterRaw : "GENERIC") as "GENERIC" | "SLACK" | "TEAMS" | "DISCORD";
-    return { bat, san_sang: bat && hop_le, endpoint, timeout_ms: 5000, max_retries, backoff_ms, co_hmac, adapter };
+    const retentionRaw = Number(process.env.SYSTEM_ALERT_WEBHOOK_DLQ_RETENTION_DAYS || 30);
+    const dlq_retention_days = Number.isFinite(retentionRaw) ? Math.max(1, Math.min(365, Math.floor(retentionRaw))) : 30;
+    const replay_allow_duplicate = ["1", "true", "yes", "on"].includes((process.env.SYSTEM_ALERT_WEBHOOK_REPLAY_ALLOW_DUPLICATE || "false").trim().toLowerCase());
+    return { bat, san_sang: bat && hop_le, endpoint, timeout_ms: 5000, max_retries, backoff_ms, co_hmac, adapter, dlq_retention_days, replay_allow_duplicate };
   }
 
   private dinh_dang_webhook_payload(payload: Record<string, unknown>, adapter: "GENERIC" | "SLACK" | "TEAMS" | "DISCORD") {
@@ -452,7 +466,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     return { type: "message", attachments: [{ contentType: "application/vnd.microsoft.card.adaptive", content: { type: "AdaptiveCard", version: "1.4", body: [{ type: "TextBlock", weight: "Bolder", text: title }, { type: "TextBlock", wrap: true, text: summary }] } }], nhienin3d: payload };
   }
 
-  private async gui_webhook_canh_bao(payload: Record<string, unknown>, context: { replay_of?: string; tao_dead_letter?: boolean } = {}): Promise<WebhookSendResultV380> {
+  private async gui_webhook_canh_bao(payload: Record<string, unknown>, context: { replay_of?: string; tao_dead_letter?: boolean } = {}): Promise<WebhookSendResultV390> {
     const cau_hinh = this.cau_hinh_webhook_canh_bao();
     if (!cau_hinh.san_sang) return { da_gui: false, ly_do: cau_hinh.bat ? "Webhook chưa có URL hợp lệ" : "Webhook đang tắt", so_lan_thu: 0, hmac: false, adapter: cau_hinh.adapter };
     const token = process.env.SYSTEM_ALERT_WEBHOOK_BEARER_TOKEN?.trim();
@@ -460,11 +474,12 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const url = process.env.SYSTEM_ALERT_WEBHOOK_URL!.trim();
     const adapterPayload = this.dinh_dang_webhook_payload(payload, cau_hinh.adapter);
     const body = JSON.stringify(adapterPayload);
-    let ket_qua_cuoi: WebhookSendResultV380 = { da_gui: false, ly_do: "Chưa gửi", so_lan_thu: 0, hmac: !!secret, adapter: cau_hinh.adapter };
+    const idempotency_key = createHash("sha256").update(`${cau_hinh.endpoint}|${body}`).digest("hex");
+    let ket_qua_cuoi: WebhookSendResultV390 = { da_gui: false, ly_do: "Chưa gửi", so_lan_thu: 0, hmac: !!secret, adapter: cau_hinh.adapter };
     for (let index = 0; index <= cau_hinh.max_retries; index++) {
       const lan_thu = index + 1;
       const timestamp = String(Math.floor(Date.now() / 1000));
-      const headers: Record<string, string> = { "content-type": "application/json", "user-agent": "NhienIn3d-Ops/3.8.0", "x-nhienin3d-timestamp": timestamp, "x-nhienin3d-adapter": cau_hinh.adapter };
+      const headers: Record<string, string> = { "content-type": "application/json", "user-agent": "NhienIn3d-Ops/3.9.0", "x-nhienin3d-timestamp": timestamp, "x-nhienin3d-adapter": cau_hinh.adapter };
       if (token) headers.authorization = `Bearer ${token}`;
       if (secret) headers["x-nhienin3d-signature"] = `sha256=${createHmac("sha256", secret).update(`${timestamp}.${body}`).digest("hex")}`;
       const bat_dau = performance.now();
@@ -472,7 +487,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
         const response = await fetch(url, { method: "POST", headers, body, signal: AbortSignal.timeout(cau_hinh.timeout_ms) });
         const do_tre_ms = Math.max(0, Math.round((performance.now() - bat_dau) * 10) / 10);
         const thanh_cong = response.ok;
-        await this.ghi_lich_su_van_hanh("WEBHOOK", thanh_cong ? "THANH_CONG" : "THAT_BAI", thanh_cong ? "Webhook cảnh báo đã giao thành công" : `Webhook cảnh báo trả HTTP ${response.status}`, { endpoint: cau_hinh.endpoint, adapter: cau_hinh.adapter, lan_thu, http_status: response.status, do_tre_ms, hmac: !!secret, event: payload.event, chu_ky: payload.chu_ky, replay_of: context.replay_of || null });
+        await this.ghi_lich_su_van_hanh("WEBHOOK", thanh_cong ? "THANH_CONG" : "THAT_BAI", thanh_cong ? "Webhook cảnh báo đã giao thành công" : `Webhook cảnh báo trả HTTP ${response.status}`, { endpoint: cau_hinh.endpoint, adapter: cau_hinh.adapter, lan_thu, http_status: response.status, do_tre_ms, hmac: !!secret, event: payload.event, chu_ky: payload.chu_ky, replay_of: context.replay_of || null, idempotency_key });
         if (thanh_cong) return { da_gui: true, http_status: response.status, so_lan_thu: lan_thu, hmac: !!secret, adapter: cau_hinh.adapter };
         ket_qua_cuoi = { da_gui: false, ly_do: `Webhook trả HTTP ${response.status}`, http_status: response.status, so_lan_thu: lan_thu, hmac: !!secret, adapter: cau_hinh.adapter };
         const retryable = response.status === 408 || response.status === 429 || response.status >= 500;
@@ -481,12 +496,12 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
         const do_tre_ms = Math.max(0, Math.round((performance.now() - bat_dau) * 10) / 10);
         const ly_do = error instanceof Error ? error.message : String(error);
         ket_qua_cuoi = { da_gui: false, ly_do, so_lan_thu: lan_thu, hmac: !!secret, adapter: cau_hinh.adapter };
-        await this.ghi_lich_su_van_hanh("WEBHOOK", "THAT_BAI", "Webhook cảnh báo gặp lỗi kết nối", { endpoint: cau_hinh.endpoint, adapter: cau_hinh.adapter, lan_thu, do_tre_ms, hmac: !!secret, loi: ly_do, event: payload.event, chu_ky: payload.chu_ky, replay_of: context.replay_of || null });
+        await this.ghi_lich_su_van_hanh("WEBHOOK", "THAT_BAI", "Webhook cảnh báo gặp lỗi kết nối", { endpoint: cau_hinh.endpoint, adapter: cau_hinh.adapter, lan_thu, do_tre_ms, hmac: !!secret, loi: ly_do, event: payload.event, chu_ky: payload.chu_ky, replay_of: context.replay_of || null, idempotency_key });
       }
       if (index < cau_hinh.max_retries) await new Promise(resolve => setTimeout(resolve, Math.min(5000, cau_hinh.backoff_ms * (2 ** index))));
     }
     if (context.tao_dead_letter !== false) {
-      await this.ghi_lich_su_van_hanh("WEBHOOK_DLQ", "CHO_REPLAY", "Webhook thất bại sau retry, đã đưa vào dead-letter", { endpoint: cau_hinh.endpoint, adapter: cau_hinh.adapter, payload, ly_do: ket_qua_cuoi.ly_do || "Không rõ", so_lan_thu: ket_qua_cuoi.so_lan_thu, http_status: ket_qua_cuoi.http_status ?? null });
+      await this.ghi_lich_su_van_hanh("WEBHOOK_DLQ", "CHO_REPLAY", "Webhook thất bại sau retry, đã đưa vào dead-letter", { endpoint: cau_hinh.endpoint, adapter: cau_hinh.adapter, payload, ly_do: ket_qua_cuoi.ly_do || "Không rõ", so_lan_thu: ket_qua_cuoi.so_lan_thu, http_status: ket_qua_cuoi.http_status ?? null, idempotency_key, retention_days: cau_hinh.dlq_retention_days });
     }
     return ket_qua_cuoi;
   }
@@ -499,45 +514,116 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     return { du_lieu: ds.map(x => ({ ...x, id: x.id.toString() })), gioi_han, cau_hinh: this.cau_hinh_webhook_canh_bao() };
   }
 
-  async danh_sach_webhook_dead_letter(gioiHanRaw?: string) {
-    const gioi_han = Math.max(5, Math.min(100, Number.parseInt(gioiHanRaw || "30", 10) || 30));
-    const [ds, replay] = await Promise.all([
-      this.db.lichSuVanHanh.findMany({ where: { loai: "WEBHOOK_DLQ" }, orderBy: { id: "desc" }, take: gioi_han }),
-      this.db.lichSuVanHanh.findMany({ where: { loai: "WEBHOOK_REPLAY", trang_thai: "THANH_CONG" }, orderBy: { id: "desc" }, take: 500, select: { chi_tiet: true } })
-    ]);
-    const replayed = new Set(replay.map(x => { const c = x.chi_tiet && typeof x.chi_tiet === "object" && !Array.isArray(x.chi_tiet) ? x.chi_tiet as Record<string, unknown> : {}; return String(c.dead_letter_id || ""); }).filter(Boolean));
-    return { du_lieu: ds.map(x => ({ ...x, id: x.id.toString(), da_replay: replayed.has(x.id.toString()) })), gioi_han, cau_hinh: this.cau_hinh_webhook_canh_bao() };
+  private parse_webhook_dead_letter_id(idRaw: string) {
+    try { const id = BigInt(idRaw.trim()); if (id <= 0n) throw new Error(); return id; }
+    catch { throw new BadRequestException("ID dead-letter không hợp lệ"); }
   }
 
-  async replay_webhook_dead_letter(actor: NguoiDungXacThuc, idRaw: string) {
-    let id: bigint;
-    try { id = BigInt(idRaw.trim()); if (id <= 0n) throw new Error(); } catch { throw new BadRequestException("ID dead-letter không hợp lệ"); }
+  async danh_sach_webhook_dead_letter(gioiHanRaw?: string, trangThaiRaw?: string) {
+    const gioi_han = Math.max(5, Math.min(100, Number.parseInt(gioiHanRaw || "30", 10) || 30));
+    const cau_hinh = this.cau_hinh_webhook_canh_bao();
+    const trang_thai = trangThaiRaw?.trim().toUpperCase() || "";
+    if (trang_thai && !["CHO_REPLAY", "DA_REPLAY", "DA_ACK", "HET_HAN"].includes(trang_thai)) throw new BadRequestException("Trạng thái dead-letter không hợp lệ");
+    const [ds, replay, ack] = await Promise.all([
+      this.db.lichSuVanHanh.findMany({ where: { loai: "WEBHOOK_DLQ" }, orderBy: { id: "desc" }, take: Math.max(gioi_han * 4, 100) }),
+      this.db.lichSuVanHanh.findMany({ where: { loai: "WEBHOOK_REPLAY", trang_thai: "THANH_CONG" }, orderBy: { id: "desc" }, take: 1000, select: { chi_tiet: true } }),
+      this.db.lichSuVanHanh.findMany({ where: { loai: "WEBHOOK_DLQ_ACK", trang_thai: "DA_ACK" }, orderBy: { id: "desc" }, take: 1000, select: { chi_tiet: true } })
+    ]);
+    const replayed = new Set(replay.map(x => { const c = x.chi_tiet && typeof x.chi_tiet === "object" && !Array.isArray(x.chi_tiet) ? x.chi_tiet as Record<string, unknown> : {}; return String(c.dead_letter_id || ""); }).filter(Boolean));
+    const acknowledged = new Set(ack.map(x => { const c = x.chi_tiet && typeof x.chi_tiet === "object" && !Array.isArray(x.chi_tiet) ? x.chi_tiet as Record<string, unknown> : {}; return String(c.dead_letter_id || ""); }).filter(Boolean));
+    const expiresMs = cau_hinh.dlq_retention_days * 86_400_000;
+    const mapped = ds.map(x => {
+      const id = x.id.toString();
+      const da_replay = replayed.has(id);
+      const da_ack = acknowledged.has(id);
+      const het_han = Date.now() - x.ngay_tao.getTime() > expiresMs;
+      const trang_thai_dlq = da_replay ? "DA_REPLAY" : da_ack ? "DA_ACK" : het_han ? "HET_HAN" : "CHO_REPLAY";
+      const chi_tiet = x.chi_tiet && typeof x.chi_tiet === "object" && !Array.isArray(x.chi_tiet) ? x.chi_tiet as Record<string, unknown> : {};
+      return { ...x, id, da_replay, da_ack, het_han, trang_thai_dlq, idempotency_key: String(chi_tiet.idempotency_key || ""), het_han_luc: new Date(x.ngay_tao.getTime() + expiresMs).toISOString() };
+    }).filter(x => !trang_thai || x.trang_thai_dlq === trang_thai).slice(0, gioi_han);
+    return { du_lieu: mapped, gioi_han, bo_loc: { trang_thai: trang_thai || null }, cau_hinh };
+  }
+
+  async acknowledge_webhook_dead_letter(actor: NguoiDungXacThuc, idRaw: string, ghiChuRaw?: string) {
+    const id = this.parse_webhook_dead_letter_id(idRaw);
     const item = await this.db.lichSuVanHanh.findUnique({ where: { id } });
     if (!item || item.loai !== "WEBHOOK_DLQ") throw new NotFoundException("Không tìm thấy webhook dead-letter");
+    const existing = await this.db.lichSuVanHanh.findMany({ where: { loai: "WEBHOOK_DLQ_ACK" }, orderBy: { id: "desc" }, take: 1000, select: { chi_tiet: true } });
+    if (existing.some(x => { const c = x.chi_tiet && typeof x.chi_tiet === "object" && !Array.isArray(x.chi_tiet) ? x.chi_tiet as Record<string, unknown> : {}; return String(c.dead_letter_id || "") === id.toString(); })) return { dead_letter_id: id.toString(), da_ack: true, lap_lai: true };
+    await this.ghi_lich_su_van_hanh("WEBHOOK_DLQ_ACK", "DA_ACK", `Admin ${actor.ho_ten} acknowledge webhook dead-letter`, { dead_letter_id: id.toString(), ghi_chu: ghiChuRaw?.trim().slice(0, 500) || null, nguoi_ack: actor.ho_ten });
+    return { dead_letter_id: id.toString(), da_ack: true, lap_lai: false };
+  }
+
+  async replay_webhook_dead_letter(actor: NguoiDungXacThuc, idRaw: string, boQuaIdempotency = false) {
+    const id = this.parse_webhook_dead_letter_id(idRaw);
+    const item = await this.db.lichSuVanHanh.findUnique({ where: { id } });
+    if (!item || item.loai !== "WEBHOOK_DLQ") throw new NotFoundException("Không tìm thấy webhook dead-letter");
+    const cau_hinh = this.cau_hinh_webhook_canh_bao();
+    if (Date.now() - item.ngay_tao.getTime() > cau_hinh.dlq_retention_days * 86_400_000) throw new BadRequestException("Dead-letter đã hết retention, không thể replay");
     const detail = item.chi_tiet && typeof item.chi_tiet === "object" && !Array.isArray(item.chi_tiet) ? item.chi_tiet as Record<string, unknown> : {};
     const payloadRaw = detail.payload;
     if (!payloadRaw || typeof payloadRaw !== "object" || Array.isArray(payloadRaw)) throw new BadRequestException("Dead-letter không chứa payload có thể replay");
+    const idempotency_key = String(detail.idempotency_key || "");
+    const allowDuplicate = boQuaIdempotency || cau_hinh.replay_allow_duplicate;
+    if (idempotency_key && !allowDuplicate) {
+      const replay = await this.db.lichSuVanHanh.findMany({ where: { loai: "WEBHOOK_REPLAY", trang_thai: "THANH_CONG" }, orderBy: { id: "desc" }, take: 1000, select: { chi_tiet: true } });
+      const da_gui = replay.some(x => { const c = x.chi_tiet && typeof x.chi_tiet === "object" && !Array.isArray(x.chi_tiet) ? x.chi_tiet as Record<string, unknown> : {}; return String(c.idempotency_key || "") === idempotency_key; });
+      if (da_gui) return { dead_letter_id: id.toString(), da_gui: true, bo_qua_idempotency: true, so_lan_thu: 0, hmac: cau_hinh.co_hmac, adapter: cau_hinh.adapter, idempotency_key };
+    }
     const result = await this.gui_webhook_canh_bao(payloadRaw as Record<string, unknown>, { replay_of: id.toString(), tao_dead_letter: false });
-    await this.ghi_lich_su_van_hanh("WEBHOOK_REPLAY", result.da_gui ? "THANH_CONG" : "THAT_BAI", result.da_gui ? `Admin ${actor.ho_ten} replay webhook thành công` : `Admin ${actor.ho_ten} replay webhook thất bại`, { dead_letter_id: id.toString(), adapter: result.adapter, so_lan_thu: result.so_lan_thu, http_status: result.http_status ?? null, ly_do: result.ly_do ?? null, nguoi_replay: actor.ho_ten });
-    return { dead_letter_id: id.toString(), ...result };
+    await this.ghi_lich_su_van_hanh("WEBHOOK_REPLAY", result.da_gui ? "THANH_CONG" : "THAT_BAI", result.da_gui ? `Admin ${actor.ho_ten} replay webhook thành công` : `Admin ${actor.ho_ten} replay webhook thất bại`, { dead_letter_id: id.toString(), idempotency_key, adapter: result.adapter, so_lan_thu: result.so_lan_thu, http_status: result.http_status ?? null, ly_do: result.ly_do ?? null, nguoi_replay: actor.ho_ten, bo_qua_idempotency: allowDuplicate });
+    return { dead_letter_id: id.toString(), idempotency_key, bo_qua_idempotency: false, ...result };
+  }
+
+  async replay_bulk_webhook_dead_letter(actor: NguoiDungXacThuc, idsRaw: string[], boQuaIdempotency = false) {
+    const ids = [...new Set(idsRaw.map(x => x.trim()).filter(Boolean))];
+    if (!ids.length || ids.length > 20) throw new BadRequestException("Bulk replay cần từ 1 đến 20 dead-letter");
+    const ket_qua: Array<Record<string, unknown>> = [];
+    for (const id of ids) {
+      try { ket_qua.push(await this.replay_webhook_dead_letter(actor, id, boQuaIdempotency)); }
+      catch (error) { ket_qua.push({ dead_letter_id: id, da_gui: false, ly_do: error instanceof Error ? error.message : String(error) }); }
+    }
+    return { tong: ket_qua.length, thanh_cong: ket_qua.filter(x => x.da_gui === true).length, that_bai: ket_qua.filter(x => x.da_gui !== true).length, ket_qua };
+  }
+
+  private tao_headers_slo_endpoint(endpoint: SloEndpointCheckV390) {
+    const headers: Record<string, string> = { "user-agent": "NhienIn3d-SLO-Probe/3.9.0" };
+    const resolveTemplate = (value: string) => value.replace(/\$\{ENV:([A-Z][A-Z0-9_]*)\}/g, (_all, name: string) => process.env[name] || "");
+    for (const [nameRaw, valueRaw] of Object.entries(endpoint.headers || {})) {
+      const name = nameRaw.trim().toLowerCase();
+      if (!/^[a-z0-9-]{1,50}$/.test(name) || ["host", "content-length", "cookie"].includes(name)) continue;
+      headers[name] = resolveTemplate(String(valueRaw).slice(0, 300));
+    }
+    if (endpoint.auth_template === "BEARER_ENV" && endpoint.auth_env) {
+      const token = process.env[endpoint.auth_env]?.trim();
+      if (token) headers.authorization = `Bearer ${token}`;
+    }
+    return headers;
   }
 
   private async kiem_tra_slo_endpoints() {
     const config = await this.cau_hinh_slo_nang_cao_runtime();
     const apiPort = Number(process.env.API_PORT || 3001);
     const base = `http://127.0.0.1:${Number.isFinite(apiPort) ? apiPort : 3001}`;
-    const results = [] as Array<{ id: string; ten: string; path: string; ok: boolean; http_status: number | null; do_tre_ms: number; loi?: string }>;
+    const bao_tri = await this.bao_tri_he_thong_runtime();
+    const results = [] as Array<{ id: string; ten: string; path: string; method: string; ok: boolean; latency_ok: boolean; http_status: number | null; do_tre_ms: number; maintenance_active: boolean; loi?: string }>;
     for (const endpoint of config.endpoint_checks) {
       const bat_dau = performance.now();
       let ok = false; let http_status: number | null = null; let loi: string | undefined;
       try {
-        const response = await fetch(`${base}${endpoint.path}`, { method: "GET", signal: AbortSignal.timeout(endpoint.timeout_ms), headers: { "user-agent": "NhienIn3d-SLO-Probe/3.8.0" } });
+        const response = await fetch(`${base}${endpoint.path}`, { method: endpoint.method, signal: AbortSignal.timeout(endpoint.timeout_ms), headers: this.tao_headers_slo_endpoint(endpoint) });
         http_status = response.status; ok = response.ok;
       } catch (error) { loi = error instanceof Error ? error.message : String(error); }
       const do_tre_ms = Math.max(0, Math.round((performance.now() - bat_dau) * 10) / 10);
-      const item = { id: endpoint.id, ten: endpoint.ten, path: endpoint.path, ok, http_status, do_tre_ms, ...(loi ? { loi } : {}) };
+      const latency_ok = do_tre_ms <= endpoint.latency_target_ms;
+      const item = { id: endpoint.id, ten: endpoint.ten, path: endpoint.path, method: endpoint.method, ok, latency_ok, http_status, do_tre_ms, maintenance_active: bao_tri.dang_bao_tri, ...(loi ? { loi } : {}) };
       results.push(item);
-      await this.ghi_lich_su_van_hanh("SLO_ENDPOINT", ok ? "TOT" : "LOI", ok ? `Endpoint ${endpoint.ten} đáp ứng SLO probe` : `Endpoint ${endpoint.ten} không đáp ứng SLO probe`, { endpoint_id: endpoint.id, endpoint_ten: endpoint.ten, path: endpoint.path, muc_tieu_percent: endpoint.muc_tieu_percent, timeout_ms: endpoint.timeout_ms, ok, http_status, do_tre_ms, loi: loi || null });
+      await this.ghi_lich_su_van_hanh("SLO_ENDPOINT", ok ? "TOT" : "LOI", ok ? `Endpoint ${endpoint.ten} đáp ứng SLO probe` : `Endpoint ${endpoint.ten} không đáp ứng SLO probe`, {
+        endpoint_id: endpoint.id, endpoint_ten: endpoint.ten, path: endpoint.path, method: endpoint.method,
+        header_names: Object.keys(endpoint.headers || {}), auth_template: endpoint.auth_template,
+        muc_tieu_percent: endpoint.muc_tieu_percent, latency_target_ms: endpoint.latency_target_ms, timeout_ms: endpoint.timeout_ms,
+        ok, latency_ok, http_status, do_tre_ms, maintenance_active: bao_tri.dang_bao_tri, loi: loi || null
+      });
     }
     return results;
   }
@@ -642,7 +728,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const trang_thai = !database.ket_noi ? "LOI" : (van_de.length ? "CANH_BAO" : "TOT");
     const ket_qua = {
       trang_thai,
-      phien_ban: "3.8.0",
+      phien_ban: "3.9.0",
       thoi_gian: new Date().toISOString(),
       api: { uptime_giay: Math.floor(process.uptime()), node: process.version, pid: process.pid, rss_bytes: bo_nho.rss, heap_used_bytes: bo_nho.heapUsed, heap_total_bytes: bo_nho.heapTotal },
       database,
@@ -662,6 +748,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
         backup_tuoi_gio: backup.gan_nhat?.tuoi_gio ?? null,
         smtp_bat: smtp.bat,
         smtp_san_sang: smtp.san_sang,
+        maintenance_active: bao_tri.dang_bao_tri,
         van_de
       }, luc_bat_dau, chu_ky_canh_bao);
       try { await this.kiem_tra_slo_endpoints(); } catch (error) { this.logger.debug(`Không ghi được SLO endpoint probe: ${error instanceof Error ? error.message : String(error)}`); }
@@ -747,7 +834,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       }
     }
     const webhook = await this.gui_webhook_canh_bao({
-      event: "nhienin3d.system.alert", version: "3.8.0", trang_thai: trang_thai_canh_bao, chu_ky, van_de, thoi_gian: health.thoi_gian, cap_leo_thang, ton_tai_phut
+      event: "nhienin3d.system.alert", version: "3.9.0", trang_thai: trang_thai_canh_bao, chu_ky, van_de, thoi_gian: health.thoi_gian, cap_leo_thang, ton_tai_phut
     });
     const da_gui = email.da_gui || webhook.da_gui;
     if (!da_gui) return { da_gui: false, ly_do: `Không có kênh cảnh báo gửi thành công. Email: ${email.ly_do || "không gửi"}; Webhook: ${webhook.ly_do || "không gửi"}`, van_de, cap_leo_thang, ton_tai_phut, email, webhook, bao_tri };
@@ -849,7 +936,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       this.danh_sach_su_co_van_hanh("100", trangThaiXuLyRaw, tuNgayRaw, denNgayRaw)
     ]);
     const rows: unknown[][] = [
-      ["NhienIn3d Ops Dashboard v3.8.0"],
+      ["NhienIn3d Ops Dashboard v3.9.0"],
       ["Tạo lúc", new Date().toISOString()],
       ["Bộ lọc incident", `${tuNgayRaw || "*"} → ${denNgayRaw || "*"} · ${trangThaiXuLyRaw || "Tất cả"}`],
       [],
@@ -877,7 +964,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     for (const item of sla.burn_rate_policy) rows.push([item.gio, item.nguong, item.muc_do, item.sla.burn_rate ?? "", item.uptime.burn_rate ?? ""]);
     rows.push([], ["Incident"], ["Chữ ký", "Trạng thái", "Vấn đề", "Bắt đầu", "Gần nhất", "Sự kiện", "Tiếp nhận", "Khắc phục"]);
     for (const item of incidents.du_lieu) rows.push([item.chu_ky, item.trang_thai_xu_ly, item.van_de.join(" | "), item.bat_dau.toISOString(), item.gan_nhat.toISOString(), item.so_su_kien, item.tiep_nhan_luc?.toISOString() || "", item.khac_phuc_luc?.toISOString() || ""]);
-    const buffer = this.tao_xlsx(rows, "Ops v3.8.0");
+    const buffer = this.tao_xlsx(rows, "Ops v3.9.0");
     return { ten_file: `ops-slo-incident-${new Date().toISOString().slice(0, 10)}.xlsx`, mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", base64: buffer.toString("base64") };
   }
 
@@ -887,18 +974,41 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const q = qRaw?.trim().slice(0, 120) || "";
     let cursor: bigint | null = null;
     if (cursorRaw?.trim()) { try { cursor = BigInt(cursorRaw.trim()); if (cursor <= 0n) throw new Error(); } catch { throw new BadRequestException("Cursor timeline incident không hợp lệ"); } }
-    const rows = await this.db.$queryRawUnsafe<Array<{ id: bigint; loai: string; trang_thai: string; mo_ta: string | null; chi_tiet: Prisma.JsonValue; chu_ky_canh_bao: string | null; ngay_bat_dau: Date | null; ngay_ket_thuc: Date | null; ngay_tao: Date }>>(
-      `SELECT id, loai, trang_thai, mo_ta, chi_tiet, chu_ky_canh_bao, ngay_bat_dau, ngay_ket_thuc, ngay_tao
-       FROM lich_su_van_hanh
-       WHERE chu_ky_canh_bao = $1
-         AND ($2 = '' OR to_tsvector('simple', coalesce(mo_ta,'') || ' ' || coalesce(chi_tiet::text,'')) @@ plainto_tsquery('simple',$2) OR loai ILIKE '%' || $2 || '%' OR trang_thai ILIKE '%' || $2 || '%')
-         AND ($3::bigint IS NULL OR id < $3::bigint)
-       ORDER BY id DESC LIMIT $4`,
-      chu_ky, q, cursor?.toString() ?? null, kich_thuoc + 1
-    );
+    type TimelineRow = { id: bigint; loai: string; trang_thai: string; mo_ta: string | null; chi_tiet: Prisma.JsonValue; chu_ky_canh_bao: string | null; ngay_bat_dau: Date | null; ngay_ket_thuc: Date | null; ngay_tao: Date; xep_hang?: number };
+    let rows: TimelineRow[];
+    let che_do_tim_kiem = "KHONG";
+    if (q) {
+      try {
+        rows = await this.db.$queryRawUnsafe<TimelineRow[]>(
+          `SELECT id, loai, trang_thai, mo_ta, chi_tiet, chu_ky_canh_bao, ngay_bat_dau, ngay_ket_thuc, ngay_tao,
+                  ts_rank_cd(search_vector, websearch_to_tsquery('simple', $2))::float8 AS xep_hang
+           FROM lich_su_van_hanh
+           WHERE chu_ky_canh_bao = $1
+             AND search_vector @@ websearch_to_tsquery('simple', $2)
+             AND ($3::bigint IS NULL OR id < $3::bigint)
+           ORDER BY id DESC LIMIT $4`,
+          chu_ky, q, cursor?.toString() ?? null, kich_thuoc + 1
+        );
+        che_do_tim_kiem = "GIN_TSVECTOR_V390";
+      } catch (error) {
+        this.logger.debug(`Incident GIN search fallback: ${error instanceof Error ? error.message : String(error)}`);
+        rows = await this.db.$queryRawUnsafe<TimelineRow[]>(
+          `SELECT id, loai, trang_thai, mo_ta, chi_tiet, chu_ky_canh_bao, ngay_bat_dau, ngay_ket_thuc, ngay_tao
+           FROM lich_su_van_hanh
+           WHERE chu_ky_canh_bao = $1
+             AND (to_tsvector('simple', coalesce(mo_ta,'') || ' ' || coalesce(chi_tiet::text,'')) @@ websearch_to_tsquery('simple',$2) OR loai ILIKE '%' || $2 || '%' OR trang_thai ILIKE '%' || $2 || '%')
+             AND ($3::bigint IS NULL OR id < $3::bigint)
+           ORDER BY id DESC LIMIT $4`,
+          chu_ky, q, cursor?.toString() ?? null, kich_thuoc + 1
+        );
+        che_do_tim_kiem = "FULL_TEXT_FALLBACK";
+      }
+    } else {
+      rows = await this.db.lichSuVanHanh.findMany({ where: { chu_ky_canh_bao: chu_ky, ...(cursor ? { id: { lt: cursor } } : {}) }, orderBy: { id: "desc" }, take: kich_thuoc + 1 }) as TimelineRow[];
+    }
     const co_them = rows.length > kich_thuoc;
     const ds = rows.slice(0, kich_thuoc);
-    return { du_lieu: ds.map(x => ({ ...x, id: x.id.toString() })), cursor: { kich_thuoc, co_them, next_cursor: co_them && ds.length ? ds[ds.length - 1].id.toString() : null, che_do_tim_kiem: q ? "POSTGRES_FULL_TEXT" : "KHONG" }, q };
+    return { du_lieu: ds.map(x => ({ ...x, id: x.id.toString() })), cursor: { kich_thuoc, co_them, next_cursor: co_them && ds.length ? ds[ds.length - 1].id.toString() : null, che_do_tim_kiem }, q };
   }
 
   async xuat_excel_chi_tiet_su_co_van_hanh(chu_kyRaw: string) {
@@ -964,11 +1074,12 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async cau_hinh_slo_nang_cao_runtime() {
-    const endpointMacDinh: SloEndpointCheckV380[] = [
-      { id: "public-health", ten: "Public health", path: "/api/v1/suc-khoe", muc_tieu_percent: 99.95, timeout_ms: 2500 },
-      { id: "catalog", ten: "Danh mục", path: "/api/v1/danh-muc", muc_tieu_percent: 99.9, timeout_ms: 3000 },
-      { id: "products", ten: "Danh sách sản phẩm", path: "/api/v1/san-pham", muc_tieu_percent: 99.9, timeout_ms: 3000 }
+    const endpointMacDinh: SloEndpointCheckV390[] = [
+      { id: "public-health", ten: "Public health", path: "/api/v1/suc-khoe", method: "GET", headers: {}, auth_template: "NONE", auth_env: "", muc_tieu_percent: 99.95, latency_target_ms: 500, timeout_ms: 2500 },
+      { id: "catalog", ten: "Danh mục", path: "/api/v1/danh-muc", method: "GET", headers: {}, auth_template: "NONE", auth_env: "", muc_tieu_percent: 99.9, latency_target_ms: 700, timeout_ms: 3000 },
+      { id: "products", ten: "Danh sách sản phẩm", path: "/api/v1/san-pham", method: "GET", headers: {}, auth_template: "NONE", auth_env: "", muc_tieu_percent: 99.9, latency_target_ms: 900, timeout_ms: 3000 }
     ];
+    const maintenance_policy: SloMaintenancePolicyV390 = { exclude_from_availability: false, exclude_from_error_budget: false, max_gap_multiplier: 2 };
     const mac_dinh = {
       burn_windows: [
         { gio: 1, nguong: 14.4, muc_do: "NGHIEM_TRONG" },
@@ -977,6 +1088,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       ],
       service_targets: { api: 99.9, postgresql: 99.9, backup: 99, smtp: 99 },
       endpoint_checks: endpointMacDinh,
+      maintenance_policy,
       nguon_cau_hinh: "MAC_DINH" as const,
       ngay_cap_nhat: null as Date | null
     };
@@ -1000,15 +1112,31 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
         const id = String(r.id || `endpoint-${index + 1}`).trim().toLowerCase();
         const ten = String(r.ten || id).trim();
         const path = String(r.path || "").trim();
+        const methodRaw = String(r.method || "GET").trim().toUpperCase();
+        const method = (["GET", "HEAD"].includes(methodRaw) ? methodRaw : "GET") as "GET" | "HEAD";
         const muc_tieu_percent = Number(r.muc_tieu_percent);
+        const latency_target_ms = Number(r.latency_target_ms ?? 1000);
         const timeout_ms = Number(r.timeout_ms);
+        const authRaw = String(r.auth_template || "NONE").trim().toUpperCase();
+        const auth_template = (["NONE", "BEARER_ENV"].includes(authRaw) ? authRaw : "NONE") as "NONE" | "BEARER_ENV";
+        const auth_env = /^[A-Z][A-Z0-9_]{1,79}$/.test(String(r.auth_env || "").trim()) ? String(r.auth_env || "").trim() : "";
+        const headersRaw = r.headers && typeof r.headers === "object" && !Array.isArray(r.headers) ? r.headers as Record<string, unknown> : {};
+        const headers = Object.fromEntries(Object.entries(headersRaw).slice(0, 10).filter(([name]) => /^[a-zA-Z0-9-]{1,50}$/.test(name)).map(([name, value]) => [name.toLowerCase(), String(value).slice(0, 300)]));
         if (!/^[a-z0-9][a-z0-9-]{1,39}$/.test(id) || !ten || ten.length > 80 || !path.startsWith("/api/v1/") || path.includes("..") || !Number.isFinite(muc_tieu_percent) || muc_tieu_percent < 90 || muc_tieu_percent > 100) return null;
-        return { id, ten: ten.slice(0, 80), path: path.slice(0, 180), muc_tieu_percent: Math.round(muc_tieu_percent * 1000) / 1000, timeout_ms: Number.isFinite(timeout_ms) ? Math.max(500, Math.min(10_000, Math.floor(timeout_ms))) : 3000 } satisfies SloEndpointCheckV380;
-      }).filter((v): v is SloEndpointCheckV380 => !!v) : [];
+        return { id, ten: ten.slice(0, 80), path: path.slice(0, 180), method, headers, auth_template, auth_env, muc_tieu_percent: Math.round(muc_tieu_percent * 1000) / 1000, latency_target_ms: Number.isFinite(latency_target_ms) ? Math.max(50, Math.min(10_000, Math.floor(latency_target_ms))) : 1000, timeout_ms: Number.isFinite(timeout_ms) ? Math.max(500, Math.min(10_000, Math.floor(timeout_ms))) : 3000 } satisfies SloEndpointCheckV390;
+      }).filter((v): v is SloEndpointCheckV390 => !!v) : [];
+      const mpRaw = x.maintenance_policy && typeof x.maintenance_policy === "object" && !Array.isArray(x.maintenance_policy) ? x.maintenance_policy as Record<string, unknown> : {};
+      const maxGap = Number(mpRaw.max_gap_multiplier ?? maintenance_policy.max_gap_multiplier);
+      const parsedMaintenance: SloMaintenancePolicyV390 = {
+        exclude_from_availability: typeof mpRaw.exclude_from_availability === "boolean" ? mpRaw.exclude_from_availability : maintenance_policy.exclude_from_availability,
+        exclude_from_error_budget: typeof mpRaw.exclude_from_error_budget === "boolean" ? mpRaw.exclude_from_error_budget : maintenance_policy.exclude_from_error_budget,
+        max_gap_multiplier: Number.isFinite(maxGap) ? Math.max(1, Math.min(6, Math.round(maxGap * 10) / 10)) : maintenance_policy.max_gap_multiplier
+      };
       return {
         burn_windows: windows.length ? windows.slice(0, 6) : mac_dinh.burn_windows,
         service_targets: { api: target("api", 99.9), postgresql: target("postgresql", 99.9), backup: target("backup", 99), smtp: target("smtp", 99) },
         endpoint_checks: endpoints.length ? endpoints.slice(0, 10) : endpointMacDinh,
+        maintenance_policy: parsedMaintenance,
         nguon_cau_hinh: "DATABASE" as const,
         ngay_cap_nhat: item?.ngay_cap_nhat || null
       };
@@ -1041,24 +1169,54 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const endpointRaw = dto.endpoint_checks ?? current.endpoint_checks;
     if (!endpointRaw.length || endpointRaw.length > 10) throw new BadRequestException("SLO endpoint cần từ 1 đến 10 endpoint");
     const endpointIds = new Set<string>();
-    const endpoint_checks: SloEndpointCheckV380[] = endpointRaw.map((raw, index) => {
+    const endpoint_checks: SloEndpointCheckV390[] = endpointRaw.map((raw, index) => {
       const id = String(raw.id || `endpoint-${index + 1}`).trim().toLowerCase(); const ten = String(raw.ten || id).trim(); const path = String(raw.path || "").trim();
-      const muc_tieu_percent = Number(raw.muc_tieu_percent); const timeout_ms = Number(raw.timeout_ms ?? 3000);
+      const methodRaw = String(raw.method || "GET").trim().toUpperCase();
+      const method = (["GET", "HEAD"].includes(methodRaw) ? methodRaw : "GET") as "GET" | "HEAD";
+      const muc_tieu_percent = Number(raw.muc_tieu_percent); const latency_target_ms = Number(raw.latency_target_ms ?? 1000); const timeout_ms = Number(raw.timeout_ms ?? 3000);
+      const authRaw = String(raw.auth_template || "NONE").trim().toUpperCase();
+      const auth_template = (["NONE", "BEARER_ENV"].includes(authRaw) ? authRaw : "NONE") as "NONE" | "BEARER_ENV";
+      const auth_env = String(raw.auth_env || "").trim();
+      const headersRaw = raw.headers && typeof raw.headers === "object" && !Array.isArray(raw.headers) ? raw.headers as Record<string, unknown> : {};
       if (!/^[a-z0-9][a-z0-9-]{1,39}$/.test(id)) throw new BadRequestException(`ID endpoint ${id || index + 1} không hợp lệ`);
       if (endpointIds.has(id)) throw new BadRequestException(`ID endpoint ${id} bị trùng`); endpointIds.add(id);
       if (!ten || ten.length > 80) throw new BadRequestException(`Tên endpoint ${id} không hợp lệ`);
       if (!path.startsWith("/api/v1/") || path.includes("..") || path.length > 180) throw new BadRequestException(`Path endpoint ${id} phải bắt đầu /api/v1/`);
+      if (!["GET", "HEAD"].includes(method)) throw new BadRequestException(`HTTP method endpoint ${id} chỉ hỗ trợ GET/HEAD`);
       if (!Number.isFinite(muc_tieu_percent) || muc_tieu_percent < 90 || muc_tieu_percent > 100) throw new BadRequestException(`SLO endpoint ${id} phải từ 90 đến 100%`);
+      if (!Number.isFinite(latency_target_ms) || latency_target_ms < 50 || latency_target_ms > 10_000) throw new BadRequestException(`Latency target endpoint ${id} phải từ 50 đến 10000ms`);
       if (!Number.isFinite(timeout_ms) || timeout_ms < 500 || timeout_ms > 10_000) throw new BadRequestException(`Timeout endpoint ${id} phải từ 500 đến 10000ms`);
-      return { id, ten, path, muc_tieu_percent: Math.round(muc_tieu_percent * 1000) / 1000, timeout_ms: Math.floor(timeout_ms) };
+      if (auth_template === "BEARER_ENV" && !/^[A-Z][A-Z0-9_]{1,79}$/.test(auth_env)) throw new BadRequestException(`Auth env endpoint ${id} không hợp lệ`);
+      const headers: Record<string, string> = {};
+      for (const [nameRaw, valueRaw] of Object.entries(headersRaw).slice(0, 10)) {
+        const name = nameRaw.trim().toLowerCase(); const value = String(valueRaw);
+        if (!/^[a-z0-9-]{1,50}$/.test(name) || ["host", "content-length", "cookie"].includes(name)) throw new BadRequestException(`Header ${nameRaw} của endpoint ${id} không hợp lệ`);
+        if (value.length > 300) throw new BadRequestException(`Header ${nameRaw} của endpoint ${id} quá dài`);
+        const envRefs = [...value.matchAll(/\$\{ENV:([^}]+)\}/g)].map(m => m[1]);
+        if (envRefs.some(name => !/^[A-Z][A-Z0-9_]{1,79}$/.test(name))) throw new BadRequestException(`ENV template trong header ${nameRaw} không hợp lệ`);
+        if (["authorization", "proxy-authorization", "x-api-key", "api-key"].includes(name) && envRefs.length === 0) {
+          throw new BadRequestException(`Header nhạy cảm ${nameRaw} của endpoint ${id} phải dùng template \${ENV:TEN_BIEN}`);
+        }
+        headers[name] = value;
+      }
+      return { id, ten, path, method, headers, auth_template, auth_env: auth_template === "BEARER_ENV" ? auth_env : "", muc_tieu_percent: Math.round(muc_tieu_percent * 1000) / 1000, latency_target_ms: Math.floor(latency_target_ms), timeout_ms: Math.floor(timeout_ms) };
     });
+    const rawMaintenance = dto.maintenance_policy ?? current.maintenance_policy;
+    const maxGap = Number(rawMaintenance.max_gap_multiplier ?? 2);
+    if (!Number.isFinite(maxGap) || maxGap < 1 || maxGap > 6) throw new BadRequestException("Max gap multiplier phải từ 1 đến 6");
+    const maintenance_policy: SloMaintenancePolicyV390 = {
+      exclude_from_availability: !!rawMaintenance.exclude_from_availability,
+      exclude_from_error_budget: !!rawMaintenance.exclude_from_error_budget,
+      max_gap_multiplier: Math.round(maxGap * 10) / 10
+    };
     const truoc = current;
-    const sau = { burn_windows, service_targets, endpoint_checks };
+    const sau = { burn_windows, service_targets, endpoint_checks, maintenance_policy };
+    const jsonSau = this.chuan_hoa_json_object(sau as unknown as Record<string, unknown>);
     await this.db.$transaction([
-      this.db.cauHinhHeThong.upsert({ where: { khoa: "SLO_NANG_CAO_V370" }, create: { khoa: "SLO_NANG_CAO_V370", gia_tri: sau, nguoi_cap_nhat_id: actor.id }, update: { gia_tri: sau, nguoi_cap_nhat_id: actor.id } }),
-      this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_CAP_NHAT_SLO_NANG_CAO", nguoi_dung_id: actor.id, chi_tiet: { truoc, sau } } })
+      this.db.cauHinhHeThong.upsert({ where: { khoa: "SLO_NANG_CAO_V370" }, create: { khoa: "SLO_NANG_CAO_V370", gia_tri: jsonSau, nguoi_cap_nhat_id: actor.id }, update: { gia_tri: jsonSau, nguoi_cap_nhat_id: actor.id } }),
+      this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_CAP_NHAT_SLO_NANG_CAO", nguoi_dung_id: actor.id, chi_tiet: this.chuan_hoa_json_object({ truoc, sau } as unknown as Record<string, unknown>) } })
     ]);
-    await this.ghi_lich_su_van_hanh("SLO_POLICY", "DA_CAP_NHAT", `Admin ${actor.ho_ten} cập nhật burn-rate/error-budget/endpoint policy`, sau);
+    await this.ghi_lich_su_van_hanh("SLO_POLICY", "DA_CAP_NHAT", `Admin ${actor.ho_ten} cập nhật burn-rate/error-budget/endpoint/maintenance policy`, sau as unknown as Record<string, unknown>);
     return this.cau_hinh_slo_nang_cao_runtime();
   }
 
@@ -1066,7 +1224,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const raw = Number.parseInt(soNgayRaw || "90", 10) || 90;
     const so_ngay = raw <= 30 ? 30 : 90;
     const tu = new Date(); tu.setUTCDate(tu.getUTCDate() - (so_ngay - 1)); tu.setUTCHours(0, 0, 0, 0);
-    const [ds, muc_tieu, nang_cao, incidents, alertConfig, endpointRows, maintenanceConfig] = await Promise.all([
+    const [healthRows, muc_tieu, nang_cao, incidents, alertConfig, endpointRows, maintenanceConfig] = await Promise.all([
       this.db.lichSuVanHanh.findMany({ where: { loai: "HEALTH", ngay_tao: { gte: tu } }, orderBy: { ngay_tao: "asc" }, select: { trang_thai: true, ngay_tao: true, chi_tiet: true } }),
       this.cau_hinh_slo_van_hanh_runtime(),
       this.cau_hinh_slo_nang_cao_runtime(),
@@ -1075,8 +1233,18 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       this.db.lichSuVanHanh.findMany({ where: { loai: "SLO_ENDPOINT", ngay_tao: { gte: tu } }, orderBy: { ngay_tao: "asc" }, select: { trang_thai: true, ngay_tao: true, chi_tiet: true } }),
       this.danh_sach_bao_tri_v370_runtime()
     ]);
+    const chi_tiet = (value: Prisma.JsonValue) => value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+    const laMaintenance = (row: { chi_tiet: Prisma.JsonValue }) => chi_tiet(row.chi_tiet).maintenance_active === true;
+    const policyMaintenance = nang_cao.maintenance_policy;
+    const dsAvailability = policyMaintenance.exclude_from_availability ? healthRows.filter(x => !laMaintenance(x)) : healthRows;
+    const dsBudget = policyMaintenance.exclude_from_error_budget ? healthRows.filter(x => !laMaintenance(x)) : healthRows;
+    const maintenance_excluded = {
+      availability_samples: healthRows.length - dsAvailability.length,
+      error_budget_samples: healthRows.length - dsBudget.length
+    };
+
     const map = new Map<string, { tong: number; tot: number; canh_bao: number; loi: number }>();
-    for (const item of ds) {
+    for (const item of dsAvailability) {
       const ngay = item.ngay_tao.toISOString().slice(0, 10);
       const x = map.get(ngay) || { tong: 0, tot: 0, canh_bao: 0, loi: 0 }; x.tong += 1;
       if (item.trang_thai === "TOT") x.tot += 1; else if (item.trang_thai === "LOI") x.loi += 1; else x.canh_bao += 1; map.set(ngay, x);
@@ -1098,9 +1266,14 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       const da_tieu_thu = ty_le_xau / cho_phep_ty_le;
       return { tong_mau: tong, mau_xau: xau, loi_cho_phep_percent: Math.round(cho_phep_ty_le * 100000) / 1000, da_tieu_thu_percent: Math.round(da_tieu_thu * 10000) / 100, con_lai_percent: Math.round(Math.max(0, 1 - da_tieu_thu) * 10000) / 100 };
     };
+    const rows30Budget = dsBudget.filter(x => x.ngay_tao.getTime() >= Date.now() - 30 * 86_400_000);
+    const ngan_sach_loi = {
+      sla: tinh_ngan_sach(rows30Budget.length, rows30Budget.filter(x => x.trang_thai !== "TOT").length, muc_tieu.sla_muc_tieu_percent),
+      uptime: tinh_ngan_sach(rows30Budget.length, rows30Budget.filter(x => x.trang_thai === "LOI").length, muc_tieu.uptime_muc_tieu_percent)
+    };
     const tinh_burn = (gio: number, kieu: "sla" | "uptime", muc_tieu_percent: number) => {
       const moc = Date.now() - gio * 3_600_000;
-      const rows = ds.filter(x => x.ngay_tao.getTime() >= moc);
+      const rows = dsBudget.filter(x => x.ngay_tao.getTime() >= moc);
       const tong = rows.length;
       if (!tong) return { cua_so_gio: gio, tong_mau: 0, mau_xau: 0, burn_rate: null as number | null, muc_do: "CHUA_CO_DU_LIEU" as const };
       const mau_xau = rows.filter(x => kieu === "sla" ? x.trang_thai !== "TOT" : x.trang_thai === "LOI").length;
@@ -1113,10 +1286,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const tong_quan = tinh(theo_ngay);
     const bay_ngay = tinh(theo_ngay.slice(-7));
     const ba_muoi_ngay = tinh(theo_ngay.slice(-30));
-    const ngan_sach_loi = {
-      sla: tinh_ngan_sach(ba_muoi_ngay.tong, ba_muoi_ngay.tong - ba_muoi_ngay.tot, muc_tieu.sla_muc_tieu_percent),
-      uptime: tinh_ngan_sach(ba_muoi_ngay.tong, ba_muoi_ngay.loi, muc_tieu.uptime_muc_tieu_percent)
-    };
+    const chin_muoi_ngay = tinh(theo_ngay.slice(-90));
     const burn_rate = {
       sla: { mot_gio: tinh_burn(1, "sla", muc_tieu.sla_muc_tieu_percent), sau_gio: tinh_burn(6, "sla", muc_tieu.sla_muc_tieu_percent), hai_muoi_bon_gio: tinh_burn(24, "sla", muc_tieu.sla_muc_tieu_percent) },
       uptime: { mot_gio: tinh_burn(1, "uptime", muc_tieu.uptime_muc_tieu_percent), sau_gio: tinh_burn(6, "uptime", muc_tieu.uptime_muc_tieu_percent), hai_muoi_bon_gio: tinh_burn(24, "uptime", muc_tieu.uptime_muc_tieu_percent) }
@@ -1130,12 +1300,11 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
         uptime: { ...uptime, vuot_nguong: uptime.burn_rate != null && uptime.burn_rate >= policy.nguong, muc_do_policy: uptime.burn_rate != null && uptime.burn_rate >= policy.nguong ? policy.muc_do : "TOT" }
       };
     });
-    const chi_tiet = (value: Prisma.JsonValue) => value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
     const dich_vu = {
-      api: ds.map(x => ({ x, bad: x.trang_thai === "LOI" })),
-      postgresql: ds.map(x => ({ x, bad: chi_tiet(x.chi_tiet).database_ket_noi === false })),
-      backup: ds.map(x => { const age = chi_tiet(x.chi_tiet).backup_tuoi_gio; return { x, bad: age == null || (typeof age === "number" && age > alertConfig.backup_qua_han_gio) }; }),
-      smtp: ds.filter(x => chi_tiet(x.chi_tiet).smtp_bat === true).map(x => ({ x, bad: chi_tiet(x.chi_tiet).smtp_san_sang !== true }))
+      api: dsBudget.map(x => ({ x, bad: x.trang_thai === "LOI" })),
+      postgresql: dsBudget.map(x => ({ x, bad: chi_tiet(x.chi_tiet).database_ket_noi === false })),
+      backup: dsBudget.map(x => { const age = chi_tiet(x.chi_tiet).backup_tuoi_gio; return { x, bad: age == null || (typeof age === "number" && age > alertConfig.backup_qua_han_gio) }; }),
+      smtp: dsBudget.filter(x => chi_tiet(x.chi_tiet).smtp_bat === true).map(x => ({ x, bad: chi_tiet(x.chi_tiet).smtp_san_sang !== true }))
     };
     const ngan_sach_dich_vu = Object.fromEntries(Object.entries(dich_vu).map(([key, rows]) => {
       const target = Number(nang_cao.service_targets[key as keyof typeof nang_cao.service_targets]);
@@ -1147,28 +1316,59 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       const sorted = [...values].sort((a, b) => a - b); const idx = Math.min(sorted.length - 1, Math.max(0, Math.ceil(sorted.length * p) - 1));
       return Math.round(sorted[idx] * 10) / 10;
     };
+    const avg = (values: number[]) => values.length ? Math.round((values.reduce((a, b) => a + b, 0) / values.length) * 10) / 10 : null;
     const mttaValues = incidents.filter(x => x.tiep_nhan_luc).map(x => Math.max(0, (x.tiep_nhan_luc!.getTime() - x.bat_dau.getTime()) / 60_000));
     const mttrValues = incidents.filter(x => x.khac_phuc_luc).map(x => Math.max(0, (x.khac_phuc_luc!.getTime() - x.bat_dau.getTime()) / 60_000));
-    const avg = (values: number[]) => values.length ? Math.round((values.reduce((a, b) => a + b, 0) / values.length) * 10) / 10 : null;
-    const incident_metrics = { tong_incident: incidents.length, dang_mo: incidents.filter(x => x.trang_thai_xu_ly !== "DA_KHAC_PHUC").length, da_khac_phuc: incidents.filter(x => x.trang_thai_xu_ly === "DA_KHAC_PHUC").length, mtta_phut: avg(mttaValues), mtta_p95_phut: percentile(mttaValues, 0.95), mttr_phut: avg(mttrValues), mttr_p95_phut: percentile(mttrValues, 0.95) };
-    const chin_muoi_ngay = tinh(theo_ngay.slice(-90));
-    const maxWeightMs = Math.max(2, this.cau_hinh_slo_endpoint_runtime().chu_ky_phut * 2) * 60_000;
+    let incident_metrics = { tong_incident: incidents.length, dang_mo: incidents.filter(x => x.trang_thai_xu_ly !== "DA_KHAC_PHUC").length, da_khac_phuc: incidents.filter(x => x.trang_thai_xu_ly === "DA_KHAC_PHUC").length, mtta_phut: avg(mttaValues), mtta_p95_phut: percentile(mttaValues, 0.95), mttr_phut: avg(mttrValues), mttr_p95_phut: percentile(mttrValues, 0.95), nguon: "RUNTIME_FALLBACK" as string, refreshed_at: null as string | null };
+    try {
+      await this.db.$executeRawUnsafe('REFRESH MATERIALIZED VIEW "ops_incident_metrics_v390"');
+      const rows = await this.db.$queryRawUnsafe<Array<{ tong_incident: bigint; dang_mo: bigint; da_khac_phuc: bigint; mtta_phut: number | null; mtta_p95_phut: number | null; mttr_phut: number | null; mttr_p95_phut: number | null; refreshed_at: Date }>>('SELECT tong_incident, dang_mo, da_khac_phuc, mtta_phut, mtta_p95_phut, mttr_phut, mttr_p95_phut, refreshed_at FROM "ops_incident_metrics_v390" WHERE id = 1');
+      if (rows[0]) incident_metrics = { tong_incident: Number(rows[0].tong_incident), dang_mo: Number(rows[0].dang_mo), da_khac_phuc: Number(rows[0].da_khac_phuc), mtta_phut: rows[0].mtta_phut == null ? null : Math.round(Number(rows[0].mtta_phut) * 10) / 10, mtta_p95_phut: rows[0].mtta_p95_phut == null ? null : Math.round(Number(rows[0].mtta_p95_phut) * 10) / 10, mttr_phut: rows[0].mttr_phut == null ? null : Math.round(Number(rows[0].mttr_phut) * 10) / 10, mttr_p95_phut: rows[0].mttr_p95_phut == null ? null : Math.round(Number(rows[0].mttr_p95_phut) * 10) / 10, nguon: "MATERIALIZED_VIEW_V390", refreshed_at: rows[0].refreshed_at.toISOString() };
+    } catch (error) { this.logger.debug(`Ops incident materialized metrics fallback: ${error instanceof Error ? error.message : String(error)}`); }
+
+    const maxWeightMs = Math.max(1, this.cau_hinh_slo_endpoint_runtime().chu_ky_phut * policyMaintenance.max_gap_multiplier) * 60_000;
     const endpoint_slo = {
       time_weighted: true,
+      maintenance_aware: true,
       endpoints: nang_cao.endpoint_checks.map(endpoint => {
         const rows = endpointRows.filter(row => String(chi_tiet(row.chi_tiet).endpoint_id || "") === endpoint.id);
-        let tong_ms = 0; let tot_ms = 0;
+        let availability_ms = 0; let availability_ok_ms = 0; let budget_ms = 0; let budget_ok_ms = 0; let excluded_availability_ms = 0; let excluded_budget_ms = 0;
+        const latencyRows: number[] = []; let latencyOk = 0;
         for (let i = 0; i < rows.length; i++) {
+          const detail = chi_tiet(rows[i].chi_tiet);
           const start = Math.max(tu.getTime(), rows[i].ngay_tao.getTime());
           const next = i + 1 < rows.length ? rows[i + 1].ngay_tao.getTime() : Date.now();
           const duration = Math.max(1000, Math.min(maxWeightMs, next - start));
-          tong_ms += duration; if (rows[i].trang_thai === "TOT") tot_ms += duration;
+          const maintenanceActive = detail.maintenance_active === true;
+          if (maintenanceActive && policyMaintenance.exclude_from_availability) excluded_availability_ms += duration;
+          else { availability_ms += duration; if (rows[i].trang_thai === "TOT") availability_ok_ms += duration; }
+          if (maintenanceActive && policyMaintenance.exclude_from_error_budget) excluded_budget_ms += duration;
+          else { budget_ms += duration; if (rows[i].trang_thai === "TOT") budget_ok_ms += duration; }
+          if (!(maintenanceActive && policyMaintenance.exclude_from_availability)) {
+            const latency = Number(detail.do_tre_ms); if (Number.isFinite(latency)) { latencyRows.push(latency); if (latency <= endpoint.latency_target_ms) latencyOk += 1; }
+          }
         }
-        const availability_percent = tong_ms ? Math.round((tot_ms / tong_ms) * 100000) / 1000 : null;
-        const allowed = tong_ms * Math.max(0.000001, 1 - endpoint.muc_tieu_percent / 100);
-        const bad = Math.max(0, tong_ms - tot_ms);
-        const consumed = tong_ms ? bad / allowed : null;
-        return { ...endpoint, tong_mau: rows.length, tong_thoi_gian_phut: Math.round(tong_ms / 6000) / 10, downtime_phut: Math.round(bad / 6000) / 10, availability_percent, dat_muc_tieu: availability_percent == null ? null : availability_percent >= endpoint.muc_tieu_percent, error_budget_da_tieu_percent: consumed == null ? null : Math.round(consumed * 10000) / 100, error_budget_con_lai_percent: consumed == null ? null : Math.round(Math.max(0, 1 - consumed) * 10000) / 100 };
+        const availability_percent = availability_ms ? Math.round((availability_ok_ms / availability_ms) * 100000) / 1000 : null;
+        const allowed = budget_ms * Math.max(0.000001, 1 - endpoint.muc_tieu_percent / 100);
+        const badBudget = Math.max(0, budget_ms - budget_ok_ms);
+        const consumed = budget_ms ? badBudget / allowed : null;
+        const histogramBuckets = [100, 250, 500, 1000, 3000];
+        const histogram: Record<string, number> = {}; let prev = 0;
+        for (const bucket of histogramBuckets) { const count = latencyRows.filter(x => x > prev && x <= bucket).length; histogram[`${prev + (prev ? 1 : 0)}-${bucket}ms`] = count; prev = bucket; }
+        histogram[">3000ms"] = latencyRows.filter(x => x > 3000).length;
+        return {
+          ...endpoint,
+          tong_mau: rows.length,
+          tong_thoi_gian_phut: Math.round(availability_ms / 6000) / 10,
+          downtime_phut: Math.round(Math.max(0, availability_ms - availability_ok_ms) / 6000) / 10,
+          budget_downtime_phut: Math.round(badBudget / 6000) / 10,
+          excluded_maintenance_phut: { availability: Math.round(excluded_availability_ms / 6000) / 10, error_budget: Math.round(excluded_budget_ms / 6000) / 10 },
+          availability_percent,
+          dat_muc_tieu: availability_percent == null ? null : availability_percent >= endpoint.muc_tieu_percent,
+          error_budget_da_tieu_percent: consumed == null ? null : Math.round(consumed * 10000) / 100,
+          error_budget_con_lai_percent: consumed == null ? null : Math.round(Math.max(0, 1 - consumed) * 10000) / 100,
+          latency: { samples: latencyRows.length, sli_percent: latencyRows.length ? Math.round((latencyOk / latencyRows.length) * 10000) / 100 : null, avg_ms: avg(latencyRows), p50_ms: percentile(latencyRows, 0.5), p95_ms: percentile(latencyRows, 0.95), p99_ms: percentile(latencyRows, 0.99), target_ms: endpoint.latency_target_ms, dat_p95: latencyRows.length ? (percentile(latencyRows, 0.95) ?? Infinity) <= endpoint.latency_target_ms : null, histogram }
+        };
       })
     };
     const burn_rate_series = theo_ngay.map(row => {
@@ -1194,12 +1394,14 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
         if (item.sla.vuot_nguong) canh_bao.push(`Burn-rate SLA ${item.gio}h ${item.sla.burn_rate}x vượt policy ${item.nguong}x`);
         if (item.uptime.vuot_nguong) canh_bao.push(`Burn-rate Uptime ${item.gio}h ${item.uptime.burn_rate}x vượt policy ${item.nguong}x`);
       }
+      for (const endpoint of endpoint_slo.endpoints) if (endpoint.latency.dat_p95 === false) canh_bao.push(`Latency P95 ${endpoint.ten} ${endpoint.latency.p95_ms}ms vượt mục tiêu ${endpoint.latency.target_ms}ms`);
     }
     return {
       so_ngay, tu_ngay: tu.toISOString(), tao_luc: new Date().toISOString(),
-      dinh_nghia: { sla: "Tỷ lệ mẫu health ở trạng thái TỐT", uptime: "Tỷ lệ mẫu health không ở trạng thái LỖI", error_budget: "Ngân sách lỗi 30 ngày theo mục tiêu SLO; burn-rate được so với multi-window policy cấu hình", endpoint_slo: "Availability time-weighted từ probe HTTP thật của endpoint; mỗi sample có trọng số đến sample kế tiếp và được cap theo chu kỳ endpoint probe" },
+      dinh_nghia: { sla: "Tỷ lệ health snapshot TỐT, có thể loại maintenance theo policy", uptime: "Tỷ lệ health snapshot không LỖI, có thể loại maintenance theo policy", error_budget: "Ngân sách lỗi 30 ngày theo mục tiêu SLO; burn-rate dùng tập mẫu error-budget sau maintenance policy", endpoint_slo: "Availability time-weighted từ HTTP probe; latency SLI/P50/P95/P99 + histogram; gap được cap theo max_gap_multiplier" },
       muc_tieu: { sla_muc_tieu_percent: muc_tieu.sla_muc_tieu_percent, uptime_muc_tieu_percent: muc_tieu.uptime_muc_tieu_percent, canh_bao_xu_huong: muc_tieu.canh_bao_xu_huong, nguon_cau_hinh: muc_tieu.nguon_cau_hinh },
       cau_hinh_nang_cao: nang_cao,
+      maintenance_policy_applied: { ...policyMaintenance, ...maintenance_excluded },
       tong_quan,
       xu_huong: { bay_ngay, ba_muoi_ngay, chin_muoi_ngay },
       comparison: { bay_ngay, ba_muoi_ngay, chin_muoi_ngay },

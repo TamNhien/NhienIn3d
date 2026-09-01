@@ -20,6 +20,8 @@ import {
   layWebhookDeadLetterAdmin,
   layWebhookDeliveryAdmin,
   replayWebhookDeadLetterAdmin,
+  acknowledgeWebhookDeadLetterAdmin,
+  replayBulkWebhookDeadLetterAdmin,
   taoBaoTriAdmin,
   xoaBaoTriAdmin,
   xuatOpsTongHopExcelAdmin
@@ -29,6 +31,7 @@ import styles from "./page.module.css";
 const homNay = () => new Date().toISOString().slice(0, 10);
 const truocNgay = (soNgay: number) => { const d = new Date(); d.setDate(d.getDate() - soNgay); return d.toISOString().slice(0, 10); };
 const fmt = (value?: string | null) => value ? new Date(value).toLocaleString("vi-VN") : "—";
+const ms = (value?: number | null) => value == null ? "—" : `${value.toLocaleString("vi-VN", { maximumFractionDigits: 1 })} ms`;
 const pct = (value?: number | null) => value == null ? "—" : `${value.toLocaleString("vi-VN", { maximumFractionDigits: 3 })}%`;
 const taiTep = (kq: { base64: string; mime_type: string; ten_file: string }) => {
   const binary = atob(kq.base64); const bytes = new Uint8Array(binary.length); for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
@@ -116,14 +119,14 @@ export default function OpsDashboardPage() {
     if (!policy) return;
     setDangXuLy("policy"); setLoi("");
     try {
-      const kq = await capNhatCauHinhSloNangCaoAdmin({ burn_windows: policy.burn_windows, service_targets: policy.service_targets, endpoint_checks: policy.endpoint_checks });
+      const kq = await capNhatCauHinhSloNangCaoAdmin({ burn_windows: policy.burn_windows, service_targets: policy.service_targets, endpoint_checks: policy.endpoint_checks, maintenance_policy: policy.maintenance_policy });
       setPolicy(kq); setThongBao("Đã lưu burn-rate, service budget và endpoint SLO policy."); await taiDuLieu();
     } catch (error) { setLoi(error instanceof Error ? error.message : String(error)); }
     finally { setDangXuLy(""); }
   }
 
   function addEndpoint() {
-    setPolicy(current => current ? ({ ...current, endpoint_checks: [...current.endpoint_checks, { id: `endpoint-${current.endpoint_checks.length + 1}`, ten: "Endpoint mới", path: "/api/v1/suc-khoe", muc_tieu_percent: 99.9, timeout_ms: 3000 }] }) : current);
+    setPolicy(current => current ? ({ ...current, endpoint_checks: [...current.endpoint_checks, { id: `endpoint-${current.endpoint_checks.length + 1}`, ten: "Endpoint mới", path: "/api/v1/suc-khoe", method: "GET", headers: {}, auth_template: "NONE", auth_env: "", muc_tieu_percent: 99.9, latency_target_ms: 1000, timeout_ms: 3000 }] }) : current);
   }
 
   function removeEndpoint(index: number) {
@@ -157,9 +160,27 @@ export default function OpsDashboardPage() {
     finally { setDangXuLy(""); }
   }
 
+  async function ackDeadLetter(item: WebhookDeadLetterAdmin) {
+    if (item.da_ack || item.da_replay || !confirm(`Acknowledge dead-letter #${item.id}?`)) return;
+    setDangXuLy(`ack-${item.id}`); setLoi("");
+    try { await acknowledgeWebhookDeadLetterAdmin(item.id, "Đã xác nhận xử lý từ Ops Dashboard v3.9.0"); setThongBao(`Đã acknowledge dead-letter #${item.id}.`); await taiDuLieu(); }
+    catch (error) { setLoi(error instanceof Error ? error.message : String(error)); }
+    finally { setDangXuLy(""); }
+  }
+
+  async function replayBulkDeadLetters() {
+    const ids = deadLetters.filter(x => x.trang_thai_dlq === "CHO_REPLAY").slice(0, 20).map(x => x.id);
+    if (!ids.length) { setThongBao("Không có dead-letter đang chờ replay."); return; }
+    if (!confirm(`Replay bulk ${ids.length} dead-letter đang chờ?`)) return;
+    setDangXuLy("replay-bulk"); setLoi("");
+    try { const kq = await replayBulkWebhookDeadLetterAdmin(ids); setThongBao(`Bulk replay: ${kq.thanh_cong}/${kq.tong} thành công.`); await taiDuLieu(); }
+    catch (error) { setLoi(error instanceof Error ? error.message : String(error)); }
+    finally { setDangXuLy(""); }
+  }
+
   return <main className={styles.page}>
     <header className={styles.header}>
-      <div><span className={styles.kicker}>NHIENIN3D · OPS v3.8.0</span><h1>Ops Dashboard</h1><p>Endpoint SLO time-weighted, burn-rate timeline, maintenance annotation, incident full-text timeline và webhook dead-letter/replay trên một màn hình vận hành riêng.</p></div>
+      <div><span className={styles.kicker}>NHIENIN3D · OPS v3.9.0</span><h1>Ops Dashboard</h1><p>Endpoint SLO time-weighted + latency SLI/P95, maintenance-aware error budget, GIN incident search và webhook DLQ lifecycle trên một màn hình vận hành riêng.</p></div>
       <div className={styles.actions}><Link href="/quan-tri" className={styles.secondary}>← Quản trị</Link><button onClick={() => void taiDuLieu()} disabled={!!dangXuLy}>Làm mới</button><button onClick={() => void exportOps()} disabled={!!dangXuLy}>Xuất Ops Excel</button></div>
     </header>
 
@@ -183,7 +204,7 @@ export default function OpsDashboardPage() {
 
     <section className={styles.grid2}>
       <article className={styles.panel}><h2>So sánh SLO 7 / 30 / 90 ngày</h2><p>Giữ cùng định nghĩa để nhìn xu hướng dài hạn.</p><div className={styles.tableWrap}><table><thead><tr><th>Cửa sổ</th><th>SLA</th><th>Uptime</th><th>Mẫu</th></tr></thead><tbody>{comparisonRows.map(({ label, value }) => <tr key={label}><td>{label}</td><td>{pct(value.sla_percent)}</td><td>{pct(value.uptime_percent)}</td><td>{value.tong}</td></tr>)}</tbody></table></div></article>
-      <article className={styles.panel}><h2>Endpoint SLO · time-weighted</h2><p>Probe HTTP thật; availability được tính theo thời lượng giữa các sample, không chỉ đếm mẫu.</p><div className={styles.tableWrap}><table><thead><tr><th>Endpoint</th><th>Availability</th><th>Mục tiêu</th><th>Downtime</th><th>Budget còn</th></tr></thead><tbody>{(sla?.endpoint_slo?.endpoints || []).map(item => <tr key={item.id}><td><b>{item.ten}</b><small className={styles.blockSmall}>{item.path}</small></td><td>{pct(item.availability_percent)}</td><td>{pct(item.muc_tieu_percent)}</td><td>{item.downtime_phut} phút</td><td>{pct(item.error_budget_con_lai_percent)}</td></tr>)}</tbody></table></div></article>
+      <article className={styles.panel}><h2>Endpoint SLO · time-weighted + latency</h2><p>Availability time-weighted; latency có SLI, P50/P95/P99 và histogram. Maintenance được loại trừ theo policy.</p><div className={styles.tableWrap}><table><thead><tr><th>Endpoint</th><th>Availability</th><th>Latency SLI</th><th>P95 / Target</th><th>Maintenance loại</th><th>Budget còn</th></tr></thead><tbody>{(sla?.endpoint_slo?.endpoints || []).map(item => <tr key={item.id}><td><b>{item.ten}</b><small className={styles.blockSmall}>{item.method} · {item.path}</small></td><td>{pct(item.availability_percent)}</td><td>{pct(item.latency.sli_percent)}</td><td>{ms(item.latency.p95_ms)} / {ms(item.latency.target_ms)}</td><td>{item.excluded_maintenance_phut.availability} phút</td><td>{pct(item.error_budget_con_lai_percent)}</td></tr>)}</tbody></table></div></article>
     </section>
 
     <section className={styles.panel}><h2>Burn-rate theo thời gian</h2><p>30 ngày gần nhất; dấu bảo trì được annotation trực tiếp theo ngày.</p><div className={styles.burnChart}>{burnSeries.map(item => <div className={styles.burnDay} key={item.ngay}><div className={styles.burnDate}>{item.ngay.slice(5)}{maintenanceDates.has(item.ngay) && <span title={maintenanceDates.get(item.ngay)}>M</span>}</div><div className={styles.burnTracks}><div className={styles.burnTrack}><i style={{ width: `${Math.min(100, ((item.sla_burn_rate || 0) / maxBurn) * 100)}%` }}/><b>SLA {item.sla_burn_rate ?? "—"}x</b></div><div className={styles.burnTrack}><i style={{ width: `${Math.min(100, ((item.uptime_burn_rate || 0) / maxBurn) * 100)}%` }}/><b>Uptime {item.uptime_burn_rate ?? "—"}x</b></div></div></div>)}</div></section>
@@ -196,7 +217,8 @@ export default function OpsDashboardPage() {
           <label>Mức độ<select value={w.muc_do} onChange={e => setPolicy(p => p ? ({ ...p, burn_windows: p.burn_windows.map((x, i) => i === index ? { ...x, muc_do: e.target.value } : x) }) : p)}><option>CANH_BAO</option><option>CAO</option><option>NGHIEM_TRONG</option></select></label>
         </div>)}</div>
         <div className={styles.serviceTargets}>{Object.entries(policy.service_targets).map(([key, value]) => <label key={key}>{key}<input type="number" min={90} max={100} step={0.01} value={value} onChange={e => setPolicy(p => p ? ({ ...p, service_targets: { ...p.service_targets, [key]: Number(e.target.value) } as CauHinhSloNangCaoAdmin["service_targets"] }) : p)}/></label>)}</div>
-        <h3>Endpoint probes</h3><div className={styles.endpointEditor}>{policy.endpoint_checks.map((ep, index) => <div key={`${ep.id}-${index}`} className={styles.endpointRow}><input aria-label={`Endpoint ID ${index + 1}`} value={ep.id} onChange={e => setPolicy(p => p ? ({ ...p, endpoint_checks: p.endpoint_checks.map((x, i) => i === index ? { ...x, id: e.target.value } : x) }) : p)}/><input aria-label={`Endpoint tên ${index + 1}`} value={ep.ten} onChange={e => setPolicy(p => p ? ({ ...p, endpoint_checks: p.endpoint_checks.map((x, i) => i === index ? { ...x, ten: e.target.value } : x) }) : p)}/><input aria-label={`Endpoint path ${index + 1}`} value={ep.path} onChange={e => setPolicy(p => p ? ({ ...p, endpoint_checks: p.endpoint_checks.map((x, i) => i === index ? { ...x, path: e.target.value } : x) }) : p)}/><input aria-label={`Endpoint SLO ${index + 1}`} type="number" min={90} max={100} step={0.01} value={ep.muc_tieu_percent} onChange={e => setPolicy(p => p ? ({ ...p, endpoint_checks: p.endpoint_checks.map((x, i) => i === index ? { ...x, muc_tieu_percent: Number(e.target.value) } : x) }) : p)}/><button className={styles.danger} onClick={() => removeEndpoint(index)} disabled={policy.endpoint_checks.length <= 1}>Xóa</button></div>)}</div>
+        <h3>Maintenance-aware SLO</h3><div className={styles.policyRows}><div className={styles.policyRow}><label><input type="checkbox" checked={policy.maintenance_policy.exclude_from_availability} onChange={e => setPolicy(p => p ? ({ ...p, maintenance_policy: { ...p.maintenance_policy, exclude_from_availability: e.target.checked } }) : p)}/> Loại maintenance khỏi availability</label><label><input type="checkbox" checked={policy.maintenance_policy.exclude_from_error_budget} onChange={e => setPolicy(p => p ? ({ ...p, maintenance_policy: { ...p.maintenance_policy, exclude_from_error_budget: e.target.checked } }) : p)}/> Loại maintenance khỏi error budget</label><label>Max gap multiplier<input type="number" min={1} max={6} step={0.5} value={policy.maintenance_policy.max_gap_multiplier} onChange={e => setPolicy(p => p ? ({ ...p, maintenance_policy: { ...p.maintenance_policy, max_gap_multiplier: Number(e.target.value) } }) : p)}/></label></div></div>
+        <h3>Endpoint probes</h3><div className={styles.endpointEditor}>{policy.endpoint_checks.map((ep, index) => <div key={`${ep.id}-${index}`} className={styles.endpointRow}><input aria-label={`Endpoint ID ${index + 1}`} value={ep.id} onChange={e => setPolicy(p => p ? ({ ...p, endpoint_checks: p.endpoint_checks.map((x, i) => i === index ? { ...x, id: e.target.value } : x) }) : p)}/><input aria-label={`Endpoint tên ${index + 1}`} value={ep.ten} onChange={e => setPolicy(p => p ? ({ ...p, endpoint_checks: p.endpoint_checks.map((x, i) => i === index ? { ...x, ten: e.target.value } : x) }) : p)}/><input aria-label={`Endpoint path ${index + 1}`} value={ep.path} onChange={e => setPolicy(p => p ? ({ ...p, endpoint_checks: p.endpoint_checks.map((x, i) => i === index ? { ...x, path: e.target.value } : x) }) : p)}/><select aria-label={`Endpoint method ${index + 1}`} value={ep.method} onChange={e => setPolicy(p => p ? ({ ...p, endpoint_checks: p.endpoint_checks.map((x, i) => i === index ? { ...x, method: e.target.value as "GET" | "HEAD" } : x) }) : p)}><option>GET</option><option>HEAD</option></select><input aria-label={`Endpoint SLO ${index + 1}`} type="number" min={90} max={100} step={0.01} value={ep.muc_tieu_percent} onChange={e => setPolicy(p => p ? ({ ...p, endpoint_checks: p.endpoint_checks.map((x, i) => i === index ? { ...x, muc_tieu_percent: Number(e.target.value) } : x) }) : p)}/><input aria-label={`Endpoint latency ${index + 1}`} type="number" min={50} max={10000} value={ep.latency_target_ms} onChange={e => setPolicy(p => p ? ({ ...p, endpoint_checks: p.endpoint_checks.map((x, i) => i === index ? { ...x, latency_target_ms: Number(e.target.value) } : x) }) : p)}/><select aria-label={`Endpoint auth ${index + 1}`} value={ep.auth_template} onChange={e => setPolicy(p => p ? ({ ...p, endpoint_checks: p.endpoint_checks.map((x, i) => i === index ? { ...x, auth_template: e.target.value as "NONE" | "BEARER_ENV" } : x) }) : p)}><option value="NONE">Không auth</option><option value="BEARER_ENV">Bearer từ ENV</option></select><input aria-label={`Endpoint auth env ${index + 1}`} placeholder="ENV token (nếu có)" value={ep.auth_env} onChange={e => setPolicy(p => p ? ({ ...p, endpoint_checks: p.endpoint_checks.map((x, i) => i === index ? { ...x, auth_env: e.target.value } : x) }) : p)}/><small className={styles.blockSmall}>Header template API: {Object.keys(ep.headers || {}).join(", ") || "chưa cấu hình"}</small><button className={styles.danger} onClick={() => removeEndpoint(index)} disabled={policy.endpoint_checks.length <= 1}>Xóa</button></div>)}</div>
         <div className={styles.inlineActions}><button onClick={addEndpoint} disabled={policy.endpoint_checks.length >= 10}>Thêm endpoint</button><button onClick={() => void savePolicy()} disabled={dangXuLy === "policy"}>{dangXuLy === "policy" ? "Đang lưu…" : "Lưu SLO policy"}</button></div>
       </>}</article>
 
@@ -210,10 +232,10 @@ export default function OpsDashboardPage() {
     </section>
 
     <section className={styles.grid2}>
-      <article className={styles.panel}><h2>Incident + timeline full-text</h2><div className={styles.incidents}>{incidents.map(item => <button key={item.chu_ky} className={`${styles.incidentButton} ${selectedIncident === item.chu_ky ? styles.selectedIncident : ""}`} onClick={() => void loadTimeline(item.chu_ky, true)}><span>{item.trang_thai_xu_ly.replaceAll("_", " ")}</span><b>{item.van_de.join(" · ") || "Incident"}</b><small>#{item.chu_ky.slice(0, 12)} · {fmt(item.bat_dau)} · {item.so_su_kien} sự kiện</small></button>)}{!incidents.length && <p>Không có incident phù hợp.</p>}</div>
+      <article className={styles.panel}><h2>Incident + timeline GIN full-text</h2><div className={styles.incidents}>{incidents.map(item => <button key={item.chu_ky} className={`${styles.incidentButton} ${selectedIncident === item.chu_ky ? styles.selectedIncident : ""}`} onClick={() => void loadTimeline(item.chu_ky, true)}><span>{item.trang_thai_xu_ly.replaceAll("_", " ")}</span><b>{item.van_de.join(" · ") || "Incident"}</b><small>#{item.chu_ky.slice(0, 12)} · {fmt(item.bat_dau)} · {item.so_su_kien} sự kiện</small></button>)}{!incidents.length && <p>Không có incident phù hợp.</p>}</div>
         {selectedIncident && <div className={styles.timeline}><div className={styles.timelineSearch}><input placeholder="Tìm full-text trong mô tả / JSON timeline" value={timelineQuery} onChange={e => setTimelineQuery(e.target.value)}/><button onClick={() => void loadTimeline(selectedIncident, true, timelineQuery)}>Tìm</button></div>{timeline.map(item => <div key={item.id}><span>{item.loai} · {item.trang_thai}</span><b>{item.mo_ta || "Sự kiện vận hành"}</b><small>{fmt(item.ngay_tao)} · #{item.id}</small></div>)}{timelineHasMore && <button onClick={() => void loadTimeline(selectedIncident, false, timelineQuery)} disabled={dangXuLy === "timeline"}>Tải thêm timeline</button>}</div>}
       </article>
-      <article className={styles.panel}><h2>Webhook delivery + dead-letter</h2><p>Adapter hiện tại: <b>{webhookAdapter}</b>. Hỗ trợ GENERIC / Slack / Teams / Discord, retry/backoff/HMAC và replay.</p><div className={styles.incidents}>{webhook.slice(0, 12).map(item => <div key={item.id}><span>{item.trang_thai}</span><b>{item.mo_ta || "Webhook delivery"}</b><small>{fmt(item.ngay_tao)} · {JSON.stringify(item.chi_tiet)}</small></div>)}</div><h3>Dead-letter queue</h3><div className={styles.incidents}>{deadLetters.map(item => <div key={item.id}><span>{item.da_replay ? "ĐÃ REPLAY" : "CHỜ REPLAY"}</span><b>{item.mo_ta || `Dead-letter #${item.id}`}</b><small>{fmt(item.ngay_tao)} · {JSON.stringify(item.chi_tiet)}</small><button onClick={() => void replayDeadLetter(item)} disabled={item.da_replay || dangXuLy === `replay-${item.id}`}>{item.da_replay ? "Đã replay" : "Replay"}</button></div>)}{!deadLetters.length && <p>Không có webhook dead-letter.</p>}</div></article>
+      <article className={styles.panel}><h2>Webhook delivery + DLQ lifecycle</h2><p>Adapter: <b>{webhookAdapter}</b>. DLQ có retention, acknowledge, idempotency và bulk replay.</p><div className={styles.incidents}>{webhook.slice(0, 12).map(item => <div key={item.id}><span>{item.trang_thai}</span><b>{item.mo_ta || "Webhook delivery"}</b><small>{fmt(item.ngay_tao)} · {JSON.stringify(item.chi_tiet)}</small></div>)}</div><div className={styles.panelHead}><h3>Dead-letter queue</h3><button onClick={() => void replayBulkDeadLetters()} disabled={dangXuLy === "replay-bulk"}>Replay bulk chờ</button></div><div className={styles.incidents}>{deadLetters.map(item => <div key={item.id}><span>{item.trang_thai_dlq.replaceAll("_", " ")}</span><b>{item.mo_ta || `Dead-letter #${item.id}`}</b><small>{fmt(item.ngay_tao)} · hết hạn {fmt(item.het_han_luc)} · key {item.idempotency_key?.slice(0, 12) || "—"}</small><div className={styles.inlineActions}><button onClick={() => void replayDeadLetter(item)} disabled={item.trang_thai_dlq !== "CHO_REPLAY" || dangXuLy === `replay-${item.id}`}>Replay</button><button className={styles.secondary} onClick={() => void ackDeadLetter(item)} disabled={item.trang_thai_dlq !== "CHO_REPLAY" || dangXuLy === `ack-${item.id}`}>Acknowledge</button></div></div>)}{!deadLetters.length && <p>Không có webhook dead-letter.</p>}</div></article>
     </section>
   </main>;
 }

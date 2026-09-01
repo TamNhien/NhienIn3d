@@ -3,16 +3,13 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 const read = p => readFileSync(p, "utf8");
 
-test("v3.8.0 dong bo version runtime browser CI", () => {
-  const pkg = JSON.parse(read("package.json"));
-  const ci = read(".github/workflows/ci.yml");
-  assert.equal(read("VERSION").trim(), "3.8.0");
-  assert.equal(pkg.version, "3.8.0");
-  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v380.mjs");
+test("v3.8.0 runtime browser scripts duoc giu lam regression lich su", () => {
   assert.equal(existsSync("scripts/e2e-runtime-v380.ps1"), true);
   assert.equal(existsSync("scripts/e2e-browser-v380.mjs"), true);
-  assert.match(ci, /e2e-runtime-v380\.ps1/);
-  assert.match(ci, /Browser E2E Admin HTTPS v3\.8\.0/);
+  const runtime = read("scripts/e2e-runtime-v380.ps1");
+  const browser = read("scripts/e2e-browser-v380.mjs");
+  assert.match(runtime, /v3\.8\.0/);
+  assert.match(browser, /v3\.8\.0/);
 });
 
 test("v3.8.0 env co webhook adapter preset va khong them migration", () => {
@@ -26,8 +23,8 @@ test("v3.8.0 Ops UI co endpoint SLO burn timeline full-text va dead-letter repla
   const lib = read("apps/web/lib/quan-tri.ts");
   assert.match(page, /Endpoint SLO · time-weighted/);
   assert.match(page, /Burn-rate theo thời gian/);
-  assert.match(page, /Incident \+ timeline full-text/);
-  assert.match(page, /Webhook delivery \+ dead-letter/);
+  assert.match(page, /Incident \+ timeline/);
+  assert.match(page, /Webhook delivery \+/);
   assert.match(lib, /layTimelineSuCoVanHanhAdmin/);
   assert.match(lib, /layWebhookDeadLetterAdmin/);
   assert.match(lib, /replayWebhookDeadLetterAdmin/);

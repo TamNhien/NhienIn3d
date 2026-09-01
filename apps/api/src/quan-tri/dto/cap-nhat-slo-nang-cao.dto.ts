@@ -10,4 +10,8 @@ export class CapNhatSloNangCaoDto {
   @IsOptional()
   @IsArray()
   endpoint_checks?: Array<Record<string, unknown>>;
+
+  @IsOptional()
+  @IsObject()
+  maintenance_policy?: Record<string, unknown>;
 }

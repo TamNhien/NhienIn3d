@@ -401,6 +401,7 @@ model LichSuVanHanh {
   ngay_bat_dau DateTime? @db.Timestamptz(6)
   ngay_ket_thuc DateTime? @db.Timestamptz(6)
   ngay_tao    DateTime @default(now()) @db.Timestamptz(6)
+  search_vector Unsupported("tsvector")? @default(dbgenerated()) @map("search_vector")
 
   @@index([loai, ngay_tao])
   @@index([trang_thai, ngay_tao])
