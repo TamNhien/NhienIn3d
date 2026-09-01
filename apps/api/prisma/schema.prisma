@@ -397,12 +397,14 @@ model LichSuVanHanh {
   trang_thai  String   @db.VarChar(30)
   mo_ta       String?  @db.VarChar(500)
   chi_tiet    Json     @default("{}") @db.JsonB
+  chu_ky_canh_bao String? @db.VarChar(64)
   ngay_bat_dau DateTime? @db.Timestamptz(6)
   ngay_ket_thuc DateTime? @db.Timestamptz(6)
   ngay_tao    DateTime @default(now()) @db.Timestamptz(6)
 
   @@index([loai, ngay_tao])
   @@index([trang_thai, ngay_tao])
+  @@index([chu_ky_canh_bao, ngay_tao])
   @@index([ngay_tao])
   @@map("lich_su_van_hanh")
 }

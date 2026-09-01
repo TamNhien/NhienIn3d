@@ -32,6 +32,7 @@ apps/api/prisma/migrations/202608310004_v300_mfa_admin/migration.sql
 apps/api/prisma/migrations/202608310005_v310_remove_mfa_system_health/migration.sql
 apps/api/prisma/migrations/202608310006_v320_audit_ops_history/migration.sql
 apps/api/prisma/migrations/202608310007_v330_audit_ops_indexes/migration.sql
+apps/api/prisma/migrations/202608310008_v340_incident_signature_cursor_sla/migration.sql
 apps/api/prisma/migrations/migration_lock.toml
 apps/api/prisma/schema.prisma
 apps/api/prisma/seed.ts
@@ -53,6 +54,7 @@ apps/api/src/gio-hang/gio-hang.service.ts
 apps/api/src/main.ts
 apps/api/src/quan-tri/dto/cap-nhat-bien-the.dto.ts
 apps/api/src/quan-tri/dto/cap-nhat-ca-lam.dto.ts
+apps/api/src/quan-tri/dto/cap-nhat-cau-hinh-canh-bao-he-thong.dto.ts
 apps/api/src/quan-tri/dto/cap-nhat-cau-hinh-kho.dto.ts
 apps/api/src/quan-tri/dto/cap-nhat-danh-gia.dto.ts
 apps/api/src/quan-tri/dto/cap-nhat-danh-muc.dto.ts
@@ -117,6 +119,7 @@ apps/api/tests/v321-order-delivered-typecheck.test.mjs
 apps/api/tests/v330-audit-ops.test.mjs
 apps/api/tests/v331-session-revenue.test.mjs
 apps/api/tests/v332-revenue-delivery-reconcile.test.mjs
+apps/api/tests/v340-incident-sla-cursor.test.mjs
 apps/api/tsconfig.build.json
 apps/api/tsconfig.json
 apps/web/.dockerignore
@@ -173,6 +176,7 @@ apps/web/tests/v323-order-payment-type.test.mjs
 apps/web/tests/v330-audit-ops.test.mjs
 apps/web/tests/v331-session-revenue.test.mjs
 apps/web/tests/v332-revenue-delivery-reconcile.test.mjs
+apps/web/tests/v340-incident-sla-cursor.test.mjs
 apps/web/tsconfig.json
 docker-compose.https.yml
 docker-compose.yml
@@ -185,6 +189,7 @@ scripts/backup-verify.ps1
 scripts/cap-nhat.ps1
 scripts/don-dep-legacy.mjs
 scripts/e2e-runtime-v320.ps1
+scripts/e2e-runtime-v340.ps1
 scripts/https-local-bo-tin-cay.ps1
 scripts/https-local.ps1
 scripts/khoi-tao-github.ps1
@@ -203,3 +208,4 @@ tests/v323-order-payment-type.test.mjs
 tests/v330-audit-ops.test.mjs
 tests/v331-session-revenue.test.mjs
 tests/v332-revenue-delivery-reconcile.test.mjs
+tests/v340-incident-sla-cursor.test.mjs

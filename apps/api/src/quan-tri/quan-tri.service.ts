@@ -33,6 +33,7 @@ import { KiemTraTepNhapKhoDto } from "./dto/kiem-tra-tep-nhap-kho.dto.js";
 import { NhapKhoLoDto } from "./dto/nhap-kho-lo.dto.js";
 import { TaoNhaCungCapDto } from "./dto/tao-nha-cung-cap.dto.js";
 import { CapNhatNhaCungCapDto } from "./dto/cap-nhat-nha-cung-cap.dto.js";
+import { CapNhatCauHinhCanhBaoHeThongDto } from "./dto/cap-nhat-cau-hinh-canh-bao-he-thong.dto.js";
 
 @Injectable()
 export class QuanTriService implements OnModuleInit, OnModuleDestroy {
@@ -43,7 +44,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
 
   constructor(private readonly db: CoSoDuLieuService, private readonly thu_dien_tu: ThuDienTuService) {}
 
-  onModuleInit() {
+  async onModuleInit() {
     const kho = this.cau_hinh_canh_bao_kho_runtime();
     if (kho.bat) {
       const chayKho = () => this.kiem_tra_gui_canh_bao_kho_email().catch(error => this.logger.warn(`Không thể gửi cảnh báo tồn kho: ${error instanceof Error ? error.message : String(error)}`));
@@ -53,14 +54,8 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       this.logger.log(`Cảnh báo tồn kho qua email được kiểm tra mỗi ${kho.chu_ky_phut} phút.`);
     }
 
-    const heThong = this.cau_hinh_canh_bao_he_thong_runtime();
-    if (heThong.bat) {
-      const chayHeThong = () => this.kiem_tra_gui_canh_bao_he_thong_email().catch(error => this.logger.warn(`Không thể kiểm tra/gửi cảnh báo hệ thống: ${error instanceof Error ? error.message : String(error)}`));
-      setTimeout(chayHeThong, 45_000).unref();
-      this.bo_hen_canh_bao_he_thong = setInterval(chayHeThong, heThong.chu_ky_phut * 60_000);
-      this.bo_hen_canh_bao_he_thong.unref();
-      this.logger.log(`Cảnh báo sức khỏe hệ thống được kiểm tra mỗi ${heThong.chu_ky_phut} phút.`);
-    }
+    const heThong = await this.cau_hinh_canh_bao_he_thong_runtime();
+    this.ap_dung_bo_hen_canh_bao_he_thong(heThong, true);
   }
 
   onModuleDestroy() {
@@ -75,7 +70,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     return { bat, chu_ky_phut };
   }
 
-  private cau_hinh_canh_bao_he_thong_runtime() {
+  private cau_hinh_canh_bao_he_thong_env() {
     const bat = ["1", "true", "yes", "on"].includes((process.env.SYSTEM_HEALTH_EMAIL_ENABLED || "false").trim().toLowerCase());
     const raw = Number(process.env.SYSTEM_HEALTH_EMAIL_INTERVAL_MINUTES || 30);
     const maxBackupRaw = Number(process.env.SYSTEM_HEALTH_BACKUP_MAX_AGE_HOURS || 36);
@@ -87,8 +82,64 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       backup_qua_han_gio: Number.isFinite(maxBackupRaw) ? Math.max(6, Math.min(720, Math.floor(maxBackupRaw))) : 36,
       im_lang_phut: Number.isFinite(silenceRaw) ? Math.max(15, Math.min(10080, Math.floor(silenceRaw))) : 180,
       leo_thang_phut: Number.isFinite(escalationRaw) ? Math.max(60, Math.min(43200, Math.floor(escalationRaw))) : 720,
-      nguoi_nhan_co_dinh: (process.env.SYSTEM_HEALTH_EMAIL_TO || "").split(",").map(x => x.trim().toLowerCase()).filter(Boolean)
+      nguoi_nhan_co_dinh: (process.env.SYSTEM_HEALTH_EMAIL_TO || "").split(",").map(x => x.trim().toLowerCase()).filter(Boolean),
+      nguon_cau_hinh: "ENV" as const
     };
+  }
+
+  private async cau_hinh_canh_bao_he_thong_runtime() {
+    const mac_dinh = this.cau_hinh_canh_bao_he_thong_env();
+    try {
+      const item = await this.db.cauHinhHeThong.findUnique({ where: { khoa: "CANH_BAO_HE_THONG_CAU_HINH" } });
+      const raw = item?.gia_tri;
+      if (!raw || typeof raw !== "object" || Array.isArray(raw)) return mac_dinh;
+      const x = raw as Record<string, unknown>;
+      const so = (key: string, fallback: number, min: number, max: number) => { const n = Number(x[key]); return Number.isFinite(n) ? Math.max(min, Math.min(max, Math.floor(n))) : fallback; };
+      const nguoiNhanRaw = Array.isArray(x.nguoi_nhan) ? x.nguoi_nhan : typeof x.nguoi_nhan === "string" ? x.nguoi_nhan.split(",") : mac_dinh.nguoi_nhan_co_dinh;
+      const nguoi_nhan_co_dinh = [...new Set(nguoiNhanRaw.map(v => String(v).trim().toLowerCase()).filter(Boolean))];
+      return {
+        bat: typeof x.bat === "boolean" ? x.bat : mac_dinh.bat,
+        chu_ky_phut: so("chu_ky_phut", mac_dinh.chu_ky_phut, 15, 1440),
+        backup_qua_han_gio: so("backup_qua_han_gio", mac_dinh.backup_qua_han_gio, 6, 720),
+        im_lang_phut: so("im_lang_phut", mac_dinh.im_lang_phut, 15, 10080),
+        leo_thang_phut: so("leo_thang_phut", mac_dinh.leo_thang_phut, 60, 43200),
+        nguoi_nhan_co_dinh,
+        nguon_cau_hinh: "DATABASE" as const,
+        ngay_cap_nhat: item?.ngay_cap_nhat || null
+      };
+    } catch (error) {
+      this.logger.debug(`Không đọc được cấu hình cảnh báo hệ thống từ DB, dùng .env: ${error instanceof Error ? error.message : String(error)}`);
+      return mac_dinh;
+    }
+  }
+
+  private ap_dung_bo_hen_canh_bao_he_thong(cau_hinh: { bat: boolean; chu_ky_phut: number; nguon_cau_hinh: string }, chay_som = false) {
+    if (this.bo_hen_canh_bao_he_thong) { clearInterval(this.bo_hen_canh_bao_he_thong); this.bo_hen_canh_bao_he_thong = null; }
+    if (!cau_hinh.bat) { this.logger.log("Cảnh báo sức khỏe hệ thống đang tắt."); return; }
+    const chayHeThong = () => this.kiem_tra_gui_canh_bao_he_thong_email().catch(error => this.logger.warn(`Không thể kiểm tra/gửi cảnh báo hệ thống: ${error instanceof Error ? error.message : String(error)}`));
+    if (chay_som) setTimeout(chayHeThong, 45_000).unref();
+    this.bo_hen_canh_bao_he_thong = setInterval(chayHeThong, cau_hinh.chu_ky_phut * 60_000);
+    this.bo_hen_canh_bao_he_thong.unref();
+    this.logger.log(`Cảnh báo sức khỏe hệ thống được kiểm tra mỗi ${cau_hinh.chu_ky_phut} phút (${cau_hinh.nguon_cau_hinh}).`);
+  }
+
+  async lay_cau_hinh_canh_bao_he_thong() {
+    const x = await this.cau_hinh_canh_bao_he_thong_runtime();
+    return { ...x, nguoi_nhan: x.nguoi_nhan_co_dinh.join(", "), nguoi_nhan_co_dinh: undefined };
+  }
+
+  async cap_nhat_cau_hinh_canh_bao_he_thong(actor: NguoiDungXacThuc, dto: CapNhatCauHinhCanhBaoHeThongDto) {
+    const truocRuntime = await this.cau_hinh_canh_bao_he_thong_runtime();
+    const truoc = { bat: truocRuntime.bat, chu_ky_phut: truocRuntime.chu_ky_phut, backup_qua_han_gio: truocRuntime.backup_qua_han_gio, im_lang_phut: truocRuntime.im_lang_phut, leo_thang_phut: truocRuntime.leo_thang_phut, nguoi_nhan: truocRuntime.nguoi_nhan_co_dinh.join(", ") };
+    const nguoi_nhan = [...new Set((dto.nguoi_nhan || "").split(",").map(x => x.trim().toLowerCase()).filter(Boolean))];
+    const sau = { bat: dto.bat, chu_ky_phut: dto.chu_ky_phut, backup_qua_han_gio: dto.backup_qua_han_gio, im_lang_phut: dto.im_lang_phut, leo_thang_phut: dto.leo_thang_phut, nguoi_nhan: nguoi_nhan.join(", ") };
+    await this.db.$transaction([
+      this.db.cauHinhHeThong.upsert({ where: { khoa: "CANH_BAO_HE_THONG_CAU_HINH" }, create: { khoa: "CANH_BAO_HE_THONG_CAU_HINH", gia_tri: { ...sau, nguoi_nhan }, nguoi_cap_nhat_id: actor.id }, update: { gia_tri: { ...sau, nguoi_nhan }, nguoi_cap_nhat_id: actor.id } }),
+      this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_CAP_NHAT_CAU_HINH_CANH_BAO_HE_THONG", nguoi_dung_id: actor.id, chi_tiet: { truoc, sau, thay_doi: this.tao_diff(truoc, sau) } } })
+    ]);
+    const runtime = await this.cau_hinh_canh_bao_he_thong_runtime();
+    this.ap_dung_bo_hen_canh_bao_he_thong(runtime);
+    return { ...runtime, nguoi_nhan: runtime.nguoi_nhan_co_dinh.join(", "), nguoi_nhan_co_dinh: undefined };
   }
 
   private async thong_tin_backup() {
@@ -118,9 +169,9 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     return JSON.parse(JSON.stringify(value, (_key, item) => typeof item === "bigint" ? item.toString() : item)) as Prisma.InputJsonObject;
   }
 
-  private async ghi_lich_su_van_hanh(loai: string, trang_thai: string, mo_ta: string, chi_tiet: Record<string, unknown>, ngay_bat_dau?: Date) {
+  private async ghi_lich_su_van_hanh(loai: string, trang_thai: string, mo_ta: string, chi_tiet: Record<string, unknown>, ngay_bat_dau?: Date, chu_ky_canh_bao?: string | null) {
     try {
-      await this.db.lichSuVanHanh.create({ data: { loai, trang_thai, mo_ta, chi_tiet: this.chuan_hoa_json_object(chi_tiet), ngay_bat_dau: ngay_bat_dau || null, ngay_ket_thuc: new Date() } });
+      await this.db.lichSuVanHanh.create({ data: { loai, trang_thai, mo_ta, chi_tiet: this.chuan_hoa_json_object(chi_tiet), chu_ky_canh_bao: chu_ky_canh_bao || null, ngay_bat_dau: ngay_bat_dau || null, ngay_ket_thuc: new Date() } });
     } catch (error) {
       this.logger.debug(`Không ghi được lịch sử vận hành ${loai}: ${error instanceof Error ? error.message : String(error)}`);
     }
@@ -150,19 +201,26 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const smtp = this.thu_dien_tu.trangThaiCauHinh();
     const backup = await this.thong_tin_backup();
     const canh_bao_kho = this.cau_hinh_canh_bao_kho_runtime();
-    const canh_bao_he_thong = this.cau_hinh_canh_bao_he_thong_runtime();
-    const backup_cu = backup.gan_nhat ? backup.gan_nhat.tuoi_gio > canh_bao_he_thong.backup_qua_han_gio : true;
-    const trang_thai = !database.ket_noi ? "LOI" : (backup_cu || (smtp.bat && !smtp.san_sang) ? "CANH_BAO" : "TOT");
+    const canh_bao_he_thong = await this.cau_hinh_canh_bao_he_thong_runtime();
+    const van_de: string[] = [];
+    if (!database.ket_noi) van_de.push(`PostgreSQL mất kết nối${database.loi ? `: ${database.loi}` : ""}`);
+    if (!backup.gan_nhat) van_de.push("Chưa có bản backup PostgreSQL");
+    else if (backup.gan_nhat.tuoi_gio > canh_bao_he_thong.backup_qua_han_gio) van_de.push(`Backup gần nhất đã ${backup.gan_nhat.tuoi_gio} giờ`);
+    if (smtp.bat && !smtp.san_sang) van_de.push("SMTP đã bật nhưng cấu hình chưa sẵn sàng");
+    const chu_ky_canh_bao = van_de.length ? createHash("sha256").update(JSON.stringify(van_de)).digest("hex") : null;
+    const trang_thai = !database.ket_noi ? "LOI" : (van_de.length ? "CANH_BAO" : "TOT");
     const ket_qua = {
       trang_thai,
-      phien_ban: "3.3.2",
+      phien_ban: "3.4.0",
       thoi_gian: new Date().toISOString(),
       api: { uptime_giay: Math.floor(process.uptime()), node: process.version, pid: process.pid, rss_bytes: bo_nho.rss, heap_used_bytes: bo_nho.heapUsed, heap_total_bytes: bo_nho.heapTotal },
       database,
       smtp,
       backup,
+      van_de,
+      chu_ky_canh_bao,
       canh_bao_kho,
-      canh_bao_he_thong: { bat: canh_bao_he_thong.bat, chu_ky_phut: canh_bao_he_thong.chu_ky_phut, backup_qua_han_gio: canh_bao_he_thong.backup_qua_han_gio, im_lang_phut: canh_bao_he_thong.im_lang_phut, leo_thang_phut: canh_bao_he_thong.leo_thang_phut }
+      canh_bao_he_thong: { bat: canh_bao_he_thong.bat, chu_ky_phut: canh_bao_he_thong.chu_ky_phut, backup_qua_han_gio: canh_bao_he_thong.backup_qua_han_gio, im_lang_phut: canh_bao_he_thong.im_lang_phut, leo_thang_phut: canh_bao_he_thong.leo_thang_phut, nguon_cau_hinh: canh_bao_he_thong.nguon_cau_hinh }
     };
     if (ghi_lich_su && database.ket_noi) {
       await this.ghi_lich_su_van_hanh("HEALTH", trang_thai, trang_thai === "TOT" ? "Kiểm tra sức khỏe hệ thống đạt yêu cầu" : "Kiểm tra sức khỏe hệ thống phát hiện vấn đề", {
@@ -170,21 +228,18 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
         database_do_tre_ms: database.do_tre_ms,
         backup_tuoi_gio: backup.gan_nhat?.tuoi_gio ?? null,
         smtp_bat: smtp.bat,
-        smtp_san_sang: smtp.san_sang
-      }, luc_bat_dau);
+        smtp_san_sang: smtp.san_sang,
+        van_de
+      }, luc_bat_dau, chu_ky_canh_bao);
     }
     return ket_qua;
   }
 
   async kiem_tra_gui_canh_bao_he_thong_email(kiem_tra_thu_cong = false) {
-    const cau_hinh = this.cau_hinh_canh_bao_he_thong_runtime();
+    const cau_hinh = await this.cau_hinh_canh_bao_he_thong_runtime();
     if (!cau_hinh.bat && !kiem_tra_thu_cong) return { da_gui: false, ly_do: "Cảnh báo hệ thống qua email đang tắt", van_de: [] as string[], cap_leo_thang: 0 };
     const health = await this.suc_khoe_he_thong(false);
-    const van_de: string[] = [];
-    if (!health.database.ket_noi) van_de.push(`PostgreSQL mất kết nối${health.database.loi ? `: ${health.database.loi}` : ""}`);
-    if (!health.backup.gan_nhat) van_de.push("Chưa có bản backup PostgreSQL");
-    else if (health.backup.gan_nhat.tuoi_gio > cau_hinh.backup_qua_han_gio) van_de.push(`Backup gần nhất đã ${health.backup.gan_nhat.tuoi_gio} giờ`);
-    if (health.smtp.bat && !health.smtp.san_sang) van_de.push("SMTP đã bật nhưng cấu hình chưa sẵn sàng");
+    const van_de = health.van_de;
     if (!van_de.length) {
       this.chu_ky_canh_bao_he_thong = null;
       if (health.database.ket_noi) {
@@ -195,7 +250,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       return { da_gui: false, ly_do: "Hệ thống đang hoạt động tốt", van_de, cap_leo_thang: 0 };
     }
 
-    const chu_ky = createHash("sha256").update(JSON.stringify(van_de)).digest("hex");
+    const chu_ky = health.chu_ky_canh_bao || createHash("sha256").update(JSON.stringify(van_de)).digest("hex");
     const now = new Date();
     let chu_ky_da_gui: string | null = this.chu_ky_canh_bao_he_thong;
     let phat_hien_luc = now;
@@ -245,7 +300,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     this.chu_ky_canh_bao_he_thong = chu_ky;
     if (health.database.ket_noi) {
       try { await this.db.cauHinhHeThong.upsert({ where: { khoa: "CANH_BAO_HE_THONG_EMAIL" }, create: { khoa: "CANH_BAO_HE_THONG_EMAIL", gia_tri: { chu_ky, trang_thai: health.trang_thai, van_de, phat_hien_luc: phat_hien_luc.toISOString(), lan_gui: health.thoi_gian, cap_leo_thang } }, update: { gia_tri: { chu_ky, trang_thai: health.trang_thai, van_de, phat_hien_luc: phat_hien_luc.toISOString(), lan_gui: health.thoi_gian, cap_leo_thang } } }); } catch {}
-      await this.ghi_lich_su_van_hanh("ALERT", "THANH_CONG", cap_leo_thang > 0 ? `Đã gửi escalation cảnh báo vận hành cấp ${cap_leo_thang}` : "Đã gửi cảnh báo vận hành qua email", { van_de, so_nguoi_nhan: nguoi_nhan.length, cap_leo_thang, ton_tai_phut });
+      await this.ghi_lich_su_van_hanh("ALERT", "THANH_CONG", cap_leo_thang > 0 ? `Đã gửi escalation cảnh báo vận hành cấp ${cap_leo_thang}` : "Đã gửi cảnh báo vận hành qua email", { van_de, so_nguoi_nhan: nguoi_nhan.length, cap_leo_thang, ton_tai_phut, chu_ky }, undefined, chu_ky);
     }
     return { da_gui: true, van_de, so_nguoi_nhan: nguoi_nhan.length, cap_leo_thang, ton_tai_phut };
   }
@@ -265,6 +320,96 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       this.db.lichSuVanHanh.findMany({ where, orderBy: { ngay_tao: "desc" }, skip: (trang - 1) * kich_thuoc, take: kich_thuoc })
     ]);
     return { du_lieu: ds.map(x => ({ ...x, id: x.id.toString() })), phan_trang: { trang, kich_thuoc, tong, tong_trang: Math.max(1, Math.ceil(tong / kich_thuoc)) } };
+  }
+
+  async danh_sach_lich_su_van_hanh_cursor(loai?: string, trang_thai?: string, tu_ngay?: string, den_ngay?: string, cursorRaw?: string, kichThuocRaw?: string) {
+    const kich_thuoc = Math.max(10, Math.min(100, Number.parseInt(kichThuocRaw || "25", 10) || 25));
+    const bat_dau = tu_ngay ? new Date(`${tu_ngay}T00:00:00.000Z`) : undefined;
+    const ket_thuc = den_ngay ? new Date(`${den_ngay}T23:59:59.999Z`) : undefined;
+    if (bat_dau && Number.isNaN(bat_dau.getTime())) throw new BadRequestException("Từ ngày không hợp lệ");
+    if (ket_thuc && Number.isNaN(ket_thuc.getTime())) throw new BadRequestException("Đến ngày không hợp lệ");
+    let cursor: bigint | undefined;
+    if (cursorRaw?.trim()) { try { cursor = BigInt(cursorRaw.trim()); if (cursor <= 0n) throw new Error(); } catch { throw new BadRequestException("Cursor lịch sử vận hành không hợp lệ"); } }
+    const where = {
+      ...(loai?.trim() ? { loai: loai.trim().toUpperCase() } : {}),
+      ...(trang_thai?.trim() ? { trang_thai: trang_thai.trim().toUpperCase() } : {}),
+      ...(cursor ? { id: { lt: cursor } } : {}),
+      ...((bat_dau || ket_thuc) ? { ngay_tao: { ...(bat_dau ? { gte: bat_dau } : {}), ...(ket_thuc ? { lte: ket_thuc } : {}) } } : {})
+    };
+    const raw = await this.db.lichSuVanHanh.findMany({ where, orderBy: { id: "desc" }, take: kich_thuoc + 1 });
+    const co_them = raw.length > kich_thuoc;
+    const ds = raw.slice(0, kich_thuoc);
+    return {
+      du_lieu: ds.map(x => ({ ...x, id: x.id.toString() })),
+      cursor: { kich_thuoc, co_them, next_cursor: co_them && ds.length ? ds[ds.length - 1].id.toString() : null }
+    };
+  }
+
+  async danh_sach_su_co_van_hanh(gioiHanRaw?: string) {
+    const gioi_han = Math.max(5, Math.min(100, Number.parseInt(gioiHanRaw || "20", 10) || 20));
+    const ds = await this.db.lichSuVanHanh.findMany({
+      where: { chu_ky_canh_bao: { not: null } },
+      orderBy: { id: "desc" },
+      take: 5000
+    });
+    const nhom = new Map<string, { chu_ky: string; bat_dau: Date; gan_nhat: Date; so_su_kien: number; so_health: number; so_alert: number; trang_thai_gan_nhat: string; van_de: string[] }>();
+    for (const item of ds) {
+      const key = item.chu_ky_canh_bao; if (!key) continue;
+      const ct = item.chi_tiet && typeof item.chi_tiet === "object" && !Array.isArray(item.chi_tiet) ? item.chi_tiet as Record<string, unknown> : {};
+      const van_de = Array.isArray(ct.van_de) ? ct.van_de.map(x => String(x)) : [];
+      const cu = nhom.get(key);
+      if (!cu) {
+        nhom.set(key, { chu_ky: key, bat_dau: item.ngay_tao, gan_nhat: item.ngay_tao, so_su_kien: 1, so_health: item.loai === "HEALTH" ? 1 : 0, so_alert: item.loai === "ALERT" ? 1 : 0, trang_thai_gan_nhat: item.trang_thai, van_de });
+      } else {
+        cu.bat_dau = item.ngay_tao < cu.bat_dau ? item.ngay_tao : cu.bat_dau;
+        cu.so_su_kien += 1; cu.so_health += item.loai === "HEALTH" ? 1 : 0; cu.so_alert += item.loai === "ALERT" ? 1 : 0;
+        if (!cu.van_de.length && van_de.length) cu.van_de = van_de;
+      }
+    }
+    const du_lieu = [...nhom.values()].sort((a, b) => b.gan_nhat.getTime() - a.gan_nhat.getTime()).slice(0, gioi_han).map(x => ({ ...x, thoi_luong_phut: Math.max(0, Math.round((x.gan_nhat.getTime() - x.bat_dau.getTime()) / 60_000)) }));
+    return { du_lieu, gioi_han, gioi_han_quet: 5000 };
+  }
+
+  async chi_tiet_su_co_van_hanh(chu_kyRaw: string) {
+    const chu_ky = chu_kyRaw.trim().toLowerCase();
+    if (!/^[a-f0-9]{64}$/.test(chu_ky)) throw new BadRequestException("Chữ ký sự cố không hợp lệ");
+    const ds = await this.db.lichSuVanHanh.findMany({ where: { chu_ky_canh_bao: chu_ky }, orderBy: { id: "asc" }, take: 1000 });
+    if (!ds.length) throw new NotFoundException("Không tìm thấy chuỗi sự cố vận hành");
+    const dau = ds[0], cuoi = ds[ds.length - 1];
+    const van_de = ds.map(x => x.chi_tiet && typeof x.chi_tiet === "object" && !Array.isArray(x.chi_tiet) ? (x.chi_tiet as Record<string, unknown>).van_de : null).find(Array.isArray) as unknown[] | undefined;
+    return {
+      chu_ky,
+      bat_dau: dau.ngay_tao,
+      gan_nhat: cuoi.ngay_tao,
+      thoi_luong_phut: Math.max(0, Math.round((cuoi.ngay_tao.getTime() - dau.ngay_tao.getTime()) / 60_000)),
+      van_de: van_de?.map(x => String(x)) || [],
+      so_su_kien: ds.length,
+      su_kien: ds.map(x => ({ ...x, id: x.id.toString() }))
+    };
+  }
+
+  async thong_ke_sla_van_hanh(soNgayRaw?: string) {
+    const raw = Number.parseInt(soNgayRaw || "90", 10) || 90;
+    const so_ngay = raw <= 30 ? 30 : 90;
+    const tu = new Date(); tu.setUTCDate(tu.getUTCDate() - (so_ngay - 1)); tu.setUTCHours(0, 0, 0, 0);
+    const ds = await this.db.lichSuVanHanh.findMany({ where: { loai: "HEALTH", ngay_tao: { gte: tu } }, orderBy: { ngay_tao: "asc" }, select: { trang_thai: true, ngay_tao: true } });
+    const map = new Map<string, { tong: number; tot: number; canh_bao: number; loi: number }>();
+    for (const item of ds) {
+      const ngay = item.ngay_tao.toISOString().slice(0, 10);
+      const x = map.get(ngay) || { tong: 0, tot: 0, canh_bao: 0, loi: 0 }; x.tong += 1;
+      if (item.trang_thai === "TOT") x.tot += 1; else if (item.trang_thai === "LOI") x.loi += 1; else x.canh_bao += 1; map.set(ngay, x);
+    }
+    const theo_ngay = Array.from({ length: so_ngay }, (_, i) => {
+      const d = new Date(tu); d.setUTCDate(tu.getUTCDate() + i); const ngay = d.toISOString().slice(0, 10); const x = map.get(ngay) || { tong: 0, tot: 0, canh_bao: 0, loi: 0 };
+      return { ngay, ...x, sla_percent: x.tong ? Math.round((x.tot / x.tong) * 10000) / 100 : null, uptime_percent: x.tong ? Math.round(((x.tot + x.canh_bao) / x.tong) * 10000) / 100 : null };
+    });
+    const tong = theo_ngay.reduce((a, x) => ({ tong: a.tong + x.tong, tot: a.tot + x.tot, canh_bao: a.canh_bao + x.canh_bao, loi: a.loi + x.loi }), { tong: 0, tot: 0, canh_bao: 0, loi: 0 });
+    return {
+      so_ngay, tu_ngay: tu.toISOString(), tao_luc: new Date().toISOString(),
+      dinh_nghia: { sla: "Tỷ lệ mẫu health ở trạng thái TỐT", uptime: "Tỷ lệ mẫu health không ở trạng thái LỖI" },
+      tong_quan: { ...tong, sla_percent: tong.tong ? Math.round((tong.tot / tong.tong) * 10000) / 100 : null, uptime_percent: tong.tong ? Math.round(((tong.tot + tong.canh_bao) / tong.tong) * 10000) / 100 : null },
+      theo_ngay
+    };
   }
 
   async thong_ke_van_hanh() {
@@ -2176,6 +2321,35 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     }
     const tong = await this.db.nhatKyBaoMat.count({ where });
     return { du_lieu: mapped, phan_trang: { trang, kich_thuoc, tong, tong_trang: Math.max(1, Math.ceil(tong / kich_thuoc)) } };
+  }
+
+  async danh_sach_nhat_ky_admin_cursor(tim_kiem?: string, loai?: string, nguoi_dung_id?: string, tu_ngay?: string, den_ngay?: string, cursorRaw?: string, kichThuocRaw?: string) {
+    const q = tim_kiem?.trim().toLocaleLowerCase("vi") || "";
+    const kich_thuoc = Math.max(10, Math.min(100, Number.parseInt(kichThuocRaw || "25", 10) || 25));
+    const bat_dau = tu_ngay ? new Date(`${tu_ngay}T00:00:00.000Z`) : undefined;
+    const ket_thuc = den_ngay ? new Date(`${den_ngay}T23:59:59.999Z`) : undefined;
+    if (bat_dau && Number.isNaN(bat_dau.getTime())) throw new BadRequestException("Từ ngày không hợp lệ");
+    if (ket_thuc && Number.isNaN(ket_thuc.getTime())) throw new BadRequestException("Đến ngày không hợp lệ");
+    let cursor: bigint | undefined;
+    if (cursorRaw?.trim()) { try { cursor = BigInt(cursorRaw.trim()); if (cursor <= 0n) throw new Error(); } catch { throw new BadRequestException("Cursor nhật ký không hợp lệ"); } }
+    const where = {
+      OR: [{ loai_su_kien: { startsWith: "ADMIN_" } }, { loai_su_kien: { startsWith: "DANG_NHAP_" } }],
+      ...(loai?.trim() ? { loai_su_kien: loai.trim() } : {}),
+      ...(nguoi_dung_id?.trim() ? { nguoi_dung_id: nguoi_dung_id.trim() } : {}),
+      ...(cursor ? { id: { lt: cursor } } : {}),
+      ...((bat_dau || ket_thuc) ? { ngay_tao: { ...(bat_dau ? { gte: bat_dau } : {}), ...(ket_thuc ? { lte: ket_thuc } : {}) } } : {})
+    };
+    const takeRaw = q ? Math.min(2000, kich_thuoc * 20) : kich_thuoc + 1;
+    const raw = await this.db.nhatKyBaoMat.findMany({ where, orderBy: { id: "desc" }, take: takeRaw });
+    const actorIds = [...new Set(raw.map(x => x.nguoi_dung_id).filter((x): x is string => Boolean(x)))];
+    const actors = actorIds.length ? await this.db.nguoiDung.findMany({ where: { id: { in: actorIds } }, select: { id: true, ho_ten: true, thu_dien_tu: true } }) : [];
+    const actorMap = new Map(actors.map(x => [x.id, x]));
+    const mapped = raw.map(item => ({ id: item.id.toString(), loai_su_kien: item.loai_su_kien, nguoi_dung_id: item.nguoi_dung_id, nguoi_thuc_hien: item.nguoi_dung_id ? actorMap.get(item.nguoi_dung_id) || null : null, dia_chi_ip: item.dia_chi_ip, chi_tiet: item.chi_tiet, ngay_tao: item.ngay_tao }));
+    const filtered = q ? mapped.filter(item => `${item.loai_su_kien} ${item.nguoi_thuc_hien?.ho_ten || ""} ${item.nguoi_thuc_hien?.thu_dien_tu || ""} ${item.dia_chi_ip || ""} ${JSON.stringify(item.chi_tiet)}`.toLocaleLowerCase("vi").includes(q)) : mapped;
+    const du_lieu = filtered.slice(0, kich_thuoc);
+    const co_them = q ? raw.length === takeRaw : raw.length > kich_thuoc;
+    const cursorBase = q ? raw[raw.length - 1] : raw[Math.min(kich_thuoc - 1, raw.length - 1)];
+    return { du_lieu, cursor: { kich_thuoc, co_them, next_cursor: co_them && cursorBase ? cursorBase.id.toString() : null, che_do_tim_kiem: q ? "cursor-scan" : "cursor-index" } };
   }
 
   async xuat_nhat_ky_admin_excel(tim_kiem?: string, loai?: string, nguoi_dung_id?: string, tu_ngay?: string, den_ngay?: string) {

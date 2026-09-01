@@ -39,7 +39,7 @@ jobs:
           package-manager-cache: false
 
       - name: Cài dependencies
-        run: npm ci
+        run: npm install
 
       - name: Test + typecheck
         run: |

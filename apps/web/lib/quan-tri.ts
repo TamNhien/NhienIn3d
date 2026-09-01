@@ -47,7 +47,13 @@ export type AdminSanPham = { id: string; ma_san_pham: string; ten_san_pham: stri
 export type NhatKyAdmin = { id: string; loai_su_kien: string; nguoi_dung_id?: string | null; nguoi_thuc_hien?: { id: string; ho_ten: string; thu_dien_tu: string } | null; dia_chi_ip?: string | null; chi_tiet: Record<string, unknown>; ngay_tao: string };
 export type PhanTrang = { trang: number; kich_thuoc: number; tong: number; tong_trang: number; gioi_han_tim_kiem?: number };
 export type KetQuaPhanTrang<T> = { du_lieu: T[]; phan_trang: PhanTrang };
-export type LichSuVanHanhAdmin = { id: string; loai: "HEALTH" | "BACKUP" | "RESTORE" | "ALERT" | string; trang_thai: "TOT" | "CANH_BAO" | "LOI" | "THANH_CONG" | "THAT_BAI" | string; mo_ta?: string | null; chi_tiet: Record<string, unknown>; ngay_bat_dau?: string | null; ngay_ket_thuc?: string | null; ngay_tao: string };
+export type CursorTrang = { kich_thuoc: number; co_them: boolean; next_cursor: string | null; che_do_tim_kiem?: string };
+export type KetQuaCursor<T> = { du_lieu: T[]; cursor: CursorTrang };
+export type LichSuVanHanhAdmin = { id: string; loai: "HEALTH" | "BACKUP" | "RESTORE" | "ALERT" | string; trang_thai: "TOT" | "CANH_BAO" | "LOI" | "THANH_CONG" | "THAT_BAI" | string; mo_ta?: string | null; chi_tiet: Record<string, unknown>; chu_ky_canh_bao?: string | null; ngay_bat_dau?: string | null; ngay_ket_thuc?: string | null; ngay_tao: string };
+export type CauHinhCanhBaoHeThongAdmin = { bat: boolean; chu_ky_phut: number; backup_qua_han_gio: number; im_lang_phut: number; leo_thang_phut: number; nguoi_nhan: string; nguon_cau_hinh: "DATABASE" | "ENV" | string; ngay_cap_nhat?: string | null };
+export type SuCoVanHanhTomTat = { chu_ky: string; bat_dau: string; gan_nhat: string; so_su_kien: number; so_health: number; so_alert: number; trang_thai_gan_nhat: string; van_de: string[]; thoi_luong_phut: number };
+export type ChiTietSuCoVanHanh = { chu_ky: string; bat_dau: string; gan_nhat: string; thoi_luong_phut: number; van_de: string[]; so_su_kien: number; su_kien: LichSuVanHanhAdmin[] };
+export type SlaVanHanhAdmin = { so_ngay: number; tu_ngay: string; tao_luc: string; dinh_nghia: { sla: string; uptime: string }; tong_quan: { tong: number; tot: number; canh_bao: number; loi: number; sla_percent: number | null; uptime_percent: number | null }; theo_ngay: Array<{ ngay: string; tong: number; tot: number; canh_bao: number; loi: number; sla_percent: number | null; uptime_percent: number | null }> };
 export type ThongKeVanHanhAdmin = { tao_luc: string; bay_ngay: ThongKeVanHanhKy; ba_muoi_ngay: ThongKeVanHanhKy };
 export type ThongKeVanHanhKy = { so_ngay: number; tu_ngay: string; health: { tong: number; tot: number; canh_bao: number; loi: number; ty_le_tot: number | null }; backup: { tong: number; thanh_cong: number; that_bai: number; ty_le_thanh_cong: number | null }; restore: { tong: number; thanh_cong: number; that_bai: number; ty_le_thanh_cong: number | null }; canh_bao_email: number };
 export type LichSuKhoAdmin = { id: string; loai_su_kien: string; loai_bien_dong: "NHAP_KHO" | "XUAT_KHO" | "DIEU_CHINH" | string; ton_cu: number; ton_moi: number; chenh_lech: number; ly_do: string; ma_bien_the: string; ma_san_pham: string; nguoi_thuc_hien?: { id: string; ho_ten: string; thu_dien_tu?: string } | null; chi_tiet: Record<string, unknown>; ngay_tao: string };
@@ -66,7 +72,9 @@ export type AdminSucKhoeHeThong = {
   smtp: { bat: boolean; san_sang: boolean; host?: string | null; port?: number | null; from: string; loi?: string };
   backup: { thu_muc: string; so_ban_sao: number; so_daily: number; so_weekly: number; tong_dung_luong_bytes: number; gan_nhat: { ten_file: string; kich_thuoc_bytes: number; ngay_sua: string; tuoi_gio: number } | null; loi?: string };
   canh_bao_kho: { bat: boolean; chu_ky_phut: number };
-  canh_bao_he_thong: { bat: boolean; chu_ky_phut: number; backup_qua_han_gio: number; im_lang_phut: number; leo_thang_phut: number };
+  van_de?: string[];
+  chu_ky_canh_bao?: string | null;
+  canh_bao_he_thong: { bat: boolean; chu_ky_phut: number; backup_qua_han_gio: number; im_lang_phut: number; leo_thang_phut: number; nguon_cau_hinh?: string };
 };
 
 export type AdminTongQuan = {
@@ -93,8 +101,14 @@ export type AdminTongQuan = {
 
 export const layTongQuan = () => goi<AdminTongQuan>("/quan-tri/tong-quan");
 export const laySucKhoeHeThongAdmin = () => goi<AdminSucKhoeHeThong>("/quan-tri/he-thong/suc-khoe");
+export const layCauHinhCanhBaoHeThongAdmin = () => goi<CauHinhCanhBaoHeThongAdmin>("/quan-tri/he-thong/cau-hinh-canh-bao");
+export const capNhatCauHinhCanhBaoHeThongAdmin = (payload: Omit<CauHinhCanhBaoHeThongAdmin, "nguon_cau_hinh" | "ngay_cap_nhat">) => goi<CauHinhCanhBaoHeThongAdmin>("/quan-tri/he-thong/cau-hinh-canh-bao", { method: "POST", body: JSON.stringify(payload) });
+export const laySlaVanHanhAdmin = (so_ngay: 30 | 90 = 90) => goi<SlaVanHanhAdmin>(`/quan-tri/he-thong/sla?so_ngay=${so_ngay}`);
+export const layDanhSachSuCoVanHanhAdmin = (gioi_han = 20) => goi<{ du_lieu: SuCoVanHanhTomTat[]; gioi_han: number; gioi_han_quet: number }>(`/quan-tri/he-thong/su-co?gioi_han=${gioi_han}`);
+export const layChiTietSuCoVanHanhAdmin = (chu_ky: string) => goi<ChiTietSuCoVanHanh>(`/quan-tri/he-thong/su-co/${encodeURIComponent(chu_ky)}`);
 export const layThongKeVanHanhAdmin = () => goi<ThongKeVanHanhAdmin>("/quan-tri/he-thong/thong-ke");
 export const layLichSuVanHanhAdmin = (bo_loc: { loai?: string; trang_thai?: string; tu_ngay?: string; den_ngay?: string; trang?: number; kich_thuoc?: number } = {}) => { const q = new URLSearchParams(); if (bo_loc.loai) q.set("loai", bo_loc.loai); if (bo_loc.trang_thai) q.set("trang_thai", bo_loc.trang_thai); if (bo_loc.tu_ngay) q.set("tu_ngay", bo_loc.tu_ngay); if (bo_loc.den_ngay) q.set("den_ngay", bo_loc.den_ngay); if (bo_loc.trang) q.set("trang", String(bo_loc.trang)); if (bo_loc.kich_thuoc) q.set("kich_thuoc", String(bo_loc.kich_thuoc)); return goi<KetQuaPhanTrang<LichSuVanHanhAdmin>>(`/quan-tri/he-thong/lich-su${q.size ? `?${q}` : ""}`); };
+export const layLichSuVanHanhCursorAdmin = (bo_loc: { loai?: string; trang_thai?: string; tu_ngay?: string; den_ngay?: string; cursor?: string | null; kich_thuoc?: number } = {}) => { const q = new URLSearchParams(); if (bo_loc.loai) q.set("loai", bo_loc.loai); if (bo_loc.trang_thai) q.set("trang_thai", bo_loc.trang_thai); if (bo_loc.tu_ngay) q.set("tu_ngay", bo_loc.tu_ngay); if (bo_loc.den_ngay) q.set("den_ngay", bo_loc.den_ngay); if (bo_loc.cursor) q.set("cursor", bo_loc.cursor); if (bo_loc.kich_thuoc) q.set("kich_thuoc", String(bo_loc.kich_thuoc)); return goi<KetQuaCursor<LichSuVanHanhAdmin>>(`/quan-tri/he-thong/lich-su/cursor${q.size ? `?${q}` : ""}`); };
 export const xuatLichSuVanHanhExcelAdmin = (bo_loc: { loai?: string; trang_thai?: string; tu_ngay?: string; den_ngay?: string } = {}) => { const q = new URLSearchParams(); if (bo_loc.loai) q.set("loai", bo_loc.loai); if (bo_loc.trang_thai) q.set("trang_thai", bo_loc.trang_thai); if (bo_loc.tu_ngay) q.set("tu_ngay", bo_loc.tu_ngay); if (bo_loc.den_ngay) q.set("den_ngay", bo_loc.den_ngay); return goi<{ ten_file: string; mime_type: string; base64: string }>(`/quan-tri/he-thong/lich-su/excel${q.size ? `?${q}` : ""}`); };
 export const guiCanhBaoHeThongAdmin = () => goi<{ da_gui: boolean; ly_do?: string; van_de: string[]; so_nguoi_nhan?: number; cap_leo_thang?: number; ton_tai_phut?: number }>("/quan-tri/he-thong/canh-bao-email/gui", { method: "POST" });
 export const layNguoiDung = () => goi<AdminNguoiDung[]>("/quan-tri/nguoi-dung");
@@ -192,6 +206,17 @@ export const layNhatKyPhanTrangAdmin = (bo_loc: { tim_kiem?: string; loai?: stri
   if (bo_loc.trang) q.set("trang", String(bo_loc.trang));
   if (bo_loc.kich_thuoc) q.set("kich_thuoc", String(bo_loc.kich_thuoc));
   return goi<KetQuaPhanTrang<NhatKyAdmin>>(`/quan-tri/nhat-ky/phan-trang${q.size ? `?${q}` : ""}`);
+};
+export const layNhatKyCursorAdmin = (bo_loc: { tim_kiem?: string; loai?: string; nguoi_dung_id?: string; tu_ngay?: string; den_ngay?: string; cursor?: string | null; kich_thuoc?: number } = {}) => {
+  const q = new URLSearchParams();
+  if (bo_loc.tim_kiem?.trim()) q.set("tim_kiem", bo_loc.tim_kiem.trim());
+  if (bo_loc.loai) q.set("loai", bo_loc.loai);
+  if (bo_loc.nguoi_dung_id) q.set("nguoi_dung_id", bo_loc.nguoi_dung_id);
+  if (bo_loc.tu_ngay) q.set("tu_ngay", bo_loc.tu_ngay);
+  if (bo_loc.den_ngay) q.set("den_ngay", bo_loc.den_ngay);
+  if (bo_loc.cursor) q.set("cursor", bo_loc.cursor);
+  if (bo_loc.kich_thuoc) q.set("kich_thuoc", String(bo_loc.kich_thuoc));
+  return goi<KetQuaCursor<NhatKyAdmin>>(`/quan-tri/nhat-ky/cursor${q.size ? `?${q}` : ""}`);
 };
 export const xuatNhatKyExcelAdmin = (bo_loc: { tim_kiem?: string; loai?: string; nguoi_dung_id?: string; tu_ngay?: string; den_ngay?: string } = {}) => {
   const q = new URLSearchParams();

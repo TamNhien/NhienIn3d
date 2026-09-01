@@ -40,7 +40,7 @@ jobs:
           package-manager-cache: false
 
       - name: Cài dependencies
-        run: npm ci
+        run: npm install
 
       - name: Test root + workspaces
         run: npm test
@@ -90,9 +90,10 @@ jobs:
           done
           docker compose logs api --tail 150
           exit 1
-      - name: Backup restore cô lập
+      - name: Runtime E2E Admin + backup restore
         shell: pwsh
-        run: ./scripts/e2e-runtime-v320.ps1
+        # e2e-runtime-v340.ps1 gọi lại e2e-runtime-v320.ps1 để giữ regression backup/restore.
+        run: ./scripts/e2e-runtime-v340.ps1
       - name: Docker logs khi thất bại
         if: failure()
         run: |

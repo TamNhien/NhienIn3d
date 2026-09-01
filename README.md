@@ -1,6 +1,6 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v3.3.2** — 31/08/2026
+> Phiên bản hiện tại: **v3.4.0** — 31/08/2026
 
 NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **frontend Next.js** và **backend NestJS/Fastify** kết nối **PostgreSQL qua Prisma**.
 
@@ -19,6 +19,11 @@ NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **fro
 
 
 ## Điểm chính bản hiện tại
+
+- v3.4.0 nâng cấp vận hành: Admin cấu hình trực tiếp chu kỳ/backup threshold/silence/escalation/người nhận cảnh báo; cấu hình lưu PostgreSQL, áp dụng timer ngay và audit đầy đủ trước/sau.
+- Health/Alert được gắn **chữ ký SHA-256 của tập vấn đề** để nhóm thành chuỗi sự cố; tab Hệ thống có danh sách incident, timeline chi tiết và thời lượng.
+- Bổ sung **SLA/Uptime 30 hoặc 90 ngày** theo mẫu HEALTH và biểu đồ theo ngày. Audit + lịch sử vận hành chuyển giao diện sang **cursor pagination** để tải tiếp ổn định khi dữ liệu tăng lớn; endpoint offset cũ vẫn giữ tương thích.
+- Migration `202608310008_v340_incident_signature_cursor_sla` thêm cột/index chữ ký sự cố. `scripts/e2e-runtime-v340.ps1` mở rộng Docker E2E cho đăng nhập Admin, đơn hàng, sản phẩm, preview nhập kho, phiếu nhập, báo cáo Excel, Ops/SLA/incident/cursor, đồng thời chạy lại regression backup/restore v3.2.0.
 
 - v3.3.1 sửa lỗi F5 nhiều lần ở Admin có thể chạm rate limit rồi bị hiểu nhầm là hết phiên: tăng ngưỡng API mặc định lên 600 request/phút, cho phép cấu hình `API_RATE_LIMIT_MAX`, dùng single-flight cho `layTaiKhoan`/`lamMoiPhien` và không coi 429/5xx là tín hiệu đăng xuất.
 - v3.3.2 đối soát doanh thu khi giao hàng: chốt đúng giao dịch COD đang chờ dù có giao dịch thất bại mới hơn, tách KPI số đơn đã giao khỏi số đơn ghi nhận doanh thu và làm rõ đơn thanh toán trước không được cộng doanh thu lần hai.
@@ -1276,13 +1281,26 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 
 ---
 
+## v3.4.0 — 31/08/2026
+
+- Admin có thể đọc/sửa **cấu hình cảnh báo vận hành** ngay trong tab Hệ thống: bật/tắt, chu kỳ kiểm tra, ngưỡng backup quá hạn, silence, escalation và danh sách email nhận cảnh báo. Cấu hình được lưu ở `cau_hinh_he_thong` với khóa `CANH_BAO_HE_THONG_CAU_HINH`, `.env` là fallback; sau khi lưu API hủy/tạo lại timer ngay và ghi audit `ADMIN_CAP_NHAT_CAU_HINH_CANH_BAO_HE_THONG` có `truoc` / `sau` / `thay_doi`.
+- Health check tạo **SHA-256 incident signature** từ tập vấn đề và lưu vào `lich_su_van_hanh.chu_ky_canh_bao`. API mới nhóm tối đa 5.000 sự kiện gần nhất theo signature, trả danh sách incident và timeline chi tiết; Admin có thể mở chuỗi sự cố từ danh sách incident hoặc từng dòng lịch sử.
+- Thêm thống kê **SLA/Uptime 30/90 ngày**: SLA là tỷ lệ mẫu HEALTH `TOT`, uptime là tỷ lệ mẫu không `LOI`; giao diện có KPI tổng hợp và biểu đồ theo từng ngày.
+- Thêm cursor pagination dựa trên BigInt `id` cho lịch sử vận hành và Nhật ký Admin. UI dùng **Tải thêm** thay cho page offset; endpoint phân trang cũ vẫn được giữ để tương thích. Tìm kiếm audit dùng cursor-scan có giới hạn batch để không kéo toàn bộ bảng vào bộ nhớ.
+- Migration `202608310008_v340_incident_signature_cursor_sla` thêm cột `chu_ky_canh_bao VARCHAR(64)` và index `(chu_ky_canh_bao, ngay_tao DESC)`.
+- Thêm `scripts/e2e-runtime-v340.ps1`: chạy regression backup/SHA/restore v3.2.0, đăng nhập Admin bằng cookie session, đọc đơn hàng/sản phẩm, preview import kho CSV không ghi tồn, kiểm tra phiếu nhập + xuất Excel tồn kho và xác minh các endpoint config/SLA/incident/cursor. CI Docker chuyển sang script v3.4.0.
+- Vì source release không kèm `package-lock.json`, CI/Release dùng `npm install` thay cho `npm ci`, thống nhất với quy trình release Windows hiện tại.
+- Đồng bộ Root/API/Web/Health/OpenAPI lên **v3.4.0**. Quy trình release: `npm install` → `npm test` → `npm run typecheck` → `npm run build` → `./scripts/backup-db.ps1` → `docker compose up -d --build --remove-orphans` → `docker compose ps` → `./scripts/e2e-runtime-v340.ps1` → `./scripts/release.ps1 v3.4.0`.
+
+---
+
 # Lộ trình tiếp theo
 
-## v3.4.0
+## v3.5.0
 
-- Thêm trang chi tiết sự cố vận hành theo chuỗi thời gian và nhóm cùng chữ ký cảnh báo.
-- Cho Admin cấu hình ngưỡng/silence/escalation từ giao diện thay vì chỉ qua `.env`, có audit trước/sau.
-- Bổ sung thống kê SLA/uptime theo ngày và biểu đồ 30/90 ngày.
-- Tối ưu phân trang cursor cho audit/lịch sử vận hành khi dữ liệu vượt hàng trăm nghìn bản ghi.
-- Mở rộng E2E Docker cho đăng nhập Admin, đơn hàng, nhập kho và xuất báo cáo.
+- Thêm trạng thái acknowledge/resolve cho incident và ghi người xử lý, ghi chú khắc phục.
+- Cho phép đặt mục tiêu SLO riêng (SLA/Uptime) và cảnh báo khi xu hướng 7/30 ngày xuống dưới ngưỡng.
+- Tối ưu truy vấn incident theo bảng tổng hợp khi lịch sử vận hành tăng lên hàng triệu bản ghi.
+- Mở rộng E2E browser cho luồng Admin trên giao diện HTTPS local.
+
 ---

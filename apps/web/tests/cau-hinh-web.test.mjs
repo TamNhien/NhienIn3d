@@ -866,7 +866,7 @@ test("v2.18.2 dropdown vat lieu mau Admin de doc va tuong phan cao", () => {
 
 test("v2.18.3 Next dev co lenh HTTPS local", () => {
   const pkg = JSON.parse(readFileSync("package.json", "utf8"));
-  assert.equal(pkg.version, "3.3.2");
+  assert.equal(pkg.version, "3.4.0");
   assert.match(pkg.scripts["dev:https"], /next dev --experimental-https/);
 });
 
