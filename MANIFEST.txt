@@ -133,6 +133,7 @@ apps/api/tests/v3100-persistent-apdex-dlq-rbac-cache.test.mjs
 apps/api/tests/v3110-ops-distributed-probe-dlq-archive-oncall.test.mjs
 apps/api/tests/v3120-managed-probe-fleet.test.mjs
 apps/api/tests/v3130-quorum-ed25519.test.mjs
+apps/api/tests/v3140-key-lifecycle-quorum-alert.test.mjs
 apps/api/tests/v320-operations.test.mjs
 apps/api/tests/v321-order-delivered-typecheck.test.mjs
 apps/api/tests/v330-audit-ops.test.mjs
@@ -199,6 +200,7 @@ apps/web/tests/v3100-persistent-apdex-dlq-rbac-cache.test.mjs
 apps/web/tests/v3110-ops-dashboard-distributed-keyring-archive.test.mjs
 apps/web/tests/v3120-managed-probe-fleet-ui.test.mjs
 apps/web/tests/v3130-quorum-ui.test.mjs
+apps/web/tests/v3140-maintenance-key-lifecycle-ui.test.mjs
 apps/web/tests/v320-operations.test.mjs
 apps/web/tests/v321-order-delivered.test.mjs
 apps/web/tests/v322-order-update-ux.test.mjs
@@ -232,6 +234,7 @@ scripts/e2e-browser-v3105.mjs
 scripts/e2e-browser-v3110.mjs
 scripts/e2e-browser-v3120.mjs
 scripts/e2e-browser-v3130.mjs
+scripts/e2e-browser-v3140.mjs
 scripts/e2e-browser-v350.mjs
 scripts/e2e-browser-v351.mjs
 scripts/e2e-browser-v352.mjs
@@ -259,6 +262,7 @@ scripts/e2e-runtime-v3105.ps1
 scripts/e2e-runtime-v3110.ps1
 scripts/e2e-runtime-v3120.ps1
 scripts/e2e-runtime-v3130.ps1
+scripts/e2e-runtime-v3140.ps1
 scripts/e2e-runtime-v320.ps1
 scripts/e2e-runtime-v340.ps1
 scripts/e2e-runtime-v341.ps1
@@ -289,9 +293,12 @@ scripts/kiem-tra.ps1
 scripts/probe-agent-v3110.mjs
 scripts/probe-agent-v3120.mjs
 scripts/probe-agent-v3130.mjs
+scripts/probe-agent-v3140.mjs
 scripts/probe-fleet-v3120.ps1
 scripts/probe-fleet-v3130.ps1
+scripts/probe-fleet-v3140.ps1
 scripts/probe-keygen-v3130.mjs
+scripts/probe-keygen-v3140.mjs
 scripts/release.ps1
 scripts/restore-db.ps1
 tests/cau-truc.test.mjs
@@ -307,6 +314,7 @@ tests/v3105-mysql2-installed-tree-scanner.test.mjs
 tests/v3110-distributed-probe-dlq-keyring-oncall-archive.test.mjs
 tests/v3120-managed-probe-fleet.test.mjs
 tests/v3130-quorum-ed25519-anomaly.test.mjs
+tests/v3140-key-lifecycle-quorum-alert-maintenance-ui.test.mjs
 tests/v320-operations.test.mjs
 tests/v321-order-delivered-typecheck.test.mjs
 tests/v322-order-update-ux.test.mjs

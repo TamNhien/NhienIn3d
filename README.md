@@ -1,7 +1,7 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v3.13.0** — 02/09/2026
-- **Multi-region quorum + asymmetric probe v3.13.0**: bổ sung Ed25519 signing tùy chọn bên cạnh HMAC, public-key rotation grace-period, quorum/consensus theo region và anomaly detection latency/status trên persistent probe samples.
+> Phiên bản hiện tại: **v3.14.0** — 02/09/2026
+- **Probe key lifecycle + quorum alert + Maintenance UX v3.14.0**: Ed25519 public-key descriptor có revoke/not-before/expiry, cảnh báo quorum/anomaly đi chung pipeline alert/escalation, Docker wiring đầy đủ và nút Thêm window chuyển sang dark compact.
 
 NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **frontend Next.js** và **backend NestJS/Fastify** kết nối **PostgreSQL qua Prisma**.
 
@@ -19,14 +19,13 @@ NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **fro
 
 ## Điểm chính bản hiện tại
 
-- **Ed25519 probe signing**: `scripts/probe-agent-v3130.mjs` ưu tiên private key Ed25519 qua `NH3D_PROBE_AGENT_PRIVATE_KEY` / `NH3D_PROBE_AGENT_PRIVATE_KEY_FILE`; API xác minh bằng `SYSTEM_SLO_AGENT_PUBLIC_KEYS_JSON`. HMAC-SHA256 v3.11 vẫn tương thích ngược.
-- **Rotation grace-period**: mỗi agent trong `SYSTEM_SLO_AGENT_PUBLIC_KEYS_JSON` có thể trỏ tới một public key hoặc mảng nhiều public key; server chấp nhận bất kỳ key hợp lệ nào trong lúc rotate, không cần giữ private key phía server.
-- **Key generation an toàn**: `npm run probe:keygen -- agent-hcm-01` tạo Ed25519 keypair vào `.probe-keys/`; thư mục này bị `.gitignore`, source không chứa private key.
-- **Multi-region quorum/consensus**: Ops runtime tính quorum theo persistent `slo_endpoint_mau`, `SYSTEM_SLO_QUORUM_MIN_REGIONS`, `SYSTEM_SLO_QUORUM_HEALTHY_PERCENT` và `SYSTEM_SLO_QUORUM_WINDOW_SECONDS`; phân loại `QUORUM_OK` / `DEGRADED` / `OUTAGE` và phát hiện region bất đồng.
-- **Anomaly detection**: so latency mới nhất với median baseline theo region/endpoint, ngưỡng multiplier cấu hình; đồng thời phát hiện status anomaly khi baseline ổn định nhưng sample mới chuyển xấu.
-- **Managed probe fleet v3.12 được giữ nguyên**: ONLINE/STALE/OFFLINE/MISSING, key/registration coverage, keepalive runner và compact badge; v3.13 mở rộng coverage để chấp nhận cả HMAC per-agent key lẫn Ed25519 public key.
-- **Ops Dashboard v3.13**: thêm panel **Multi-region quorum · anomaly detection**, badge compact `QUORUM OK` / `DEGRADED`, số endpoint/quorum/disagreement/anomaly và trạng thái signing; không hiển thị raw secret/private key.
-- **Database**: v3.13.0 không thêm migration; tiếp tục dùng 23 migrations, migration mới nhất `202609020001_v3110_distributed_probe_dlq_keyring_oncall_archive`. Runtime/browser dùng `scripts/e2e-runtime-v3130.ps1` / `scripts/e2e-browser-v3130.mjs`; CI/Health/OpenAPI đồng bộ **v3.13.0**.
+- **Ed25519 key lifecycle v3.14**: `SYSTEM_SLO_AGENT_PUBLIC_KEYS_JSON` giữ tương thích string/array v3.13 và nhận descriptor `key_id/public_key/status/not_before/expires_at/revoked`; verifier chỉ dùng key đang hiệu lực và từ chối key revoked/expired/not-yet-valid.
+- **Rotation/expiry observability**: Managed probe fleet trả số key active/revoked/expired/not-yet-valid/expiring-soon theo metadata an toàn, không trả raw public/private key; `SYSTEM_SLO_AGENT_KEY_EXPIRY_WARN_DAYS` điều khiển ngưỡng cảnh báo hết hạn.
+- **Quorum alert chủ động**: `SYSTEM_SLO_QUORUM_ALERT_ENABLED=true` đưa `OUTAGE/DEGRADED`, region disagreement và anomaly vào pipeline cảnh báo hệ thống hiện có, kế thừa silence/escalation/on-call/email/webhook và tự suppress trong maintenance window.
+- **Docker env wiring hoàn chỉnh**: API container nhận Ed25519 keyring, quorum window/min-regions/healthy-percent, anomaly config và lifecycle/alert settings; tránh trường hợp local `.env` có cấu hình nhưng container không thấy.
+- **Maintenance UX**: nút **Thêm window** trên Ops Dashboard dùng dark compact action, hover/focus rõ, không còn nền trắng quá sáng; responsive grid cũ được giữ nguyên.
+- **Managed probe fleet + multi-region quorum**: toàn bộ HMAC/Ed25519, keepalive, quorum/anomaly v3.11-v3.13 vẫn tương thích.
+- **Database**: v3.14.0 không thêm migration; tiếp tục dùng 23 migrations, migration mới nhất `202609020001_v3110_distributed_probe_dlq_keyring_oncall_archive`. Runtime/browser dùng `scripts/e2e-runtime-v3140.ps1` / `scripts/e2e-browser-v3140.mjs`; CI/Health/OpenAPI đồng bộ **v3.14.0**.
 
 ## Tài khoản và bảo mật
 
@@ -1483,11 +1482,22 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 - Runtime/Browser E2E, CI, Health/OpenAPI và package version đồng bộ **v3.13.0**.
 - Quy trình release: `npm install` → `npm run security:mysql2` → `npm audit` → `npm test` → `npm run typecheck` → `npm run build` → Docker → `./scripts/e2e-runtime-v3130.ps1` → `npm run e2e:browser` → `./scripts/release.ps1 v3.13.0`.
 
+## v3.14.0 — 02/09/2026
+
+- Sửa UI **Maintenance windows**: nút `Thêm window` chuyển từ nền sáng generic sang dark compact action, giữ focus-visible/disabled state và không ảnh hưởng các nút primary khác.
+- Nâng Ed25519 keyring thành lifecycle-aware descriptor: hỗ trợ `key_id`, `status`, `not_before`, `expires_at`, `revoked`; vẫn đọc được string/array kiểu v3.13 để rotate không downtime.
+- Probe verifier chỉ chấp nhận public key đang active; key revoked/disabled/expired/chưa đến hiệu lực không được dùng xác minh. Ops runtime chỉ trả metadata/count, tuyệt đối không trả raw key.
+- Managed probe fleet bổ sung cảnh báo `ED25519_NO_ACTIVE_KEY`, `ED25519_KEY_EXPIRES_SOON`, `ED25519_REVOKED_KEY_PRESENT` và thống kê active/revoked/expired/not-yet-valid/expiring-soon.
+- Quorum/anomaly được nối vào pipeline cảnh báo vận hành khi `SYSTEM_SLO_QUORUM_ALERT_ENABLED=true`; kế thừa chống gửi lặp, silence, escalation, on-call routing, email/webhook và maintenance suppression.
+- Bổ sung Docker wiring cho toàn bộ biến Ed25519/quorum/anomaly vốn chỉ có ở `.env.example` của v3.13; thêm `SYSTEM_SLO_AGENT_KEY_EXPIRY_WARN_DAYS` và `SYSTEM_SLO_QUORUM_ALERT_ENABLED`.
+- Không thêm migration; tiếp tục 23 migrations. Runtime/Browser E2E, CI, Health/OpenAPI và package version đồng bộ **v3.14.0**.
+- Quy trình release: `npm install` → `npm run security:mysql2` → `npm audit` → `npm test` → `npm run typecheck` → `npm run build` → Docker → `./scripts/e2e-runtime-v3140.ps1` → `npm run e2e:browser` → `./scripts/release.ps1 v3.14.0`.
+
 # Lộ trình tiếp theo
 
-## v3.14.0
+## v3.15.0
 
-- Probe enrollment token/self-service rotation nâng cao hoặc mTLS; bổ sung revoke/expiry metadata cho asymmetric keys.
-- SLO alert chủ động theo quorum + burn-rate anomaly và service dependency map.
-- Archive export sang object storage S3-compatible, restore/replay từng partition và retention policy theo legal/audit class.
-- On-call calendar import/export, override/absence, handoff report và escalation notification acknowledgment.
+- Probe enrollment token/self-service provisioning hoặc mTLS cho node mới.
+- Service dependency map + blast-radius correlation cho quorum/burn-rate alerts.
+- Archive export S3-compatible, restore/replay từng partition và retention class.
+- On-call calendar import/export, override/absence, handoff report và escalation acknowledgment.
