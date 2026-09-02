@@ -24,7 +24,7 @@ test("v3.8.0 Ops UI co endpoint SLO burn timeline full-text va dead-letter repla
   assert.match(page, /Endpoint SLO · time-weighted/);
   assert.match(page, /Burn-rate theo thời gian/);
   assert.match(page, /Incident \+ timeline/);
-  assert.match(page, /Webhook delivery \+/);
+  assert.match(page, /Webhook (?:delivery \+|encrypted DLQ \+)/);
   assert.match(lib, /layTimelineSuCoVanHanhAdmin/);
   assert.match(lib, /layWebhookDeadLetterAdmin/);
   assert.match(lib, /replayWebhookDeadLetterAdmin/);

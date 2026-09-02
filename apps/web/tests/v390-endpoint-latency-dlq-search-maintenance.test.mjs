@@ -17,7 +17,7 @@ test("v3.9.0 Ops hien endpoint latency va maintenance-aware SLO", () => {
 test("v3.9.0 Ops webhook DLQ co acknowledge bulk replay va retention status", () => {
   const page = read("app/quan-tri/ops/page.tsx");
   const lib = read("lib/quan-tri.ts");
-  assert.match(page, /Webhook delivery \+ DLQ lifecycle/);
+  assert.match(page, /Webhook (?:delivery \+ DLQ lifecycle|encrypted DLQ \+ scheduled retry)/);
   assert.match(page, /Replay bulk chờ/);
   assert.match(page, /Acknowledge/);
   assert.match(page, /trang_thai_dlq/);

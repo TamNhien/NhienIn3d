@@ -43,6 +43,6 @@ test("v3.7.0 API export Ops SLO Incident tong hop", () => {
   const svc = read("src/quan-tri/quan-tri.service.ts");
   const ctl = read("src/quan-tri/quan-tri.controller.ts");
   assert.match(svc, /xuat_excel_ops_tong_hop/);
-  assert.match(svc, /Ops v(?:3\.7\.[012]|3\.8\.0|3\.9\.0)/);
+  assert.match(svc, /Ops v(?:3\.7\.[012]|3\.8\.0|3\.9\.0|3\.10\.[0123])/);
   assert.match(ctl, /he-thong\/ops\/excel/);
 });

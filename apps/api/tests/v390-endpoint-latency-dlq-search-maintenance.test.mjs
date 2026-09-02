@@ -46,6 +46,6 @@ test("v3.9.0 incident search dung GIN tsvector va metrics materialized fallback"
   assert.match(svc, /search_vector @@ websearch_to_tsquery/);
   assert.match(svc, /GIN_TSVECTOR_V390/);
   assert.match(svc, /REFRESH MATERIALIZED VIEW/);
-  assert.match(svc, /MATERIALIZED_VIEW_V390/);
+  assert.match(svc, /MATERIALIZED_VIEW_(?:V390|READONLY_V3100|CACHE_V3100)/);
   assert.match(svc, /RUNTIME_FALLBACK/);
 });

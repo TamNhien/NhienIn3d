@@ -71,6 +71,7 @@ model NguoiDung {
   dat_lai_mat_khau DatLaiMatKhau[]
   nhan_vien       NhanVien?
   lich_su_don_hang LichSuDonHang[]
+  ops_phan_cong   OpsPhanCong[]
 
   @@map("nguoi_dung")
 }
@@ -442,6 +443,79 @@ model PhienBanSeed {
   ngay_ap_dung DateTime @default(now()) @db.Timestamptz(6)
 
   @@map("phien_ban_seed")
+}
+
+
+
+model SloEndpointMau {
+  id                 BigInt   @id @default(autoincrement())
+  endpoint_id        String   @db.VarChar(80)
+  agent_id           String   @db.VarChar(80)
+  region             String   @default("local") @db.VarChar(80)
+  node_name          String   @default("local") @db.VarChar(120)
+  trang_thai         String   @db.VarChar(20)
+  http_status        Int?
+  do_tre_ms          Float
+  latency_target_ms  Int
+  apdex_t_ms         Int
+  apdex_bucket       String   @db.VarChar(20)
+  maintenance_active Boolean  @default(false)
+  ngay_tao           DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([endpoint_id, ngay_tao])
+  @@index([agent_id, ngay_tao])
+  @@index([region, ngay_tao])
+  @@map("slo_endpoint_mau")
+}
+
+model WebhookDlqPayload {
+  id                    String   @id @db.Uuid
+  dead_letter_history_id BigInt? @unique
+  payload_ciphertext    String   @db.Text
+  iv                    String   @db.VarChar(64)
+  auth_tag              String   @db.VarChar(64)
+  key_id                String   @db.VarChar(64)
+  payload_hash          String   @db.Char(64)
+  idempotency_key       String   @db.Char(64)
+  endpoint              String   @db.Text
+  adapter               String   @db.VarChar(20)
+  trang_thai            String   @default("CHO_RETRY") @db.VarChar(30)
+  so_lan_retry_tu_dong  Int      @default(0)
+  retry_tiep_theo_luc   DateTime? @db.Timestamptz(6)
+  het_han_luc           DateTime @db.Timestamptz(6)
+  loi_cuoi              String?  @db.Text
+  ngay_tao              DateTime @default(now()) @db.Timestamptz(6)
+  ngay_cap_nhat          DateTime @updatedAt @db.Timestamptz(6)
+
+  @@index([trang_thai, retry_tiep_theo_luc])
+  @@index([het_han_luc])
+  @@index([idempotency_key])
+  @@map("webhook_dlq_payload")
+}
+
+model OpsMetricCache {
+  khoa         String   @id @db.VarChar(80)
+  gia_tri      Json     @default("{}") @db.JsonB
+  refreshed_at DateTime @default(now()) @db.Timestamptz(6)
+
+  @@map("ops_metric_cache")
+}
+
+model OpsPhanCong {
+  id              String   @id @default(uuid()) @db.Uuid
+  nguoi_dung_id   String   @db.Uuid
+  dich_vu         String   @db.VarChar(80)
+  vai_tro_ops     String   @db.VarChar(30)
+  cap_escalation  Int      @default(1)
+  dang_hoat_dong  Boolean  @default(true)
+  ngay_tao        DateTime @default(now()) @db.Timestamptz(6)
+  ngay_cap_nhat   DateTime @updatedAt @db.Timestamptz(6)
+  nguoi_dung      NguoiDung @relation(fields: [nguoi_dung_id], references: [id], onDelete: Cascade)
+
+  @@unique([nguoi_dung_id, dich_vu, vai_tro_ops])
+  @@index([dich_vu, dang_hoat_dong])
+  @@index([nguoi_dung_id, dang_hoat_dong])
+  @@map("ops_phan_cong")
 }
 
 

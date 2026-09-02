@@ -64,11 +64,11 @@ test("seed v2.12.0 theo doi 24 bang va cho phep du lieu van hanh bi xoa", () => 
 });
 
 
-test("API hien thi dung version v3.9.0 o health va OpenAPI", () => {
+test("API hien thi dung version v3.10.3 o health va OpenAPI", () => {
   const health = readFileSync("src/suc-khoe/suc-khoe.controller.ts", "utf8");
   const main = readFileSync("src/main.ts", "utf8");
-  assert.match(health, /phien_ban: "v3\.9\.0"/);
-  assert.match(main, /setVersion\("3\.9\.0"\)/);
+  assert.match(health, /phien_ban: "v3\.10\.3"/);
+  assert.match(main, /setVersion\("3\.10\.3"\)/);
 });
 
 test("V2 co migration gio hang, thanh toan va dia chi", () => {
@@ -411,7 +411,7 @@ test("v2.9.8 vai tro he thong co dinh khong doi qua PATCH nguoi dung", () => {
   const dto = readFileSync("src/quan-tri/dto/cap-nhat-nguoi-dung.dto.ts", "utf8");
   const service = readFileSync("src/quan-tri/quan-tri.service.ts", "utf8");
   assert.doesNotMatch(dto, /vai_tro/);
-  assert.doesNotMatch(service, /dto\.vai_tro/);
+  assert.doesNotMatch(service, /dto\.vai_tro\b/);
   assert.match(service, /PATCH người dùng không còn được đổi vai trò/u);
 });
 

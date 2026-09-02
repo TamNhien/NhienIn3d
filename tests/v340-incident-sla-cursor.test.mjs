@@ -31,5 +31,5 @@ test("v3.4.0 runtime E2E phu Admin orders stock report va ops", () => {
   const ci = doc(".github/workflows/ci.yml");
   for (const text of ["xac-thuc/dang-nhap", "quan-tri/don-hang", "quan-tri/san-pham", "kho/import/kiem-tra", "bao-cao/ton-kho/excel", "he-thong/sla", "nhat-ky/cursor"]) assert.match(e2e, new RegExp(text.replaceAll("/", "\\/")));
   assert.match(e2e, /e2e-runtime-v320\.ps1/);
-  assert.match(ci, /e2e-runtime-v(?:34[01]|35[01234]|36[01234567]|37[012]|380|390)\.ps1/);
+  assert.match(ci, /e2e-runtime-v(?:34[01]|35[01234]|36[01234567]|37[012]|380|390|3100|3101|3102|3103)\.ps1/);
 });

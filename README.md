@@ -1,6 +1,7 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v3.9.0** — 01/09/2026
+> Phiên bản hiện tại: **v3.10.3** — 02/09/2026
+- **Security install-tree hotfix v3.10.3**: `mysql2` được khai báo trực tiếp tại root `devDependencies` ở `3.22.0`, còn `overrides.mysql2` tham chiếu `$mysql2`. Cách này buộc `npm install` đồng bộ `package-lock.json`/`node_modules` thay vì chỉ để lại transitive `mysql2@3.15.3` bị `npm ls` đánh dấu `invalid`. `npm run audit:security` nay kiểm tra cả version mysql2 đang cài trước khi chạy `npm audit`.
 
 NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **frontend Next.js** và **backend NestJS/Fastify** kết nối **PostgreSQL qua Prisma**.
 
@@ -18,11 +19,13 @@ NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **fro
 
 ## Điểm chính bản hiện tại
 
-- **Endpoint SLO v3.9.0**: probe hỗ trợ `GET/HEAD`, header template `${ENV:...}`, Bearer token từ biến môi trường, latency target và SLI P50/P95/P99 + histogram; time-weighted availability có quy tắc cap gap. Các header nhạy cảm như `Authorization`/`X-API-Key` bắt buộc tham chiếu ENV, không lưu secret dạng literal trong cấu hình.
-- **Maintenance-aware SLO**: policy có thể loại maintenance khỏi availability và/hoặc error budget; thống kê trả số phút maintenance bị loại theo từng mục đích.
-- **Webhook DLQ lifecycle**: retention, trạng thái chờ replay/đã replay/đã acknowledge/hết hạn, bulk replay tối đa 20 item và idempotency key chống replay trùng; Admin có thể acknowledge dead-letter.
-- **Incident search/metrics lớn**: migration `202609010002_v390_ops_search_metrics` tạo generated `tsvector`, GIN index, incident cursor index và materialized Ops incident metrics MTTA/MTTR/P95 với runtime fallback.
-- **Ops Dashboard v3.9.0**: hiển thị endpoint latency, maintenance-aware policy, GIN full-text timeline và DLQ lifecycle. Runtime/browser smoke dùng `scripts/e2e-runtime-v390.ps1` / `scripts/e2e-browser-v390.mjs`; CI/Health/OpenAPI đồng bộ **v3.9.0**.
+- **Security dependency hotfix v3.10.3**: khóa `mysql2@3.22.0` bằng root direct devDependency + `overrides: { "mysql2": "$mysql2" }`, để npm phải reconcile cây cài đặt thay vì giữ `mysql2@3.15.3 invalid`. Prisma vẫn ở 7.10.0 và NhienIn3d vẫn dùng PostgreSQL qua `@prisma/adapter-pg`; không dùng `npm audit fix --force`.
+- **Persistent Endpoint SLI + Apdex v3.10.0**: mỗi probe được lưu vào `slo_endpoint_mau` cùng agent/node/region, HTTP status, latency, maintenance flag và Apdex bucket; thống kê ưu tiên dữ liệu persistent nhưng vẫn fallback lịch sử v3.9 khi nâng cấp.
+- **Probe agent identity**: `SYSTEM_SLO_PROBE_AGENT_ID`, `SYSTEM_SLO_PROBE_REGION`, `SYSTEM_SLO_PROBE_NODE` giúp phân biệt nhiều node/region và hiển thị `probe_agents`/persistent sample count trên Ops Dashboard.
+- **Encrypted Webhook DLQ + scheduler**: payload dead-letter được tách khỏi history và mã hóa AES-256-GCM trong `webhook_dlq_payload`; history chỉ giữ payload reference/hash. Scheduler retry theo policy, exponential backoff, retention expiry và trạng thái `CHO_RETRY/RETRY_THAT_BAI/HET_HAN`; hỗ trợ replay/ack hiện có.
+- **Cached Ops metrics + retention**: refresh materialized incident metrics được chuyển khỏi request path sang scheduler và `ops_metric_cache`; cleanup telemetry cũ theo retention nhưng giữ dữ liệu liên kết incident.
+- **RBAC Ops/on-call**: thêm `OPS_VIEWER`, `ON_CALL`, `SERVICE_OWNER`, escalation 1-5 và phân quyền theo dịch vụ. Non-Admin được vào `/quan-tri/ops` ở chế độ read-only hoặc xử lý incident khi có on-call/service-owner assignment; Admin quản trị assignment.
+- **Database**: migration mới nhất vẫn là `202609010003_v3100_ops_persistence_dlq_oncall`; v3.10.3 không đổi schema. Runtime/browser smoke hiện dùng `scripts/e2e-runtime-v3103.ps1` / `scripts/e2e-browser-v3103.mjs`; CI/Health/OpenAPI đồng bộ **v3.10.3**.
 
 ## Tài khoản và bảo mật
 
@@ -1391,11 +1394,46 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 - Ops Dashboard hiển endpoint latency + maintenance-aware policy, incident GIN full-text và DLQ lifecycle. Runtime/Browser E2E, CI, Health/OpenAPI chuyển sang v3.9.0.
 - Quy trình release: `npm install` → `npm audit` → `npm test` → `npm run typecheck` → `npm run build` → `./scripts/backup-db.ps1` → `docker compose up -d --build --remove-orphans` → `docker compose ps` → `./scripts/e2e-runtime-v390.ps1` → `npm run e2e:browser` → `./scripts/release.ps1 v3.9.0`.
 
+## v3.10.0 — 01/09/2026
+
+- Endpoint SLI được persistence vào `slo_endpoint_mau` với agent/node/region, status, latency, target, maintenance flag và Apdex bucket. `GET /he-thong/sla` ưu tiên persistent sample, trả `persistent_samples`, `probe_agents` và Apdex score; legacy `SLO_ENDPOINT` history vẫn là fallback tương thích.
+- Webhook DLQ payload chuyển sang `webhook_dlq_payload` mã hóa AES-256-GCM. `lich_su_van_hanh` chỉ giữ reference/hash/metadata, không giữ plaintext payload; khóa lấy từ `SYSTEM_ALERT_WEBHOOK_DLQ_ENCRYPTION_KEY` hoặc dẫn xuất từ `COOKIE_SECRET` và API chỉ lộ `key_id/key_source`, không lộ key.
+- Thêm scheduled DLQ retry + exponential backoff + retention expiry; `SYSTEM_ALERT_WEBHOOK_DLQ_RETRY_INTERVAL_MINUTES` và `SYSTEM_ALERT_WEBHOOK_DLQ_SCHEDULED_MAX_ATTEMPTS` điều khiển scheduler. Replay/ack/bulk replay/idempotency từ v3.9.0 vẫn tương thích, legacy dead-letter vẫn đọc được.
+- Materialized incident metrics không còn refresh đồng bộ trên request dashboard. Scheduler refresh `ops_incident_metrics_v390` rồi cache JSON trong `ops_metric_cache`; thêm retention cleanup cho endpoint sample và telemetry low-value không gắn incident.
+- Thêm RBAC Ops/on-call theo dịch vụ với `OPS_VIEWER`, `ON_CALL`, `SERVICE_OWNER`, escalation 1-5. Admin quản lý assignment; người dùng được phân công truy cập dashboard/timeline qua `/api/v1/ops`, còn thao tác tiếp nhận/khắc phục yêu cầu ON_CALL hoặc SERVICE_OWNER.
+- Migration `202609010003_v3100_ops_persistence_dlq_oncall` thêm `slo_endpoint_mau`, `webhook_dlq_payload`, `ops_metric_cache`, `ops_phan_cong`. Runtime/Browser E2E, CI, Health/OpenAPI đồng bộ v3.10.0 và kiểm tra persistent/Apdex/encrypted DLQ/cache/RBAC.
+- Quy trình release: `npm install` → `npm audit` → `npm test` → `npm run typecheck` → `npm run build` → `./scripts/backup-db.ps1` → `docker compose up -d --build --remove-orphans` → `docker compose ps` → `./scripts/e2e-runtime-v3100.ps1` → `npm run e2e:browser` → `./scripts/release.ps1 v3.10.0`.
+
+
+## v3.10.1 — 01/09/2026
+
+- Sửa `npm run typecheck` API lỗi `TS18047: 'cache' is possibly 'null'` trong Ops metrics cache. Nhánh đọc cache nay kiểm tra đồng thời `cache && c` trước khi truy cập `cache.refreshed_at`, giữ nguyên fallback materialized view/runtime khi cache chưa tồn tại.
+- Thêm regression test khóa null narrowing để không tái sử dụng `if (c)` rồi dereference `cache`. Runtime/Browser E2E, CI, Health/OpenAPI và package version đồng bộ **v3.10.1**.
+- Không có migration mới; migration mới nhất vẫn là `202609010003_v3100_ops_persistence_dlq_oncall`. Toàn bộ persistent Apdex, encrypted DLQ, scheduled retry, Ops cache và RBAC on-call của v3.10.0 được giữ nguyên.
+- Quy trình release: `npm install` → `npm audit` → `npm test` → `npm run typecheck` → `npm run build` → `./scripts/backup-db.ps1` → `docker compose up -d --build --remove-orphans` → `docker compose ps` → `./scripts/e2e-runtime-v3101.ps1` → `npm run e2e:browser` → `./scripts/release.ps1 v3.10.1`.
+
+## v3.10.2 — 02/09/2026
+
+- Sửa `npm audit` báo **2 high severity vulnerabilities** từ `mysql2 <3.22.0` / GHSA-3f6p-5ww8-9rcr nằm trong dependency tree của Prisma CLI. Root `overrides` ghim `mysql2: 3.22.0`, là ngưỡng đã vá theo audit report.
+- Giữ nguyên Prisma `7.10.0`, `@prisma/client 7.10.0` và `@prisma/adapter-pg 7.10.0`; không chạy `npm audit fix --force` vì npm đề xuất downgrade Prisma xuống `6.19.3`, là breaking change và không cần thiết cho stack PostgreSQL hiện tại.
+- Giữ fix null narrowing v3.10.1; Runtime/Browser E2E, CI, Health/OpenAPI và package version đồng bộ **v3.10.2**. Thêm regression test khóa `overrides.mysql2 === 3.22.0` và khóa Prisma 7.10.0.
+- Không có migration mới; migration mới nhất vẫn là `202609010003_v3100_ops_persistence_dlq_oncall`.
+- Quy trình release: `npm install` → `npm audit` → `npm test` → `npm run typecheck` → `npm run build` → `./scripts/backup-db.ps1` → `docker compose up -d --build --remove-orphans` → `docker compose ps` → `./scripts/e2e-runtime-v3102.ps1` → `npm run e2e:browser` → `./scripts/release.ps1 v3.10.2`.
+
+## v3.10.3 — 02/09/2026
+
+- Sửa security dependency reconciliation: thêm `mysql2@3.22.0` làm root devDependency và cho `overrides.mysql2` tham chiếu `$mysql2`, để `npm install` cập nhật cây cài đặt/lockfile thay vì giữ `mysql2@3.15.3 invalid`.
+- Thêm `scripts/kiem-tra-mysql2-security.mjs`; `npm run audit:security` và `scripts/kiem-tra.ps1` xác minh mysql2 đang cài đặt >=3.22.0 trước khi audit/release.
+- Giữ Prisma 7.10.0 và PostgreSQL adapter; không dùng `npm audit fix --force`. Runtime/Browser E2E, CI, Health/OpenAPI đồng bộ v3.10.3. Không có migration mới.
+- Quy trình release: `npm install` → `npm ls mysql2 --all` → `npm audit` → `npm test` → `npm run typecheck` → `npm run build` → Docker → `./scripts/e2e-runtime-v3103.ps1` → `npm run e2e:browser` → `./scripts/release.ps1 v3.10.3`.
+
+
 # Lộ trình tiếp theo
 
-## v3.10.0
 
-- Persistence histogram/latency SLI theo endpoint, Apdex và probe agent phân tán cho nhiều node/region.
-- DLQ payload reference mã hóa, scheduled retry policy, retention cleanup job và bulk operations có progress/audit chi tiết.
-- Tách refresh materialized Ops metrics thành scheduler/cache, bổ sung retention/partitioning cho `lich_su_van_hanh` khi dữ liệu lớn.
-- RBAC Ops/on-call, escalation ownership và dashboard theo dịch vụ/nhóm trực.
+## v3.11.0
+
+- Probe agent phân tán thực sự qua signed ingestion/heartbeat, agent health và so sánh SLO theo region/node thay vì chỉ identity trên cùng API scheduler.
+- DLQ key rotation/KMS-friendly keyring, per-destination retry budget, bulk replay có progress/cancel và audit theo từng item.
+- Online archive/partition cho `lich_su_van_hanh` và `slo_endpoint_mau` khi dữ liệu lớn; retention theo loại telemetry và công cụ verify trước khi prune.
+- On-call schedule/rotation theo ca, escalation policy theo service, ownership incident và notification routing cho nhóm trực.

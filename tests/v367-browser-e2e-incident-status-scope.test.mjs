@@ -22,15 +22,15 @@ test("v3.6.7 backport scoped status assertion cho browser E2E v3.6.0 den v3.6.6"
   }
 });
 
-test("v3.6.7 scoped-status fix duoc giu khi nang v3.9.0", () => {
+test("v3.6.7 scoped-status fix duoc giu khi nang v3.10.3", () => {
   const pkg = JSON.parse(read("package.json"));
   const ci = read(".github/workflows/ci.yml");
   const runtime = read("scripts/e2e-runtime-v367.ps1");
   const browser = read("scripts/e2e-browser-v367.mjs");
-  assert.equal(pkg.version, "3.9.0");
-  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v390.mjs");
-  assert.match(ci, /e2e-runtime-v390\.ps1/);
-  assert.match(ci, /Browser E2E Admin HTTPS v3\.9\.0/);
+  assert.equal(pkg.version, "3.10.3");
+  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3103.mjs");
+  assert.match(ci, /e2e-runtime-v3103\.ps1/);
+  assert.match(ci, /Browser E2E Admin HTTPS v3\.10\.3/);
   assert.match(runtime, /v3\.6\.7/);
   assert.match(browser, /v3\.6\.7/);
 });
