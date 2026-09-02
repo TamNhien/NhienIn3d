@@ -6,17 +6,17 @@ const read = (p) => readFileSync(p, "utf8");
 
 test("v3.13.0 dong bo version runtime browser CI va probe tools", () => {
   const pkg = JSON.parse(read("package.json"));
-  assert.equal(read("VERSION").trim(), "3.14.0");
-  assert.equal(pkg.version, "3.14.0");
-  assert.equal(JSON.parse(read("apps/api/package.json")).version, "3.14.0");
-  assert.equal(JSON.parse(read("apps/web/package.json")).version, "3.14.0");
-  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3140.mjs");
-  assert.equal(pkg.scripts["probe:agent"], "node scripts/probe-agent-v3140.mjs");
-  assert.equal(pkg.scripts["probe:keygen"], "node scripts/probe-keygen-v3140.mjs");
-  assert.match(pkg.scripts["probe:fleet"], /probe-fleet-v3140\.ps1/);
+  assert.equal(read("VERSION").trim(), "3.15.0");
+  assert.equal(pkg.version, "3.15.0");
+  assert.equal(JSON.parse(read("apps/api/package.json")).version, "3.15.0");
+  assert.equal(JSON.parse(read("apps/web/package.json")).version, "3.15.0");
+  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3150.mjs");
+  assert.equal(pkg.scripts["probe:agent"], "node scripts/probe-agent-v3150.mjs");
+  assert.equal(pkg.scripts["probe:keygen"], "node scripts/probe-keygen-v3150.mjs");
+  assert.match(pkg.scripts["probe:fleet"], /probe-fleet-v3150\.ps1/);
   assert.equal(existsSync("scripts/e2e-runtime-v3140.ps1"), true);
-  assert.match(read(".github/workflows/ci.yml"), /e2e-runtime-v3140\.ps1/);
-  assert.match(read(".github/workflows/ci.yml"), /Browser E2E Admin HTTPS v3\.14\.0/);
+  assert.match(read(".github/workflows/ci.yml"), /e2e-runtime-v3150\.ps1/);
+  assert.match(read(".github/workflows/ci.yml"), /Browser E2E Admin HTTPS v3\.15\.0/);
 });
 
 test("v3.13.0 probe ho tro Ed25519 va giu HMAC nonce anti-replay", () => {

@@ -38,6 +38,7 @@ import { CapNhatSloNangCaoDto } from "./dto/cap-nhat-slo-nang-cao.dto.js";
 import { AckWebhookDeadLetterDto, ReplayBulkWebhookDeadLetterDto } from "./dto/webhook-dead-letter.dto.js";
 import { CapNhatOpsPhanCongDto, TaoOpsPhanCongDto } from "./dto/ops-phan-cong.dto.js";
 import { GanChuSoHuuIncidentDto, OpsArchiveDto, RotateDlqKeyDto, TaoOpsOnCallScheduleDto, TaoWebhookReplayJobDto, UpsertOpsEscalationPolicyDto } from "./dto/ops-v3110.dto.js";
+import { TaoProbeEnrollmentTokenDto } from "./dto/probe-enrollment-v3150.dto.js";
 import { QuanTriService } from "./quan-tri.service.js";
 
 @ApiTags("Quản trị")
@@ -70,7 +71,8 @@ export class QuanTriController {
   @Get("he-thong/su-co") su_co_he_thong(@Query("gioi_han") gioi_han?: string, @Query("trang_thai_xu_ly") trang_thai_xu_ly?: string, @Query("tu_ngay") tu_ngay?: string, @Query("den_ngay") den_ngay?: string) { return this.service.danh_sach_su_co_van_hanh(gioi_han, trang_thai_xu_ly, tu_ngay, den_ngay); }
   @Get("he-thong/su-co/excel") su_co_he_thong_excel(@Query("trang_thai_xu_ly") trang_thai_xu_ly?: string, @Query("tu_ngay") tu_ngay?: string, @Query("den_ngay") den_ngay?: string) { return this.service.xuat_excel_danh_sach_su_co_van_hanh(trang_thai_xu_ly, tu_ngay, den_ngay); }
   @Get("he-thong/ops/excel") ops_excel(@Query("trang_thai_xu_ly") trang_thai_xu_ly?: string, @Query("tu_ngay") tu_ngay?: string, @Query("den_ngay") den_ngay?: string) { return this.service.xuat_excel_ops_tong_hop(trang_thai_xu_ly, tu_ngay, den_ngay); }
-  @Get("he-thong/ops/runtime") ops_runtime() { return this.service.trang_thai_ops_v3140(); }
+  @Get("he-thong/ops/runtime") ops_runtime() { return this.service.trang_thai_ops_v3150(); }
+  @Post("he-thong/ops/probe-enrollment-token") tao_probe_enrollment_token(@Req() req: YeuCauCoNguoiDung, @Body() dto: TaoProbeEnrollmentTokenDto) { return this.service.tao_probe_enrollment_token_v3150(req.nguoi_dung_xac_thuc!, dto); }
   @Get("he-thong/ops/phan-cong") ops_phan_cong() { return this.service.danh_sach_ops_phan_cong(); }
   @Post("he-thong/ops/phan-cong") tao_ops_phan_cong(@Req() req: YeuCauCoNguoiDung, @Body() dto: TaoOpsPhanCongDto) { return this.service.tao_ops_phan_cong(req.nguoi_dung_xac_thuc!, dto); }
   @Post("he-thong/ops/phan-cong/:id/cap-nhat") cap_nhat_ops_phan_cong(@Req() req: YeuCauCoNguoiDung, @Param("id") id: string, @Body() dto: CapNhatOpsPhanCongDto) { return this.service.cap_nhat_ops_phan_cong(req.nguoi_dung_xac_thuc!, id, dto); }

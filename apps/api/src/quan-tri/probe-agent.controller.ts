@@ -2,12 +2,18 @@ import { Body, Controller, Headers, Post, Req } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
 import { ApiTags } from "@nestjs/swagger";
 import { ProbeAgentHeartbeatDto, ProbeAgentIngestDto } from "./dto/probe-agent.dto.js";
+import { ProbeAgentEnrollDto } from "./dto/probe-enrollment-v3150.dto.js";
 import { QuanTriService } from "./quan-tri.service.js";
 
 @ApiTags("Probe Agent")
 @Controller("probe-agent")
 export class ProbeAgentController {
   constructor(private readonly service: QuanTriService) {}
+
+  @Post("enroll")
+  enroll(@Body() dto: ProbeAgentEnrollDto) {
+    return this.service.probe_agent_enroll_v3150(dto);
+  }
 
   @Post("heartbeat")
   heartbeat(

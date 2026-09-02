@@ -1,6 +1,31 @@
-param([string]$Directory = ".\backups")
+﻿param([string]$Directory = ".\backups")
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
+
+function Get-Sha256Hex([string]$Path) {
+  $hashCmd = Get-Command Get-FileHash -ErrorAction SilentlyContinue
+  if ($null -ne $hashCmd) {
+    try {
+      return (Get-FileHash -Algorithm SHA256 -Path $Path).Hash.ToLowerInvariant()
+    } catch {
+      Write-Warning "Get-FileHash không khả dụng; chuyển sang SHA-256 .NET fallback: $($_.Exception.Message)"
+    }
+  }
+
+  $stream = [System.IO.File]::OpenRead($Path)
+  try {
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    try {
+      $bytes = $sha.ComputeHash($stream)
+      return ([System.BitConverter]::ToString($bytes) -replace "-", "").ToLowerInvariant()
+    } finally {
+      $sha.Dispose()
+    }
+  } finally {
+    $stream.Dispose()
+  }
+}
+
 $Root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $dir = if ([IO.Path]::IsPathRooted($Directory)) { $Directory } else { Join-Path $Root $Directory }
 if (-not (Test-Path $dir)) { throw "Không tìm thấy thư mục backup: $dir" }
@@ -16,7 +41,7 @@ foreach ($file in $files) {
     continue
   }
   $expected = ((Get-Content -Raw $shaPath).Trim() -split '\s+')[0].ToLowerInvariant()
-  $actual = (Get-FileHash -Algorithm SHA256 -Path $file.FullName).Hash.ToLowerInvariant()
+  $actual = Get-Sha256Hex $file.FullName
   if ($expected -eq $actual) { Write-Host "PASS $($file.Name)" -ForegroundColor Green }
   else { Write-Host "FAIL $($file.Name)" -ForegroundColor Red; $failed++ }
 }

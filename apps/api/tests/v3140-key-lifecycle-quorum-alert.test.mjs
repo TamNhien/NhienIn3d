@@ -12,7 +12,7 @@ test("v3.14.0 API probe key lifecycle va runtime safe metadata", () => {
   assert.match(service, /expired_keys/);
   assert.match(service, /expiring_soon_keys/);
   assert.match(service, /secret_values_exposed: false/);
-  assert.match(controller, /trang_thai_ops_v3140/);
+  assert.match(controller, /trang_thai_ops_v3150/);
 });
 
 test("v3.14.0 API quorum alert ke thua alert pipeline va version", () => {
@@ -22,6 +22,6 @@ test("v3.14.0 API quorum alert ke thua alert pipeline va version", () => {
   assert.match(service, /quorum_alerting/);
   assert.match(service, /canh_bao_quorum/);
   assert.match(service, /SYSTEM_SLO_QUORUM_ALERT_ENABLED/);
-  assert.match(health, /phien_ban: "v3\.14\.0"/);
-  assert.match(main, /setVersion\("3\.14\.0"\)/);
+  assert.match(health, /phien_ban: "v3\.15\.0"/);
+  assert.match(main, /setVersion\("3\.15\.0"\)/);
 });

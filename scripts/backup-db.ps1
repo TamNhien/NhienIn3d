@@ -1,4 +1,4 @@
-param(
+﻿param(
   [string]$OutputDirectory = ".\backups",
   [int]$DailyRetentionDays = 14,
   [int]$WeeklyRetentionWeeks = 8,
@@ -18,6 +18,31 @@ function Write-OpsHistory {
     if ($LASTEXITCODE -ne 0) { Write-Warning "Không ghi được lịch sử vận hành (có thể migration v3.2.0 chưa được áp dụng)." }
   } catch {
     Write-Warning "Không ghi được lịch sử vận hành: $($_.Exception.Message)"
+  }
+}
+
+
+function Get-Sha256Hex([string]$Path) {
+  $hashCmd = Get-Command Get-FileHash -ErrorAction SilentlyContinue
+  if ($null -ne $hashCmd) {
+    try {
+      return (Get-FileHash -Algorithm SHA256 -Path $Path).Hash.ToLowerInvariant()
+    } catch {
+      Write-Warning "Get-FileHash không khả dụng; chuyển sang SHA-256 .NET fallback: $($_.Exception.Message)"
+    }
+  }
+
+  $stream = [System.IO.File]::OpenRead($Path)
+  try {
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    try {
+      $bytes = $sha.ComputeHash($stream)
+      return ([System.BitConverter]::ToString($bytes) -replace "-", "").ToLowerInvariant()
+    } finally {
+      $sha.Dispose()
+    }
+  } finally {
+    $stream.Dispose()
   }
 }
 
@@ -48,7 +73,7 @@ try {
   docker compose exec -T postgres rm -f $remoteFile | Out-Null
 
   function Write-Sha([string]$Path) {
-    $hash = (Get-FileHash -Algorithm SHA256 -Path $Path).Hash.ToLowerInvariant()
+    $hash = Get-Sha256Hex $Path
     $shaFile = "$Path.sha256.txt"
     "$hash  $([System.IO.Path]::GetFileName($Path))" | Set-Content -Encoding ascii -Path $shaFile
     return $hash

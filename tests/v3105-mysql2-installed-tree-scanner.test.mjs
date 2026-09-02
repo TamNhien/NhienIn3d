@@ -50,7 +50,7 @@ test("v3.11.0 CI verify va release dung security:mysql2 khong dung npm ls", () =
   const ci = read(".github/workflows/ci.yml");
   const verify = read("scripts/kiem-tra.ps1");
   const release = read(".github/workflows/release.yml");
-  assert.equal(pkg.version, "3.14.0");
+  assert.equal(pkg.version, "3.15.0");
   assert.equal(pkg.devDependencies.mysql2, "3.22.0");
   assert.equal(pkg.overrides.mysql2, "$mysql2");
   assert.match(ci, /npm run security:mysql2/);
@@ -65,12 +65,12 @@ test("v3.11.0 dong bo Runtime Browser CI Health OpenAPI", () => {
   const ci = read(".github/workflows/ci.yml");
   const health = read("apps/api/src/suc-khoe/suc-khoe.controller.ts");
   const main = read("apps/api/src/main.ts");
-  assert.equal(read("VERSION").trim(), "3.14.0");
-  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3140.mjs");
+  assert.equal(read("VERSION").trim(), "3.15.0");
+  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3150.mjs");
   assert.equal(existsSync("scripts/e2e-runtime-v3110.ps1"), true);
   assert.equal(existsSync("scripts/e2e-browser-v3110.mjs"), true);
-  assert.match(ci, /e2e-runtime-v3140\.ps1/);
-  assert.match(ci, /Browser E2E Admin HTTPS v3\.14\.0/);
-  assert.match(health, /phien_ban: "v3\.14\.0"/);
-  assert.match(main, /setVersion\("3\.14\.0"\)/);
+  assert.match(ci, /e2e-runtime-v3150\.ps1/);
+  assert.match(ci, /Browser E2E Admin HTTPS v3\.15\.0/);
+  assert.match(health, /phien_ban: "v3\.15\.0"/);
+  assert.match(main, /setVersion\("3\.15\.0"\)/);
 });

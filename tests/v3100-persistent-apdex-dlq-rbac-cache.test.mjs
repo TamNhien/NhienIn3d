@@ -7,13 +7,13 @@ test("v3.10.0 dong bo version runtime browser CI va migration moi", () => {
   const pkg = JSON.parse(read("package.json"));
   const ci = read(".github/workflows/ci.yml");
   const runtime = read("scripts/e2e-runtime-v3100.ps1");
-  assert.equal(read("VERSION").trim(), "3.14.0");
-  assert.equal(pkg.version, "3.14.0");
-  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3140.mjs");
+  assert.equal(read("VERSION").trim(), "3.15.0");
+  assert.equal(pkg.version, "3.15.0");
+  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3150.mjs");
   assert.equal(existsSync("scripts/e2e-runtime-v3100.ps1"), true);
   assert.equal(existsSync("scripts/e2e-browser-v3100.mjs"), true);
-  assert.match(ci, /e2e-runtime-v3140\.ps1/);
-  assert.match(ci, /Browser E2E Admin HTTPS v3\.14\.0/);
+  assert.match(ci, /e2e-runtime-v3150\.ps1/);
+  assert.match(ci, /Browser E2E Admin HTTPS v3\.15\.0/);
   assert.match(runtime, /202609010003_v3100_ops_persistence_dlq_oncall/);
   assert.doesNotMatch(runtime, /202609010002_v3100_ops_search_metrics/);
 });

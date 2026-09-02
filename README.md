@@ -1,7 +1,7 @@
-# NhienIn3d
+﻿# NhienIn3d
 
-> Phiên bản hiện tại: **v3.14.0** — 02/09/2026
-- **Probe key lifecycle + quorum alert + Maintenance UX v3.14.0**: Ed25519 public-key descriptor có revoke/not-before/expiry, cảnh báo quorum/anomaly đi chung pipeline alert/escalation, Docker wiring đầy đủ và nút Thêm window chuyển sang dark compact.
+> Phiên bản hiện tại: **v3.15.0** — 02/09/2026
+- **Secure probe enrollment + service blast radius + grouped verification v3.15.0**: Admin cấp enrollment token một lần để agent tự đăng ký Ed25519 public key, quorum tính cả region đã enroll, Ops tương quan service dependency/blast radius và gom toàn bộ chuỗi kiểm thử vào 1 lệnh local hoặc 1 lệnh full.
 
 NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **frontend Next.js** và **backend NestJS/Fastify** kết nối **PostgreSQL qua Prisma**.
 
@@ -19,13 +19,15 @@ NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **fro
 
 ## Điểm chính bản hiện tại
 
-- **Ed25519 key lifecycle v3.14**: `SYSTEM_SLO_AGENT_PUBLIC_KEYS_JSON` giữ tương thích string/array v3.13 và nhận descriptor `key_id/public_key/status/not_before/expires_at/revoked`; verifier chỉ dùng key đang hiệu lực và từ chối key revoked/expired/not-yet-valid.
-- **Rotation/expiry observability**: Managed probe fleet trả số key active/revoked/expired/not-yet-valid/expiring-soon theo metadata an toàn, không trả raw public/private key; `SYSTEM_SLO_AGENT_KEY_EXPIRY_WARN_DAYS` điều khiển ngưỡng cảnh báo hết hạn.
-- **Quorum alert chủ động**: `SYSTEM_SLO_QUORUM_ALERT_ENABLED=true` đưa `OUTAGE/DEGRADED`, region disagreement và anomaly vào pipeline cảnh báo hệ thống hiện có, kế thừa silence/escalation/on-call/email/webhook và tự suppress trong maintenance window.
-- **Docker env wiring hoàn chỉnh**: API container nhận Ed25519 keyring, quorum window/min-regions/healthy-percent, anomaly config và lifecycle/alert settings; tránh trường hợp local `.env` có cấu hình nhưng container không thấy.
-- **Maintenance UX**: nút **Thêm window** trên Ops Dashboard dùng dark compact action, hover/focus rõ, không còn nền trắng quá sáng; responsive grid cũ được giữ nguyên.
-- **Managed probe fleet + multi-region quorum**: toàn bộ HMAC/Ed25519, keepalive, quorum/anomaly v3.11-v3.13 vẫn tương thích.
-- **Database**: v3.14.0 không thêm migration; tiếp tục dùng 23 migrations, migration mới nhất `202609020001_v3110_distributed_probe_dlq_keyring_oncall_archive`. Runtime/browser dùng `scripts/e2e-runtime-v3140.ps1` / `scripts/e2e-browser-v3140.mjs`; CI/Health/OpenAPI đồng bộ **v3.14.0**.
+- **Verify full SHA-256 compatibility hotfix**: `backup-db.ps1`, `backup-verify.ps1` và runtime backup/restore E2E tự fallback sang .NET SHA-256 khi host PowerShell không có cmdlet `Get-FileHash`; giữ nguyên file `.sha256.txt` và quy trình verify backup.
+- **Probe self-enrollment v3.15**: Admin tạo enrollment token HMAC có TTL và identity binding; token chỉ hiển thị một lần, chống replay bằng `slo_probe_nonce`. Agent tự sinh Ed25519 private key tại node và chỉ gửi public key về `POST /api/v1/probe-agent/enroll`.
+- **Enrolled key persistence**: public key đã enroll được lưu trong metadata hiện có của `slo_probe_agent`, được bảo toàn qua heartbeat/ingest và dùng trực tiếp để verify `ED25519-ENROLLED-v3150`; không lưu private key và không cần migration mới.
+- **Managed fleet động**: agent self-enrolled được tự bổ sung vào fleet với nguồn `ENROLLED`; region của agent enrolled cũng tham gia multi-region quorum thay vì phải khai báo lại profile tĩnh.
+- **Service dependency + blast radius**: `SYSTEM_OPS_SERVICE_DEPENDENCIES_JSON` mô tả dependency giữa service, `SYSTEM_SLO_ENDPOINT_SERVICE_MAP_JSON` ánh xạ endpoint → service; Ops runtime tính root failure, service bị ảnh hưởng bắc cầu và severity `OK/WARNING/CRITICAL` từ quorum.
+- **Ops Dashboard**: thêm panel compact **Service dependency · blast radius**; Managed Probe Fleet hiển thị số Ed25519 key self-enrolled và trạng thái enrollment mà không trả raw token/private key.
+- **Gom lệnh test**: `npm run verify` chạy install → security:mysql2 → audit → toàn bộ test → typecheck → build. `npm run verify:full` chạy thêm backup DB → Docker build/up → migration log → Runtime E2E → Browser E2E.
+- **Tương thích ngược**: giữ HMAC v3.11, Managed Fleet v3.12, Ed25519/quorum v3.13 và lifecycle/alert/Maintenance dark UI v3.14.
+- **Database**: v3.15.0 không thêm migration; tiếp tục dùng 23 migrations, migration mới nhất `202609020001_v3110_distributed_probe_dlq_keyring_oncall_archive`. Runtime/browser dùng `scripts/e2e-runtime-v3150.ps1` / `scripts/e2e-browser-v3150.mjs`; CI/Health/OpenAPI đồng bộ **v3.15.0**.
 
 ## Tài khoản và bảo mật
 
@@ -1493,11 +1495,23 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 - Không thêm migration; tiếp tục 23 migrations. Runtime/Browser E2E, CI, Health/OpenAPI và package version đồng bộ **v3.14.0**.
 - Quy trình release: `npm install` → `npm run security:mysql2` → `npm audit` → `npm test` → `npm run typecheck` → `npm run build` → Docker → `./scripts/e2e-runtime-v3140.ps1` → `npm run e2e:browser` → `./scripts/release.ps1 v3.14.0`.
 
+## v3.15.0 — 02/09/2026
+
+- Thêm **secure probe self-enrollment**: Admin mint token HMAC có TTL/identity binding; public endpoint enroll chỉ nhận token + identity + Ed25519 public key, không nhận private key.
+- Enrollment token chống replay bằng bảng `slo_probe_nonce` hiện có; public key tự enroll được giữ trong `slo_probe_agent.metadata.enrollment_v3150`, bảo toàn qua heartbeat/ingest và dùng để verify `ED25519-ENROLLED-v3150`.
+- Agent enrolled tự tham gia **Managed Probe Fleet** với nguồn `ENROLLED`; các region enrolled được đưa vào expected-region universe của multi-region quorum.
+- Thêm **service dependency map + blast-radius correlation**: endpoint lỗi/quorum degradation được ánh xạ tới service gốc rồi lan truyền qua reverse dependency để xác định service ảnh hưởng và severity.
+- Ops Dashboard thêm panel compact **Service dependency · blast radius**, đồng thời hiển thị enrollment readiness/số enrolled public keys mà không lộ token/private key.
+- Thêm `scripts/probe-enroll-v3150.mjs`, `scripts/probe-enrollment-token-v3150.ps1`, `scripts/e2e-runtime-v3150.ps1`, `scripts/e2e-browser-v3150.mjs` và đồng bộ CI/Health/OpenAPI v3.15.0.
+- Gom chuỗi kiểm thử thành **2 lệnh chính**: `npm run verify` cho local quality gate; `npm run verify:full` cho backup + Docker + migration + Runtime/Browser E2E. Hai alias versioned `verify:v315`/`verify:full:v315` vẫn được giữ để khóa contract release.
+- Không thêm migration; tiếp tục 23 migrations và giữ toàn bộ HMAC/Ed25519 lifecycle/quorum alert/Maintenance dark UI từ v3.11-v3.14.
+- Hotfix `verify:full`: Runtime backup/restore restore từ chính dump đã copy về host, dùng `pg_restore --exit-on-error --single-transaction`; sentinel query được gửi qua **stdin của psql** thay vì nhét SQL vào `sh -lc ... -c`, tránh Windows PowerShell 5.1 làm mất quote khiến `verify=` rỗng.
+- Hotfix Runtime E2E Admin auth: Windows PowerShell 5.1 có thể không gửi `Cookie` khi gắn qua `-Headers`; runtime nay tạo `WebRequestSession` loopback riêng, nạp access token vào `CookieContainer` dạng non-Secure cho HTTP localhost rồi vẫn để API xác minh JWT/session/ADMIN như runtime thật.
+
 # Lộ trình tiếp theo
 
-## v3.15.0
+## v3.16.0
 
-- Probe enrollment token/self-service provisioning hoặc mTLS cho node mới.
-- Service dependency map + blast-radius correlation cho quorum/burn-rate alerts.
 - Archive export S3-compatible, restore/replay từng partition và retention class.
 - On-call calendar import/export, override/absence, handoff report và escalation acknowledgment.
+- Enrollment hardening tùy chọn bằng mTLS/device identity và rotation policy theo fleet.

@@ -126,7 +126,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     setTimeout(cleanupOps, 120_000).unref();
     this.bo_hen_ops_retention = setInterval(cleanupOps, 6 * 60 * 60_000);
     this.bo_hen_ops_retention.unref();
-    this.logger.log(`Ops v3.14.0 schedulers: DLQ ${dlqPolicy.chu_ky_phut}m, metrics ${opsPolicy.refresh_phut}m, retention ${opsPolicy.retention_days}d.`);
+    this.logger.log(`Ops v3.15.0 schedulers: DLQ ${dlqPolicy.chu_ky_phut}m, metrics ${opsPolicy.refresh_phut}m, retention ${opsPolicy.retention_days}d.`);
   }
 
   onModuleDestroy() {
@@ -618,7 +618,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     for (let index = 0; index <= cau_hinh.max_retries; index++) {
       const lan_thu = index + 1;
       const timestamp = String(Math.floor(Date.now() / 1000));
-      const headers: Record<string, string> = { "content-type": "application/json", "user-agent": "NhienIn3d-Ops/3.14.0", "x-nhienin3d-timestamp": timestamp, "x-nhienin3d-adapter": cau_hinh.adapter };
+      const headers: Record<string, string> = { "content-type": "application/json", "user-agent": "NhienIn3d-Ops/3.15.0", "x-nhienin3d-timestamp": timestamp, "x-nhienin3d-adapter": cau_hinh.adapter };
       if (token) headers.authorization = `Bearer ${token}`;
       if (secret) headers["x-nhienin3d-signature"] = `sha256=${createHmac("sha256", secret).update(`${timestamp}.${body}`).digest("hex")}`;
       const bat_dau = performance.now();
@@ -872,11 +872,11 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       cached = cache?.gia_tri && typeof cache.gia_tri === "object" && !Array.isArray(cache.gia_tri) ? cache.gia_tri as Record<string, unknown> : null;
       endpoint_samples = countSamples; assignments = countAssignments;
     } catch {}
-    return { phien_ban: "3.14.0", probe_agent: agent, endpoint_samples, dlq: { ...dlq, payload_encryption_ready: !!crypto, key_id: crypto?.key_id || null, key_source: crypto?.nguon || null }, ops_metrics: { ...scheduler, cache: cached }, rbac: { active_assignments: assignments, roles: ["OPS_VIEWER", "ON_CALL", "SERVICE_OWNER"] } };
+    return { phien_ban: "3.15.0", probe_agent: agent, endpoint_samples, dlq: { ...dlq, payload_encryption_ready: !!crypto, key_id: crypto?.key_id || null, key_source: crypto?.nguon || null }, ops_metrics: { ...scheduler, cache: cached }, rbac: { active_assignments: assignments, roles: ["OPS_VIEWER", "ON_CALL", "SERVICE_OWNER"] } };
   }
 
   private tao_headers_slo_endpoint(endpoint: SloEndpointCheckV390) {
-    const headers: Record<string, string> = { "user-agent": "NhienIn3d-SLO-Probe/3.14.0" };
+    const headers: Record<string, string> = { "user-agent": "NhienIn3d-SLO-Probe/3.15.0" };
     const resolveTemplate = (value: string) => value.replace(/\$\{ENV:([A-Z][A-Z0-9_]*)\}/g, (_all, name: string) => process.env[name] || "");
     for (const [nameRaw, valueRaw] of Object.entries(endpoint.headers || {})) {
       const name = nameRaw.trim().toLowerCase();
@@ -1026,7 +1026,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const trang_thai = !database.ket_noi ? "LOI" : (van_de.length ? "CANH_BAO" : "TOT");
     const ket_qua = {
       trang_thai,
-      phien_ban: "3.14.0",
+      phien_ban: "3.15.0",
       thoi_gian: new Date().toISOString(),
       api: { uptime_giay: Math.floor(process.uptime()), node: process.version, pid: process.pid, rss_bytes: bo_nho.rss, heap_used_bytes: bo_nho.heapUsed, heap_total_bytes: bo_nho.heapTotal },
       database,
@@ -1152,7 +1152,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const webhook = onCallRouting.kenh === "EMAIL" && onCallRouting.people.length
       ? { da_gui: false, ly_do: "Escalation policy hiện tại chỉ định EMAIL", so_lan_thu: 0, adapter: this.cau_hinh_webhook_canh_bao().adapter }
       : await this.gui_webhook_canh_bao({
-          event: "nhienin3d.system.alert", version: "3.14.0", trang_thai: trang_thai_canh_bao, chu_ky, dich_vu, van_de, thoi_gian: health.thoi_gian, cap_leo_thang, ton_tai_phut, on_call: onCallRouting
+          event: "nhienin3d.system.alert", version: "3.15.0", trang_thai: trang_thai_canh_bao, chu_ky, dich_vu, van_de, thoi_gian: health.thoi_gian, cap_leo_thang, ton_tai_phut, on_call: onCallRouting
         });
     const da_gui = email.da_gui || webhook.da_gui;
     if (!da_gui) return { da_gui: false, ly_do: `Không có kênh cảnh báo gửi thành công. Email: ${email.ly_do || "không gửi"}; Webhook: ${webhook.ly_do || "không gửi"}`, van_de, cap_leo_thang, ton_tai_phut, email, webhook, bao_tri };
@@ -1254,7 +1254,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       this.danh_sach_su_co_van_hanh("100", trangThaiXuLyRaw, tuNgayRaw, denNgayRaw)
     ]);
     const rows: unknown[][] = [
-      ["NhienIn3d Ops Dashboard v3.14.0"],
+      ["NhienIn3d Ops Dashboard v3.15.0"],
       ["Tạo lúc", new Date().toISOString()],
       ["Bộ lọc incident", `${tuNgayRaw || "*"} → ${denNgayRaw || "*"} · ${trangThaiXuLyRaw || "Tất cả"}`],
       [],
@@ -1282,7 +1282,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     for (const item of sla.burn_rate_policy) rows.push([item.gio, item.nguong, item.muc_do, item.sla.burn_rate ?? "", item.uptime.burn_rate ?? ""]);
     rows.push([], ["Incident"], ["Chữ ký", "Trạng thái", "Vấn đề", "Bắt đầu", "Gần nhất", "Sự kiện", "Tiếp nhận", "Khắc phục"]);
     for (const item of incidents.du_lieu) rows.push([item.chu_ky, item.trang_thai_xu_ly, item.van_de.join(" | "), item.bat_dau.toISOString(), item.gan_nhat.toISOString(), item.so_su_kien, item.tiep_nhan_luc?.toISOString() || "", item.khac_phuc_luc?.toISOString() || ""]);
-    const buffer = this.tao_xlsx(rows, "Ops v3.14.0");
+    const buffer = this.tao_xlsx(rows, "Ops v3.15.0");
     return { ten_file: `ops-slo-incident-${new Date().toISOString().slice(0, 10)}.xlsx`, mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", base64: buffer.toString("base64") };
   }
 
@@ -1635,6 +1635,111 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     return { keys: selectedKeys, summary, configured: selectedKeys.length > 0, active: summary.active_keys > 0, source: rawMap ? "ED25519_PUBLIC_KEYRING" : "UNCONFIGURED" };
   }
 
+  private cau_hinh_probe_enrollment_v3150() {
+    const secret = process.env.SYSTEM_SLO_ENROLLMENT_SECRET?.trim() || "";
+    const ttlRaw = Number.parseInt(process.env.SYSTEM_SLO_ENROLLMENT_TTL_MINUTES || "30", 10) || 30;
+    return { secret, configured: secret.length >= 32, ttl_minutes: Math.max(5, Math.min(1440, ttlRaw)) };
+  }
+
+  private probe_enrollment_metadata_v3150(metadata: Prisma.JsonValue | null | undefined) {
+    if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return null;
+    const root = metadata as Record<string, unknown>;
+    const raw = root.enrollment_v3150;
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+    const value = raw as Record<string, unknown>;
+    const public_key = typeof value.public_key === "string" ? value.public_key.replace(/\\n/g, "\n").trim() : "";
+    const key_id = typeof value.key_id === "string" ? value.key_id.trim() : "";
+    if (!public_key.includes("BEGIN PUBLIC KEY") || !/^[A-Za-z0-9._-]{1,80}$/.test(key_id)) return null;
+    return {
+      key_id,
+      public_key,
+      enrolled_at: typeof value.enrolled_at === "string" ? value.enrolled_at : null,
+      token_id: typeof value.token_id === "string" ? value.token_id : null,
+      managed: value.managed !== false,
+    };
+  }
+
+  async tao_probe_enrollment_token_v3150(
+    actor: NguoiDungXacThuc,
+    dto: { agent_id: string; region: string; node_name: string; expires_minutes?: number },
+  ) {
+    const config = this.cau_hinh_probe_enrollment_v3150();
+    if (!config.configured) throw new BadRequestException("SYSTEM_SLO_ENROLLMENT_SECRET phải có ít nhất 32 ký tự để tạo enrollment token");
+    const agent_id = dto.agent_id.trim();
+    const region = dto.region.trim();
+    const node_name = dto.node_name.trim();
+    if (!/^[A-Za-z0-9._-]{2,80}$/.test(agent_id)) throw new BadRequestException("agent_id enrollment không hợp lệ");
+    if (!region || region.length > 80) throw new BadRequestException("region enrollment không hợp lệ");
+    if (!node_name || node_name.length > 120) throw new BadRequestException("node_name enrollment không hợp lệ");
+    const ttl = Math.max(5, Math.min(1440, dto.expires_minutes || config.ttl_minutes));
+    const now = Math.floor(Date.now() / 1000);
+    const payload = { v: 1, jti: randomBytes(16).toString("hex"), agent_id, region, node_name, iat: now, exp: now + ttl * 60 };
+    const encoded = Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
+    const signature = createHmac("sha256", config.secret).update(encoded).digest("base64url");
+    const token = `nh3d-enroll-v1.${encoded}.${signature}`;
+    await this.ghi_lich_su_van_hanh("PROBE_ENROLLMENT", "DA_TAO", `Admin ${actor.ho_ten} tạo probe enrollment token`, {
+      agent_id, region, node_name, expires_minutes: ttl, token_id: payload.jti, token_visible_once: true,
+    });
+    return { token, agent_id, region, node_name, expires_at: new Date(payload.exp * 1000).toISOString(), token_visible_once: true, secret_values_exposed: false };
+  }
+
+  private xac_thuc_probe_enrollment_token_v3150(tokenRaw: string) {
+    const config = this.cau_hinh_probe_enrollment_v3150();
+    if (!config.configured) throw new ForbiddenException("Probe enrollment chưa được cấu hình");
+    const token = tokenRaw.trim();
+    const parts = token.split(".");
+    if (parts.length !== 3 || parts[0] !== "nh3d-enroll-v1") throw new ForbiddenException("Probe enrollment token không hợp lệ");
+    const encoded = parts[1];
+    const actual = Buffer.from(parts[2], "base64url");
+    const expected = createHmac("sha256", config.secret).update(encoded).digest();
+    if (actual.length !== expected.length || !timingSafeEqual(actual, expected)) throw new ForbiddenException("Probe enrollment token signature không hợp lệ");
+    let payload: Record<string, unknown>;
+    try { payload = JSON.parse(Buffer.from(encoded, "base64url").toString("utf8")) as Record<string, unknown>; }
+    catch { throw new ForbiddenException("Probe enrollment token payload không hợp lệ"); }
+    const agent_id = String(payload.agent_id || "");
+    const region = String(payload.region || "");
+    const node_name = String(payload.node_name || "");
+    const jti = String(payload.jti || "");
+    const iat = Number(payload.iat);
+    const exp = Number(payload.exp);
+    const now = Math.floor(Date.now() / 1000);
+    if (!/^[A-Za-z0-9._-]{2,80}$/.test(agent_id) || !/^[a-f0-9]{32}$/.test(jti) || !Number.isFinite(iat) || !Number.isFinite(exp)) throw new ForbiddenException("Probe enrollment token claims không hợp lệ");
+    if (iat > now + 60 || exp <= now || exp - iat > 86_400) throw new ForbiddenException("Probe enrollment token đã hết hạn hoặc thời hạn không hợp lệ");
+    return { agent_id, region, node_name, jti, iat, exp };
+  }
+
+  async probe_agent_enroll_v3150(dto: { token: string; agent_id: string; region: string; node_name: string; key_id: string; public_key: string }) {
+    const claims = this.xac_thuc_probe_enrollment_token_v3150(dto.token);
+    const agent_id = dto.agent_id.trim();
+    const region = dto.region.trim();
+    const node_name = dto.node_name.trim();
+    const key_id = dto.key_id.trim();
+    const public_key = dto.public_key.replace(/\\n/g, "\n").trim();
+    if (agent_id !== claims.agent_id || region !== claims.region || node_name !== claims.node_name) throw new ForbiddenException("Probe enrollment identity không khớp token");
+    if (!/^[A-Za-z0-9._-]{1,80}$/.test(key_id)) throw new BadRequestException("Probe enrollment key_id không hợp lệ");
+    if (!public_key.includes("BEGIN PUBLIC KEY") || public_key.length > 4096) throw new BadRequestException("Probe enrollment public key không hợp lệ");
+    try { verifySignature(null, Buffer.from("nhienin3d-enrollment-key-check", "utf8"), public_key, Buffer.alloc(64)); }
+    catch { throw new BadRequestException("Probe enrollment public key không parse được"); }
+
+    try {
+      await this.db.sloProbeNonce.deleteMany({ where: { het_han_luc: { lt: new Date() } } });
+      await this.db.sloProbeNonce.create({ data: { agent_id, nonce: `enroll-${claims.jti}`, het_han_luc: new Date(claims.exp * 1000) } });
+    } catch {
+      throw new ForbiddenException("Probe enrollment token đã được sử dụng");
+    }
+
+    const existing = await this.db.sloProbeAgent.findUnique({ where: { agent_id }, select: { metadata: true } });
+    const oldMeta = existing?.metadata && typeof existing.metadata === "object" && !Array.isArray(existing.metadata) ? existing.metadata as Record<string, unknown> : {};
+    const enrollment_v3150 = { key_id, public_key, enrolled_at: new Date().toISOString(), token_id: claims.jti, managed: true };
+    await this.db.sloProbeAgent.upsert({
+      where: { agent_id },
+      create: { agent_id, region, node_name, phien_ban: "3.15.0", trang_thai: "ENROLLED", lan_heartbeat: new Date(0), metadata: this.chuan_hoa_json_object({ ...oldMeta, enrollment_v3150 }) },
+      update: { region, node_name, metadata: this.chuan_hoa_json_object({ ...oldMeta, enrollment_v3150 }) },
+    });
+    await this.ghi_lich_su_van_hanh("PROBE_ENROLLMENT", "THANH_CONG", "Probe agent đã enroll Ed25519 public key", { agent_id, region, node_name, key_id, token_id: claims.jti, private_key_exposed: false });
+    return { enrolled: true, agent_id, region, node_name, key_id, protocol: "ED25519-ENROLL-v3150", private_key_exposed: false };
+  }
+
   private async xac_thuc_probe_agent_v3110(
     headers: { agent?: string; timestamp?: string; nonce?: string; signature?: string; algorithm?: string },
     body: Record<string, unknown>,
@@ -1659,17 +1764,24 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     if (algorithm === "ED25519") {
       if (!/^[A-Za-z0-9+/=]{80,120}$/.test(signatureRaw)) throw new ForbiddenException("Probe agent Ed25519 signature không hợp lệ");
       const publicKeys = this.cau_hinh_probe_agent_public_keys_v3140(agent);
-      if (!publicKeys.configured) throw new ForbiddenException("Probe agent Ed25519 public key chưa được cấu hình");
-      if (!publicKeys.active) throw new ForbiddenException("Probe agent Ed25519 không có public key đang hiệu lực");
+      const enrolledRow = await this.db.sloProbeAgent.findUnique({ where: { agent_id: agent }, select: { metadata: true } });
+      const enrolledKey = this.probe_enrollment_metadata_v3150(enrolledRow?.metadata);
+      if (!publicKeys.configured && !enrolledKey) throw new ForbiddenException("Probe agent Ed25519 public key chưa được cấu hình hoặc enroll");
+      if (publicKeys.configured && !publicKeys.active && !enrolledKey) throw new ForbiddenException("Probe agent Ed25519 không có public key đang hiệu lực");
       const signature = Buffer.from(signatureRaw, "base64");
       let valid = false;
       for (const publicKey of publicKeys.keys.filter(key => key.active)) {
         try {
-          if (verifySignature(null, Buffer.from(canonical, "utf8"), publicKey.public_key, signature)) { valid = true; break; }
+          if (verifySignature(null, Buffer.from(canonical, "utf8"), publicKey.public_key, signature)) { valid = true; protocol = "ED25519-v3140"; break; }
+        } catch {}
+      }
+      if (!valid && enrolledKey) {
+        try {
+          valid = verifySignature(null, Buffer.from(canonical, "utf8"), enrolledKey.public_key, signature);
+          if (valid) protocol = "ED25519-ENROLLED-v3150";
         } catch {}
       }
       if (!valid) throw new ForbiddenException("Probe agent Ed25519 signature không hợp lệ");
-      protocol = "ED25519-v3140";
     } else {
       const signature = signatureRaw.toLowerCase();
       if (!/^[a-f0-9]{64}$/.test(signature)) throw new ForbiddenException("Probe agent signature không hợp lệ");
@@ -1697,7 +1809,9 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const region = dto.region.trim().slice(0, 80) || "unknown";
     const node_name = dto.node_name.trim().slice(0, 120) || dto.agent_id;
     const now = new Date();
-    const metadata = this.chuan_hoa_json_object(dto.metadata || {});
+    const current = await this.db.sloProbeAgent.findUnique({ where: { agent_id: dto.agent_id }, select: { metadata: true } });
+    const enrolled = this.probe_enrollment_metadata_v3150(current?.metadata);
+    const metadata = this.chuan_hoa_json_object({ ...(dto.metadata || {}), ...(enrolled ? { enrollment_v3150: enrolled } : {}) });
     await this.db.sloProbeAgent.upsert({
       where: { agent_id: dto.agent_id },
       create: { agent_id: dto.agent_id, region, node_name, phien_ban: dto.phien_ban?.trim().slice(0, 40) || null, trang_thai: "ONLINE", lan_heartbeat: now, metadata },
@@ -1725,12 +1839,15 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       const apdex_bucket = sample.trang_thai !== "TOT" || do_tre_ms > latency_target_ms * 4 ? "FRUSTRATED" : do_tre_ms <= latency_target_ms ? "SATISFIED" : "TOLERATING";
       return { endpoint_id, agent_id: dto.agent_id, region, node_name, trang_thai: sample.trang_thai, http_status: sample.http_status ?? null, do_tre_ms, latency_target_ms, apdex_t_ms: latency_target_ms, apdex_bucket, maintenance_active: sample.maintenance_active === true, ngay_tao };
     });
+    const current = await this.db.sloProbeAgent.findUnique({ where: { agent_id: dto.agent_id }, select: { metadata: true } });
+    const enrolled = this.probe_enrollment_metadata_v3150(current?.metadata);
+    const metadata = this.chuan_hoa_json_object({ ...(dto.metadata || {}), ...(enrolled ? { enrollment_v3150: enrolled } : {}) });
     await this.db.$transaction([
       this.db.sloEndpointMau.createMany({ data: samples }),
       this.db.sloProbeAgent.upsert({
         where: { agent_id: dto.agent_id },
-        create: { agent_id: dto.agent_id, region, node_name, phien_ban: dto.phien_ban?.trim().slice(0, 40) || null, trang_thai: "ONLINE", lan_heartbeat: now, lan_mau: now, metadata: this.chuan_hoa_json_object(dto.metadata || {}) },
-        update: { region, node_name, phien_ban: dto.phien_ban?.trim().slice(0, 40) || null, trang_thai: "ONLINE", lan_heartbeat: now, lan_mau: now, metadata: this.chuan_hoa_json_object(dto.metadata || {}) },
+        create: { agent_id: dto.agent_id, region, node_name, phien_ban: dto.phien_ban?.trim().slice(0, 40) || null, trang_thai: "ONLINE", lan_heartbeat: now, lan_mau: now, metadata },
+        update: { region, node_name, phien_ban: dto.phien_ban?.trim().slice(0, 40) || null, trang_thai: "ONLINE", lan_heartbeat: now, lan_mau: now, metadata },
       }),
     ]);
     return { da_nhan: true, agent_id: dto.agent_id, so_mau: samples.length, server_time: now.toISOString(), protocol: auth.protocol };
@@ -1770,7 +1887,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
           if (resolved.length >= 16) key_ids.push(agent_id);
         }
       } catch (error) {
-        this.logger.warn(`SYSTEM_SLO_AGENT_KEYS_JSON không hợp lệ cho probe fleet v3.14.0: ${error instanceof Error ? error.message : String(error)}`);
+        this.logger.warn(`SYSTEM_SLO_AGENT_KEYS_JSON không hợp lệ cho probe fleet v3.15.0: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
     key_ids.sort();
@@ -1826,7 +1943,17 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       const byId = new Map(rows.map(row => [row.agent_id, row]));
       const keySet = new Set(config.key_ids);
       const publicKeySet = new Set(config.public_key_ids);
-      const profileSet = new Set(config.profiles.map(x => x.agent_id));
+      type EffectiveProfileV3150 = { agent_id: string; region: string | null; node_name: string | null; required: boolean; source: "PROFILE" | "KEYRING" | "ENROLLED" };
+      const effectiveProfiles: EffectiveProfileV3150[] = config.profiles.map(x => ({ ...x }));
+      const effectiveIds = new Set(effectiveProfiles.map(x => x.agent_id));
+      for (const row of rows) {
+        const enrolled = this.probe_enrollment_metadata_v3150(row.metadata);
+        if (enrolled?.managed && !effectiveIds.has(row.agent_id)) {
+          effectiveProfiles.push({ agent_id: row.agent_id, region: row.region, node_name: row.node_name, required: true, source: "ENROLLED" });
+          effectiveIds.add(row.agent_id);
+        }
+      }
+      const profileSet = new Set(effectiveProfiles.map(x => x.agent_id));
       const now = Date.now();
       const statusFor = (heartbeat: Date | null) => {
         if (!heartbeat) return { status: "MISSING" as const, age: null as number | null };
@@ -1836,14 +1963,15 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
         return { status: "OFFLINE" as const, age };
       };
 
-      const managed = config.profiles.map(profile => {
+      const managed = effectiveProfiles.map(profile => {
         const row = byId.get(profile.agent_id);
         const state = statusFor(row?.lan_heartbeat || null);
         const per_agent_key = keySet.has(profile.agent_id);
-        const asymmetric_key = publicKeySet.has(profile.agent_id);
+        const enrolledKey = this.probe_enrollment_metadata_v3150(row?.metadata);
+        const asymmetric_key = publicKeySet.has(profile.agent_id) || !!enrolledKey;
         const lifecycleKeys = config.public_key_lifecycle.filter(key => key.agent_id === profile.agent_id);
-        const asymmetric_key_count = lifecycleKeys.length;
-        const asymmetric_active_keys = lifecycleKeys.filter(key => key.active).length;
+        const asymmetric_key_count = lifecycleKeys.length + (enrolledKey ? 1 : 0);
+        const asymmetric_active_keys = lifecycleKeys.filter(key => key.active).length + (enrolledKey ? 1 : 0);
         const asymmetric_revoked_keys = lifecycleKeys.filter(key => key.revoked).length;
         const asymmetric_expired_keys = lifecycleKeys.filter(key => key.expired).length;
         const asymmetric_expiring_soon = lifecycleKeys.filter(key => key.active && key.expiring_soon).length;
@@ -1887,10 +2015,11 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       const unmanaged = rows.filter(row => !profileSet.has(row.agent_id)).map(row => {
         const state = statusFor(row.lan_heartbeat);
         const lifecycleKeys = config.public_key_lifecycle.filter(key => key.agent_id === row.agent_id);
+        const enrolledKey = this.probe_enrollment_metadata_v3150(row.metadata);
         return {
           agent_id: row.agent_id, required: false, managed: false, source: "UNMANAGED" as const,
-          key_configured: keySet.has(row.agent_id) || publicKeySet.has(row.agent_id) || config.shared_secret_enabled, per_agent_key: keySet.has(row.agent_id), asymmetric_key: publicKeySet.has(row.agent_id),
-          asymmetric_key_count: lifecycleKeys.length, asymmetric_active_keys: lifecycleKeys.filter(key => key.active).length, asymmetric_revoked_keys: lifecycleKeys.filter(key => key.revoked).length,
+          key_configured: keySet.has(row.agent_id) || publicKeySet.has(row.agent_id) || !!enrolledKey || config.shared_secret_enabled, per_agent_key: keySet.has(row.agent_id), asymmetric_key: publicKeySet.has(row.agent_id) || !!enrolledKey,
+          asymmetric_key_count: lifecycleKeys.length + (enrolledKey ? 1 : 0), asymmetric_active_keys: lifecycleKeys.filter(key => key.active).length + (enrolledKey ? 1 : 0), asymmetric_revoked_keys: lifecycleKeys.filter(key => key.revoked).length,
           asymmetric_expired_keys: lifecycleKeys.filter(key => key.expired).length, asymmetric_expiring_soon: lifecycleKeys.filter(key => key.active && key.expiring_soon).length, registered: true,
           status: state.status, heartbeat_age_seconds: state.age, expected_region: null, expected_node_name: null, region: row.region, node_name: row.node_name, phien_ban: row.phien_ban, lan_heartbeat: row.lan_heartbeat, lan_mau: row.lan_mau, warnings: ["UNMANAGED_AGENT"],
         };
@@ -1907,14 +2036,15 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       const percent = (value: number) => requiredCount ? Math.round((value / requiredCount) * 10_000) / 100 : 100;
       const warnings = [...new Set([...managed, ...unmanaged].flatMap(x => x.warnings))];
       return {
-        phien_ban: "3.14.0",
-        mode: config.mode,
+        phien_ban: "3.15.0",
+        mode: config.mode === "UNCONFIGURED" && effectiveProfiles.some(profile => profile.source === "ENROLLED") ? "ENROLLED" : config.mode,
         stale_after_seconds: config.stale_after_seconds,
         offline_after_seconds: config.offline_after_seconds,
         expected: requiredCount,
-        configured_profiles: config.profiles.length,
+        configured_profiles: effectiveProfiles.length,
         per_agent_keys: config.key_ids.length,
-        asymmetric_public_keys: config.public_key_ids.length,
+        asymmetric_public_keys: new Set([...config.public_key_ids, ...rows.filter(row => !!this.probe_enrollment_metadata_v3150(row.metadata)).map(row => row.agent_id)]).size,
+        enrolled_public_keys: rows.filter(row => !!this.probe_enrollment_metadata_v3150(row.metadata)).length,
         asymmetric_key_lifecycle: { ...config.public_key_summary, secret_values_exposed: false },
         shared_secret_enabled: config.shared_secret_enabled,
         registered, online, stale, offline, missing, unmanaged: unmanaged.length,
@@ -1928,7 +2058,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       };
     } catch (error) {
       return {
-        phien_ban: "3.14.0", mode: config.mode, stale_after_seconds: config.stale_after_seconds, offline_after_seconds: config.offline_after_seconds,
+        phien_ban: "3.15.0", mode: config.mode, stale_after_seconds: config.stale_after_seconds, offline_after_seconds: config.offline_after_seconds,
         expected: config.profiles.filter(x => x.required).length, configured_profiles: config.profiles.length, per_agent_keys: config.key_ids.length, asymmetric_public_keys: config.public_key_ids.length, asymmetric_key_lifecycle: { ...config.public_key_summary, secret_values_exposed: false }, shared_secret_enabled: config.shared_secret_enabled,
         registered: 0, online: 0, stale: 0, offline: 0, missing: config.profiles.filter(x => x.required).length, unmanaged: 0,
         registration_coverage_percent: 0, online_coverage_percent: 0, key_coverage_percent: 0, ready: false, warnings: ["FLEET_STORE_UNAVAILABLE"], agents: [], secret_values_exposed: false,
@@ -1965,12 +2095,22 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const lookbackSeconds = Math.max(config.window_seconds, config.anomaly_lookback_minutes * 60);
     const since = new Date(Date.now() - lookbackSeconds * 1000);
     try {
-      const rows = await this.db.sloEndpointMau.findMany({
-        where: { ngay_tao: { gte: since } },
-        orderBy: { ngay_tao: "asc" },
-        select: { endpoint_id: true, agent_id: true, region: true, node_name: true, trang_thai: true, http_status: true, do_tre_ms: true, latency_target_ms: true, maintenance_active: true, ngay_tao: true },
-      });
-      const expectedRegions = [...new Set(fleetConfig.profiles.filter(x => x.required && x.region).map(x => x.region as string))].sort();
+      const [rows, registeredAgents] = await Promise.all([
+        this.db.sloEndpointMau.findMany({
+          where: { ngay_tao: { gte: since } },
+          orderBy: { ngay_tao: "asc" },
+          select: { endpoint_id: true, agent_id: true, region: true, node_name: true, trang_thai: true, http_status: true, do_tre_ms: true, latency_target_ms: true, maintenance_active: true, ngay_tao: true },
+        }),
+        this.db.sloProbeAgent.findMany({ select: { region: true, metadata: true } }),
+      ]);
+      const enrolledRegions = registeredAgents
+        .filter(agent => this.probe_enrollment_metadata_v3150(agent.metadata)?.managed)
+        .map(agent => agent.region)
+        .filter((region): region is string => Boolean(region));
+      const expectedRegions = [...new Set([
+        ...fleetConfig.profiles.filter(x => x.required && x.region).map(x => x.region as string),
+        ...enrolledRegions,
+      ])].sort();
       const endpointMap = new Map<string, typeof rows>();
       for (const row of rows) {
         const list = endpointMap.get(row.endpoint_id) || [];
@@ -2058,7 +2198,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       });
       const alert = { enabled: config.alert_enabled, active: config.alert_enabled && alertIssues.length > 0, level: endpoints.some(x => x.alert_level === "CRITICAL") ? "CRITICAL" : alertIssues.length ? "WARNING" : "OK", issues: alertIssues };
       return {
-        phien_ban: "3.14.0",
+        phien_ban: "3.15.0",
         config,
         expected_regions: expectedRegions,
         summary,
@@ -2068,7 +2208,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       };
     } catch (error) {
       return {
-        phien_ban: "3.14.0",
+        phien_ban: "3.15.0",
         config,
         expected_regions: [],
         summary: { endpoints: 0, quorum_ok: 0, degraded: 0, outage: 0, disagreements: 0, anomalies: 0 },
@@ -2078,6 +2218,94 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
         loi: error instanceof Error ? error.message : String(error),
       };
     }
+  }
+
+  private cau_hinh_service_dependency_v3150() {
+    const defaultDependencies: Record<string, string[]> = {
+      storefront: ["api"],
+      checkout: ["api", "postgresql"],
+      ops: ["api", "postgresql"],
+      api: ["postgresql"],
+      email: ["smtp"],
+      backup: ["postgresql"],
+    };
+    const parseMap = (raw: string | undefined, fallback: Record<string, string[]>) => {
+      if (!raw?.trim()) return fallback;
+      try {
+        const parsed = JSON.parse(raw) as Record<string, unknown>;
+        if (!parsed || Array.isArray(parsed) || typeof parsed !== "object") return fallback;
+        const result: Record<string, string[]> = {};
+        for (const [service, deps] of Object.entries(parsed)) {
+          if (!/^[A-Za-z0-9._-]{1,80}$/.test(service) || !Array.isArray(deps)) continue;
+          result[service] = [...new Set(deps.map(x => String(x).trim()).filter(x => /^[A-Za-z0-9._-]{1,80}$/.test(x)))];
+        }
+        return Object.keys(result).length ? result : fallback;
+      } catch (error) {
+        this.logger.warn(`SYSTEM_OPS_SERVICE_DEPENDENCIES_JSON không hợp lệ: ${error instanceof Error ? error.message : String(error)}`);
+        return fallback;
+      }
+    };
+    const dependencies = parseMap(process.env.SYSTEM_OPS_SERVICE_DEPENDENCIES_JSON, defaultDependencies);
+    let endpoint_services: Record<string, string> = { "public-health": "api" };
+    const rawEndpointMap = process.env.SYSTEM_SLO_ENDPOINT_SERVICE_MAP_JSON?.trim();
+    if (rawEndpointMap) {
+      try {
+        const parsed = JSON.parse(rawEndpointMap) as Record<string, unknown>;
+        const normalized: Record<string, string> = {};
+        for (const [endpoint, service] of Object.entries(parsed || {})) {
+          const value = String(service || "").trim();
+          if (/^[A-Za-z0-9._-]{1,80}$/.test(endpoint) && /^[A-Za-z0-9._-]{1,80}$/.test(value)) normalized[endpoint] = value;
+        }
+        if (Object.keys(normalized).length) endpoint_services = normalized;
+      } catch (error) {
+        this.logger.warn(`SYSTEM_SLO_ENDPOINT_SERVICE_MAP_JSON không hợp lệ: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+    return { dependencies, endpoint_services, source: process.env.SYSTEM_OPS_SERVICE_DEPENDENCIES_JSON?.trim() ? "ENV" : "DEFAULT" };
+  }
+
+  private phan_tich_blast_radius_v3150(quorum: { endpoints: Array<{ endpoint_id: string; consensus: string; alert_level?: string }> }) {
+    const config = this.cau_hinh_service_dependency_v3150();
+    const allServices = new Set<string>();
+    for (const [service, deps] of Object.entries(config.dependencies)) {
+      allServices.add(service); deps.forEach(dep => allServices.add(dep));
+    }
+    const reverse = new Map<string, string[]>();
+    for (const [service, deps] of Object.entries(config.dependencies)) {
+      for (const dep of deps) reverse.set(dep, [...(reverse.get(dep) || []), service]);
+    }
+    const impactedFrom = (root: string) => {
+      const seen = new Set<string>([root]);
+      const queue = [root];
+      while (queue.length) {
+        const current = queue.shift()!;
+        for (const dependent of reverse.get(current) || []) {
+          if (!seen.has(dependent)) { seen.add(dependent); queue.push(dependent); }
+        }
+      }
+      return [...seen].sort();
+    };
+    const failures = quorum.endpoints.filter(x => x.consensus !== "QUORUM_OK").map(endpoint => {
+      const root_service = config.endpoint_services[endpoint.endpoint_id] || "api";
+      return { endpoint_id: endpoint.endpoint_id, consensus: endpoint.consensus, alert_level: endpoint.alert_level || "WARNING", root_service, impacted_services: impactedFrom(root_service) };
+    });
+    const impacted = [...new Set(failures.flatMap(x => x.impacted_services))].sort();
+    const roots = [...new Set(failures.map(x => x.root_service))].sort();
+    const severity = failures.some(x => x.alert_level === "CRITICAL") ? "CRITICAL" : failures.length ? "WARNING" : "OK";
+    return {
+      phien_ban: "3.15.0",
+      configured: true,
+      source: config.source,
+      services: [...allServices].sort(),
+      dependencies: config.dependencies,
+      endpoint_services: config.endpoint_services,
+      root_failures: roots,
+      impacted_services: impacted,
+      blast_radius: impacted.length,
+      severity,
+      ready: failures.length === 0,
+      correlations: failures,
+    };
   }
 
   async thong_tin_dlq_keyring_v3110() {
@@ -2364,7 +2592,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
 
   async trang_thai_ops_v3120() {
     const [base, probe_fleet] = await Promise.all([this.trang_thai_ops_v3110(), this.suc_khoe_probe_fleet_v3120()]);
-    return { ...base, phien_ban: "3.14.0", probe_fleet };
+    return { ...base, phien_ban: "3.15.0", probe_fleet };
   }
 
   async trang_thai_ops_v3130() {
@@ -2376,7 +2604,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const keyring = this.cau_hinh_probe_agent_public_keys_v3140();
     return {
       ...base,
-      phien_ban: "3.14.0",
+      phien_ban: "3.15.0",
       multi_region_quorum,
       quorum_alerting: multi_region_quorum.alert,
       asymmetric_probe_signing: {
@@ -2386,6 +2614,22 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
         key_lifecycle: { ...keyring.summary, secret_values_exposed: false },
         secret_values_exposed: false,
       },
+    };
+  }
+
+  async trang_thai_ops_v3150() {
+    const base = await this.trang_thai_ops_v3140();
+    const service_dependency = this.phan_tich_blast_radius_v3150(base.multi_region_quorum);
+    const enrollment = this.cau_hinh_probe_enrollment_v3150();
+    const enrolledKeys = Number((base.probe_fleet as { enrolled_public_keys?: number } | undefined)?.enrolled_public_keys || 0);
+    return {
+      ...base,
+      phien_ban: "3.15.0",
+      probe_fleet: base.probe_fleet ? { ...base.probe_fleet, phien_ban: "3.15.0" } : base.probe_fleet,
+      multi_region_quorum: { ...base.multi_region_quorum, phien_ban: "3.15.0" },
+      service_dependency,
+      probe_enrollment: { configured: enrollment.configured, ttl_minutes: enrollment.ttl_minutes, enrolled_public_keys: enrolledKeys, token_visible_once: true, private_key_exposed: false },
+      asymmetric_probe_signing: { ...base.asymmetric_probe_signing, public_keyring_configured: base.asymmetric_probe_signing.public_keyring_configured || enrolledKeys > 0 },
     };
   }
 
