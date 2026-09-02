@@ -1,7 +1,7 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v3.11.0** — 02/09/2026
-- **Ops distributed reliability v3.11.0**: signed probe ingestion/heartbeat HMAC + nonce, SLO breakdown theo region/node, DLQ keyring/replay jobs/retry budget, telemetry archive verify-before-prune và on-call schedule/escalation/incident ownership.
+> Phiên bản hiện tại: **v3.12.0** — 02/09/2026
+- **Managed probe fleet v3.12.0**: quản lý tập agent theo profile, đối chiếu per-agent keyring với agent đã đăng ký trong PostgreSQL, phân loại ONLINE/STALE/OFFLINE/MISSING, kiểm tra key/registration coverage và tuyệt đối không trả secret raw ra Ops runtime/UI.
 
 NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **frontend Next.js** và **backend NestJS/Fastify** kết nối **PostgreSQL qua Prisma**.
 
@@ -19,13 +19,13 @@ NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **fro
 
 ## Điểm chính bản hiện tại
 
-- **Distributed signed probe v3.11.0**: public agent endpoints nhận heartbeat/sample qua HMAC-SHA256, timestamp clock-skew và nonce chống replay; standalone `scripts/probe-agent-v3110.mjs` có thể chạy ở node/region khác và gửi persistent SLI về API trung tâm.
-- **SLO theo region/node**: endpoint SLO trả `by_region`/`by_node`, availability, P95 và Apdex để so sánh chất lượng từng vùng/nút thay vì chỉ một scheduler local.
-- **DLQ keyring + replay jobs**: AES-256-GCM hỗ trợ nhiều key ID/active key và rotate payload cũ; destination retry budget giới hạn retry storm; bulk replay chuyển thành async job có progress/cancel/per-item audit.
-- **Archive verify-before-prune**: migration tạo partitioned archive store và batch metadata; API preview count/min/max/hash trước khi archive, verify số dòng rồi mới prune. Direct telemetry prune mặc định tắt qua `SYSTEM_OPS_DIRECT_PRUNE_ENABLED=false`.
-- **On-call rotation + escalation routing**: lịch trực theo thứ/ca/timezone/service/escalation level, policy theo số phút tồn tại và kênh EMAIL/WEBHOOK; incident có service/owner và có thể auto-assign người đang trực.
-- **Security dependency gate**: giữ `mysql2@3.22.0` + installed-tree scanner từ v3.10.5 và `npm audit --audit-level=high`; Prisma vẫn 7.10.0/PostgreSQL adapter.
-- **Database**: migration mới nhất `202609020001_v3110_distributed_probe_dlq_keyring_oncall_archive`; runtime/browser smoke dùng `scripts/e2e-runtime-v3110.ps1` / `scripts/e2e-browser-v3110.mjs`; CI/Health/OpenAPI đồng bộ **v3.11.0**.
+- **Managed probe fleet v3.12.0**: `SYSTEM_SLO_AGENT_PROFILES_JSON` khai báo tập agent mong đợi; Ops runtime đối chiếu profile, `SYSTEM_SLO_AGENT_KEYS_JSON` và `slo_probe_agent` để tính expected/online, key coverage, registration coverage và trạng thái `ONLINE` / `STALE` / `OFFLINE` / `MISSING`.
+- **Không lộ secret**: API chỉ trả metadata `key_configured`/`per_agent_key` và `secret_values_exposed=false`; script fleet chỉ in độ dài secret, không in giá trị khóa.
+- **Managed probe fleet runner**: `npm run probe:fleet` chạy liên tục và làm mới heartbeat cho toàn bộ agent theo `NH3D_PROBE_INTERVAL_SECONDS` (mặc định 300 giây); `npm run probe:fleet:once` dùng cho smoke một vòng. Nếu không có runner/agent process chạy lâu dài, agent sẽ chuyển `STALE` rồi `OFFLINE` đúng theo ngưỡng cấu hình.
+- **Distributed signed probe kế thừa v3.11.0**: tiếp tục HMAC-SHA256 + timestamp + nonce anti-replay, fallback `public-health` có `timeout_ms=5000`, SLO persistent breakdown theo region/node và Apdex.
+- **Ops Dashboard**: thêm panel **Managed probe fleet**, badge READY/ATTENTION, coverage và danh sách agent; badge `online/offline` của Distributed probe được thu gọn 22px, không bị flex kéo cao và chữ được canh giữa.
+- **DLQ / Archive / On-call**: giữ keyring/replay jobs/retry budget, archive verify-before-prune và on-call/escalation/incident ownership của v3.11.0.
+- **Database**: v3.12.0 không thêm migration; migration mới nhất vẫn `202609020001_v3110_distributed_probe_dlq_keyring_oncall_archive` (23 migrations). Runtime/browser dùng `scripts/e2e-runtime-v3120.ps1` / `scripts/e2e-browser-v3120.mjs`; CI/Health/OpenAPI đồng bộ **v3.12.0**.
 
 ## Tài khoản và bảo mật
 
@@ -1456,9 +1456,22 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 - Distributed probe hotfix: HMAC heartbeat/ingest xác minh trên request body gốc trước transform DTO; fallback `public-health` luôn có `timeout_ms=5000`, probe có timeout fallback phòng thủ và log rõ lỗi endpoint thay vì âm thầm trả `LOI`.
 - Runtime/Browser E2E, CI, Health/OpenAPI đồng bộ v3.11.0. Quy trình release: `npm install` → `npm run security:mysql2` → `npm audit` → `npm test` → `npm run typecheck` → `npm run build` → Docker/migration → `./scripts/e2e-runtime-v3110.ps1` → `npm run e2e:browser` → `./scripts/release.ps1 v3.11.0`.
 
+## v3.12.0 — 02/09/2026
+
+- Thêm **Managed probe fleet** trên Ops runtime/UI: khai báo agent mong đợi bằng `SYSTEM_SLO_AGENT_PROFILES_JSON`, đối chiếu profile + per-agent keyring + PostgreSQL registration/heartbeat.
+- Phân loại agent thành `ONLINE`, `STALE`, `OFFLINE`, `MISSING`; ngưỡng stale/offline cấu hình bằng `SYSTEM_SLO_AGENT_STALE_AFTER_SECONDS` và `SYSTEM_SLO_AGENT_OFFLINE_AFTER_SECONDS`.
+- Ops Dashboard dùng badge trạng thái managed fleet và online/offline dạng compact 22px, chữ canh giữa để không kéo cao panel.
+- Trả key coverage/registration coverage và metadata key an toàn; `secret_values_exposed=false`, không trả hoặc log raw secret trên API/Ops UI.
+- Thêm `scripts/probe-fleet-v3120.ps1` làm managed keepalive runner: `npm run probe:fleet` chạy liên tục theo chu kỳ, `npm run probe:fleet:once` chạy một vòng smoke; cập nhật `probe:agent` sang `probe-agent-v3120.mjs`.
+- Giữ HMAC timestamp/nonce của v3.11.0, không thêm migration mới; tiếp tục dùng 23 migrations với migration mới nhất `202609020001_v3110_distributed_probe_dlq_keyring_oncall_archive`.
+- Runtime E2E, Browser E2E, CI, API Health/OpenAPI và Ops Dashboard đồng bộ **v3.12.0**.
+- UI hotfix: thu nhỏ badge `online · offline` còn 22px, chặn flex stretch và canh giữa chữ để panel gọn hơn trên desktop.
+- Probe Fleet PowerShell hotfix: dùng `${id}: ...` khi nội suy chuỗi để tránh `InvalidVariableReferenceWithDrive` trên Windows PowerShell; lưu runner dạng UTF-8 BOM để thông báo tiếng Việt không bị mojibake.
+- Quy trình release: `npm install` → `npm run security:mysql2` → `npm audit` → `npm test` → `npm run typecheck` → `npm run build` → Docker → `./scripts/e2e-runtime-v3120.ps1` → `npm run e2e:browser` → `./scripts/release.ps1 v3.12.0`.
+
 # Lộ trình tiếp theo
 
-## v3.12.0
+## v3.13.0
 
 - Probe agent enrollment/rotation key tự phục vụ, mTLS hoặc asymmetric signing và quorum/consensus khi nhiều region báo trạng thái khác nhau.
 - SLO alert theo multi-region quorum, anomaly detection latency/burn-rate và service dependency map.

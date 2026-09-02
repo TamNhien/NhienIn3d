@@ -5,7 +5,7 @@ const read = (p) => readFileSync(new URL(p, import.meta.url), "utf8");
 
 test("v3.11.0 Ops Dashboard hien distributed probe region node", () => {
   const page = read("../app/quan-tri/ops/page.tsx");
-  assert.match(page, /OPS v3\.11\.0/);
+  assert.match(page, /OPS v3\.12\.0/);
   assert.match(page, /Distributed probe agents/);
   assert.match(page, /by_region/);
   assert.match(page, /by_node/);

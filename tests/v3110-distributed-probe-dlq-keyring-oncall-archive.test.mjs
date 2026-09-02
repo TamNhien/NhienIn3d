@@ -7,11 +7,13 @@ const read = (p) => readFileSync(p, "utf8");
 test("v3.11.0 dong bo version Runtime Browser CI va migration", () => {
   const pkg = JSON.parse(read("package.json"));
   const ci = read(".github/workflows/ci.yml");
-  assert.equal(read("VERSION").trim(), "3.11.0");
-  assert.equal(pkg.version, "3.11.0");
-  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3110.mjs");
-  assert.equal(pkg.scripts["probe:agent"], "node scripts/probe-agent-v3110.mjs");
-  assert.match(ci, /e2e-runtime-v3110\.ps1/);
+  assert.equal(read("VERSION").trim(), "3.12.0");
+  assert.equal(pkg.version, "3.12.0");
+  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3120.mjs");
+  assert.equal(pkg.scripts["probe:agent"], "node scripts/probe-agent-v3120.mjs");
+  assert.match(ci, /e2e-runtime-v3120\.ps1/);
+  assert.ok(existsSync("scripts/e2e-runtime-v3110.ps1"));
+  assert.ok(existsSync("scripts/e2e-browser-v3110.mjs"));
   assert.ok(existsSync("apps/api/prisma/migrations/202609020001_v3110_distributed_probe_dlq_keyring_oncall_archive/migration.sql"));
   assert.equal(readdirSync("apps/api/prisma/migrations", { withFileTypes: true }).filter(x => x.isDirectory()).length, 23);
 });

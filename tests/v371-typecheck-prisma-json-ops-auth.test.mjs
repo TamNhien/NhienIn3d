@@ -26,12 +26,12 @@ test("v3.7.1 typecheck fix duoc giu khi nang v3.11.0", () => {
   const runtime = read("scripts/e2e-runtime-v3100.ps1");
   const browser = read("scripts/e2e-browser-v3100.mjs");
   const health = read("apps/api/src/suc-khoe/suc-khoe.controller.ts");
-  assert.equal(pkg.version, "3.11.0");
-  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3110.mjs");
-  assert.match(ci, /e2e-runtime-v3110\.ps1/);
-  assert.match(ci, /Browser E2E Admin HTTPS v3\.11\.0/);
+  assert.equal(pkg.version, "3.12.0");
+  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3120.mjs");
+  assert.match(ci, /e2e-runtime-v3120\.ps1/);
+  assert.match(ci, /Browser E2E Admin HTTPS v3\.12\.0/);
   assert.match(runtime, /publicHealth\.phien_ban -eq "v3\.10\.0"/);
   assert.match(runtime, /health\.phien_ban -eq "3\.10\.0"/);
   assert.match(browser, /health\.phien_ban !== "v3\.10\.0"/);
-  assert.match(health, /phien_ban: "v3\.11\.0"/);
+  assert.match(health, /phien_ban: "v3\.12\.0"/);
 });
