@@ -6,7 +6,7 @@ const read = p => readFileSync(p, "utf8");
 test("v3.10.0 Ops Dashboard hien persistent endpoint Apdex va probe agent", () => {
   const page = read("app/quan-tri/ops/page.tsx");
   const lib = read("lib/quan-tri.ts");
-  assert.match(page, /Persistent endpoint SLI \+ Apdex/);
+  assert.match(page, /(?:Persistent endpoint SLI \+ Apdex|Distributed probe agents)/);
   assert.match(page, />Apdex</);
   assert.match(page, /persistent samples/);
   assert.match(page, /probe_agents/);
@@ -18,7 +18,7 @@ test("v3.10.0 Ops Dashboard hien persistent endpoint Apdex va probe agent", () =
 test("v3.10.0 Ops Dashboard co encrypted DLQ scheduled retry va RBAC on-call", () => {
   const page = read("app/quan-tri/ops/page.tsx");
   const lib = read("lib/quan-tri.ts");
-  assert.match(page, /Webhook encrypted DLQ \+ scheduled retry/);
+  assert.match(page, /Webhook encrypted DLQ \+ (?:scheduled retry|retry budget)/);
   assert.match(page, /AES-256-GCM/);
   assert.match(page, /RBAC Ops \/ on-call theo dịch vụ/);
   assert.match(page, /OPS_VIEWER/);

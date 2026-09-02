@@ -5,7 +5,6 @@
 .github/workflows/release.yml
 .gitignore
 .npmrc
-MANIFEST.txt
 README.md
 VERSION
 apps/api/.dockerignore
@@ -36,6 +35,7 @@ apps/api/prisma/migrations/202608310008_v340_incident_signature_cursor_sla/migra
 apps/api/prisma/migrations/202609010001_v350_incident_slo_rollup/migration.sql
 apps/api/prisma/migrations/202609010002_v390_ops_search_metrics/migration.sql
 apps/api/prisma/migrations/202609010003_v3100_ops_persistence_dlq_oncall/migration.sql
+apps/api/prisma/migrations/202609020001_v3110_distributed_probe_dlq_keyring_oncall_archive/migration.sql
 apps/api/prisma/migrations/migration_lock.toml
 apps/api/prisma/schema.prisma
 apps/api/prisma/seed.ts
@@ -78,6 +78,8 @@ apps/api/src/quan-tri/dto/cap-nhat-vat-lieu.dto.ts
 apps/api/src/quan-tri/dto/kiem-tra-tep-nhap-kho.dto.ts
 apps/api/src/quan-tri/dto/nhap-kho-lo.dto.ts
 apps/api/src/quan-tri/dto/ops-phan-cong.dto.ts
+apps/api/src/quan-tri/dto/ops-v3110.dto.ts
+apps/api/src/quan-tri/dto/probe-agent.dto.ts
 apps/api/src/quan-tri/dto/tao-bien-the.dto.ts
 apps/api/src/quan-tri/dto/tao-ca-lam.dto.ts
 apps/api/src/quan-tri/dto/tao-danh-muc.dto.ts
@@ -89,6 +91,7 @@ apps/api/src/quan-tri/dto/tao-san-pham-quan-tri.dto.ts
 apps/api/src/quan-tri/dto/tao-vat-lieu.dto.ts
 apps/api/src/quan-tri/dto/webhook-dead-letter.dto.ts
 apps/api/src/quan-tri/ops.controller.ts
+apps/api/src/quan-tri/probe-agent.controller.ts
 apps/api/src/quan-tri/quan-tri.controller.ts
 apps/api/src/quan-tri/quan-tri.module.ts
 apps/api/src/quan-tri/quan-tri.service.ts
@@ -126,6 +129,7 @@ apps/api/tests/cau-hinh-api.test.mjs
 apps/api/tests/v219-nha-cung-cap-kho.test.mjs
 apps/api/tests/v300-mfa-security.test.mjs
 apps/api/tests/v3100-persistent-apdex-dlq-rbac-cache.test.mjs
+apps/api/tests/v3110-ops-distributed-probe-dlq-archive-oncall.test.mjs
 apps/api/tests/v320-operations.test.mjs
 apps/api/tests/v321-order-delivered-typecheck.test.mjs
 apps/api/tests/v330-audit-ops.test.mjs
@@ -189,6 +193,7 @@ apps/web/tests/v219-kho-ncc.test.mjs
 apps/web/tests/v2191-auth-dark.test.mjs
 apps/web/tests/v300-mfa-admin.test.mjs
 apps/web/tests/v3100-persistent-apdex-dlq-rbac-cache.test.mjs
+apps/web/tests/v3110-ops-dashboard-distributed-keyring-archive.test.mjs
 apps/web/tests/v320-operations.test.mjs
 apps/web/tests/v321-order-delivered.test.mjs
 apps/web/tests/v322-order-update-ux.test.mjs
@@ -219,6 +224,7 @@ scripts/e2e-browser-v3102.mjs
 scripts/e2e-browser-v3103.mjs
 scripts/e2e-browser-v3104.mjs
 scripts/e2e-browser-v3105.mjs
+scripts/e2e-browser-v3110.mjs
 scripts/e2e-browser-v350.mjs
 scripts/e2e-browser-v351.mjs
 scripts/e2e-browser-v352.mjs
@@ -243,6 +249,7 @@ scripts/e2e-runtime-v3102.ps1
 scripts/e2e-runtime-v3103.ps1
 scripts/e2e-runtime-v3104.ps1
 scripts/e2e-runtime-v3105.ps1
+scripts/e2e-runtime-v3110.ps1
 scripts/e2e-runtime-v320.ps1
 scripts/e2e-runtime-v340.ps1
 scripts/e2e-runtime-v341.ps1
@@ -270,6 +277,7 @@ scripts/khoi-tao-github.ps1
 scripts/khoi-tao.ps1
 scripts/kiem-tra-mysql2-security.mjs
 scripts/kiem-tra.ps1
+scripts/probe-agent-v3110.mjs
 scripts/release.ps1
 scripts/restore-db.ps1
 tests/cau-truc.test.mjs
@@ -282,6 +290,7 @@ tests/v3102-mysql2-audit-override.test.mjs
 tests/v3103-mysql2-direct-pin-installed-tree.test.mjs
 tests/v3104-mysql2-ci-override-validation.test.mjs
 tests/v3105-mysql2-installed-tree-scanner.test.mjs
+tests/v3110-distributed-probe-dlq-keyring-oncall-archive.test.mjs
 tests/v320-operations.test.mjs
 tests/v321-order-delivered-typecheck.test.mjs
 tests/v322-order-update-ux.test.mjs

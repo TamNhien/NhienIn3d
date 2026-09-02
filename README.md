@@ -1,7 +1,7 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v3.10.5** — 02/09/2026
-- **mysql2 installed-tree scanner hotfix v3.10.5**: sửa checker v3.10.4 bị phụ thuộc vào entrypoint nội bộ của package Prisma (`build/types.js`) trên Windows/GitHub runner. Security gate mới quét trực tiếp mọi package `mysql2` thực tế trong `node_modules` (kể cả nested dependency), bắt buộc tất cả >=3.22.0 rồi mới chạy `npm audit`; không dùng `npm ls` và không resolve entrypoint Prisma.
+> Phiên bản hiện tại: **v3.11.0** — 02/09/2026
+- **Ops distributed reliability v3.11.0**: signed probe ingestion/heartbeat HMAC + nonce, SLO breakdown theo region/node, DLQ keyring/replay jobs/retry budget, telemetry archive verify-before-prune và on-call schedule/escalation/incident ownership.
 
 NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **frontend Next.js** và **backend NestJS/Fastify** kết nối **PostgreSQL qua Prisma**.
 
@@ -19,13 +19,13 @@ NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **fro
 
 ## Điểm chính bản hiện tại
 
-- **Installed-tree security validation v3.10.5**: giữ `mysql2@3.22.0` root direct devDependency + `overrides: { "mysql2": "$mysql2" }`, nhưng checker quét trực tiếp mọi `node_modules/**/mysql2/package.json` thực tế thay vì resolve entrypoint Prisma hoặc dùng `npm ls`. Nhờ vậy tránh cả `ELSPROBLEMS` lẫn lỗi `prisma/build/types.js` mà vẫn fail nếu tồn tại bất kỳ mysql2 <3.22.0. `npm audit` vẫn là gate lỗ hổng cuối.
-- **Persistent Endpoint SLI + Apdex v3.10.0**: mỗi probe được lưu vào `slo_endpoint_mau` cùng agent/node/region, HTTP status, latency, maintenance flag và Apdex bucket; thống kê ưu tiên dữ liệu persistent nhưng vẫn fallback lịch sử v3.9 khi nâng cấp.
-- **Probe agent identity**: `SYSTEM_SLO_PROBE_AGENT_ID`, `SYSTEM_SLO_PROBE_REGION`, `SYSTEM_SLO_PROBE_NODE` giúp phân biệt nhiều node/region và hiển thị `probe_agents`/persistent sample count trên Ops Dashboard.
-- **Encrypted Webhook DLQ + scheduler**: payload dead-letter được tách khỏi history và mã hóa AES-256-GCM trong `webhook_dlq_payload`; history chỉ giữ payload reference/hash. Scheduler retry theo policy, exponential backoff, retention expiry và trạng thái `CHO_RETRY/RETRY_THAT_BAI/HET_HAN`; hỗ trợ replay/ack hiện có.
-- **Cached Ops metrics + retention**: refresh materialized incident metrics được chuyển khỏi request path sang scheduler và `ops_metric_cache`; cleanup telemetry cũ theo retention nhưng giữ dữ liệu liên kết incident.
-- **RBAC Ops/on-call**: thêm `OPS_VIEWER`, `ON_CALL`, `SERVICE_OWNER`, escalation 1-5 và phân quyền theo dịch vụ. Non-Admin được vào `/quan-tri/ops` ở chế độ read-only hoặc xử lý incident khi có on-call/service-owner assignment; Admin quản trị assignment.
-- **Database**: migration mới nhất vẫn là `202609010003_v3100_ops_persistence_dlq_oncall`; v3.10.5 không đổi schema. Runtime/browser smoke hiện dùng `scripts/e2e-runtime-v3105.ps1` / `scripts/e2e-browser-v3105.mjs`; CI/Health/OpenAPI đồng bộ **v3.10.5**.
+- **Distributed signed probe v3.11.0**: public agent endpoints nhận heartbeat/sample qua HMAC-SHA256, timestamp clock-skew và nonce chống replay; standalone `scripts/probe-agent-v3110.mjs` có thể chạy ở node/region khác và gửi persistent SLI về API trung tâm.
+- **SLO theo region/node**: endpoint SLO trả `by_region`/`by_node`, availability, P95 và Apdex để so sánh chất lượng từng vùng/nút thay vì chỉ một scheduler local.
+- **DLQ keyring + replay jobs**: AES-256-GCM hỗ trợ nhiều key ID/active key và rotate payload cũ; destination retry budget giới hạn retry storm; bulk replay chuyển thành async job có progress/cancel/per-item audit.
+- **Archive verify-before-prune**: migration tạo partitioned archive store và batch metadata; API preview count/min/max/hash trước khi archive, verify số dòng rồi mới prune. Direct telemetry prune mặc định tắt qua `SYSTEM_OPS_DIRECT_PRUNE_ENABLED=false`.
+- **On-call rotation + escalation routing**: lịch trực theo thứ/ca/timezone/service/escalation level, policy theo số phút tồn tại và kênh EMAIL/WEBHOOK; incident có service/owner và có thể auto-assign người đang trực.
+- **Security dependency gate**: giữ `mysql2@3.22.0` + installed-tree scanner từ v3.10.5 và `npm audit --audit-level=high`; Prisma vẫn 7.10.0/PostgreSQL adapter.
+- **Database**: migration mới nhất `202609020001_v3110_distributed_probe_dlq_keyring_oncall_archive`; runtime/browser smoke dùng `scripts/e2e-runtime-v3110.ps1` / `scripts/e2e-browser-v3110.mjs`; CI/Health/OpenAPI đồng bộ **v3.11.0**.
 
 ## Tài khoản và bảo mật
 
@@ -1445,12 +1445,22 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 - Quy trình release: `npm install` → `npm run security:mysql2` → `npm audit` → `npm test` → `npm run typecheck` → `npm run build` → Docker → `./scripts/e2e-runtime-v3105.ps1` → `npm run e2e:browser` → `./scripts/release.ps1 v3.10.5`.
 
 
+## v3.11.0 — 02/09/2026
+
+- Thêm signed distributed probe ingestion/heartbeat với HMAC-SHA256, timestamp clock-skew, nonce replay protection, agent health và standalone probe agent script; endpoint SLO có breakdown theo region/node.
+- DLQ nâng lên keyring/KMS-friendly key references, active-key rotation, destination retry budget và async bulk replay jobs có progress/cancel/per-item audit.
+- Migration `202609020001_v3110_distributed_probe_dlq_keyring_oncall_archive` thêm probe agent/nonce, retry budget/replay job, on-call/escalation, incident service/owner, archive batch và partitioned telemetry archive.
+- Retention chuyển sang archive-first: direct prune mặc định khóa, Admin preview count/hash rồi archive + verify trước khi prune dữ liệu nguồn.
+- On-call schedule/rotation theo ca/timezone/service, escalation routing EMAIL/WEBHOOK, incident ownership/auto-assign; Ops Dashboard hiển thị toàn bộ control plane mới.
+- Build hotfix: xử lý an toàn union return của `replay_webhook_dead_letter()` trước khi đọc `ly_do`, sửa lỗi TypeScript `TS2339` tại bulk replay job và thêm regression assertion để tránh tái phát.
+- Distributed probe hotfix: HMAC heartbeat/ingest xác minh trên request body gốc trước transform DTO; fallback `public-health` luôn có `timeout_ms=5000`, probe có timeout fallback phòng thủ và log rõ lỗi endpoint thay vì âm thầm trả `LOI`.
+- Runtime/Browser E2E, CI, Health/OpenAPI đồng bộ v3.11.0. Quy trình release: `npm install` → `npm run security:mysql2` → `npm audit` → `npm test` → `npm run typecheck` → `npm run build` → Docker/migration → `./scripts/e2e-runtime-v3110.ps1` → `npm run e2e:browser` → `./scripts/release.ps1 v3.11.0`.
+
 # Lộ trình tiếp theo
 
+## v3.12.0
 
-## v3.11.0
-
-- Probe agent phân tán thực sự qua signed ingestion/heartbeat, agent health và so sánh SLO theo region/node thay vì chỉ identity trên cùng API scheduler.
-- DLQ key rotation/KMS-friendly keyring, per-destination retry budget, bulk replay có progress/cancel và audit theo từng item.
-- Online archive/partition cho `lich_su_van_hanh` và `slo_endpoint_mau` khi dữ liệu lớn; retention theo loại telemetry và công cụ verify trước khi prune.
-- On-call schedule/rotation theo ca, escalation policy theo service, ownership incident và notification routing cho nhóm trực.
+- Probe agent enrollment/rotation key tự phục vụ, mTLS hoặc asymmetric signing và quorum/consensus khi nhiều region báo trạng thái khác nhau.
+- SLO alert theo multi-region quorum, anomaly detection latency/burn-rate và service dependency map.
+- Archive export sang object storage S3-compatible, restore/replay từng partition và retention policy theo legal/audit class.
+- On-call calendar import/export, override/absence, handoff report và escalation notification acknowledgment.

@@ -1,7 +1,7 @@
 {
   "name": "nhienin3d",
   "private": true,
-  "version": "3.10.5",
+  "version": "3.11.0",
   "description": "NhienIn3d - cửa hàng sản phẩm in 3D hiện đại",
   "engines": {
     "node": ">=24.0.0",
@@ -28,7 +28,8 @@
     "https:local": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/https-local.ps1",
     "docker:up": "docker compose up -d --build --remove-orphans",
     "docker:ps": "docker compose ps",
-    "e2e:browser": "node scripts/e2e-browser-v3105.mjs",
+    "e2e:browser": "node scripts/e2e-browser-v3110.mjs",
+    "probe:agent": "node scripts/probe-agent-v3110.mjs",
     "security:mysql2": "node scripts/kiem-tra-mysql2-security.mjs"
   },
   "workspaces": [

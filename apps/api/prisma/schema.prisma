@@ -72,6 +72,7 @@ model NguoiDung {
   nhan_vien       NhanVien?
   lich_su_don_hang LichSuDonHang[]
   ops_phan_cong   OpsPhanCong[]
+  ops_on_call     OpsOnCallSchedule[]
 
   @@map("nguoi_dung")
 }
@@ -428,6 +429,9 @@ model SuCoVanHanh {
   nguoi_khac_phuc_id        String?  @db.Uuid
   nguoi_khac_phuc_ten       String?  @db.VarChar(150)
   khac_phuc_luc             DateTime? @db.Timestamptz(6)
+  dich_vu                    String?  @db.VarChar(80)
+  chu_so_huu_id              String?  @db.Uuid
+  chu_so_huu_ten             String?  @db.VarChar(150)
   ngay_tao                  DateTime @default(now()) @db.Timestamptz(6)
   ngay_cap_nhat             DateTime @updatedAt @db.Timestamptz(6)
 
@@ -491,6 +495,131 @@ model WebhookDlqPayload {
   @@index([het_han_luc])
   @@index([idempotency_key])
   @@map("webhook_dlq_payload")
+}
+
+
+model SloProbeAgent {
+  agent_id        String   @id @db.VarChar(80)
+  region          String   @db.VarChar(80)
+  node_name       String   @db.VarChar(120)
+  phien_ban       String?  @db.VarChar(40)
+  trang_thai      String   @default("ONLINE") @db.VarChar(20)
+  lan_heartbeat   DateTime @db.Timestamptz(6)
+  lan_mau         DateTime? @db.Timestamptz(6)
+  metadata        Json     @default("{}") @db.JsonB
+  ngay_tao        DateTime @default(now()) @db.Timestamptz(6)
+  ngay_cap_nhat   DateTime @updatedAt @db.Timestamptz(6)
+
+  @@index([region, lan_heartbeat])
+  @@index([trang_thai, lan_heartbeat])
+  @@map("slo_probe_agent")
+}
+
+model SloProbeNonce {
+  agent_id   String   @db.VarChar(80)
+  nonce      String   @db.VarChar(80)
+  het_han_luc DateTime @db.Timestamptz(6)
+  ngay_tao   DateTime @default(now()) @db.Timestamptz(6)
+
+  @@id([agent_id, nonce])
+  @@index([het_han_luc])
+  @@map("slo_probe_nonce")
+}
+
+model WebhookRetryBudget {
+  budget_key    String   @id @db.Char(64)
+  endpoint      String   @db.Text
+  adapter       String   @db.VarChar(20)
+  window_start  DateTime @db.Timestamptz(6)
+  da_dung       Int      @default(0)
+  ngay_cap_nhat DateTime @updatedAt @db.Timestamptz(6)
+
+  @@index([window_start])
+  @@map("webhook_retry_budget")
+}
+
+model WebhookReplayJob {
+  id              String   @id @default(uuid()) @db.Uuid
+  trang_thai      String   @default("CHO_XU_LY") @db.VarChar(30)
+  tong            Int      @default(0)
+  da_xu_ly        Int      @default(0)
+  thanh_cong      Int      @default(0)
+  that_bai        Int      @default(0)
+  da_huy          Boolean  @default(false)
+  bo_qua_idempotency Boolean @default(false)
+  nguoi_tao_id    String?  @db.Uuid
+  nguoi_tao_ten   String?  @db.VarChar(150)
+  ngay_tao        DateTime @default(now()) @db.Timestamptz(6)
+  ngay_cap_nhat   DateTime @updatedAt @db.Timestamptz(6)
+  items           WebhookReplayItem[]
+
+  @@index([trang_thai, ngay_tao])
+  @@map("webhook_replay_job")
+}
+
+model WebhookReplayItem {
+  id                     String   @id @default(uuid()) @db.Uuid
+  job_id                 String   @db.Uuid
+  dead_letter_history_id BigInt
+  trang_thai             String   @default("CHO_XU_LY") @db.VarChar(30)
+  loi                    String?  @db.Text
+  ngay_tao               DateTime @default(now()) @db.Timestamptz(6)
+  ngay_cap_nhat           DateTime @updatedAt @db.Timestamptz(6)
+  job                     WebhookReplayJob @relation(fields: [job_id], references: [id], onDelete: Cascade)
+
+  @@unique([job_id, dead_letter_history_id])
+  @@index([job_id, trang_thai])
+  @@map("webhook_replay_item")
+}
+
+model OpsOnCallSchedule {
+  id                String   @id @default(uuid()) @db.Uuid
+  dich_vu           String   @db.VarChar(80)
+  nguoi_dung_id     String   @db.Uuid
+  thu_trong_tuan    Int
+  bat_dau_phut      Int
+  ket_thuc_phut     Int
+  timezone          String   @default("Asia/Ho_Chi_Minh") @db.VarChar(80)
+  cap_escalation    Int      @default(1)
+  dang_hoat_dong    Boolean  @default(true)
+  ngay_tao          DateTime @default(now()) @db.Timestamptz(6)
+  ngay_cap_nhat     DateTime @updatedAt @db.Timestamptz(6)
+  nguoi_dung        NguoiDung @relation(fields: [nguoi_dung_id], references: [id], onDelete: Cascade)
+
+  @@index([dich_vu, thu_trong_tuan, dang_hoat_dong])
+  @@index([nguoi_dung_id, dang_hoat_dong])
+  @@map("ops_on_call_schedule")
+}
+
+model OpsEscalationPolicy {
+  id                String   @id @default(uuid()) @db.Uuid
+  dich_vu           String   @db.VarChar(80)
+  cap_escalation    Int
+  sau_phut          Int
+  kenh              String   @default("EMAIL_WEBHOOK") @db.VarChar(40)
+  dang_hoat_dong    Boolean  @default(true)
+  ngay_tao          DateTime @default(now()) @db.Timestamptz(6)
+  ngay_cap_nhat     DateTime @updatedAt @db.Timestamptz(6)
+
+  @@unique([dich_vu, cap_escalation])
+  @@index([dich_vu, dang_hoat_dong])
+  @@map("ops_escalation_policy")
+}
+
+model OpsArchiveBatch {
+  id             String   @id @default(uuid()) @db.Uuid
+  bang_nguon     String   @db.VarChar(80)
+  thang          String   @db.Char(7)
+  partition_name String   @db.VarChar(120)
+  so_ban_ghi     Int
+  sha256         String   @db.Char(64)
+  trang_thai     String   @db.VarChar(30)
+  nguoi_tao_id   String?  @db.Uuid
+  ngay_tao       DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([bang_nguon, thang])
+  @@index([ngay_tao])
+  @@map("ops_archive_batch")
 }
 
 model OpsMetricCache {

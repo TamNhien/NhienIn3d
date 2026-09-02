@@ -21,7 +21,7 @@ test("v3.8.0 env co webhook adapter preset va khong them migration", () => {
 test("v3.8.0 Ops UI co endpoint SLO burn timeline full-text va dead-letter replay", () => {
   const page = read("apps/web/app/quan-tri/ops/page.tsx");
   const lib = read("apps/web/lib/quan-tri.ts");
-  assert.match(page, /Endpoint SLO · time-weighted/);
+  assert.match(page, /Endpoint SLO · (?:time-weighted|distributed region\/node)/);
   assert.match(page, /Burn-rate theo thời gian/);
   assert.match(page, /Incident \+ timeline/);
   assert.match(page, /Webhook (?:delivery \+|encrypted DLQ \+)/);

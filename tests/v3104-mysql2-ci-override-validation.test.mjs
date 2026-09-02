@@ -4,7 +4,7 @@ import { existsSync, readFileSync } from "node:fs";
 
 const read = (p) => readFileSync(p, "utf8");
 
-test("v3.10.4 bo npm ls false-fail va contract nay duoc giu o v3.10.5", () => {
+test("v3.10.4 bo npm ls false-fail va contract nay duoc giu o v3.11.0", () => {
   const ci = read(".github/workflows/ci.yml");
   const verify = read("scripts/kiem-tra.ps1");
   const pkg = JSON.parse(read("package.json"));

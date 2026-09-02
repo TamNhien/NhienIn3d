@@ -23,9 +23,9 @@ test("v3.6.2 E2E va CI dung phien ban patch moi", () => {
   const runtime = readFileSync("scripts/e2e-runtime-v362.ps1", "utf8");
   const browser = readFileSync("scripts/e2e-browser-v362.mjs", "utf8");
   const ci = readFileSync(".github/workflows/ci.yml", "utf8");
-  assert.match(root.scripts["e2e:browser"], /^node scripts\/e2e-browser-v(?:36[234567]|37[012]|380|390|3100|3101|3102|3103|3104|3105)\.mjs$/);
+  assert.match(root.scripts["e2e:browser"], /^node scripts\/e2e-browser-v(?:36[234567]|37[012]|380|390|3100|3101|3102|3103|3104|3105|3110)\.mjs$/);
   assert.match(runtime, /không phải v3\.6\.2/);
   assert.match(browser, /không phải v3\.6\.2/);
-  assert.match(ci, /e2e-runtime-v(?:36[234567]|37[012]|380|390|3100|3101|3102|3103|3104|3105)\.ps1/);
-  assert.match(ci, /Browser E2E Admin HTTPS v(?:3\.6\.[234567]|3\.7\.[012]|3\.8\.0|3\.9\.0|3\.10\.[012345])/);
+  assert.match(ci, /e2e-runtime-v(?:36[234567]|37[012]|380|390|3100|3101|3102|3103|3104|3105|3110)\.ps1/);
+  assert.match(ci, /Browser E2E Admin HTTPS v(?:3\.6\.[234567]|3\.7\.[012]|3\.8\.0|3\.9\.0|3\.10\.[012345]|3\.11\.0)/);
 });

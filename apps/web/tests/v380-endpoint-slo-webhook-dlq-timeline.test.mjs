@@ -6,7 +6,7 @@ const read = p => readFileSync(p, "utf8");
 test("v3.8.0 Web hien endpoint SLO time-weighted va comparison 7 30 90", () => {
   const page = read("app/quan-tri/ops/page.tsx");
   assert.match(page, /So sánh SLO 7 \/ 30 \/ 90 ngày/);
-  assert.match(page, /Endpoint SLO · time-weighted/);
+  assert.match(page, /Endpoint SLO · (?:time-weighted|distributed region\/node)/);
   assert.match(page, /Burn-rate theo thời gian/);
   assert.match(page, /Endpoint probes/);
 });
