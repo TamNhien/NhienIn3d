@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, NotFoundException, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
 import * as argon2 from "argon2";
 import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes, randomUUID, timingSafeEqual, verify as verifySignature } from "node:crypto";
-import { inflateRawSync } from "node:zlib";
+import { gzipSync, inflateRawSync } from "node:zlib";
 import { readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { CoSoDuLieuService } from "../co-so-du-lieu/co-so-du-lieu.service.js";
@@ -69,6 +69,19 @@ type SloMaintenancePolicyV390 = {
   max_gap_multiplier: number;
 };
 
+
+type OpsOnCallOverrideV3160 = {
+  id: string;
+  loai: "ABSENCE" | "OVERRIDE";
+  dich_vu: string;
+  nguoi_dung_id: string;
+  bat_dau: string;
+  ket_thuc: string;
+  ly_do: string;
+  nguoi_tao_id?: string;
+  ngay_tao: string;
+};
+
 type WebhookSendResultV390 = {
   da_gui: boolean;
   ly_do?: string;
@@ -126,7 +139,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     setTimeout(cleanupOps, 120_000).unref();
     this.bo_hen_ops_retention = setInterval(cleanupOps, 6 * 60 * 60_000);
     this.bo_hen_ops_retention.unref();
-    this.logger.log(`Ops v3.15.0 schedulers: DLQ ${dlqPolicy.chu_ky_phut}m, metrics ${opsPolicy.refresh_phut}m, retention ${opsPolicy.retention_days}d.`);
+    this.logger.log(`Ops v3.16.0 schedulers: DLQ ${dlqPolicy.chu_ky_phut}m, metrics ${opsPolicy.refresh_phut}m, retention ${opsPolicy.retention_days}d.`);
   }
 
   onModuleDestroy() {
@@ -618,7 +631,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     for (let index = 0; index <= cau_hinh.max_retries; index++) {
       const lan_thu = index + 1;
       const timestamp = String(Math.floor(Date.now() / 1000));
-      const headers: Record<string, string> = { "content-type": "application/json", "user-agent": "NhienIn3d-Ops/3.15.0", "x-nhienin3d-timestamp": timestamp, "x-nhienin3d-adapter": cau_hinh.adapter };
+      const headers: Record<string, string> = { "content-type": "application/json", "user-agent": "NhienIn3d-Ops/3.16.0", "x-nhienin3d-timestamp": timestamp, "x-nhienin3d-adapter": cau_hinh.adapter };
       if (token) headers.authorization = `Bearer ${token}`;
       if (secret) headers["x-nhienin3d-signature"] = `sha256=${createHmac("sha256", secret).update(`${timestamp}.${body}`).digest("hex")}`;
       const bat_dau = performance.now();
@@ -876,7 +889,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
   }
 
   private tao_headers_slo_endpoint(endpoint: SloEndpointCheckV390) {
-    const headers: Record<string, string> = { "user-agent": "NhienIn3d-SLO-Probe/3.15.0" };
+    const headers: Record<string, string> = { "user-agent": "NhienIn3d-SLO-Probe/3.16.0" };
     const resolveTemplate = (value: string) => value.replace(/\$\{ENV:([A-Z][A-Z0-9_]*)\}/g, (_all, name: string) => process.env[name] || "");
     for (const [nameRaw, valueRaw] of Object.entries(endpoint.headers || {})) {
       const name = nameRaw.trim().toLowerCase();
@@ -1026,7 +1039,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const trang_thai = !database.ket_noi ? "LOI" : (van_de.length ? "CANH_BAO" : "TOT");
     const ket_qua = {
       trang_thai,
-      phien_ban: "3.15.0",
+      phien_ban: "3.16.0",
       thoi_gian: new Date().toISOString(),
       api: { uptime_giay: Math.floor(process.uptime()), node: process.version, pid: process.pid, rss_bytes: bo_nho.rss, heap_used_bytes: bo_nho.heapUsed, heap_total_bytes: bo_nho.heapTotal },
       database,
@@ -1117,7 +1130,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const dich_vu = this.xep_dich_vu_su_co_v3110(van_de);
     let onCallRouting: { emails: string[]; people: string[]; policy_level: number; kenh: "EMAIL" | "WEBHOOK" | "EMAIL_WEBHOOK" } = { emails: [], people: [], policy_level: Math.min(5, Math.max(1, cap_leo_thang + 1)), kenh: "EMAIL_WEBHOOK" };
     try {
-      const roster = await this.on_call_hien_tai_v3110(dich_vu);
+      const roster = await this.on_call_hien_tai_v3160(dich_vu);
       const eligiblePolicies = roster.policies.filter(x => x.dang_hoat_dong && x.sau_phut <= ton_tai_phut).sort((a, b) => b.sau_phut - a.sau_phut || b.cap_escalation - a.cap_escalation);
       const activePolicy = eligiblePolicies[0];
       const policyLevel = activePolicy?.cap_escalation ?? onCallRouting.policy_level;
@@ -1152,7 +1165,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const webhook = onCallRouting.kenh === "EMAIL" && onCallRouting.people.length
       ? { da_gui: false, ly_do: "Escalation policy hiện tại chỉ định EMAIL", so_lan_thu: 0, adapter: this.cau_hinh_webhook_canh_bao().adapter }
       : await this.gui_webhook_canh_bao({
-          event: "nhienin3d.system.alert", version: "3.15.0", trang_thai: trang_thai_canh_bao, chu_ky, dich_vu, van_de, thoi_gian: health.thoi_gian, cap_leo_thang, ton_tai_phut, on_call: onCallRouting
+          event: "nhienin3d.system.alert", version: "3.16.0", trang_thai: trang_thai_canh_bao, chu_ky, dich_vu, van_de, thoi_gian: health.thoi_gian, cap_leo_thang, ton_tai_phut, on_call: onCallRouting
         });
     const da_gui = email.da_gui || webhook.da_gui;
     if (!da_gui) return { da_gui: false, ly_do: `Không có kênh cảnh báo gửi thành công. Email: ${email.ly_do || "không gửi"}; Webhook: ${webhook.ly_do || "không gửi"}`, van_de, cap_leo_thang, ton_tai_phut, email, webhook, bao_tri };
@@ -1254,7 +1267,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       this.danh_sach_su_co_van_hanh("100", trangThaiXuLyRaw, tuNgayRaw, denNgayRaw)
     ]);
     const rows: unknown[][] = [
-      ["NhienIn3d Ops Dashboard v3.15.0"],
+      ["NhienIn3d Ops Dashboard v3.16.0"],
       ["Tạo lúc", new Date().toISOString()],
       ["Bộ lọc incident", `${tuNgayRaw || "*"} → ${denNgayRaw || "*"} · ${trangThaiXuLyRaw || "Tất cả"}`],
       [],
@@ -1282,7 +1295,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     for (const item of sla.burn_rate_policy) rows.push([item.gio, item.nguong, item.muc_do, item.sla.burn_rate ?? "", item.uptime.burn_rate ?? ""]);
     rows.push([], ["Incident"], ["Chữ ký", "Trạng thái", "Vấn đề", "Bắt đầu", "Gần nhất", "Sự kiện", "Tiếp nhận", "Khắc phục"]);
     for (const item of incidents.du_lieu) rows.push([item.chu_ky, item.trang_thai_xu_ly, item.van_de.join(" | "), item.bat_dau.toISOString(), item.gan_nhat.toISOString(), item.so_su_kien, item.tiep_nhan_luc?.toISOString() || "", item.khac_phuc_luc?.toISOString() || ""]);
-    const buffer = this.tao_xlsx(rows, "Ops v3.15.0");
+    const buffer = this.tao_xlsx(rows, "Ops v3.16.0");
     return { ten_file: `ops-slo-incident-${new Date().toISOString().slice(0, 10)}.xlsx`, mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", base64: buffer.toString("base64") };
   }
 
@@ -1638,7 +1651,9 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
   private cau_hinh_probe_enrollment_v3150() {
     const secret = process.env.SYSTEM_SLO_ENROLLMENT_SECRET?.trim() || "";
     const ttlRaw = Number.parseInt(process.env.SYSTEM_SLO_ENROLLMENT_TTL_MINUTES || "30", 10) || 30;
-    return { secret, configured: secret.length >= 32, ttl_minutes: Math.max(5, Math.min(1440, ttlRaw)) };
+    const rotationRaw = Number.parseInt(process.env.SYSTEM_SLO_ENROLLMENT_ROTATION_DAYS || "90", 10) || 90;
+    const require_device_id = ["1", "true", "yes", "on"].includes((process.env.SYSTEM_SLO_ENROLLMENT_REQUIRE_DEVICE_ID || "false").trim().toLowerCase());
+    return { secret, configured: secret.length >= 32, ttl_minutes: Math.max(5, Math.min(1440, ttlRaw)), rotation_days: Math.max(1, Math.min(3650, rotationRaw)), require_device_id };
   }
 
   private probe_enrollment_metadata_v3150(metadata: Prisma.JsonValue | null | undefined) {
@@ -1650,18 +1665,25 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const public_key = typeof value.public_key === "string" ? value.public_key.replace(/\\n/g, "\n").trim() : "";
     const key_id = typeof value.key_id === "string" ? value.key_id.trim() : "";
     if (!public_key.includes("BEGIN PUBLIC KEY") || !/^[A-Za-z0-9._-]{1,80}$/.test(key_id)) return null;
+    const enrolled_at = typeof value.enrolled_at === "string" ? value.enrolled_at : null;
+    const config = this.cau_hinh_probe_enrollment_v3150();
+    const enrolledAtMs = enrolled_at ? Date.parse(enrolled_at) : Number.NaN;
+    const rotation_due_at = Number.isFinite(enrolledAtMs) ? new Date(enrolledAtMs + config.rotation_days * 86_400_000).toISOString() : null;
     return {
       key_id,
       public_key,
-      enrolled_at: typeof value.enrolled_at === "string" ? value.enrolled_at : null,
+      enrolled_at,
       token_id: typeof value.token_id === "string" ? value.token_id : null,
       managed: value.managed !== false,
+      device_id_hash: typeof value.device_id_hash === "string" && /^[a-f0-9]{64}$/.test(value.device_id_hash) ? value.device_id_hash : null,
+      rotation_due_at,
+      rotation_due: rotation_due_at ? Date.parse(rotation_due_at) <= Date.now() : false,
     };
   }
 
   async tao_probe_enrollment_token_v3150(
     actor: NguoiDungXacThuc,
-    dto: { agent_id: string; region: string; node_name: string; expires_minutes?: number },
+    dto: { agent_id: string; region: string; node_name: string; expires_minutes?: number; device_id?: string },
   ) {
     const config = this.cau_hinh_probe_enrollment_v3150();
     if (!config.configured) throw new BadRequestException("SYSTEM_SLO_ENROLLMENT_SECRET phải có ít nhất 32 ký tự để tạo enrollment token");
@@ -1672,15 +1694,18 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     if (!region || region.length > 80) throw new BadRequestException("region enrollment không hợp lệ");
     if (!node_name || node_name.length > 120) throw new BadRequestException("node_name enrollment không hợp lệ");
     const ttl = Math.max(5, Math.min(1440, dto.expires_minutes || config.ttl_minutes));
+    const deviceId = dto.device_id?.trim() || "";
+    if (config.require_device_id && deviceId.length < 8) throw new BadRequestException("Device identity là bắt buộc và phải có ít nhất 8 ký tự");
+    const device_hash = deviceId ? createHash("sha256").update(`device:${deviceId}`).digest("hex") : null;
     const now = Math.floor(Date.now() / 1000);
-    const payload = { v: 1, jti: randomBytes(16).toString("hex"), agent_id, region, node_name, iat: now, exp: now + ttl * 60 };
+    const payload = { v: 2, jti: randomBytes(16).toString("hex"), agent_id, region, node_name, device_hash, iat: now, exp: now + ttl * 60 };
     const encoded = Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
     const signature = createHmac("sha256", config.secret).update(encoded).digest("base64url");
     const token = `nh3d-enroll-v1.${encoded}.${signature}`;
     await this.ghi_lich_su_van_hanh("PROBE_ENROLLMENT", "DA_TAO", `Admin ${actor.ho_ten} tạo probe enrollment token`, {
-      agent_id, region, node_name, expires_minutes: ttl, token_id: payload.jti, token_visible_once: true,
+      agent_id, region, node_name, expires_minutes: ttl, token_id: payload.jti, token_visible_once: true, device_bound: !!device_hash,
     });
-    return { token, agent_id, region, node_name, expires_at: new Date(payload.exp * 1000).toISOString(), token_visible_once: true, secret_values_exposed: false };
+    return { token, agent_id, region, node_name, expires_at: new Date(payload.exp * 1000).toISOString(), token_visible_once: true, device_bound: !!device_hash, rotation_days: config.rotation_days, secret_values_exposed: false };
   }
 
   private xac_thuc_probe_enrollment_token_v3150(tokenRaw: string) {
@@ -1702,13 +1727,14 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const jti = String(payload.jti || "");
     const iat = Number(payload.iat);
     const exp = Number(payload.exp);
+    const device_hash = typeof payload.device_hash === "string" && /^[a-f0-9]{64}$/.test(payload.device_hash) ? payload.device_hash : null;
     const now = Math.floor(Date.now() / 1000);
     if (!/^[A-Za-z0-9._-]{2,80}$/.test(agent_id) || !/^[a-f0-9]{32}$/.test(jti) || !Number.isFinite(iat) || !Number.isFinite(exp)) throw new ForbiddenException("Probe enrollment token claims không hợp lệ");
     if (iat > now + 60 || exp <= now || exp - iat > 86_400) throw new ForbiddenException("Probe enrollment token đã hết hạn hoặc thời hạn không hợp lệ");
-    return { agent_id, region, node_name, jti, iat, exp };
+    return { agent_id, region, node_name, jti, iat, exp, device_hash };
   }
 
-  async probe_agent_enroll_v3150(dto: { token: string; agent_id: string; region: string; node_name: string; key_id: string; public_key: string }) {
+  async probe_agent_enroll_v3150(dto: { token: string; agent_id: string; region: string; node_name: string; key_id: string; public_key: string }, deviceIdRaw?: string) {
     const claims = this.xac_thuc_probe_enrollment_token_v3150(dto.token);
     const agent_id = dto.agent_id.trim();
     const region = dto.region.trim();
@@ -1716,6 +1742,11 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const key_id = dto.key_id.trim();
     const public_key = dto.public_key.replace(/\\n/g, "\n").trim();
     if (agent_id !== claims.agent_id || region !== claims.region || node_name !== claims.node_name) throw new ForbiddenException("Probe enrollment identity không khớp token");
+    const config = this.cau_hinh_probe_enrollment_v3150();
+    const deviceId = deviceIdRaw?.trim() || "";
+    const deviceHash = deviceId ? createHash("sha256").update(`device:${deviceId}`).digest("hex") : null;
+    if (claims.device_hash && (!deviceHash || deviceHash !== claims.device_hash)) throw new ForbiddenException("Probe enrollment device identity không khớp token");
+    if (config.require_device_id && !claims.device_hash) throw new ForbiddenException("Probe enrollment token chưa bind device identity");
     if (!/^[A-Za-z0-9._-]{1,80}$/.test(key_id)) throw new BadRequestException("Probe enrollment key_id không hợp lệ");
     if (!public_key.includes("BEGIN PUBLIC KEY") || public_key.length > 4096) throw new BadRequestException("Probe enrollment public key không hợp lệ");
     try { verifySignature(null, Buffer.from("nhienin3d-enrollment-key-check", "utf8"), public_key, Buffer.alloc(64)); }
@@ -1730,18 +1761,18 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
 
     const existing = await this.db.sloProbeAgent.findUnique({ where: { agent_id }, select: { metadata: true } });
     const oldMeta = existing?.metadata && typeof existing.metadata === "object" && !Array.isArray(existing.metadata) ? existing.metadata as Record<string, unknown> : {};
-    const enrollment_v3150 = { key_id, public_key, enrolled_at: new Date().toISOString(), token_id: claims.jti, managed: true };
+    const enrollment_v3150 = { key_id, public_key, enrolled_at: new Date().toISOString(), token_id: claims.jti, managed: true, ...(claims.device_hash ? { device_id_hash: claims.device_hash } : {}) };
     await this.db.sloProbeAgent.upsert({
       where: { agent_id },
-      create: { agent_id, region, node_name, phien_ban: "3.15.0", trang_thai: "ENROLLED", lan_heartbeat: new Date(0), metadata: this.chuan_hoa_json_object({ ...oldMeta, enrollment_v3150 }) },
+      create: { agent_id, region, node_name, phien_ban: "3.16.0", trang_thai: "ENROLLED", lan_heartbeat: new Date(0), metadata: this.chuan_hoa_json_object({ ...oldMeta, enrollment_v3150 }) },
       update: { region, node_name, metadata: this.chuan_hoa_json_object({ ...oldMeta, enrollment_v3150 }) },
     });
-    await this.ghi_lich_su_van_hanh("PROBE_ENROLLMENT", "THANH_CONG", "Probe agent đã enroll Ed25519 public key", { agent_id, region, node_name, key_id, token_id: claims.jti, private_key_exposed: false });
-    return { enrolled: true, agent_id, region, node_name, key_id, protocol: "ED25519-ENROLL-v3150", private_key_exposed: false };
+    await this.ghi_lich_su_van_hanh("PROBE_ENROLLMENT", "THANH_CONG", "Probe agent đã enroll Ed25519 public key", { agent_id, region, node_name, key_id, token_id: claims.jti, device_bound: !!claims.device_hash, private_key_exposed: false });
+    return { enrolled: true, agent_id, region, node_name, key_id, protocol: claims.device_hash ? "ED25519-ENROLL-DEVICE-v3160" : "ED25519-ENROLL-v3150", device_bound: !!claims.device_hash, rotation_days: config.rotation_days, private_key_exposed: false };
   }
 
   private async xac_thuc_probe_agent_v3110(
-    headers: { agent?: string; timestamp?: string; nonce?: string; signature?: string; algorithm?: string },
+    headers: { agent?: string; timestamp?: string; nonce?: string; signature?: string; algorithm?: string; deviceId?: string },
     body: Record<string, unknown>,
   ) {
     const agent = headers.agent?.trim() || "";
@@ -1766,6 +1797,11 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       const publicKeys = this.cau_hinh_probe_agent_public_keys_v3140(agent);
       const enrolledRow = await this.db.sloProbeAgent.findUnique({ where: { agent_id: agent }, select: { metadata: true } });
       const enrolledKey = this.probe_enrollment_metadata_v3150(enrolledRow?.metadata);
+      if (enrolledKey?.device_id_hash) {
+        const deviceId = headers.deviceId?.trim() || "";
+        const actualDeviceHash = deviceId ? createHash("sha256").update(`device:${deviceId}`).digest("hex") : "";
+        if (!actualDeviceHash || actualDeviceHash !== enrolledKey.device_id_hash) throw new ForbiddenException("Probe agent device identity không khớp enrollment");
+      }
       if (!publicKeys.configured && !enrolledKey) throw new ForbiddenException("Probe agent Ed25519 public key chưa được cấu hình hoặc enroll");
       if (publicKeys.configured && !publicKeys.active && !enrolledKey) throw new ForbiddenException("Probe agent Ed25519 không có public key đang hiệu lực");
       const signature = Buffer.from(signatureRaw, "base64");
@@ -1778,7 +1814,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       if (!valid && enrolledKey) {
         try {
           valid = verifySignature(null, Buffer.from(canonical, "utf8"), enrolledKey.public_key, signature);
-          if (valid) protocol = "ED25519-ENROLLED-v3150";
+          if (valid) protocol = enrolledKey.device_id_hash ? "ED25519-ENROLLED-DEVICE-v3160" : "ED25519-ENROLLED-v3150";
         } catch {}
       }
       if (!valid) throw new ForbiddenException("Probe agent Ed25519 signature không hợp lệ");
@@ -1801,7 +1837,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
   }
 
   async probe_agent_heartbeat_v3110(
-    headers: { agent?: string; timestamp?: string; nonce?: string; signature?: string; algorithm?: string },
+    headers: { agent?: string; timestamp?: string; nonce?: string; signature?: string; algorithm?: string; deviceId?: string },
     dto: { agent_id: string; region: string; node_name: string; phien_ban?: string; metadata?: Record<string, unknown> },
     signedBody?: Record<string, unknown>,
   ) {
@@ -1821,7 +1857,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
   }
 
   async probe_agent_ingest_v3110(
-    headers: { agent?: string; timestamp?: string; nonce?: string; signature?: string; algorithm?: string },
+    headers: { agent?: string; timestamp?: string; nonce?: string; signature?: string; algorithm?: string; deviceId?: string },
     dto: { agent_id: string; region: string; node_name: string; phien_ban?: string; metadata?: Record<string, unknown>; samples: Array<{ endpoint_id: string; trang_thai: "TOT" | "LOI" | "CANH_BAO"; http_status?: number; do_tre_ms: number; latency_target_ms: number; maintenance_active?: boolean; observed_at?: string }> },
     signedBody?: Record<string, unknown>,
   ) {
@@ -1982,6 +2018,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
         if (asymmetric_key_count > 0 && asymmetric_active_keys === 0) warnings.push("ED25519_NO_ACTIVE_KEY");
         if (asymmetric_expiring_soon > 0) warnings.push("ED25519_KEY_EXPIRES_SOON");
         if (asymmetric_revoked_keys > 0) warnings.push("ED25519_REVOKED_KEY_PRESENT");
+        if (enrolledKey?.rotation_due) warnings.push("ED25519_ROTATION_DUE");
         if (!row) warnings.push("NOT_REGISTERED");
         if (row && profile.region && row.region !== profile.region) warnings.push("REGION_MISMATCH");
         if (row && profile.node_name && row.node_name !== profile.node_name) warnings.push("NODE_MISMATCH");
@@ -1998,6 +2035,9 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
           asymmetric_revoked_keys,
           asymmetric_expired_keys,
           asymmetric_expiring_soon,
+          enrolled_device_bound: !!enrolledKey?.device_id_hash,
+          enrolled_rotation_due: !!enrolledKey?.rotation_due,
+          enrolled_rotation_due_at: enrolledKey?.rotation_due_at || null,
           registered: !!row,
           status: state.status,
           heartbeat_age_seconds: state.age,
@@ -2020,8 +2060,8 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
           agent_id: row.agent_id, required: false, managed: false, source: "UNMANAGED" as const,
           key_configured: keySet.has(row.agent_id) || publicKeySet.has(row.agent_id) || !!enrolledKey || config.shared_secret_enabled, per_agent_key: keySet.has(row.agent_id), asymmetric_key: publicKeySet.has(row.agent_id) || !!enrolledKey,
           asymmetric_key_count: lifecycleKeys.length + (enrolledKey ? 1 : 0), asymmetric_active_keys: lifecycleKeys.filter(key => key.active).length + (enrolledKey ? 1 : 0), asymmetric_revoked_keys: lifecycleKeys.filter(key => key.revoked).length,
-          asymmetric_expired_keys: lifecycleKeys.filter(key => key.expired).length, asymmetric_expiring_soon: lifecycleKeys.filter(key => key.active && key.expiring_soon).length, registered: true,
-          status: state.status, heartbeat_age_seconds: state.age, expected_region: null, expected_node_name: null, region: row.region, node_name: row.node_name, phien_ban: row.phien_ban, lan_heartbeat: row.lan_heartbeat, lan_mau: row.lan_mau, warnings: ["UNMANAGED_AGENT"],
+          asymmetric_expired_keys: lifecycleKeys.filter(key => key.expired).length, asymmetric_expiring_soon: lifecycleKeys.filter(key => key.active && key.expiring_soon).length, enrolled_device_bound: !!enrolledKey?.device_id_hash, enrolled_rotation_due: !!enrolledKey?.rotation_due, enrolled_rotation_due_at: enrolledKey?.rotation_due_at || null, registered: true,
+          status: state.status, heartbeat_age_seconds: state.age, expected_region: null, expected_node_name: null, region: row.region, node_name: row.node_name, phien_ban: row.phien_ban, lan_heartbeat: row.lan_heartbeat, lan_mau: row.lan_mau, warnings: ["UNMANAGED_AGENT", ...(enrolledKey?.rotation_due ? ["ED25519_ROTATION_DUE"] : [])],
         };
       });
 
@@ -2045,6 +2085,8 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
         per_agent_keys: config.key_ids.length,
         asymmetric_public_keys: new Set([...config.public_key_ids, ...rows.filter(row => !!this.probe_enrollment_metadata_v3150(row.metadata)).map(row => row.agent_id)]).size,
         enrolled_public_keys: rows.filter(row => !!this.probe_enrollment_metadata_v3150(row.metadata)).length,
+        enrolled_device_bound: rows.filter(row => !!this.probe_enrollment_metadata_v3150(row.metadata)?.device_id_hash).length,
+        enrolled_rotation_due: rows.filter(row => !!this.probe_enrollment_metadata_v3150(row.metadata)?.rotation_due).length,
         asymmetric_key_lifecycle: { ...config.public_key_summary, secret_values_exposed: false },
         shared_secret_enabled: config.shared_secret_enabled,
         registered, online, stale, offline, missing, unmanaged: unmanaged.length,
@@ -2488,6 +2530,110 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     return { ...preview, da_archive: true, partition_name: partition };
   }
 
+  private validate_archive_source_v3160(raw: string) {
+    const value = raw.trim();
+    if (value !== "lich_su_van_hanh" && value !== "slo_endpoint_mau") throw new BadRequestException("Bảng archive không hợp lệ");
+    return value as "lich_su_van_hanh" | "slo_endpoint_mau";
+  }
+
+  async danh_sach_archive_batch_v3160() {
+    const batches = await this.db.opsArchiveBatch.findMany({ orderBy: { ngay_tao: "desc" }, take: 100 });
+    return {
+      phien_ban: "3.16.0",
+      portable_bundle: "JSONL+GZIP",
+      s3_presigned_upload: true,
+      restore_replay_supported: true,
+      du_lieu: batches.map(item => ({ ...item, so_ban_ghi: Number(item.so_ban_ghi), secret_values_exposed: false })),
+    };
+  }
+
+  async xuat_archive_bundle_v3160(bangRaw: string, thangRaw: string) {
+    const bang = this.validate_archive_source_v3160(bangRaw);
+    const month = this.thong_tin_thang_archive_v3110(thangRaw);
+    const batch = await this.db.opsArchiveBatch.findUnique({ where: { bang_nguon_thang: { bang_nguon: bang, thang: month.thang } } });
+    if (!batch) throw new NotFoundException("Chưa có archive batch cho tháng này");
+    const rows = await this.db.$queryRawUnsafe<Array<{ source_id: bigint; archive_month: Date; ngay_tao: Date; payload: Prisma.JsonValue; archived_at: Date }>>(
+      `SELECT "source_id","archive_month","ngay_tao","payload","archived_at" FROM "ops_telemetry_archive" WHERE "source_table"='${bang}' AND "archive_month"=DATE '${month.thang}-01' ORDER BY "source_id" ASC`,
+    );
+    const manifest = {
+      format: "nhienin3d-ops-archive-v3160",
+      source_table: bang,
+      month: month.thang,
+      batch_sha256: batch.sha256,
+      records: rows.length,
+      exported_at: new Date().toISOString(),
+      retention_class: process.env.SYSTEM_OPS_ARCHIVE_RETENTION_CLASS?.trim() || "STANDARD",
+    };
+    const lines = [JSON.stringify({ type: "manifest", ...manifest }), ...rows.map(row => JSON.stringify({
+      type: "record",
+      source_id: row.source_id.toString(),
+      archive_month: row.archive_month.toISOString().slice(0, 10),
+      ngay_tao: row.ngay_tao.toISOString(),
+      archived_at: row.archived_at.toISOString(),
+      payload: row.payload,
+    }))].join("\n") + "\n";
+    const raw = Buffer.from(lines, "utf8");
+    const compressed = gzipSync(raw, { level: 9 });
+    return {
+      ten_file: `nhienin3d-ops-${bang}-${month.thang}.jsonl.gz`,
+      mime_type: "application/gzip",
+      base64: compressed.toString("base64"),
+      sha256: createHash("sha256").update(raw).digest("hex"),
+      gzip_sha256: createHash("sha256").update(compressed).digest("hex"),
+      manifest,
+      secret_values_exposed: false,
+    };
+  }
+
+  private archive_presigned_hosts_v3160() {
+    return new Set((process.env.SYSTEM_OPS_ARCHIVE_S3_ALLOWED_HOSTS || "").split(",").map(x => x.trim().toLowerCase()).filter(Boolean));
+  }
+
+  async upload_archive_presigned_v3160(actor: NguoiDungXacThuc, bangRaw: string, thangRaw: string, presignedUrlRaw: string) {
+    const allowed = this.archive_presigned_hosts_v3160();
+    if (!allowed.size) throw new BadRequestException("SYSTEM_OPS_ARCHIVE_S3_ALLOWED_HOSTS chưa cấu hình");
+    let url: URL;
+    try { url = new URL(presignedUrlRaw.trim()); } catch { throw new BadRequestException("Presigned URL không hợp lệ"); }
+    if (url.protocol !== "https:" || !allowed.has(url.hostname.toLowerCase())) throw new ForbiddenException("Presigned URL không thuộc S3-compatible host được phép");
+    const bundle = await this.xuat_archive_bundle_v3160(bangRaw, thangRaw);
+    const body = Buffer.from(bundle.base64, "base64");
+    const response = await fetch(url, { method: "PUT", headers: { "content-type": bundle.mime_type }, body });
+    if (!response.ok) throw new BadRequestException(`S3-compatible upload thất bại HTTP ${response.status}`);
+    const etag = response.headers.get("etag");
+    await this.ghi_lich_su_van_hanh("OPS_ARCHIVE_EXPORT", "THANH_CONG", `Admin ${actor.ho_ten} export archive lên object storage`, {
+      bang_nguon: bundle.manifest.source_table, thang: bundle.manifest.month, records: bundle.manifest.records, gzip_sha256: bundle.gzip_sha256, host: url.hostname, etag,
+    });
+    return { uploaded: true, host: url.hostname, etag, ten_file: bundle.ten_file, gzip_sha256: bundle.gzip_sha256, secret_values_exposed: false };
+  }
+
+  async restore_archive_partition_v3160(actor: NguoiDungXacThuc, bangRaw: string, thangRaw: string, xacNhan: boolean) {
+    const bang = this.validate_archive_source_v3160(bangRaw);
+    const month = this.thong_tin_thang_archive_v3110(thangRaw);
+    const batch = await this.db.opsArchiveBatch.findUnique({ where: { bang_nguon_thang: { bang_nguon: bang, thang: month.thang } } });
+    if (!batch) throw new NotFoundException("Không tìm thấy archive batch để restore/replay");
+    const countRows = await this.db.$queryRawUnsafe<Array<{ archived: bigint; existing: bigint }>>(`
+      SELECT count(*)::bigint AS archived,
+        count(*) FILTER (WHERE EXISTS (SELECT 1 FROM "${bang}" s WHERE s."id"=a."source_id"))::bigint AS existing
+      FROM "ops_telemetry_archive" a
+      WHERE a."source_table"='${bang}' AND a."archive_month"=DATE '${month.thang}-01'`);
+    const summary = countRows[0] || { archived: 0n, existing: 0n };
+    const preview = { bang_nguon: bang, thang: month.thang, archived: Number(summary.archived), existing: Number(summary.existing), would_restore: Number(summary.archived - summary.existing), dry_run: !xacNhan };
+    if (!xacNhan) return { ...preview, restored: 0, xac_nhan_required: true };
+    if (bang === "lich_su_van_hanh") {
+      await this.db.$executeRawUnsafe(`INSERT INTO "lich_su_van_hanh" ("id","loai","trang_thai","mo_ta","chi_tiet","chu_ky_canh_bao","ngay_bat_dau","ngay_ket_thuc","ngay_tao")
+        SELECT (a.payload->>'id')::bigint, a.payload->>'loai', a.payload->>'trang_thai', NULLIF(a.payload->>'mo_ta',''), COALESCE(a.payload->'chi_tiet','{}'::jsonb), NULLIF(a.payload->>'chu_ky_canh_bao',''), NULLIF(a.payload->>'ngay_bat_dau','')::timestamptz, NULLIF(a.payload->>'ngay_ket_thuc','')::timestamptz, (a.payload->>'ngay_tao')::timestamptz
+        FROM "ops_telemetry_archive" a WHERE a."source_table"='lich_su_van_hanh' AND a."archive_month"=DATE '${month.thang}-01' ON CONFLICT ("id") DO NOTHING`);
+    } else {
+      await this.db.$executeRawUnsafe(`INSERT INTO "slo_endpoint_mau" ("id","endpoint_id","agent_id","region","node_name","trang_thai","http_status","do_tre_ms","latency_target_ms","apdex_t_ms","apdex_bucket","maintenance_active","ngay_tao")
+        SELECT (a.payload->>'id')::bigint, a.payload->>'endpoint_id', a.payload->>'agent_id', COALESCE(a.payload->>'region','local'), COALESCE(a.payload->>'node_name','local'), a.payload->>'trang_thai', NULLIF(a.payload->>'http_status','')::int, COALESCE((a.payload->>'do_tre_ms')::double precision,0), COALESCE((a.payload->>'latency_target_ms')::int,1000), COALESCE((a.payload->>'apdex_t_ms')::int,500), COALESCE(a.payload->>'apdex_bucket','FRUSTRATED'), COALESCE((a.payload->>'maintenance_active')::boolean,false), (a.payload->>'ngay_tao')::timestamptz
+        FROM "ops_telemetry_archive" a WHERE a."source_table"='slo_endpoint_mau' AND a."archive_month"=DATE '${month.thang}-01' ON CONFLICT ("id") DO NOTHING`);
+    }
+    const afterRows = await this.db.$queryRawUnsafe<Array<{ restored: bigint }>>(`SELECT count(*)::bigint AS restored FROM "${bang}" s WHERE EXISTS (SELECT 1 FROM "ops_telemetry_archive" a WHERE a."source_table"='${bang}' AND a."archive_month"=DATE '${month.thang}-01' AND a."source_id"=s."id")`);
+    const restored = Number(afterRows[0]?.restored || 0n) - Number(summary.existing);
+    await this.ghi_lich_su_van_hanh("OPS_ARCHIVE_RESTORE", "THANH_CONG", `Admin ${actor.ho_ten} restore/replay archive ${bang} ${month.thang}`, { ...preview, restored: Math.max(0, restored), archive_retained: true });
+    return { ...preview, dry_run: false, restored: Math.max(0, restored), archive_retained: true };
+  }
+
   private validate_ops_service_v3110(raw: string) {
     const value = raw.trim().toLowerCase();
     if (!/^[a-z0-9][a-z0-9_-]{1,79}$/.test(value)) throw new BadRequestException("Mã dịch vụ Ops không hợp lệ");
@@ -2551,6 +2697,148 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     return { at: now.toISOString(), service: service || "*", current, policies };
   }
 
+  private async lay_on_call_overrides_v3160() {
+    const item = await this.db.cauHinhHeThong.findUnique({ where: { khoa: "OPS_ON_CALL_OVERRIDES_V3160" } });
+    const raw = item?.gia_tri;
+    const list = Array.isArray(raw) ? raw : [];
+    return list.flatMap(value => {
+      if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+      const x = value as Record<string, unknown>;
+      const loai = x.loai === "ABSENCE" || x.loai === "OVERRIDE" ? x.loai : null;
+      const id = typeof x.id === "string" ? x.id : "";
+      const dich_vu = typeof x.dich_vu === "string" ? x.dich_vu : "";
+      const nguoi_dung_id = typeof x.nguoi_dung_id === "string" ? x.nguoi_dung_id : "";
+      const bat_dau = typeof x.bat_dau === "string" ? x.bat_dau : "";
+      const ket_thuc = typeof x.ket_thuc === "string" ? x.ket_thuc : "";
+      if (!loai || !id || !dich_vu || !nguoi_dung_id || !bat_dau || !ket_thuc) return [];
+      return [{ id, loai, dich_vu, nguoi_dung_id, bat_dau, ket_thuc, ly_do: typeof x.ly_do === "string" ? x.ly_do : "", nguoi_tao_id: typeof x.nguoi_tao_id === "string" ? x.nguoi_tao_id : undefined, ngay_tao: typeof x.ngay_tao === "string" ? x.ngay_tao : bat_dau } satisfies OpsOnCallOverrideV3160];
+    });
+  }
+
+  private async luu_on_call_overrides_v3160(actor: NguoiDungXacThuc, list: OpsOnCallOverrideV3160[]) {
+    const trimmed = list.filter(item => Number.isFinite(Date.parse(item.ket_thuc)) && Date.parse(item.ket_thuc) > Date.now() - 30 * 86_400_000).slice(-250);
+    await this.db.cauHinhHeThong.upsert({
+      where: { khoa: "OPS_ON_CALL_OVERRIDES_V3160" },
+      create: { khoa: "OPS_ON_CALL_OVERRIDES_V3160", gia_tri: trimmed as unknown as Prisma.InputJsonArray, nguoi_cap_nhat_id: actor.id },
+      update: { gia_tri: trimmed as unknown as Prisma.InputJsonArray, nguoi_cap_nhat_id: actor.id },
+    });
+    return trimmed;
+  }
+
+  async danh_sach_on_call_override_v3160() {
+    const list = await this.lay_on_call_overrides_v3160();
+    const now = Date.now();
+    const users = await this.db.nguoiDung.findMany({ where: { id: { in: [...new Set(list.map(x => x.nguoi_dung_id))] } }, select: { id: true, ho_ten: true, thu_dien_tu: true, da_kich_hoat: true } });
+    const byId = new Map(users.map(x => [x.id, x]));
+    return { du_lieu: list.map(x => ({ ...x, active: Date.parse(x.bat_dau) <= now && Date.parse(x.ket_thuc) > now, nguoi_dung: byId.get(x.nguoi_dung_id) || null })) };
+  }
+
+  async tao_on_call_override_v3160(actor: NguoiDungXacThuc, dto: { loai: "ABSENCE" | "OVERRIDE"; dich_vu: string; nguoi_dung_id: string; bat_dau: string; ket_thuc: string; ly_do?: string }) {
+    const dich_vu = this.validate_ops_service_v3110(dto.dich_vu);
+    const bat = new Date(dto.bat_dau); const ket = new Date(dto.ket_thuc);
+    if (!Number.isFinite(bat.getTime()) || !Number.isFinite(ket.getTime()) || ket <= bat) throw new BadRequestException("Khoảng override/absence không hợp lệ");
+    if (ket.getTime() - bat.getTime() > 31 * 86_400_000) throw new BadRequestException("Override/absence tối đa 31 ngày");
+    const user = await this.db.nguoiDung.findUnique({ where: { id: dto.nguoi_dung_id }, select: { id: true, ho_ten: true, da_kich_hoat: true, vai_tro: true } });
+    if (!user || !user.da_kich_hoat || user.vai_tro === "KHACH_HANG") throw new BadRequestException("Override on-call phải là tài khoản nhân viên đang hoạt động");
+    const list = await this.lay_on_call_overrides_v3160();
+    const item: OpsOnCallOverrideV3160 = { id: randomUUID(), loai: dto.loai, dich_vu, nguoi_dung_id: user.id, bat_dau: bat.toISOString(), ket_thuc: ket.toISOString(), ly_do: dto.ly_do?.trim().slice(0, 500) || "", nguoi_tao_id: actor.id, ngay_tao: new Date().toISOString() };
+    await this.luu_on_call_overrides_v3160(actor, [...list, item]);
+    await this.ghi_lich_su_van_hanh("OPS_ON_CALL_OVERRIDE", "DA_TAO", `Admin ${actor.ho_ten} tạo ${item.loai.toLowerCase()} on-call`, { ...item, nguoi_dung_ten: user.ho_ten });
+    return item;
+  }
+
+  async xoa_on_call_override_v3160(actor: NguoiDungXacThuc, idRaw: string) {
+    const id = idRaw.trim();
+    const list = await this.lay_on_call_overrides_v3160();
+    const existing = list.find(x => x.id === id);
+    if (!existing) throw new NotFoundException("Không tìm thấy on-call override/absence");
+    await this.luu_on_call_overrides_v3160(actor, list.filter(x => x.id !== id));
+    await this.ghi_lich_su_van_hanh("OPS_ON_CALL_OVERRIDE", "DA_XOA", `Admin ${actor.ho_ten} xóa on-call override/absence`, { id, loai: existing.loai, dich_vu: existing.dich_vu, nguoi_dung_id: existing.nguoi_dung_id });
+    return { da_xoa: true, id };
+  }
+
+  async on_call_hien_tai_v3160(dichVuRaw?: string) {
+    const base = await this.on_call_hien_tai_v3110(dichVuRaw);
+    const now = Date.now();
+    const service = base.service;
+    const overrides = (await this.lay_on_call_overrides_v3160()).filter(x => Date.parse(x.bat_dau) <= now && Date.parse(x.ket_thuc) > now && (service === "*" || x.dich_vu === service));
+    const absences = new Set(overrides.filter(x => x.loai === "ABSENCE").map(x => `${x.dich_vu}:${x.nguoi_dung_id}`));
+    const current = base.current.filter(item => !absences.has(`${item.dich_vu}:${item.nguoi_dung_id}`));
+    const overrideRows = overrides.filter(x => x.loai === "OVERRIDE");
+    const users = await this.db.nguoiDung.findMany({ where: { id: { in: [...new Set(overrideRows.map(x => x.nguoi_dung_id))] }, da_kich_hoat: true }, select: { id: true, ho_ten: true, thu_dien_tu: true, da_kich_hoat: true } });
+    const byId = new Map(users.map(x => [x.id, x]));
+    for (const item of overrideRows) {
+      const user = byId.get(item.nguoi_dung_id); if (!user) continue;
+      if (current.some(x => x.dich_vu === item.dich_vu && x.nguoi_dung_id === item.nguoi_dung_id)) continue;
+      current.push({ id: `override:${item.id}`, dich_vu: item.dich_vu, nguoi_dung_id: item.nguoi_dung_id, thu_trong_tuan: -1, bat_dau_phut: 0, ket_thuc_phut: 1439, timezone: "UTC", cap_escalation: 1, dang_hoat_dong: true, ngay_tao: new Date(item.ngay_tao), ngay_cap_nhat: new Date(item.ngay_tao), nguoi_dung: user });
+    }
+    return { ...base, current, overrides, override_active: overrideRows.length, absence_active: overrides.length - overrideRows.length };
+  }
+
+  async danh_sach_on_call_v3160() {
+    const [base, overrides, current] = await Promise.all([this.danh_sach_on_call_v3110(), this.danh_sach_on_call_override_v3160(), this.on_call_hien_tai_v3160()]);
+    return { ...base, current: current.current, overrides: overrides.du_lieu, calendar_format: "ICS", handoff_supported: true, current_state: { at: current.at, service: current.service, override_active: current.override_active, absence_active: current.absence_active } };
+  }
+
+  private ics_escape_v3160(value: string) { return value.replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/,/g, "\\,").replace(/;/g, "\\;"); }
+
+  async xuat_on_call_calendar_v3160() {
+    const schedules = await this.db.opsOnCallSchedule.findMany({ where: { dang_hoat_dong: true }, include: { nguoi_dung: { select: { ho_ten: true, thu_dien_tu: true } } }, orderBy: [{ dich_vu: "asc" }, { thu_trong_tuan: "asc" }, { bat_dau_phut: "asc" }] });
+    const dayCodes = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"];
+    const baseSunday = new Date(Date.UTC(2026, 0, 4));
+    const stamp = (day: number, minute: number, nextDay = false) => { const d = new Date(baseSunday); d.setUTCDate(d.getUTCDate() + day + (nextDay ? 1 : 0)); d.setUTCHours(Math.floor(minute / 60), minute % 60, 0, 0); return `${d.getUTCFullYear()}${String(d.getUTCMonth()+1).padStart(2,"0")}${String(d.getUTCDate()).padStart(2,"0")}T${String(d.getUTCHours()).padStart(2,"0")}${String(d.getUTCMinutes()).padStart(2,"0")}00`; };
+    const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//NhienIn3d//OnCall v3.16.0//VI", "CALSCALE:GREGORIAN"];
+    for (const item of schedules) {
+      lines.push("BEGIN:VEVENT", `UID:nh3d-oncall-${item.id}@nhienin3d.local`, `SUMMARY:${this.ics_escape_v3160(`NhienIn3d on-call ${item.dich_vu} L${item.cap_escalation} · ${item.nguoi_dung.ho_ten}`)}`, `DTSTART:${stamp(item.thu_trong_tuan, item.bat_dau_phut)}`, `DTEND:${stamp(item.thu_trong_tuan, item.ket_thuc_phut, item.ket_thuc_phut <= item.bat_dau_phut)}`, `RRULE:FREQ=WEEKLY;BYDAY=${dayCodes[item.thu_trong_tuan]}`, `X-NHIENIN3D-SERVICE:${item.dich_vu}`, `X-NHIENIN3D-USER-ID:${item.nguoi_dung_id}`, `X-NHIENIN3D-DAY:${item.thu_trong_tuan}`, `X-NHIENIN3D-START-MINUTE:${item.bat_dau_phut}`, `X-NHIENIN3D-END-MINUTE:${item.ket_thuc_phut}`, `X-NHIENIN3D-TIMEZONE:${item.timezone}`, `X-NHIENIN3D-LEVEL:${item.cap_escalation}`, `ATTENDEE:mailto:${item.nguoi_dung.thu_dien_tu}`, "END:VEVENT");
+    }
+    lines.push("END:VCALENDAR");
+    const ics = lines.join("\r\n") + "\r\n";
+    return { ten_file: "nhienin3d-on-call-v3160.ics", mime_type: "text/calendar; charset=utf-8", base64: Buffer.from(ics, "utf8").toString("base64"), schedules: schedules.length };
+  }
+
+  async import_on_call_calendar_v3160(actor: NguoiDungXacThuc, icsRaw: string, dryRun: boolean) {
+    const ics = icsRaw.replace(/\r\n[ \t]/g, "").trim();
+    if (!ics.includes("BEGIN:VCALENDAR")) throw new BadRequestException("ICS calendar không hợp lệ");
+    const events = ics.split("BEGIN:VEVENT").slice(1).map(x => x.split("END:VEVENT")[0]);
+    const field = (event: string, name: string) => event.split(/\r?\n/).find(line => line.startsWith(`${name}:`))?.slice(name.length + 1).trim() || "";
+    const parsed = events.flatMap(event => {
+      const dich_vu = field(event, "X-NHIENIN3D-SERVICE"); const nguoi_dung_id = field(event, "X-NHIENIN3D-USER-ID");
+      const thu = Number(field(event, "X-NHIENIN3D-DAY")); const bat = Number(field(event, "X-NHIENIN3D-START-MINUTE")); const ket = Number(field(event, "X-NHIENIN3D-END-MINUTE")); const cap = Number(field(event, "X-NHIENIN3D-LEVEL") || "1"); const timezone = field(event, "X-NHIENIN3D-TIMEZONE") || "Asia/Ho_Chi_Minh";
+      if (!dich_vu || !nguoi_dung_id || !Number.isInteger(thu) || thu < 0 || thu > 6 || !Number.isInteger(bat) || bat < 0 || bat > 1439 || !Number.isInteger(ket) || ket < 0 || ket > 1439) return [];
+      return [{ dich_vu, nguoi_dung_id, thu_trong_tuan: thu, bat_dau_phut: bat, ket_thuc_phut: ket, timezone, cap_escalation: Math.max(1, Math.min(5, cap || 1)) }];
+    }).slice(0, 200);
+    const userIds = [...new Set(parsed.map(x => x.nguoi_dung_id))];
+    const users = await this.db.nguoiDung.findMany({ where: { id: { in: userIds }, da_kich_hoat: true, vai_tro: { not: "KHACH_HANG" } }, select: { id: true } });
+    const validUsers = new Set(users.map(x => x.id));
+    const valid = parsed.filter(x => validUsers.has(x.nguoi_dung_id));
+    if (dryRun) return { dry_run: true, events: events.length, valid: valid.length, rejected: events.length - valid.length };
+    let created = 0; let skipped = 0;
+    for (const item of valid) {
+      const service = this.validate_ops_service_v3110(item.dich_vu);
+      const exists = await this.db.opsOnCallSchedule.findFirst({ where: { dich_vu: service, nguoi_dung_id: item.nguoi_dung_id, thu_trong_tuan: item.thu_trong_tuan, bat_dau_phut: item.bat_dau_phut, ket_thuc_phut: item.ket_thuc_phut, timezone: item.timezone, cap_escalation: item.cap_escalation } });
+      if (exists) { skipped += 1; continue; }
+      await this.db.opsOnCallSchedule.create({ data: { ...item, dich_vu: service, dang_hoat_dong: true } }); created += 1;
+    }
+    await this.ghi_lich_su_van_hanh("OPS_ON_CALL_IMPORT", "THANH_CONG", `Admin ${actor.ho_ten} import lịch on-call ICS`, { events: events.length, valid: valid.length, created, skipped });
+    return { dry_run: false, events: events.length, valid: valid.length, created, skipped };
+  }
+
+  async handoff_on_call_v3160(dichVuRaw?: string) {
+    const current = await this.on_call_hien_tai_v3160(dichVuRaw);
+    const service = current.service;
+    const incidents = await this.db.suCoVanHanh.findMany({ where: { trang_thai_xu_ly: { not: "DA_KHAC_PHUC" }, ...(service !== "*" ? { dich_vu: service } : {}) }, orderBy: { gan_nhat: "desc" }, take: 20 });
+    const recentAck = await this.db.lichSuVanHanh.findMany({ where: { loai: "OPS_ESCALATION_ACK", ngay_tao: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } }, orderBy: { ngay_tao: "desc" }, take: 30 });
+    return { generated_at: new Date().toISOString(), service, current: current.current, overrides: current.overrides, open_incidents: incidents, escalation_ack_24h: recentAck, policies: current.policies };
+  }
+
+  async acknowledge_escalation_v3160(actor: NguoiDungXacThuc, chuKyRaw: string, ghiChu?: string) {
+    const chu_ky = this.chuan_hoa_chu_ky_su_co(chuKyRaw);
+    const incident = await this.db.suCoVanHanh.findUnique({ where: { chu_ky } });
+    if (!incident) throw new NotFoundException("Không tìm thấy incident");
+    await this.ghi_lich_su_van_hanh("OPS_ESCALATION_ACK", "DA_XAC_NHAN", `${actor.ho_ten} acknowledge escalation incident`, { chu_ky, dich_vu: incident.dich_vu || "api", ghi_chu: ghiChu?.trim().slice(0, 1000) || null, acknowledged_by: actor.id }, undefined, chu_ky);
+    return { acknowledged: true, chu_ky, acknowledged_by: actor.ho_ten, acknowledged_at: new Date().toISOString() };
+  }
+
   private xep_dich_vu_su_co_v3110(vanDeRaw: unknown) {
     const text = (Array.isArray(vanDeRaw) ? vanDeRaw : []).map(x => String(x).toLowerCase()).join(" ");
     if (/postgres|database|cơ sở dữ liệu|co so du lieu/.test(text)) return "postgresql";
@@ -2570,7 +2858,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     let user: { id: string; ho_ten: string; thu_dien_tu: string; da_kich_hoat: boolean } | null = null;
     if (userId) user = await this.db.nguoiDung.findUnique({ where: { id: userId }, select: { id: true, ho_ten: true, thu_dien_tu: true, da_kich_hoat: true } });
     else {
-      const roster = await this.on_call_hien_tai_v3110(dich_vu);
+      const roster = await this.on_call_hien_tai_v3160(dich_vu);
       const first = roster.current[0];
       if (first) { userId = first.nguoi_dung.id; user = first.nguoi_dung; }
     }
@@ -2630,6 +2918,48 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       service_dependency,
       probe_enrollment: { configured: enrollment.configured, ttl_minutes: enrollment.ttl_minutes, enrolled_public_keys: enrolledKeys, token_visible_once: true, private_key_exposed: false },
       asymmetric_probe_signing: { ...base.asymmetric_probe_signing, public_keyring_configured: base.asymmetric_probe_signing.public_keyring_configured || enrolledKeys > 0 },
+    };
+  }
+
+  async trang_thai_ops_v3160() {
+    const [base, on_call, overrides, archiveCount] = await Promise.all([
+      this.trang_thai_ops_v3150(),
+      this.on_call_hien_tai_v3160(),
+      this.lay_on_call_overrides_v3160(),
+      this.db.opsArchiveBatch.count(),
+    ]);
+    const enrollment = this.cau_hinh_probe_enrollment_v3150();
+    const fleet = base.probe_fleet as Record<string, unknown> | undefined;
+    return {
+      ...base,
+      phien_ban: "3.16.0",
+      probe_fleet: fleet ? { ...fleet, phien_ban: "3.16.0" } : base.probe_fleet,
+      multi_region_quorum: { ...base.multi_region_quorum, phien_ban: "3.16.0" },
+      probe_enrollment: {
+        ...base.probe_enrollment,
+        require_device_id: enrollment.require_device_id,
+        rotation_days: enrollment.rotation_days,
+        device_bound_agents: Number(fleet?.enrolled_device_bound || 0),
+        rotation_due_agents: Number(fleet?.enrolled_rotation_due || 0),
+        raw_device_id_exposed: false,
+      },
+      archive_portability: {
+        format: "JSONL+GZIP",
+        archived_batches: archiveCount,
+        s3_presigned_upload: true,
+        s3_allowed_hosts_configured: this.archive_presigned_hosts_v3160().size,
+        restore_replay_supported: true,
+        retention_class: process.env.SYSTEM_OPS_ARCHIVE_RETENTION_CLASS?.trim() || "STANDARD",
+        secret_values_exposed: false,
+      },
+      on_call_v3160: {
+        calendar_format: "ICS",
+        calendar_import_export: true,
+        handoff_report: true,
+        escalation_acknowledgment: true,
+        active_overrides: overrides.filter(x => Date.parse(x.bat_dau) <= Date.now() && Date.parse(x.ket_thuc) > Date.now()).length,
+        current: on_call.current,
+      },
     };
   }
 

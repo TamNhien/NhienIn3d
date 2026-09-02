@@ -1,7 +1,7 @@
 {
   "name": "nhienin3d",
   "private": true,
-  "version": "3.15.0",
+  "version": "3.16.0",
   "description": "NhienIn3d - cửa hàng sản phẩm in 3D hiện đại",
   "engines": {
     "node": ">=24.0.0",
@@ -28,18 +28,18 @@
     "https:local": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/https-local.ps1",
     "docker:up": "docker compose up -d --build --remove-orphans",
     "docker:ps": "docker compose ps",
-    "e2e:browser": "node scripts/e2e-browser-v3150.mjs",
-    "probe:agent": "node scripts/probe-agent-v3150.mjs",
+    "e2e:browser": "node scripts/e2e-browser-v3160.mjs",
+    "probe:agent": "node scripts/probe-agent-v3160.mjs",
     "security:mysql2": "node scripts/kiem-tra-mysql2-security.mjs",
-    "probe:fleet": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/probe-fleet-v3150.ps1",
-    "probe:fleet:once": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/probe-fleet-v3150.ps1 -Once",
-    "probe:keygen": "node scripts/probe-keygen-v3150.mjs",
-    "probe:enroll": "node scripts/probe-enroll-v3150.mjs",
-    "probe:enrollment-token": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/probe-enrollment-token-v3150.ps1",
-    "verify:v315": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-v3150.ps1",
-    "verify:full:v315": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-v3150.ps1 -Full",
-    "verify": "npm run verify:v315",
-    "verify:full": "npm run verify:full:v315"
+    "probe:fleet": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/probe-fleet-v3160.ps1",
+    "probe:fleet:once": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/probe-fleet-v3160.ps1 -Once",
+    "probe:keygen": "node scripts/probe-keygen-v3160.mjs",
+    "probe:enroll": "node scripts/probe-enroll-v3160.mjs",
+    "probe:enrollment-token": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/probe-enrollment-token-v3160.ps1",
+    "verify": "npm run verify:v316",
+    "verify:full": "npm run verify:full:v316",
+    "verify:v316": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-v3160.ps1",
+    "verify:full:v316": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-v3160.ps1 -Full"
   },
   "workspaces": [
     "apps/api",

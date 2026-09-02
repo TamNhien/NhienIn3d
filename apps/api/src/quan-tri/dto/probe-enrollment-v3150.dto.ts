@@ -12,6 +12,9 @@ export class TaoProbeEnrollmentTokenDto {
 
   @IsOptional() @IsInt() @Min(5) @Max(1440)
   expires_minutes?: number;
+
+  @IsOptional() @IsString() @MaxLength(200)
+  device_id?: string;
 }
 
 export class ProbeAgentEnrollDto {

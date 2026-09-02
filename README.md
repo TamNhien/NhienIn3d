@@ -1,7 +1,7 @@
 ﻿# NhienIn3d
 
-> Phiên bản hiện tại: **v3.15.0** — 02/09/2026
-- **Secure probe enrollment + service blast radius + grouped verification v3.15.0**: Admin cấp enrollment token một lần để agent tự đăng ký Ed25519 public key, quorum tính cả region đã enroll, Ops tương quan service dependency/blast radius và gom toàn bộ chuỗi kiểm thử vào 1 lệnh local hoặc 1 lệnh full.
+> Phiên bản hiện tại: **v3.16.0** — 02/09/2026
+- **Archive portability + on-call continuity + device-bound enrollment v3.16.0**: telemetry archive xuất JSONL+GZIP/S3-compatible và restore/replay có dry-run; on-call có ICS import/export, override/absence, handoff report và escalation acknowledgment; probe enrollment hỗ trợ bind device identity + rotation policy mà không lưu raw device ID.
 
 NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **frontend Next.js** và **backend NestJS/Fastify** kết nối **PostgreSQL qua Prisma**.
 
@@ -19,15 +19,30 @@ NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **fro
 
 ## Điểm chính bản hiện tại
 
-- **Verify full SHA-256 compatibility hotfix**: `backup-db.ps1`, `backup-verify.ps1` và runtime backup/restore E2E tự fallback sang .NET SHA-256 khi host PowerShell không có cmdlet `Get-FileHash`; giữ nguyên file `.sha256.txt` và quy trình verify backup.
-- **Probe self-enrollment v3.15**: Admin tạo enrollment token HMAC có TTL và identity binding; token chỉ hiển thị một lần, chống replay bằng `slo_probe_nonce`. Agent tự sinh Ed25519 private key tại node và chỉ gửi public key về `POST /api/v1/probe-agent/enroll`.
-- **Enrolled key persistence**: public key đã enroll được lưu trong metadata hiện có của `slo_probe_agent`, được bảo toàn qua heartbeat/ingest và dùng trực tiếp để verify `ED25519-ENROLLED-v3150`; không lưu private key và không cần migration mới.
-- **Managed fleet động**: agent self-enrolled được tự bổ sung vào fleet với nguồn `ENROLLED`; region của agent enrolled cũng tham gia multi-region quorum thay vì phải khai báo lại profile tĩnh.
-- **Service dependency + blast radius**: `SYSTEM_OPS_SERVICE_DEPENDENCIES_JSON` mô tả dependency giữa service, `SYSTEM_SLO_ENDPOINT_SERVICE_MAP_JSON` ánh xạ endpoint → service; Ops runtime tính root failure, service bị ảnh hưởng bắc cầu và severity `OK/WARNING/CRITICAL` từ quorum.
-- **Ops Dashboard**: thêm panel compact **Service dependency · blast radius**; Managed Probe Fleet hiển thị số Ed25519 key self-enrolled và trạng thái enrollment mà không trả raw token/private key.
-- **Gom lệnh test**: `npm run verify` chạy install → security:mysql2 → audit → toàn bộ test → typecheck → build. `npm run verify:full` chạy thêm backup DB → Docker build/up → migration log → Runtime E2E → Browser E2E.
-- **Tương thích ngược**: giữ HMAC v3.11, Managed Fleet v3.12, Ed25519/quorum v3.13 và lifecycle/alert/Maintenance dark UI v3.14.
-- **Database**: v3.15.0 không thêm migration; tiếp tục dùng 23 migrations, migration mới nhất `202609020001_v3110_distributed_probe_dlq_keyring_oncall_archive`. Runtime/browser dùng `scripts/e2e-runtime-v3150.ps1` / `scripts/e2e-browser-v3150.mjs`; CI/Health/OpenAPI đồng bộ **v3.15.0**.
+- **Archive portability v3.16**: archive partition hiện có có thể xuất thành portable bundle `JSONL+GZIP`, kèm manifest, raw SHA-256 + gzip SHA-256 và retention class. API hỗ trợ PUT tới S3-compatible presigned URL nhưng chỉ cho hostname HTTPS nằm trong allowlist `SYSTEM_OPS_ARCHIVE_S3_ALLOWED_HOSTS`.
+- **Restore/replay an toàn**: Admin có dry-run trước khi replay dữ liệu từ `ops_telemetry_archive` về `lich_su_van_hanh` hoặc `slo_endpoint_mau`; insert idempotent bằng `ON CONFLICT DO NOTHING`, giữ nguyên archive sau restore để có audit/recovery trail.
+- **On-call continuity**: export lịch trực ra ICS, import ICS dạng dry-run/confirm, override hoặc absence theo service/user/time window, handoff report tổng hợp roster hiện tại + incident mở + escalation acknowledgment 24 giờ gần nhất.
+- **Escalation acknowledgment**: incident có endpoint acknowledgment riêng và ghi vào `lich_su_van_hanh` để ca trực sau nhìn thấy trạng thái bàn giao.
+- **Device-bound probe enrollment**: token enrollment có thể bind `device_id`; API chỉ lưu SHA-256 salted-domain hash (`device:<id>`), heartbeat/ingest Ed25519 phải gửi đúng device identity khi agent đã bind. Raw device ID không được trả về Ops runtime.
+- **Rotation policy**: `SYSTEM_SLO_ENROLLMENT_ROTATION_DAYS` đặt tuổi key enrollment; Managed Fleet đánh dấu agent quá hạn rotate và Ops Dashboard hiển thị `device-bound`/`rotation due` mà không lộ public/private secret material.
+- **Tương thích ngược**: HMAC v3.11, Managed Fleet v3.12, Ed25519/quorum v3.13, lifecycle/quorum alert v3.14 và self-enrollment/blast-radius v3.15 vẫn hoạt động. Device binding mặc định optional để không làm offline 3 agent hiện hữu.
+- **Gom lệnh test**: tiếp tục chỉ cần `npm run verify` cho local quality gate hoặc `npm run verify:full` cho backup → Docker → migration → Runtime E2E → Browser E2E.
+- **Database**: v3.16.0 không thêm migration; tiếp tục dùng 23 migrations, migration mới nhất `202609020001_v3110_distributed_probe_dlq_keyring_oncall_archive`. Runtime/browser dùng `scripts/e2e-runtime-v3160.ps1` / `scripts/e2e-browser-v3160.mjs`; CI/Health/OpenAPI đồng bộ **v3.16.0**.
+
+### Cấu hình bổ sung v3.16
+
+```env
+# Optional device-bound enrollment. Bật true khi tất cả agent mới đã có NH3D_PROBE_DEVICE_ID riêng.
+SYSTEM_SLO_ENROLLMENT_REQUIRE_DEVICE_ID=false
+SYSTEM_SLO_ENROLLMENT_ROTATION_DAYS=90
+NH3D_PROBE_DEVICE_ID=
+
+# Portable archive/object storage. Chỉ liệt kê hostname S3-compatible tin cậy, phân tách bằng dấu phẩy.
+SYSTEM_OPS_ARCHIVE_RETENTION_CLASS=STANDARD
+SYSTEM_OPS_ARCHIVE_S3_ALLOWED_HOSTS=
+```
+
+Không commit `.env`, raw enrollment token, private Ed25519 key hoặc device identity lên GitHub.
 
 ## Tài khoản và bảo mật
 
@@ -1508,10 +1523,24 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 - Hotfix `verify:full`: Runtime backup/restore restore từ chính dump đã copy về host, dùng `pg_restore --exit-on-error --single-transaction`; sentinel query được gửi qua **stdin của psql** thay vì nhét SQL vào `sh -lc ... -c`, tránh Windows PowerShell 5.1 làm mất quote khiến `verify=` rỗng.
 - Hotfix Runtime E2E Admin auth: Windows PowerShell 5.1 có thể không gửi `Cookie` khi gắn qua `-Headers`; runtime nay tạo `WebRequestSession` loopback riêng, nạp access token vào `CookieContainer` dạng non-Secure cho HTTP localhost rồi vẫn để API xác minh JWT/session/ADMIN như runtime thật.
 
+
+## v3.16.0 — 02/09/2026
+
+- Hotfix Browser E2E: scope kiểm tra `device-bound` vào đúng panel **Managed probe fleet**, tránh Playwright strict-mode khi cùng cụm từ xuất hiện ở phần mô tả trang và lifecycle.
+
+- Nâng telemetry archive hiện có thành **portable JSONL+GZIP bundle** có manifest, SHA-256 và retention class; thêm API tải bundle và upload S3-compatible bằng presigned URL giới hạn hostname HTTPS qua allowlist.
+- Thêm **restore/replay archive partition** với dry-run mặc định, đếm archived/existing/would-restore, replay idempotent và giữ archive sau restore để tránh biến recovery thành thao tác destructive.
+- On-call hỗ trợ **ICS export/import**, import dry-run, `OVERRIDE`/`ABSENCE`, handoff report và escalation acknowledgment có audit trail. Roster runtime áp override/absence trước khi route alert hoặc auto-assign incident.
+- Enrollment v3.15 được harden bằng **device identity binding** tùy chọn: token có device hash, enrollment/heartbeat/ingest xác minh header device, Ops chỉ trả metadata `device_bound`; raw device ID không persist/không log.
+- Thêm **rotation policy** cho public key self-enrolled; Managed Fleet cảnh báo `ED25519_ROTATION_DUE` và Ops runtime tổng hợp agent device-bound/rotation-due.
+- Ops Dashboard thêm nút **Xuất ICS**, **Handoff**, **Tải bundle** và hiển thị trạng thái device-bound/rotation policy; giữ compact badges/UI dark từ v3.12-v3.15.
+- Giữ cơ chế grouped verification: `npm run verify` và `npm run verify:full`; Runtime/Browser E2E + CI/Health/OpenAPI đồng bộ v3.16.0.
+- Không thêm migration; tiếp tục 23 migrations và tái sử dụng `ops_telemetry_archive`, `ops_archive_batch`, `ops_on_call_schedule`, `cau_hinh_he_thong`, `lich_su_van_hanh`, `slo_probe_agent` hiện có.
+
 # Lộ trình tiếp theo
 
-## v3.16.0
+## v3.17.0
 
-- Archive export S3-compatible, restore/replay từng partition và retention class.
-- On-call calendar import/export, override/absence, handoff report và escalation acknowledgment.
-- Enrollment hardening tùy chọn bằng mTLS/device identity và rotation policy theo fleet.
+- PostgreSQL PITR/WAL archive + automated recovery drill có RPO/RTO report.
+- Signed probe desired-state/remote config với canary rollout và rollback theo fleet/region.
+- Incident postmortem/runbook automation, timeline snapshot và action-item tracking.

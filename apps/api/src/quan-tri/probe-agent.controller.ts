@@ -11,8 +11,8 @@ export class ProbeAgentController {
   constructor(private readonly service: QuanTriService) {}
 
   @Post("enroll")
-  enroll(@Body() dto: ProbeAgentEnrollDto) {
-    return this.service.probe_agent_enroll_v3150(dto);
+  enroll(@Headers("x-nhienin3d-device-id") deviceId: string | undefined, @Body() dto: ProbeAgentEnrollDto) {
+    return this.service.probe_agent_enroll_v3150(dto, deviceId);
   }
 
   @Post("heartbeat")
@@ -23,10 +23,11 @@ export class ProbeAgentController {
     @Headers("x-nhienin3d-nonce") nonce: string | undefined,
     @Headers("x-nhienin3d-signature") signature: string | undefined,
     @Headers("x-nhienin3d-signature-alg") algorithm: string | undefined,
+    @Headers("x-nhienin3d-device-id") deviceId: string | undefined,
     @Body() dto: ProbeAgentHeartbeatDto,
   ) {
     const signedBody = request.body as Record<string, unknown>;
-    return this.service.probe_agent_heartbeat_v3110({ agent, timestamp, nonce, signature, algorithm }, dto, signedBody);
+    return this.service.probe_agent_heartbeat_v3110({ agent, timestamp, nonce, signature, algorithm, deviceId }, dto, signedBody);
   }
 
   @Post("ingest")
@@ -37,9 +38,10 @@ export class ProbeAgentController {
     @Headers("x-nhienin3d-nonce") nonce: string | undefined,
     @Headers("x-nhienin3d-signature") signature: string | undefined,
     @Headers("x-nhienin3d-signature-alg") algorithm: string | undefined,
+    @Headers("x-nhienin3d-device-id") deviceId: string | undefined,
     @Body() dto: ProbeAgentIngestDto,
   ) {
     const signedBody = request.body as Record<string, unknown>;
-    return this.service.probe_agent_ingest_v3110({ agent, timestamp, nonce, signature, algorithm }, dto, signedBody);
+    return this.service.probe_agent_ingest_v3110({ agent, timestamp, nonce, signature, algorithm, deviceId }, dto, signedBody);
   }
 }

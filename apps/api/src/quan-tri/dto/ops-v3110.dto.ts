@@ -72,3 +72,53 @@ export class OpsArchiveDto {
   @Matches(/^\d{4}-(0[1-9]|1[0-2])$/)
   thang!: string;
 }
+
+export class OpsArchiveExportDto {
+  @IsIn(["lich_su_van_hanh", "slo_endpoint_mau"])
+  bang_nguon!: "lich_su_van_hanh" | "slo_endpoint_mau";
+
+  @Matches(/^\d{4}-(0[1-9]|1[0-2])$/)
+  thang!: string;
+
+  @IsOptional() @IsString() @MaxLength(4096)
+  presigned_url?: string;
+}
+
+export class OpsArchiveRestoreDto {
+  @IsIn(["lich_su_van_hanh", "slo_endpoint_mau"])
+  bang_nguon!: "lich_su_van_hanh" | "slo_endpoint_mau";
+
+  @Matches(/^\d{4}-(0[1-9]|1[0-2])$/)
+  thang!: string;
+
+  @IsOptional() @IsBoolean()
+  xac_nhan?: boolean;
+}
+
+export class TaoOpsOnCallOverrideDto {
+  @IsIn(["ABSENCE", "OVERRIDE"])
+  loai!: "ABSENCE" | "OVERRIDE";
+
+  @IsString() @MaxLength(80)
+  dich_vu!: string;
+
+  @IsUUID()
+  nguoi_dung_id!: string;
+
+  @IsString() @MaxLength(40)
+  bat_dau!: string;
+
+  @IsString() @MaxLength(40)
+  ket_thuc!: string;
+
+  @IsOptional() @IsString() @MaxLength(500)
+  ly_do?: string;
+}
+
+export class ImportOpsOnCallCalendarDto {
+  @IsString() @MaxLength(250000)
+  ics!: string;
+
+  @IsOptional() @IsBoolean()
+  dry_run?: boolean;
+}
