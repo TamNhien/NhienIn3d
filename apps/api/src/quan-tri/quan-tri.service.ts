@@ -1,8 +1,8 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, NotFoundException, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
 import * as argon2 from "argon2";
-import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes, randomUUID, timingSafeEqual, verify as verifySignature } from "node:crypto";
+import { createCipheriv, createDecipheriv, createHash, createHmac, createPublicKey, randomBytes, randomUUID, sign as signPayload, timingSafeEqual, verify as verifySignature } from "node:crypto";
 import { gzipSync, inflateRawSync } from "node:zlib";
-import { readdir, stat } from "node:fs/promises";
+import { readFile, readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { CoSoDuLieuService } from "../co-so-du-lieu/co-so-du-lieu.service.js";
 import { ThuDienTuService } from "../thu-dien-tu/thu-dien-tu.service.js";
@@ -82,6 +82,44 @@ type OpsOnCallOverrideV3160 = {
   ngay_tao: string;
 };
 
+type ProbeDesiredStateV3170 = {
+  revision: number;
+  target_version: string;
+  interval_seconds: number;
+  rollout_percent: number;
+  canary_agents: string[];
+  paused: boolean;
+  note: string;
+  updated_at: string;
+  updated_by: string | null;
+  rollback_of: number | null;
+};
+
+type IncidentActionItemV3170 = {
+  id: string;
+  title: string;
+  owner: string;
+  status: "OPEN" | "IN_PROGRESS" | "DONE";
+  due_date: string | null;
+};
+
+type IncidentPostmortemV3170 = {
+  incident_id: string;
+  status: "DRAFT" | "COMPLETE";
+  summary: string;
+  impact: string;
+  root_cause: string;
+  detection: string;
+  resolution: string;
+  runbook_url: string;
+  lessons: string;
+  action_items: IncidentActionItemV3170[];
+  timeline_snapshot: Record<string, unknown>;
+  updated_at: string;
+  updated_by: string | null;
+};
+
+
 type WebhookSendResultV390 = {
   da_gui: boolean;
   ly_do?: string;
@@ -139,7 +177,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     setTimeout(cleanupOps, 120_000).unref();
     this.bo_hen_ops_retention = setInterval(cleanupOps, 6 * 60 * 60_000);
     this.bo_hen_ops_retention.unref();
-    this.logger.log(`Ops v3.16.0 schedulers: DLQ ${dlqPolicy.chu_ky_phut}m, metrics ${opsPolicy.refresh_phut}m, retention ${opsPolicy.retention_days}d.`);
+    this.logger.log(`Ops v3.17.0 schedulers: DLQ ${dlqPolicy.chu_ky_phut}m, metrics ${opsPolicy.refresh_phut}m, retention ${opsPolicy.retention_days}d.`);
   }
 
   onModuleDestroy() {
@@ -631,7 +669,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     for (let index = 0; index <= cau_hinh.max_retries; index++) {
       const lan_thu = index + 1;
       const timestamp = String(Math.floor(Date.now() / 1000));
-      const headers: Record<string, string> = { "content-type": "application/json", "user-agent": "NhienIn3d-Ops/3.16.0", "x-nhienin3d-timestamp": timestamp, "x-nhienin3d-adapter": cau_hinh.adapter };
+      const headers: Record<string, string> = { "content-type": "application/json", "user-agent": "NhienIn3d-Ops/3.17.0", "x-nhienin3d-timestamp": timestamp, "x-nhienin3d-adapter": cau_hinh.adapter };
       if (token) headers.authorization = `Bearer ${token}`;
       if (secret) headers["x-nhienin3d-signature"] = `sha256=${createHmac("sha256", secret).update(`${timestamp}.${body}`).digest("hex")}`;
       const bat_dau = performance.now();
@@ -1039,7 +1077,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const trang_thai = !database.ket_noi ? "LOI" : (van_de.length ? "CANH_BAO" : "TOT");
     const ket_qua = {
       trang_thai,
-      phien_ban: "3.16.0",
+      phien_ban: "3.17.0",
       thoi_gian: new Date().toISOString(),
       api: { uptime_giay: Math.floor(process.uptime()), node: process.version, pid: process.pid, rss_bytes: bo_nho.rss, heap_used_bytes: bo_nho.heapUsed, heap_total_bytes: bo_nho.heapTotal },
       database,
@@ -1295,7 +1333,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     for (const item of sla.burn_rate_policy) rows.push([item.gio, item.nguong, item.muc_do, item.sla.burn_rate ?? "", item.uptime.burn_rate ?? ""]);
     rows.push([], ["Incident"], ["Chữ ký", "Trạng thái", "Vấn đề", "Bắt đầu", "Gần nhất", "Sự kiện", "Tiếp nhận", "Khắc phục"]);
     for (const item of incidents.du_lieu) rows.push([item.chu_ky, item.trang_thai_xu_ly, item.van_de.join(" | "), item.bat_dau.toISOString(), item.gan_nhat.toISOString(), item.so_su_kien, item.tiep_nhan_luc?.toISOString() || "", item.khac_phuc_luc?.toISOString() || ""]);
-    const buffer = this.tao_xlsx(rows, "Ops v3.16.0");
+    const buffer = this.tao_xlsx(rows, "Ops v3.17.0");
     return { ten_file: `ops-slo-incident-${new Date().toISOString().slice(0, 10)}.xlsx`, mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", base64: buffer.toString("base64") };
   }
 
@@ -1853,7 +1891,8 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       create: { agent_id: dto.agent_id, region, node_name, phien_ban: dto.phien_ban?.trim().slice(0, 40) || null, trang_thai: "ONLINE", lan_heartbeat: now, metadata },
       update: { region, node_name, phien_ban: dto.phien_ban?.trim().slice(0, 40) || null, trang_thai: "ONLINE", lan_heartbeat: now, metadata },
     });
-    return { da_nhan: true, agent_id: dto.agent_id, server_time: now.toISOString(), protocol: auth.protocol };
+    const desired_state = await this.desired_state_for_agent_v3170(dto.agent_id, dto.phien_ban);
+    return { da_nhan: true, agent_id: dto.agent_id, server_time: now.toISOString(), protocol: auth.protocol, desired_state };
   }
 
   async probe_agent_ingest_v3110(
@@ -1886,7 +1925,8 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
         update: { region, node_name, phien_ban: dto.phien_ban?.trim().slice(0, 40) || null, trang_thai: "ONLINE", lan_heartbeat: now, lan_mau: now, metadata },
       }),
     ]);
-    return { da_nhan: true, agent_id: dto.agent_id, so_mau: samples.length, server_time: now.toISOString(), protocol: auth.protocol };
+    const desired_state = await this.desired_state_for_agent_v3170(dto.agent_id, dto.phien_ban);
+    return { da_nhan: true, agent_id: dto.agent_id, so_mau: samples.length, server_time: now.toISOString(), protocol: auth.protocol, desired_state };
   }
 
   private async suc_khoe_probe_agents_v3110() {
@@ -2918,6 +2958,298 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       service_dependency,
       probe_enrollment: { configured: enrollment.configured, ttl_minutes: enrollment.ttl_minutes, enrolled_public_keys: enrolledKeys, token_visible_once: true, private_key_exposed: false },
       asymmetric_probe_signing: { ...base.asymmetric_probe_signing, public_keyring_configured: base.asymmetric_probe_signing.public_keyring_configured || enrolledKeys > 0 },
+    };
+  }
+
+
+  private probe_desired_state_env_v3170(): ProbeDesiredStateV3170 {
+    const intervalRaw = Number.parseInt(process.env.SYSTEM_SLO_PROBE_DESIRED_INTERVAL_SECONDS || "300", 10) || 300;
+    const rolloutRaw = Number.parseInt(process.env.SYSTEM_SLO_PROBE_DESIRED_ROLLOUT_PERCENT || "0", 10) || 0;
+    const canary = (process.env.SYSTEM_SLO_PROBE_DESIRED_CANARY_AGENTS || "").split(",").map(x => x.trim()).filter(x => /^[A-Za-z0-9._-]{2,80}$/.test(x)).slice(0, 50);
+    return {
+      revision: 0,
+      target_version: (process.env.SYSTEM_SLO_PROBE_DESIRED_TARGET_VERSION || "3.17.0").trim(),
+      interval_seconds: Math.max(30, Math.min(3600, intervalRaw)),
+      rollout_percent: Math.max(0, Math.min(100, rolloutRaw)),
+      canary_agents: [...new Set(canary)],
+      paused: (process.env.SYSTEM_SLO_PROBE_DESIRED_PAUSED || "true").trim().toLowerCase() !== "false",
+      note: "ENV fallback",
+      updated_at: new Date(0).toISOString(),
+      updated_by: null,
+      rollback_of: null,
+    };
+  }
+
+  private normalize_probe_desired_state_v3170(raw: unknown, fallback: ProbeDesiredStateV3170): ProbeDesiredStateV3170 {
+    const obj = raw && typeof raw === "object" && !Array.isArray(raw) ? raw as Record<string, unknown> : {};
+    const target = String(obj.target_version || fallback.target_version).trim();
+    const interval = Number(obj.interval_seconds);
+    const rollout = Number(obj.rollout_percent);
+    const canary = Array.isArray(obj.canary_agents) ? obj.canary_agents.map(x => String(x).trim()).filter(x => /^[A-Za-z0-9._-]{2,80}$/.test(x)).slice(0, 50) : fallback.canary_agents;
+    return {
+      revision: Number.isFinite(Number(obj.revision)) ? Math.max(0, Math.floor(Number(obj.revision))) : fallback.revision,
+      target_version: /^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9._-]+)?$/.test(target) ? target : fallback.target_version,
+      interval_seconds: Number.isFinite(interval) ? Math.max(30, Math.min(3600, Math.floor(interval))) : fallback.interval_seconds,
+      rollout_percent: Number.isFinite(rollout) ? Math.max(0, Math.min(100, Math.floor(rollout))) : fallback.rollout_percent,
+      canary_agents: [...new Set(canary)],
+      paused: typeof obj.paused === "boolean" ? obj.paused : fallback.paused,
+      note: String(obj.note || fallback.note || "").slice(0, 500),
+      updated_at: Number.isFinite(Date.parse(String(obj.updated_at || ""))) ? new Date(String(obj.updated_at)).toISOString() : fallback.updated_at,
+      updated_by: typeof obj.updated_by === "string" ? obj.updated_by.slice(0, 150) : null,
+      rollback_of: Number.isFinite(Number(obj.rollback_of)) ? Math.max(0, Math.floor(Number(obj.rollback_of))) : null,
+    };
+  }
+
+  private probe_desired_signing_v3170() {
+    const rawRef = process.env.SYSTEM_SLO_PROBE_DESIRED_SIGNING_PRIVATE_KEY?.trim() || "";
+    const key_id = (process.env.SYSTEM_SLO_PROBE_DESIRED_SIGNING_KEY_ID || "desired-state-v3170").trim().slice(0, 80);
+    const private_key = rawRef ? this.giai_quyet_secret_ref_v3110(rawRef).replace(/\\n/g, "\n").trim() : "";
+    if (!private_key.includes("BEGIN PRIVATE KEY")) return { configured: false, algorithm: "ED25519", key_id, public_key_fingerprint: null as string | null, private_key: "" };
+    try {
+      const publicKey = createPublicKey(private_key);
+      const der = publicKey.export({ type: "spki", format: "der" });
+      const public_key_fingerprint = createHash("sha256").update(der).digest("hex");
+      return { configured: true, algorithm: "ED25519", key_id, public_key_fingerprint, private_key };
+    } catch (error) {
+      this.logger.warn(`SYSTEM_SLO_PROBE_DESIRED_SIGNING_PRIVATE_KEY không hợp lệ: ${error instanceof Error ? error.message : String(error)}`);
+      return { configured: false, algorithm: "ED25519", key_id, public_key_fingerprint: null as string | null, private_key: "" };
+    }
+  }
+
+  async lay_probe_desired_state_v3170() {
+    const fallback = this.probe_desired_state_env_v3170();
+    const row = await this.db.cauHinhHeThong.findUnique({ where: { khoa: "PROBE_DESIRED_STATE_V3170" } });
+    const root = row?.gia_tri && typeof row.gia_tri === "object" && !Array.isArray(row.gia_tri) ? row.gia_tri as Record<string, unknown> : {};
+    const current = this.normalize_probe_desired_state_v3170(root.current, fallback);
+    const previous = root.previous ? this.normalize_probe_desired_state_v3170(root.previous, fallback) : null;
+    const history = Array.isArray(root.history) ? root.history.slice(0, 10).map(item => this.normalize_probe_desired_state_v3170(item, fallback)) : [];
+    const signing = this.probe_desired_signing_v3170();
+    return {
+      current, previous, history, source: row ? "DATABASE" : "ENV", remote_code_execution: false, signed_delivery: signing.configured,
+      signing: { algorithm: signing.algorithm, configured: signing.configured, key_id: signing.key_id, public_key_fingerprint: signing.public_key_fingerprint, private_key_exposed: false },
+    };
+  }
+
+  private probe_rollout_bucket_v3170(agentId: string) {
+    return Number.parseInt(createHash("sha256").update(`probe-rollout:${agentId}`).digest("hex").slice(0, 8), 16) % 100;
+  }
+
+  private async desired_state_for_agent_v3170(agentId: string, agentVersion?: string) {
+    const state = await this.lay_probe_desired_state_v3170();
+    const current = state.current;
+    const bucket = this.probe_rollout_bucket_v3170(agentId);
+    const canary = current.canary_agents.includes(agentId);
+    const selected = canary || bucket < current.rollout_percent;
+    const intendedApply = !current.paused && selected;
+    const signing = this.probe_desired_signing_v3170();
+    const apply = intendedApply && signing.configured;
+    const versionMismatch = !!agentVersion && agentVersion.trim() !== current.target_version;
+    const payload = {
+      revision: current.revision, target_version: current.target_version, interval_seconds: current.interval_seconds, rollout_percent: current.rollout_percent,
+      paused: current.paused, canary, bucket, selected, apply,
+      action: intendedApply && !signing.configured ? "SIGNING_REQUIRED" : apply ? (versionMismatch ? "UPGRADE_REQUIRED" : "SYNC_CONFIG") : "HOLD",
+      note: current.note, remote_code_execution: false, signed_delivery: signing.configured,
+    };
+    if (!signing.configured) return { ...payload, integrity: null };
+    const signed_at = new Date().toISOString();
+    const canonical = this.json_on_dinh_v3110({ agent_id: agentId, signed_at, desired_state: payload });
+    const signature_base64 = signPayload(null, Buffer.from(canonical, "utf8"), signing.private_key).toString("base64");
+    return {
+      ...payload,
+      integrity: { algorithm: "ED25519", key_id: signing.key_id, public_key_fingerprint: signing.public_key_fingerprint, signed_at, signature_base64 },
+    };
+  }
+
+  async cap_nhat_probe_desired_state_v3170(actor: NguoiDungXacThuc, dto: { target_version: string; interval_seconds: number; rollout_percent: number; canary_agents: string[]; paused: boolean; note?: string }) {
+    const target = dto.target_version.trim();
+    if (!/^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9._-]+)?$/.test(target)) throw new BadRequestException("Target version khong hop le");
+    const canary = [...new Set(dto.canary_agents.map(x => x.trim()))];
+    if (canary.some(x => !/^[A-Za-z0-9._-]{2,80}$/.test(x))) throw new BadRequestException("Canary agent ID khong hop le");
+    const before = await this.lay_probe_desired_state_v3170();
+    const revision = Math.max(Date.now(), before.current.revision + 1);
+    const current: ProbeDesiredStateV3170 = {
+      revision,
+      target_version: target,
+      interval_seconds: Math.max(30, Math.min(3600, Math.floor(dto.interval_seconds))),
+      rollout_percent: Math.max(0, Math.min(100, Math.floor(dto.rollout_percent))),
+      canary_agents: canary.slice(0, 50),
+      paused: !!dto.paused,
+      note: (dto.note || "").trim().slice(0, 500),
+      updated_at: new Date().toISOString(),
+      updated_by: actor.ho_ten,
+      rollback_of: null,
+    };
+    const payload = { current, previous: before.current, history: [before.current, ...before.history].slice(0, 10) };
+    await this.db.cauHinhHeThong.upsert({ where: { khoa: "PROBE_DESIRED_STATE_V3170" }, create: { khoa: "PROBE_DESIRED_STATE_V3170", gia_tri: this.chuan_hoa_json_object(payload), nguoi_cap_nhat_id: actor.id }, update: { gia_tri: this.chuan_hoa_json_object(payload), nguoi_cap_nhat_id: actor.id } });
+    await this.ghi_lich_su_van_hanh("PROBE_DESIRED_STATE", "DA_CAP_NHAT", `Admin ${actor.ho_ten} cap nhat probe desired-state`, { revision, target_version: target, interval_seconds: current.interval_seconds, rollout_percent: current.rollout_percent, canary_agents: current.canary_agents, paused: current.paused, remote_code_execution: false });
+    return this.lay_probe_desired_state_v3170();
+  }
+
+  async rollback_probe_desired_state_v3170(actor: NguoiDungXacThuc) {
+    const before = await this.lay_probe_desired_state_v3170();
+    if (!before.previous) throw new ConflictException("Chua co desired-state truoc de rollback");
+    const revision = Math.max(Date.now(), before.current.revision + 1);
+    const current: ProbeDesiredStateV3170 = { ...before.previous, revision, updated_at: new Date().toISOString(), updated_by: actor.ho_ten, rollback_of: before.current.revision };
+    const payload = { current, previous: before.current, history: [before.current, ...before.history].slice(0, 10) };
+    await this.db.cauHinhHeThong.upsert({ where: { khoa: "PROBE_DESIRED_STATE_V3170" }, create: { khoa: "PROBE_DESIRED_STATE_V3170", gia_tri: this.chuan_hoa_json_object(payload), nguoi_cap_nhat_id: actor.id }, update: { gia_tri: this.chuan_hoa_json_object(payload), nguoi_cap_nhat_id: actor.id } });
+    await this.ghi_lich_su_van_hanh("PROBE_DESIRED_STATE", "ROLLBACK", `Admin ${actor.ho_ten} rollback probe desired-state`, { revision, rollback_of: before.current.revision, target_version: current.target_version, rollout_percent: current.rollout_percent, paused: current.paused });
+    return this.lay_probe_desired_state_v3170();
+  }
+
+  private incident_postmortem_key_v3170(chuKyRaw: string) {
+    const chuKy = chuKyRaw.trim();
+    if (!/^[A-Za-z0-9._:-]{4,64}$/.test(chuKy)) throw new BadRequestException("Incident ID khong hop le");
+    return { chuKy, key: `INCIDENT_PM_${chuKy}` };
+  }
+
+  private async timeline_snapshot_v3170(chuKy: string) {
+    const rows = await this.db.lichSuVanHanh.findMany({ where: { chu_ky_canh_bao: chuKy }, orderBy: { ngay_tao: "asc" }, take: 200, select: { id: true, loai: true, trang_thai: true, mo_ta: true, ngay_tao: true } });
+    const milestones = rows.slice(0, 20).map(item => ({ id: item.id.toString(), loai: item.loai, trang_thai: item.trang_thai, mo_ta: item.mo_ta || "", ngay_tao: item.ngay_tao.toISOString() }));
+    return { generated_at: new Date().toISOString(), events: rows.length, first_event_at: rows[0]?.ngay_tao.toISOString() || null, last_event_at: rows.length ? rows[rows.length - 1].ngay_tao.toISOString() : null, milestones };
+  }
+
+  async lay_incident_postmortem_v3170(chuKyRaw: string) {
+    const { chuKy, key } = this.incident_postmortem_key_v3170(chuKyRaw);
+    const incident = await this.db.suCoVanHanh.findUnique({ where: { chu_ky: chuKy } });
+    if (!incident) throw new NotFoundException("Khong tim thay incident");
+    const row = await this.db.cauHinhHeThong.findUnique({ where: { khoa: key } });
+    if (row?.gia_tri && typeof row.gia_tri === "object" && !Array.isArray(row.gia_tri)) return row.gia_tri as Record<string, unknown>;
+    const snapshot = await this.timeline_snapshot_v3170(chuKy);
+    return {
+      incident_id: chuKy,
+      status: "DRAFT",
+      summary: "",
+      impact: Array.isArray(incident.van_de) ? incident.van_de.map(x => String(x)).join(" | ") : "",
+      root_cause: "",
+      detection: `Detected at ${incident.bat_dau.toISOString()} from ${incident.so_su_kien} ops event(s).`,
+      resolution: incident.ghi_chu || "",
+      runbook_url: "",
+      lessons: "",
+      action_items: [],
+      timeline_snapshot: snapshot,
+      updated_at: null,
+      updated_by: null,
+    };
+  }
+
+  async luu_incident_postmortem_v3170(actor: NguoiDungXacThuc, chuKyRaw: string, dto: { summary: string; impact: string; root_cause: string; detection: string; resolution: string; runbook_url?: string; lessons?: string; action_items: Array<Record<string, unknown>> }) {
+    const { chuKy, key } = this.incident_postmortem_key_v3170(chuKyRaw);
+    const incident = await this.db.suCoVanHanh.findUnique({ where: { chu_ky: chuKy } });
+    if (!incident) throw new NotFoundException("Khong tim thay incident");
+    const runbook = (dto.runbook_url || "").trim();
+    if (runbook) {
+      let url: URL;
+      try { url = new URL(runbook); } catch { throw new BadRequestException("Runbook URL khong hop le"); }
+      if (url.protocol !== "https:") throw new BadRequestException("Runbook URL phai dung HTTPS");
+    }
+    const action_items: IncidentActionItemV3170[] = dto.action_items.slice(0, 50).map((raw, index) => {
+      const title = String(raw.title || "").trim();
+      const owner = String(raw.owner || "").trim().slice(0, 150);
+      const statusRaw = String(raw.status || "OPEN").toUpperCase();
+      const status = (["OPEN", "IN_PROGRESS", "DONE"].includes(statusRaw) ? statusRaw : "OPEN") as IncidentActionItemV3170["status"];
+      const dueRaw = String(raw.due_date || "").trim();
+      const due_date = dueRaw && Number.isFinite(Date.parse(dueRaw)) ? new Date(dueRaw).toISOString().slice(0, 10) : null;
+      if (!title || title.length > 300) throw new BadRequestException(`Action item ${index + 1} khong hop le`);
+      return { id: /^[A-Za-z0-9._-]{4,80}$/.test(String(raw.id || "")) ? String(raw.id) : randomUUID(), title, owner, status, due_date };
+    });
+    const timeline_snapshot = await this.timeline_snapshot_v3170(chuKy);
+    const complete = incident.trang_thai_xu_ly === "DA_KHAC_PHUC" && dto.summary.trim().length > 0 && dto.root_cause.trim().length > 0 && dto.resolution.trim().length > 0;
+    const value: IncidentPostmortemV3170 = {
+      incident_id: chuKy,
+      status: complete ? "COMPLETE" : "DRAFT",
+      summary: dto.summary.trim().slice(0, 2000),
+      impact: dto.impact.trim().slice(0, 4000),
+      root_cause: dto.root_cause.trim().slice(0, 4000),
+      detection: dto.detection.trim().slice(0, 4000),
+      resolution: dto.resolution.trim().slice(0, 4000),
+      runbook_url: runbook.slice(0, 500),
+      lessons: (dto.lessons || "").trim().slice(0, 4000),
+      action_items,
+      timeline_snapshot,
+      updated_at: new Date().toISOString(),
+      updated_by: actor.ho_ten,
+    };
+    await this.db.cauHinhHeThong.upsert({ where: { khoa: key }, create: { khoa: key, gia_tri: this.chuan_hoa_json_object(value as unknown as Record<string, unknown>), nguoi_cap_nhat_id: actor.id }, update: { gia_tri: this.chuan_hoa_json_object(value as unknown as Record<string, unknown>), nguoi_cap_nhat_id: actor.id } });
+    await this.ghi_lich_su_van_hanh("INCIDENT_POSTMORTEM", value.status, `Admin ${actor.ho_ten} luu postmortem incident`, { chu_ky: chuKy, status: value.status, action_items: action_items.length, open_actions: action_items.filter(x => x.status !== "DONE").length, runbook_configured: !!runbook }, undefined, chuKy);
+    return value;
+  }
+
+  private async postmortem_summary_v3170() {
+    const rows = await this.db.cauHinhHeThong.findMany({ where: { khoa: { startsWith: "INCIDENT_PM_" } }, select: { gia_tri: true } });
+    let complete = 0, draft = 0, open_actions = 0, done_actions = 0;
+    for (const row of rows) {
+      const value = row.gia_tri && typeof row.gia_tri === "object" && !Array.isArray(row.gia_tri) ? row.gia_tri as Record<string, unknown> : {};
+      if (value.status === "COMPLETE") complete += 1; else draft += 1;
+      const actions = Array.isArray(value.action_items) ? value.action_items as Array<Record<string, unknown>> : [];
+      open_actions += actions.filter(x => String(x.status || "OPEN") !== "DONE").length;
+      done_actions += actions.filter(x => String(x.status || "") === "DONE").length;
+    }
+    return { postmortems: rows.length, complete, draft, open_actions, done_actions, timeline_snapshot: true, https_runbook_only: true };
+  }
+
+  private recovery_config_v3170() {
+    const rpo = Number.parseInt(process.env.SYSTEM_DB_RECOVERY_RPO_TARGET_MINUTES || "60", 10) || 60;
+    const rto = Number.parseInt(process.env.SYSTEM_DB_RECOVERY_RTO_TARGET_MINUTES || "30", 10) || 30;
+    const drillDays = Number.parseInt(process.env.SYSTEM_DB_RECOVERY_DRILL_MAX_AGE_DAYS || "30", 10) || 30;
+    return { rpo_target_minutes: Math.max(1, Math.min(1440, rpo)), rto_target_minutes: Math.max(1, Math.min(1440, rto)), drill_max_age_days: Math.max(1, Math.min(365, drillDays)) };
+  }
+
+  private async recovery_readiness_v3170() {
+    const config = this.recovery_config_v3170();
+    const backup = await this.thong_tin_backup();
+    let pg = { wal_level: "unknown", archive_mode: "unknown", archive_command: "", archived_count: "0", failed_count: "0", last_archived_wal: null as string | null, last_archived_time: null as Date | null };
+    try {
+      const settings = await this.db.$queryRawUnsafe<Array<{ wal_level: string; archive_mode: string; archive_command: string }>>("SELECT current_setting('wal_level') AS wal_level, current_setting('archive_mode') AS archive_mode, current_setting('archive_command') AS archive_command");
+      const archiver = await this.db.$queryRawUnsafe<Array<{ archived_count: bigint; failed_count: bigint; last_archived_wal: string | null; last_archived_time: Date | null }>>("SELECT archived_count, failed_count, last_archived_wal, last_archived_time FROM pg_stat_archiver");
+      pg = { ...(settings[0] || pg), archived_count: archiver[0]?.archived_count?.toString() || "0", failed_count: archiver[0]?.failed_count?.toString() || "0", last_archived_wal: archiver[0]?.last_archived_wal || null, last_archived_time: archiver[0]?.last_archived_time || null };
+    } catch (error) {
+      this.logger.debug(`Recovery readiness PostgreSQL settings unavailable: ${error instanceof Error ? error.message : String(error)}`);
+    }
+    const pitr_ready = pg.archive_mode === "on" && ["replica", "logical"].includes(pg.wal_level) && !!pg.archive_command.trim() && pg.archive_command.trim() !== "(disabled)";
+    const backupAgeMinutes = backup.gan_nhat?.ngay_sua ? Math.max(0, Math.round((Date.now() - new Date(backup.gan_nhat.ngay_sua).getTime()) / 60000)) : null;
+    const walAgeMinutes = pg.last_archived_time ? Math.max(0, Math.round((Date.now() - pg.last_archived_time.getTime()) / 60000)) : null;
+    let drill: Record<string, unknown> | null = null;
+    try {
+      const reportPath = join(process.env.BACKUP_DIRECTORY?.trim() || "/app/backups", "recovery-drill-v3170-latest.json");
+      drill = JSON.parse(await readFile(reportPath, "utf8")) as Record<string, unknown>;
+    } catch {}
+    const observedRpo = pitr_ready && walAgeMinutes != null ? walAgeMinutes : backupAgeMinutes;
+    const rtoSeconds = drill && Number.isFinite(Number(drill.rto_seconds)) ? Number(drill.rto_seconds) : null;
+    const completedAt = drill && Number.isFinite(Date.parse(String(drill.completed_at || ""))) ? new Date(String(drill.completed_at)).toISOString() : null;
+    const drillAgeDays = completedAt ? Math.max(0, Math.round((Date.now() - Date.parse(completedAt)) / 86_400_000 * 10) / 10) : null;
+    return {
+      ...config,
+      method: pitr_ready ? "WAL_ARCHIVE+LOGICAL_DRILL" : "LOGICAL_BACKUP_FALLBACK",
+      pitr_ready,
+      pitr_restore_exercised: drill?.pitr_restore_exercised === true,
+      wal_archive: { wal_level: pg.wal_level, archive_mode: pg.archive_mode, archive_command_configured: !!pg.archive_command.trim() && pg.archive_command.trim() !== "(disabled)", archived_count: pg.archived_count, failed_count: pg.failed_count, last_archived_wal: pg.last_archived_wal, last_archived_time: pg.last_archived_time?.toISOString() || null },
+      observed_rpo_minutes: observedRpo,
+      rpo_met: observedRpo == null ? null : observedRpo <= config.rpo_target_minutes,
+      last_drill: drill,
+      drill_age_days: drillAgeDays,
+      drill_fresh: drillAgeDays == null ? false : drillAgeDays <= config.drill_max_age_days,
+      observed_rto_seconds: rtoSeconds,
+      rto_met: rtoSeconds == null ? null : rtoSeconds <= config.rto_target_minutes * 60,
+      optional_compose_override: "docker-compose.pitr.yml",
+    };
+  }
+
+  async trang_thai_ops_v3170() {
+    const [base, desired_state, postmortem, database_recovery] = await Promise.all([
+      this.trang_thai_ops_v3160(),
+      this.lay_probe_desired_state_v3170(),
+      this.postmortem_summary_v3170(),
+      this.recovery_readiness_v3170(),
+    ]);
+    const fleet = base.probe_fleet as Record<string, unknown> | undefined;
+    return {
+      ...base,
+      phien_ban: "3.17.0",
+      probe_fleet: fleet ? { ...fleet, phien_ban: "3.17.0" } : base.probe_fleet,
+      multi_region_quorum: { ...base.multi_region_quorum, phien_ban: "3.17.0" },
+      probe_desired_state: { ...desired_state, remote_code_execution: false },
+      incident_postmortem: postmortem,
+      database_recovery,
     };
   }
 

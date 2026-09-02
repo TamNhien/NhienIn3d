@@ -80,6 +80,7 @@ apps/api/src/quan-tri/dto/kiem-tra-tep-nhap-kho.dto.ts
 apps/api/src/quan-tri/dto/nhap-kho-lo.dto.ts
 apps/api/src/quan-tri/dto/ops-phan-cong.dto.ts
 apps/api/src/quan-tri/dto/ops-v3110.dto.ts
+apps/api/src/quan-tri/dto/ops-v3170.dto.ts
 apps/api/src/quan-tri/dto/probe-agent.dto.ts
 apps/api/src/quan-tri/dto/probe-enrollment-v3150.dto.ts
 apps/api/src/quan-tri/dto/tao-bien-the.dto.ts
@@ -137,6 +138,7 @@ apps/api/tests/v3130-quorum-ed25519.test.mjs
 apps/api/tests/v3140-key-lifecycle-quorum-alert.test.mjs
 apps/api/tests/v3150-enrollment-dependency.test.mjs
 apps/api/tests/v3160-archive-oncall-device-enrollment.test.mjs
+apps/api/tests/v3170-recovery-desired-postmortem.test.mjs
 apps/api/tests/v320-operations.test.mjs
 apps/api/tests/v321-order-delivered-typecheck.test.mjs
 apps/api/tests/v330-audit-ops.test.mjs
@@ -206,6 +208,7 @@ apps/web/tests/v3130-quorum-ui.test.mjs
 apps/web/tests/v3140-maintenance-key-lifecycle-ui.test.mjs
 apps/web/tests/v3150-enrollment-blast-radius-ui.test.mjs
 apps/web/tests/v3160-archive-oncall-device-ui.test.mjs
+apps/web/tests/v3170-recovery-desired-postmortem-ui.test.mjs
 apps/web/tests/v320-operations.test.mjs
 apps/web/tests/v321-order-delivered.test.mjs
 apps/web/tests/v322-order-update-ux.test.mjs
@@ -221,6 +224,7 @@ apps/web/tests/v380-endpoint-slo-webhook-dlq-timeline.test.mjs
 apps/web/tests/v390-endpoint-latency-dlq-search-maintenance.test.mjs
 apps/web/tsconfig.json
 docker-compose.https.yml
+docker-compose.pitr.yml
 docker-compose.yml
 infra/caddy/Caddyfile.local-https
 package.json
@@ -242,6 +246,7 @@ scripts/e2e-browser-v3130.mjs
 scripts/e2e-browser-v3140.mjs
 scripts/e2e-browser-v3150.mjs
 scripts/e2e-browser-v3160.mjs
+scripts/e2e-browser-v3170.mjs
 scripts/e2e-browser-v350.mjs
 scripts/e2e-browser-v351.mjs
 scripts/e2e-browser-v352.mjs
@@ -272,6 +277,7 @@ scripts/e2e-runtime-v3130.ps1
 scripts/e2e-runtime-v3140.ps1
 scripts/e2e-runtime-v3150.ps1
 scripts/e2e-runtime-v3160.ps1
+scripts/e2e-runtime-v3170.ps1
 scripts/e2e-runtime-v320.ps1
 scripts/e2e-runtime-v340.ps1
 scripts/e2e-runtime-v341.ps1
@@ -305,23 +311,30 @@ scripts/probe-agent-v3130.mjs
 scripts/probe-agent-v3140.mjs
 scripts/probe-agent-v3150.mjs
 scripts/probe-agent-v3160.mjs
+scripts/probe-agent-v3170.mjs
 scripts/probe-enroll-v3150.mjs
 scripts/probe-enroll-v3160.mjs
+scripts/probe-enroll-v3170.mjs
 scripts/probe-enrollment-token-v3150.ps1
 scripts/probe-enrollment-token-v3160.ps1
+scripts/probe-enrollment-token-v3170.ps1
 scripts/probe-fleet-v3120.ps1
 scripts/probe-fleet-v3130.ps1
 scripts/probe-fleet-v3140.ps1
 scripts/probe-fleet-v3150.ps1
 scripts/probe-fleet-v3160.ps1
+scripts/probe-fleet-v3170.ps1
 scripts/probe-keygen-v3130.mjs
 scripts/probe-keygen-v3140.mjs
 scripts/probe-keygen-v3150.mjs
 scripts/probe-keygen-v3160.mjs
+scripts/probe-keygen-v3170.mjs
+scripts/recovery-drill-v3170.ps1
 scripts/release.ps1
 scripts/restore-db.ps1
 scripts/verify-v3150.ps1
 scripts/verify-v3160.ps1
+scripts/verify-v3170.ps1
 tests/cau-truc.test.mjs
 tests/e2e-admin-v218.test.mjs
 tests/e2e-admin-v219.test.mjs
@@ -338,6 +351,8 @@ tests/v3130-quorum-ed25519-anomaly.test.mjs
 tests/v3140-key-lifecycle-quorum-alert-maintenance-ui.test.mjs
 tests/v3150-enrollment-blast-radius-verify.test.mjs
 tests/v3160-archive-oncall-device-enrollment.test.mjs
+tests/v3170-powershell51-runtime-parser.test.mjs
+tests/v3170-recovery-desired-postmortem.test.mjs
 tests/v320-operations.test.mjs
 tests/v321-order-delivered-typecheck.test.mjs
 tests/v322-order-update-ux.test.mjs

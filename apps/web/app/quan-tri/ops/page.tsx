@@ -13,6 +13,8 @@ import {
   OpsOnCallScheduleAdmin,
   OpsPhanCongAdmin,
   OpsRuntimeAdmin,
+  ProbeDesiredStateAdmin,
+  IncidentPostmortemAdmin,
   OpsEscalationPolicyAdmin,
   WebhookReplayJobAdmin,
   DlqKeyringAdmin,
@@ -30,6 +32,11 @@ import {
   layOpsOnCallHandoffAdmin,
   layOpsPhanCongAdmin,
   layOpsRuntimeAdmin,
+  layProbeDesiredStateAdmin,
+  capNhatProbeDesiredStateAdmin,
+  rollbackProbeDesiredStateAdmin,
+  layIncidentPostmortemAdmin,
+  luuIncidentPostmortemAdmin,
   layDlqKeyringAdmin,
   layWebhookReplayJobsAdmin,
   layOpsTimelineReadonly,
@@ -102,6 +109,10 @@ export default function OpsDashboardPage() {
   const [keyring, setKeyring] = useState<DlqKeyringAdmin | null>(null);
   const [archivePreview, setArchivePreview] = useState<OpsArchivePreviewAdmin | null>(null);
   const [archiveForm, setArchiveForm] = useState({ bang_nguon: "slo_endpoint_mau" as "lich_su_van_hanh" | "slo_endpoint_mau", thang: truocNgay(120).slice(0, 7) });
+  const [desiredState, setDesiredState] = useState<ProbeDesiredStateAdmin | null>(null);
+  const [desiredForm, setDesiredForm] = useState({ target_version: "3.17.0", interval_seconds: 300, rollout_percent: 0, canary_agents: "", paused: true, note: "" });
+  const [postmortem, setPostmortem] = useState<IncidentPostmortemAdmin | null>(null);
+  const [postmortemForm, setPostmortemForm] = useState({ summary: "", impact: "", root_cause: "", detection: "", resolution: "", runbook_url: "", lessons: "", action_item: "" });
 
   const taiDuLieu = useCallback(async () => {
     setDangXuLy("load"); setLoi("");
@@ -109,7 +120,7 @@ export default function OpsDashboardPage() {
       const taiKhoan = await layTaiKhoan();
       if (!taiKhoan) throw new Error("Bạn cần đăng nhập để truy cập Ops Dashboard.");
       if (taiKhoan.vai_tro === "ADMIN") {
-        const [sloData, incidentData, maintenanceData, policyData, webhookData, dlqData, runtimeData, assignmentData, users, onCallData, keyringData, replayData] = await Promise.all([
+        const [sloData, incidentData, maintenanceData, policyData, webhookData, dlqData, runtimeData, assignmentData, users, onCallData, keyringData, replayData, desiredData] = await Promise.all([
           laySlaVanHanhAdmin(90),
           layDanhSachSuCoVanHanhAdmin(100, trangThai, tuNgay, denNgay),
           layDanhSachBaoTriAdmin(),
@@ -121,10 +132,11 @@ export default function OpsDashboardPage() {
           layNguoiDung(),
           layOpsOnCallAdmin(),
           layDlqKeyringAdmin(),
-          layWebhookReplayJobsAdmin()
+          layWebhookReplayJobsAdmin(),
+          layProbeDesiredStateAdmin()
         ]);
         setAccess({ duoc_phep: true, admin: true, vai_tro_ops: "SERVICE_OWNER", dich_vu: ["*"] });
-        setSla(sloData); setIncidents(incidentData.du_lieu); setMaintenance(maintenanceData.du_lieu); setPolicy(policyData); setWebhook(webhookData.du_lieu); setDeadLetters(dlqData.du_lieu); setWebhookAdapter(webhookData.cau_hinh.adapter || "GENERIC"); setRuntime(runtimeData); setAssignments(assignmentData.du_lieu); setStaff(users.filter(x => x.vai_tro !== "KHACH_HANG" && x.da_kich_hoat !== false)); setOnCallSchedules(onCallData.schedules); setEscalationPolicies(onCallData.policies); setKeyring(keyringData); setReplayJobs(replayData.du_lieu);
+        setSla(sloData); setIncidents(incidentData.du_lieu); setMaintenance(maintenanceData.du_lieu); setPolicy(policyData); setWebhook(webhookData.du_lieu); setDeadLetters(dlqData.du_lieu); setWebhookAdapter(webhookData.cau_hinh.adapter || "GENERIC"); setRuntime(runtimeData); setAssignments(assignmentData.du_lieu); setStaff(users.filter(x => x.vai_tro !== "KHACH_HANG" && x.da_kich_hoat !== false)); setOnCallSchedules(onCallData.schedules); setEscalationPolicies(onCallData.policies); setKeyring(keyringData); setReplayJobs(replayData.du_lieu); setDesiredState(desiredData); setDesiredForm({ target_version: desiredData.current.target_version, interval_seconds: desiredData.current.interval_seconds, rollout_percent: desiredData.current.rollout_percent, canary_agents: desiredData.current.canary_agents.join(","), paused: desiredData.current.paused, note: desiredData.current.note || "" });
       } else {
         const data = await layOpsDashboardReadonly(90);
         const filtered = data.incidents.du_lieu.filter(item => {
@@ -132,7 +144,7 @@ export default function OpsDashboardPage() {
           const day = item.bat_dau.slice(0, 10);
           return (!tuNgay || day >= tuNgay) && (!denNgay || day <= denNgay);
         });
-        setAccess(data.access); setSla(data.sla); setIncidents(filtered); setPolicy(data.sla.cau_hinh_nang_cao || null); setRuntime(data.runtime); setMaintenance([]); setWebhook([]); setDeadLetters([]); setAssignments([]); setStaff([]); setOnCallSchedules(data.runtime.on_call?.current || []); setEscalationPolicies(data.runtime.on_call?.policies || []); setKeyring(data.runtime.dlq_keyring || null); setReplayJobs([]);
+        setAccess(data.access); setSla(data.sla); setIncidents(filtered); setPolicy(data.sla.cau_hinh_nang_cao || null); setRuntime(data.runtime); setMaintenance([]); setWebhook([]); setDeadLetters([]); setAssignments([]); setStaff([]); setOnCallSchedules(data.runtime.on_call?.current || []); setEscalationPolicies(data.runtime.on_call?.policies || []); setKeyring(data.runtime.dlq_keyring || null); setReplayJobs([]); setDesiredState(data.runtime.probe_desired_state || null);
       }
     } catch (error) { setLoi(error instanceof Error ? error.message : String(error)); }
     finally { setDangXuLy(""); }
@@ -207,7 +219,7 @@ export default function OpsDashboardPage() {
       const kq = access?.admin
         ? await layTimelineSuCoVanHanhAdmin(chuKy, { q: query, cursor: reset ? null : timelineCursor, kich_thuoc: 20 })
         : await layOpsTimelineReadonly(chuKy, { q: query, cursor: reset ? null : timelineCursor, kich_thuoc: 20 });
-      setSelectedIncident(chuKy); setTimeline(current => reset ? kq.du_lieu : [...current, ...kq.du_lieu]); setTimelineCursor(kq.cursor.next_cursor); setTimelineHasMore(kq.cursor.co_them);
+      setSelectedIncident(chuKy); setTimeline(current => reset ? kq.du_lieu : [...current, ...kq.du_lieu]); setTimelineCursor(kq.cursor.next_cursor); setTimelineHasMore(kq.cursor.co_them); if (reset && access?.admin) void loadPostmortem(chuKy);
     } catch (error) { setLoi(error instanceof Error ? error.message : String(error)); }
     finally { setDangXuLy(""); }
   }
@@ -339,6 +351,33 @@ export default function OpsDashboardPage() {
     finally { setDangXuLy(""); }
   }
 
+  async function saveDesiredState() {
+    setDangXuLy("desired-state-save"); setLoi("");
+    try {
+      const kq = await capNhatProbeDesiredStateAdmin({ ...desiredForm, canary_agents: desiredForm.canary_agents.split(",").map(x => x.trim()).filter(Boolean) });
+      setDesiredState(kq); setRuntime(x => x ? { ...x, probe_desired_state: kq } : x); setThongBao("Đã lưu probe desired-state; rollout không thực thi remote command.");
+    } catch (error) { setLoi(error instanceof Error ? error.message : String(error)); } finally { setDangXuLy(""); }
+  }
+
+  async function rollbackDesiredState() {
+    setDangXuLy("desired-state-rollback"); setLoi("");
+    try { const kq = await rollbackProbeDesiredStateAdmin(); setDesiredState(kq); setRuntime(x => x ? { ...x, probe_desired_state: kq } : x); setDesiredForm({ target_version: kq.current.target_version, interval_seconds: kq.current.interval_seconds, rollout_percent: kq.current.rollout_percent, canary_agents: kq.current.canary_agents.join(","), paused: kq.current.paused, note: kq.current.note || "" }); setThongBao("Đã rollback probe desired-state."); }
+    catch (error) { setLoi(error instanceof Error ? error.message : String(error)); } finally { setDangXuLy(""); }
+  }
+
+  async function loadPostmortem(chuKy: string) {
+    if (!access?.admin) return;
+    try { const kq = await layIncidentPostmortemAdmin(chuKy); setPostmortem(kq); setPostmortemForm({ summary: kq.summary || "", impact: kq.impact || "", root_cause: kq.root_cause || "", detection: kq.detection || "", resolution: kq.resolution || "", runbook_url: kq.runbook_url || "", lessons: kq.lessons || "", action_item: kq.action_items.find(x => x.status !== "DONE")?.title || "" }); }
+    catch (error) { setLoi(error instanceof Error ? error.message : String(error)); }
+  }
+
+  async function savePostmortem() {
+    if (!selectedIncident) return;
+    setDangXuLy("postmortem-save"); setLoi("");
+    try { const existing = postmortem?.action_items || []; const actions = postmortemForm.action_item.trim() ? [...existing.filter(x => x.title !== postmortemForm.action_item.trim()), { id: "ui-action", title: postmortemForm.action_item.trim(), owner: "", status: "OPEN" as const, due_date: null }] : existing; const kq = await luuIncidentPostmortemAdmin(selectedIncident, { summary: postmortemForm.summary, impact: postmortemForm.impact, root_cause: postmortemForm.root_cause, detection: postmortemForm.detection, resolution: postmortemForm.resolution, runbook_url: postmortemForm.runbook_url, lessons: postmortemForm.lessons, action_items: actions }); setPostmortem(kq); setThongBao(`Đã lưu postmortem ${kq.status}.`); await taiDuLieu(); }
+    catch (error) { setLoi(error instanceof Error ? error.message : String(error)); } finally { setDangXuLy(""); }
+  }
+
   async function assignIncidentOwner(item: SuCoVanHanhTomTat) {
     setDangXuLy(`incident-owner-${item.chu_ky}`); setLoi("");
     try { await ganChuSoHuuSuCoAdmin(item.chu_ky, { dich_vu: item.dich_vu || undefined }); setThongBao(`Đã gán owner on-call cho incident #${item.chu_ky.slice(0, 12)}.`); await taiDuLieu(); }
@@ -348,7 +387,7 @@ export default function OpsDashboardPage() {
 
   return <main className={styles.page}>
     <header className={styles.header}>
-      <div><span className={styles.kicker}>NHIENIN3D · OPS v3.16.0</span><h1>Ops Dashboard</h1><p>Archive portability + restore/replay, on-call calendar/handoff, device-bound Ed25519 enrollment; giữ multi-region quorum, managed fleet, SLO và DLQ replay.</p>{access && <small className={styles.accessBadge}>{access.admin ? "ADMIN · SERVICE OWNER" : `${access.vai_tro_ops} · ${access.dich_vu.join(", ")}`}</small>}</div>
+      <div><span className={styles.kicker}>NHIENIN3D · OPS v3.17.0</span><h1>Ops Dashboard</h1><p>Recovery readiness RPO/RTO, probe desired-state canary/rollback và incident postmortem/runbook; giữ archive portability, on-call, quorum, managed fleet và DLQ replay.</p>{access && <small className={styles.accessBadge}>{access.admin ? "ADMIN · SERVICE OWNER" : `${access.vai_tro_ops} · ${access.dich_vu.join(", ")}`}</small>}</div>
       <div className={styles.actions}>{access?.admin && <Link href="/quan-tri" className={styles.secondary}>← Quản trị</Link>}<button onClick={() => void taiDuLieu()} disabled={!!dangXuLy}>Làm mới</button>{access?.admin && <button onClick={() => void exportOps()} disabled={!!dangXuLy}>Xuất Ops Excel</button>}</div>
     </header>
 
@@ -378,6 +417,9 @@ export default function OpsDashboardPage() {
     <section className={`${styles.panel} ${styles.compactPanel}`}><div className={styles.panelHead}><div><h2>Managed probe fleet</h2><p>Đối chiếu keyring, agent đã đăng ký và heartbeat; không hiển thị secret.</p></div><small className={`${styles.accessBadge} ${styles.fleetStateBadge} ${runtime?.probe_fleet?.ready ? styles.fleetReady : styles.fleetWarn}`}>{runtime?.probe_fleet?.ready ? "READY" : "ATTENTION"}</small></div><div className={styles.fleetStats}><div><span>Expected</span><b>{runtime?.probe_fleet?.expected ?? 0}</b></div><div><span>Online</span><b>{runtime?.probe_fleet?.online ?? 0}</b></div><div><span>Key coverage</span><b>{runtime?.probe_fleet?.key_coverage_percent ?? 0}%</b></div><div><span>Registered</span><b>{runtime?.probe_fleet?.registration_coverage_percent ?? 0}%</b></div></div><div className={styles.fleetList}>{(runtime?.probe_fleet?.agents || []).map(agent => <div key={agent.agent_id}><span className={styles.fleetStatus}>{agent.status}</span><b>{agent.agent_id}</b><small>{agent.region}/{agent.node_name}</small><small>{agent.asymmetric_key ? "Ed25519 public key" : agent.per_agent_key ? "per-agent HMAC" : agent.key_configured ? "shared fallback" : "missing key"}{agent.heartbeat_age_seconds == null ? " · chưa heartbeat" : ` · ${agent.heartbeat_age_seconds}s`}</small></div>)}{!(runtime?.probe_fleet?.agents || []).length && <p>Chưa cấu hình managed probe fleet.</p>}</div><p className={styles.quorumHint}>Ed25519 lifecycle: active {runtime?.probe_fleet?.asymmetric_key_lifecycle?.active_keys ?? 0}/{runtime?.probe_fleet?.asymmetric_key_lifecycle?.configured_keys ?? 0} · enrolled {runtime?.probe_fleet?.enrolled_public_keys ?? 0} · device-bound {runtime?.probe_enrollment?.device_bound_agents ?? 0} · rotation due {runtime?.probe_enrollment?.rotation_due_agents ?? 0}. Enrollment {runtime?.probe_enrollment?.configured ? "READY" : "OFF"} · device ID {runtime?.probe_enrollment?.require_device_id ? "REQUIRED" : "OPTIONAL"} · rotate {runtime?.probe_enrollment?.rotation_days ?? 90}d.</p></section>
     <section className={`${styles.panel} ${styles.compactPanel}`}><div className={styles.panelHead}><div><h2>Multi-region quorum · anomaly detection</h2><p>Consensus theo region trong cửa sổ gần nhất; cảnh báo khi không đủ quorum hoặc latency lệch khỏi baseline.</p></div><small className={`${styles.accessBadge} ${styles.fleetStateBadge} ${runtime?.multi_region_quorum?.ready ? styles.fleetReady : styles.fleetWarn}`}>{runtime?.multi_region_quorum?.ready ? "QUORUM OK" : "DEGRADED"}</small></div><div className={styles.fleetStats}><div><span>Endpoints</span><b>{runtime?.multi_region_quorum?.summary.endpoints ?? 0}</b></div><div><span>Quorum OK</span><b>{runtime?.multi_region_quorum?.summary.quorum_ok ?? 0}</b></div><div><span>Disagreement</span><b>{runtime?.multi_region_quorum?.summary.disagreements ?? 0}</b></div><div><span>Anomalies</span><b>{runtime?.multi_region_quorum?.summary.anomalies ?? 0}</b></div></div><div className={styles.quorumList}>{(runtime?.multi_region_quorum?.endpoints || []).map(item => <div key={item.endpoint_id}><span className={`${styles.fleetStatus} ${item.quorum_met ? styles.quorumOk : styles.quorumBad}`}>{item.consensus}</span><b>{item.endpoint_id}</b><small>{item.healthy_regions}/{item.quorum_required} region khỏe · observed {item.observed_regions}/{item.expected_regions}</small><small>{item.disagreement ? "region đang bất đồng" : "consensus ổn định"}{item.anomaly_regions.length ? ` · anomaly ${item.anomaly_regions.join(", ")}` : " · không anomaly"}</small></div>)}{!(runtime?.multi_region_quorum?.endpoints || []).length && <p>Chưa có đủ sample gần đây để tính quorum.</p>}</div><p className={styles.quorumHint}>Signing: {runtime?.asymmetric_probe_signing?.public_keyring_configured ? "Ed25519 keyring sẵn sàng" : "HMAC tương thích ngược"} · quorum {runtime?.multi_region_quorum?.config.min_regions ?? 2} region / {runtime?.multi_region_quorum?.config.healthy_percent ?? 67}% · alert {runtime?.quorum_alerting?.enabled ? runtime?.quorum_alerting?.active ? `ON (${runtime.quorum_alerting.level})` : "ON" : "OFF"}.</p></section>
     <section className={`${styles.panel} ${styles.compactPanel}`}><div className={styles.panelHead}><div><h2>Service dependency · blast radius</h2><p>Tương quan quorum endpoint với dependency graph để ước lượng dịch vụ bị ảnh hưởng dây chuyền.</p></div><small className={`${styles.accessBadge} ${styles.fleetStateBadge} ${runtime?.service_dependency?.ready ? styles.fleetReady : styles.fleetWarn}`}>{runtime?.service_dependency?.ready ? "CLEAR" : runtime?.service_dependency?.severity || "UNKNOWN"}</small></div><div className={styles.fleetStats}><div><span>Services</span><b>{runtime?.service_dependency?.services.length ?? 0}</b></div><div><span>Root failures</span><b>{runtime?.service_dependency?.root_failures.length ?? 0}</b></div><div><span>Blast radius</span><b>{runtime?.service_dependency?.blast_radius ?? 0}</b></div><div><span>Source</span><b>{runtime?.service_dependency?.source ?? "—"}</b></div></div><div className={styles.quorumList}>{(runtime?.service_dependency?.correlations || []).map(item => <div key={`${item.endpoint_id}-${item.root_service}`}><span className={`${styles.fleetStatus} ${item.alert_level === "CRITICAL" ? styles.quorumBad : styles.fleetWarn}`}>{item.alert_level}</span><b>{item.root_service}</b><small>{item.endpoint_id} · {item.consensus}</small><small>Ảnh hưởng: {item.impacted_services.join(" → ") || item.root_service}</small></div>)}{!(runtime?.service_dependency?.correlations || []).length && <p>Không có quorum failure để tính blast radius.</p>}</div><p className={styles.quorumHint}>Dependency graph: {Object.entries(runtime?.service_dependency?.dependencies || {}).map(([service, deps]) => `${service}→${deps.join("+")}`).join(" · ") || "chưa cấu hình"}.</p></section>
+    <section className={`${styles.panel} ${styles.compactPanel}`}><div className={styles.panelHead}><div><h2>Probe desired-state · canary rollout</h2><p>Ed25519-signed desired-state, fail-closed khi chưa cấu hình key; deterministic canary/percentage rollout và rollback. Remote code execution luôn OFF.</p></div><small className={`${styles.accessBadge} ${styles.fleetStateBadge} ${desiredState?.current.paused || !desiredState?.signed_delivery ? styles.fleetWarn : styles.fleetReady}`}>{desiredState?.current.paused ? "PAUSED" : desiredState?.signed_delivery ? "ACTIVE" : "SIGNING REQUIRED"}</small></div><div className={styles.fleetStats}><div><span>Revision</span><b>{desiredState?.current.revision ?? 0}</b></div><div><span>Target</span><b>{desiredState?.current.target_version ?? "3.17.0"}</b></div><div><span>Rollout</span><b>{desiredState?.current.rollout_percent ?? 0}%</b></div><div><span>Interval</span><b>{desiredState?.current.interval_seconds ?? 300}s</b></div></div>{access?.admin && <div className={styles.assignmentForm}><input aria-label="Desired target version" value={desiredForm.target_version} onChange={e => setDesiredForm(x => ({ ...x, target_version: e.target.value }))}/><input aria-label="Desired interval seconds" type="number" min={30} max={3600} value={desiredForm.interval_seconds} onChange={e => setDesiredForm(x => ({ ...x, interval_seconds: Number(e.target.value) }))}/><input aria-label="Desired rollout percent" type="number" min={0} max={100} value={desiredForm.rollout_percent} onChange={e => setDesiredForm(x => ({ ...x, rollout_percent: Number(e.target.value) }))}/><input aria-label="Desired canary agents" placeholder="agent-hcm-01,agent-local" value={desiredForm.canary_agents} onChange={e => setDesiredForm(x => ({ ...x, canary_agents: e.target.value }))}/><label className={styles.quorumHint}><input type="checkbox" checked={desiredForm.paused} onChange={e => setDesiredForm(x => ({ ...x, paused: e.target.checked }))}/> Paused</label><button onClick={() => void saveDesiredState()} disabled={dangXuLy === "desired-state-save"}>Lưu rollout</button><button className={styles.secondary} onClick={() => void rollbackDesiredState()} disabled={!desiredState?.previous || dangXuLy === "desired-state-rollback"}>Rollback</button></div>}<p className={styles.quorumHint}>Canary: {desiredState?.current.canary_agents.join(", ") || "—"} · signed delivery {desiredState?.signed_delivery ? "ON" : "OFF"} · key {desiredState?.signing?.key_id || "—"} · remote code execution: OFF.</p></section>
+    <section className={`${styles.panel} ${styles.compactPanel}`}><div className={styles.panelHead}><div><h2>Recovery readiness · RPO/RTO</h2><p>Đọc trạng thái PostgreSQL/WAL thực tế và report recovery drill; PITR override là opt-in, không overclaim target-time restore.</p></div><small className={`${styles.accessBadge} ${styles.fleetStateBadge} ${runtime?.database_recovery?.pitr_ready && runtime?.database_recovery?.drill_fresh ? styles.fleetReady : styles.fleetWarn}`}>{runtime?.database_recovery?.pitr_ready ? "PITR READY" : "LOGICAL READY"}</small></div><div className={styles.fleetStats}><div><span>RPO</span><b>{runtime?.database_recovery?.observed_rpo_minutes ?? "—"}m</b><small>target {runtime?.database_recovery?.rpo_target_minutes ?? 60}m</small></div><div><span>RTO drill</span><b>{runtime?.database_recovery?.observed_rto_seconds ?? "—"}s</b><small>target {runtime?.database_recovery?.rto_target_minutes ?? 30}m</small></div><div><span>WAL archive</span><b>{runtime?.database_recovery?.wal_archive.archive_mode ?? "unknown"}</b><small>{runtime?.database_recovery?.wal_archive.wal_level ?? "—"}</small></div><div><span>Drill</span><b>{runtime?.database_recovery?.drill_fresh ? "FRESH" : "DUE"}</b><small>{runtime?.database_recovery?.drill_age_days ?? "—"} day(s)</small></div></div><p className={styles.quorumHint}>Method: {runtime?.database_recovery?.method ?? "—"} · RPO {runtime?.database_recovery?.rpo_met === true ? "PASS" : runtime?.database_recovery?.rpo_met === false ? "MISS" : "N/A"} · RTO {runtime?.database_recovery?.rto_met === true ? "PASS" : runtime?.database_recovery?.rto_met === false ? "MISS" : "N/A"} · target-time PITR exercised: {runtime?.database_recovery?.pitr_restore_exercised ? "YES" : "NO"}.</p></section>
+    <section className={`${styles.panel} ${styles.compactPanel}`}><div className={styles.panelHead}><div><h2>Incident postmortem · runbook</h2><p>Chọn incident để tạo draft từ timeline snapshot; lưu root cause, resolution, HTTPS runbook và action item.</p></div><small className={styles.accessBadge}>{runtime?.incident_postmortem?.complete ?? 0} COMPLETE · {runtime?.incident_postmortem?.draft ?? 0} DRAFT</small></div>{selectedIncident && access?.admin ? <div className={styles.assignmentForm}><input aria-label="Postmortem summary" placeholder="Summary" value={postmortemForm.summary} onChange={e => setPostmortemForm(x => ({ ...x, summary: e.target.value }))}/><input aria-label="Postmortem root cause" placeholder="Root cause" value={postmortemForm.root_cause} onChange={e => setPostmortemForm(x => ({ ...x, root_cause: e.target.value }))}/><input aria-label="Postmortem resolution" placeholder="Resolution" value={postmortemForm.resolution} onChange={e => setPostmortemForm(x => ({ ...x, resolution: e.target.value }))}/><input aria-label="Postmortem runbook" placeholder="https://..." value={postmortemForm.runbook_url} onChange={e => setPostmortemForm(x => ({ ...x, runbook_url: e.target.value }))}/><input aria-label="Postmortem action item" placeholder="Action item" value={postmortemForm.action_item} onChange={e => setPostmortemForm(x => ({ ...x, action_item: e.target.value }))}/><button onClick={() => void savePostmortem()} disabled={dangXuLy === "postmortem-save"}>Lưu postmortem</button></div> : <p>Chọn một incident trong danh sách phía dưới để mở postmortem.</p>}<p className={styles.quorumHint}>Timeline snapshot {postmortem?.timeline_snapshot?.events ?? "—"} event(s) · open actions {runtime?.incident_postmortem?.open_actions ?? 0} · runbook HTTPS only.</p></section>
     <section className={styles.panel}><div className={styles.panelHead}><div><h2>Distributed probe agents</h2><p>Heartbeat ký Ed25519 hoặc HMAC, chống replay bằng nonce; agent health và SLO được phân tách theo region/node.</p></div><small className={`${styles.accessBadge} ${styles.probeCountBadge}`}>{runtime?.distributed_probe?.online ?? 0} online · {runtime?.distributed_probe?.offline ?? 0} offline</small></div><div className={styles.assignmentList}>{(runtime?.distributed_probe?.agents || []).map(agent => <div key={agent.agent_id}><span>{agent.online ? "ONLINE" : "OFFLINE"} · {agent.region}</span><b>{agent.agent_id}</b><small>{agent.node_name} · heartbeat {agent.heartbeat_age_seconds}s trước · {agent.phien_ban || "version —"}</small><small>{agent.lan_mau ? `Mẫu cuối ${fmt(agent.lan_mau)}` : "Chưa có sample"}</small></div>)}{!(runtime?.distributed_probe?.agents || []).length && <p>Chưa có distributed probe agent heartbeat. Local scheduler vẫn tiếp tục probe như fallback.</p>}</div></section>
 
     <section className={styles.panel}><h2>Burn-rate theo thời gian</h2><p>30 ngày gần nhất; dấu bảo trì được annotation trực tiếp theo ngày.</p><div className={styles.burnChart}>{burnSeries.map(item => <div className={styles.burnDay} key={item.ngay}><div className={styles.burnDate}>{item.ngay.slice(5)}{maintenanceDates.has(item.ngay) && <span title={maintenanceDates.get(item.ngay)}>M</span>}</div><div className={styles.burnTracks}><div className={styles.burnTrack}><i style={{ width: `${Math.min(100, ((item.sla_burn_rate || 0) / maxBurn) * 100)}%` }}/><b>SLA {item.sla_burn_rate ?? "—"}x</b></div><div className={styles.burnTrack}><i style={{ width: `${Math.min(100, ((item.uptime_burn_rate || 0) / maxBurn) * 100)}%` }}/><b>Uptime {item.uptime_burn_rate ?? "—"}x</b></div></div></div>)}</div></section>

@@ -1,7 +1,10 @@
-﻿# NhienIn3d
+# NhienIn3d
 
-> Phiên bản hiện tại: **v3.16.0** — 02/09/2026
-- **Archive portability + on-call continuity + device-bound enrollment v3.16.0**: telemetry archive xuất JSONL+GZIP/S3-compatible và restore/replay có dry-run; on-call có ICS import/export, override/absence, handoff report và escalation acknowledgment; probe enrollment hỗ trợ bind device identity + rotation policy mà không lưu raw device ID.
+> Phiên bản hiện tại: **v3.17.0** — 02/09/2026
+- **Recovery + signed desired-state + postmortem v3.17.0**: thêm recovery readiness RPO/RTO và recovery drill, Ed25519-signed desired-state fail-closed cho canary rollout/rollback, cùng incident postmortem/runbook có timeline snapshot và action items.
+- **Hotfix Windows PowerShell 5.1**: các entrypoint v3.17.0 giữ UTF-8 BOM; Runtime E2E tránh literal `&` trong URI nội suy và bỏ SQL here-string ở bước seed incident để không còn parser cascade `AmpersandNotAllowed`/`Missing argument`.
+- **Hotfix Admin health v3.17.0**: đồng bộ `GET /api/v1/quan-tri/he-thong/suc-khoe` từ `3.16.0` lên `3.17.0`; Runtime E2E không còn fail sai ở bước Ops health sau khi public health và Ops runtime đã lên đúng version.
+- **Hotfix Runtime E2E on-call v3.17.0**: giữ đúng contract kế thừa `on_call_v3160` từ runtime v3.16; bỏ assertion nhầm `on_call_v3170` vốn không tồn tại, tránh `PropertyNotFoundStrict` trong `verify:full`.
 
 NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **frontend Next.js** và **backend NestJS/Fastify** kết nối **PostgreSQL qua Prisma**.
 
@@ -19,6 +22,10 @@ NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **fro
 
 ## Điểm chính bản hiện tại
 
+- **Recovery readiness v3.17**: runtime đọc WAL/archive state, RPO/RTO target và recovery-drill report; `docker-compose.pitr.yml` cho phép bật WAL archive theo kiểu opt-in.
+- **Signed desired-state fail-closed**: server ký payload bằng Ed25519, agent verify signature + SPKI fingerprint + tuổi chữ ký; thiếu key thì HOLD/SIGNING_REQUIRED, không áp dụng rollout. Remote code execution luôn OFF.
+- **Canary/rollback**: desired-state có revision/history, target version, interval, deterministic canary + percentage rollout, pause và rollback.
+- **Incident postmortem**: timeline snapshot, root cause/detection/resolution/lessons, HTTPS runbook và action items; không thêm migration.
 - **Archive portability v3.16**: archive partition hiện có có thể xuất thành portable bundle `JSONL+GZIP`, kèm manifest, raw SHA-256 + gzip SHA-256 và retention class. API hỗ trợ PUT tới S3-compatible presigned URL nhưng chỉ cho hostname HTTPS nằm trong allowlist `SYSTEM_OPS_ARCHIVE_S3_ALLOWED_HOSTS`.
 - **Restore/replay an toàn**: Admin có dry-run trước khi replay dữ liệu từ `ops_telemetry_archive` về `lich_su_van_hanh` hoặc `slo_endpoint_mau`; insert idempotent bằng `ON CONFLICT DO NOTHING`, giữ nguyên archive sau restore để có audit/recovery trail.
 - **On-call continuity**: export lịch trực ra ICS, import ICS dạng dry-run/confirm, override hoặc absence theo service/user/time window, handoff report tổng hợp roster hiện tại + incident mở + escalation acknowledgment 24 giờ gần nhất.
@@ -27,7 +34,7 @@ NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **fro
 - **Rotation policy**: `SYSTEM_SLO_ENROLLMENT_ROTATION_DAYS` đặt tuổi key enrollment; Managed Fleet đánh dấu agent quá hạn rotate và Ops Dashboard hiển thị `device-bound`/`rotation due` mà không lộ public/private secret material.
 - **Tương thích ngược**: HMAC v3.11, Managed Fleet v3.12, Ed25519/quorum v3.13, lifecycle/quorum alert v3.14 và self-enrollment/blast-radius v3.15 vẫn hoạt động. Device binding mặc định optional để không làm offline 3 agent hiện hữu.
 - **Gom lệnh test**: tiếp tục chỉ cần `npm run verify` cho local quality gate hoặc `npm run verify:full` cho backup → Docker → migration → Runtime E2E → Browser E2E.
-- **Database**: v3.16.0 không thêm migration; tiếp tục dùng 23 migrations, migration mới nhất `202609020001_v3110_distributed_probe_dlq_keyring_oncall_archive`. Runtime/browser dùng `scripts/e2e-runtime-v3160.ps1` / `scripts/e2e-browser-v3160.mjs`; CI/Health/OpenAPI đồng bộ **v3.16.0**.
+- **Database**: v3.17.0 không thêm migration; tiếp tục dùng 23 migrations, migration mới nhất `202609020001_v3110_distributed_probe_dlq_keyring_oncall_archive`. Runtime/browser dùng `scripts/e2e-runtime-v3170.ps1` / `scripts/e2e-browser-v3170.mjs`; CI/Health/OpenAPI đồng bộ **v3.17.0**.
 
 ### Cấu hình bổ sung v3.16
 
@@ -1537,10 +1544,23 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 - Giữ cơ chế grouped verification: `npm run verify` và `npm run verify:full`; Runtime/Browser E2E + CI/Health/OpenAPI đồng bộ v3.16.0.
 - Không thêm migration; tiếp tục 23 migrations và tái sử dụng `ops_telemetry_archive`, `ops_archive_batch`, `ops_on_call_schedule`, `cau_hinh_he_thong`, `lich_su_van_hanh`, `slo_probe_agent` hiện có.
 
+## v3.17.0 — 02/09/2026
+
+- Database recovery readiness: runtime đọc `wal_level`, `archive_mode`, `pg_stat_archiver`, RPO/RTO target và recovery-drill report. `docker-compose.pitr.yml` là override **opt-in** để bật WAL archive; mặc định hệ thống vẫn chạy như trước.
+- `npm run verify:full` chạy thêm recovery drill cô lập: logical dump/restore sentinel + đo RTO; nếu WAL archive đang bật sẽ ép `pg_switch_wal()` và kiểm tra archiver. Safe drill không tự nhận đã thực hiện target-time PITR (`pitr_restore_exercised=false`).
+- Probe desired-state: target version, heartbeat interval, deterministic canary + percentage rollout, pause/rollback và lịch sử revision. Server ký payload desired-state bằng **Ed25519 riêng**, agent verify signature + SPKI fingerprint + `signed_at`; thiếu key sẽ `SIGNING_REQUIRED`/HOLD (fail-closed). **Không có remote command/code execution**.
+- Incident postmortem/runbook: auto timeline snapshot, root cause/detection/resolution/lessons, HTTPS runbook và action items; lưu bằng `cau_hinh_he_thong` nên **không thêm migration**.
+- Ops Dashboard thêm `Probe desired-state · canary rollout`, `Recovery readiness · RPO/RTO`, `Incident postmortem · runbook`.
+- Signing env: server dùng `SYSTEM_SLO_PROBE_DESIRED_SIGNING_PRIVATE_KEY`/`SYSTEM_SLO_PROBE_DESIRED_SIGNING_KEY_ID`; agent dùng `NH3D_PROBE_DESIRED_STATE_PUBLIC_KEY[_FILE]`. Private key không được trả qua Ops runtime.
+- Vẫn giữ 23 migrations. Grouped commands: `npm run verify` và `npm run verify:full`.
+- Runtime E2E v3.17 giữ tên property on-call `on_call_v3160` để tương thích ngược với API/Web contract đã phát hành từ v3.16; regression test khóa việc không tham chiếu `on_call_v3170`.
+
+### Roadmap v3.18
+
+- Full isolated target-time PITR restore từ base backup + WAL archive, có cleanup an toàn.
+- Probe rollout health gate theo quorum/error-budget và auto rollback khi canary làm xấu SLO.
+- Postmortem approval/SLA, action-item reminders và liên kết runbook theo service dependency.
+
+
 # Lộ trình tiếp theo
 
-## v3.17.0
-
-- PostgreSQL PITR/WAL archive + automated recovery drill có RPO/RTO report.
-- Signed probe desired-state/remote config với canary rollout và rollback theo fleet/region.
-- Incident postmortem/runbook automation, timeline snapshot và action-item tracking.

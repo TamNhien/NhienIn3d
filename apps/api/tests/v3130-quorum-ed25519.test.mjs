@@ -12,13 +12,13 @@ test("v3.13.0 API runtime co quorum anomaly va asymmetric signing", () => {
   assert.match(service, /ED25519_PUBLIC_KEYRING/);
   assert.match(service, /QUORUM_OK/);
   assert.match(service, /DEGRADED/);
-  assert.match(controller, /trang_thai_ops_v3160/);
+  assert.match(controller, /trang_thai_ops_v3170/);
   assert.match(probe, /x-nhienin3d-signature-alg/);
 });
 
 test("v3.13.0 API health va OpenAPI dong bo version", () => {
   const health = read("../src/suc-khoe/suc-khoe.controller.ts");
   const main = read("../src/main.ts");
-  assert.match(health, /phien_ban: "v3\.16\.0"/);
-  assert.match(main, /setVersion\("3\.16\.0"\)/);
+  assert.match(health, /phien_ban: "v3\.17\.0"/);
+  assert.match(main, /setVersion\("3\.17\.0"\)/);
 });
