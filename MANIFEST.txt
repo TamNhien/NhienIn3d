@@ -217,6 +217,8 @@ scripts/e2e-browser-v3100.mjs
 scripts/e2e-browser-v3101.mjs
 scripts/e2e-browser-v3102.mjs
 scripts/e2e-browser-v3103.mjs
+scripts/e2e-browser-v3104.mjs
+scripts/e2e-browser-v3105.mjs
 scripts/e2e-browser-v350.mjs
 scripts/e2e-browser-v351.mjs
 scripts/e2e-browser-v352.mjs
@@ -239,6 +241,8 @@ scripts/e2e-runtime-v3100.ps1
 scripts/e2e-runtime-v3101.ps1
 scripts/e2e-runtime-v3102.ps1
 scripts/e2e-runtime-v3103.ps1
+scripts/e2e-runtime-v3104.ps1
+scripts/e2e-runtime-v3105.ps1
 scripts/e2e-runtime-v320.ps1
 scripts/e2e-runtime-v340.ps1
 scripts/e2e-runtime-v341.ps1
@@ -276,6 +280,8 @@ tests/v3100-persistent-apdex-dlq-rbac-cache.test.mjs
 tests/v3101-ops-cache-null-narrowing.test.mjs
 tests/v3102-mysql2-audit-override.test.mjs
 tests/v3103-mysql2-direct-pin-installed-tree.test.mjs
+tests/v3104-mysql2-ci-override-validation.test.mjs
+tests/v3105-mysql2-installed-tree-scanner.test.mjs
 tests/v320-operations.test.mjs
 tests/v321-order-delivered-typecheck.test.mjs
 tests/v322-order-update-ux.test.mjs

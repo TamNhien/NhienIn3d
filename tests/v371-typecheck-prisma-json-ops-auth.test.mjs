@@ -20,18 +20,18 @@ test("v3.7.1 Ops Dashboard van kiem tra taiKhoan null truoc khi doc vai_tro", ()
   assert.ok(page.indexOf("if (!taiKhoan)") < page.indexOf('if (taiKhoan.vai_tro === "ADMIN")'));
 });
 
-test("v3.7.1 typecheck fix duoc giu khi nang v3.10.3", () => {
+test("v3.7.1 typecheck fix duoc giu khi nang v3.10.5", () => {
   const pkg = JSON.parse(read("package.json"));
   const ci = read(".github/workflows/ci.yml");
   const runtime = read("scripts/e2e-runtime-v3100.ps1");
   const browser = read("scripts/e2e-browser-v3100.mjs");
   const health = read("apps/api/src/suc-khoe/suc-khoe.controller.ts");
-  assert.equal(pkg.version, "3.10.3");
-  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3103.mjs");
-  assert.match(ci, /e2e-runtime-v3103\.ps1/);
-  assert.match(ci, /Browser E2E Admin HTTPS v3\.10\.3/);
+  assert.equal(pkg.version, "3.10.5");
+  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3105.mjs");
+  assert.match(ci, /e2e-runtime-v3105\.ps1/);
+  assert.match(ci, /Browser E2E Admin HTTPS v3\.10\.5/);
   assert.match(runtime, /publicHealth\.phien_ban -eq "v3\.10\.0"/);
   assert.match(runtime, /health\.phien_ban -eq "3\.10\.0"/);
   assert.match(browser, /health\.phien_ban !== "v3\.10\.0"/);
-  assert.match(health, /phien_ban: "v3\.10\.3"/);
+  assert.match(health, /phien_ban: "v3\.10\.5"/);
 });

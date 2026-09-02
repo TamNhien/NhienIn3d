@@ -195,7 +195,7 @@ export default function OpsDashboardPage() {
   async function ackDeadLetter(item: WebhookDeadLetterAdmin) {
     if (item.da_ack || item.da_replay || !confirm(`Acknowledge dead-letter #${item.id}?`)) return;
     setDangXuLy(`ack-${item.id}`); setLoi("");
-    try { await acknowledgeWebhookDeadLetterAdmin(item.id, "Đã xác nhận xử lý từ Ops Dashboard v3.10.3"); setThongBao(`Đã acknowledge dead-letter #${item.id}.`); await taiDuLieu(); }
+    try { await acknowledgeWebhookDeadLetterAdmin(item.id, "Đã xác nhận xử lý từ Ops Dashboard v3.10.5"); setThongBao(`Đã acknowledge dead-letter #${item.id}.`); await taiDuLieu(); }
     catch (error) { setLoi(error instanceof Error ? error.message : String(error)); }
     finally { setDangXuLy(""); }
   }
@@ -228,7 +228,7 @@ export default function OpsDashboardPage() {
 
   return <main className={styles.page}>
     <header className={styles.header}>
-      <div><span className={styles.kicker}>NHIENIN3D · OPS v3.10.3</span><h1>Ops Dashboard</h1><p>Persistent endpoint SLI + Apdex đa agent/region, encrypted DLQ scheduled retry, cached Ops metrics và RBAC on-call theo dịch vụ.</p>{access && <small className={styles.accessBadge}>{access.admin ? "ADMIN · SERVICE OWNER" : `${access.vai_tro_ops} · ${access.dich_vu.join(", ")}`}</small>}</div>
+      <div><span className={styles.kicker}>NHIENIN3D · OPS v3.10.5</span><h1>Ops Dashboard</h1><p>Persistent endpoint SLI + Apdex đa agent/region, encrypted DLQ scheduled retry, cached Ops metrics và RBAC on-call theo dịch vụ.</p>{access && <small className={styles.accessBadge}>{access.admin ? "ADMIN · SERVICE OWNER" : `${access.vai_tro_ops} · ${access.dich_vu.join(", ")}`}</small>}</div>
       <div className={styles.actions}>{access?.admin && <Link href="/quan-tri" className={styles.secondary}>← Quản trị</Link>}<button onClick={() => void taiDuLieu()} disabled={!!dangXuLy}>Làm mới</button>{access?.admin && <button onClick={() => void exportOps()} disabled={!!dangXuLy}>Xuất Ops Excel</button>}</div>
     </header>
 

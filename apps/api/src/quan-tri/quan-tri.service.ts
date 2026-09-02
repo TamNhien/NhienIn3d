@@ -126,7 +126,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     setTimeout(cleanupOps, 120_000).unref();
     this.bo_hen_ops_retention = setInterval(cleanupOps, 6 * 60 * 60_000);
     this.bo_hen_ops_retention.unref();
-    this.logger.log(`Ops v3.10.3 schedulers: DLQ ${dlqPolicy.chu_ky_phut}m, metrics ${opsPolicy.refresh_phut}m, retention ${opsPolicy.retention_days}d.`);
+    this.logger.log(`Ops v3.10.5 schedulers: DLQ ${dlqPolicy.chu_ky_phut}m, metrics ${opsPolicy.refresh_phut}m, retention ${opsPolicy.retention_days}d.`);
   }
 
   onModuleDestroy() {
@@ -568,7 +568,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     try {
       await this.db.webhookDlqPayload.create({ data: { id: payload_ref, dead_letter_history_id: history?.id ?? null, ...encrypted, idempotency_key: meta.idempotency_key, endpoint: meta.endpoint, adapter: meta.adapter, trang_thai: "CHO_RETRY", so_lan_retry_tu_dong: 0, retry_tiep_theo_luc: retryAt, het_han_luc: expiresAt, loi_cuoi: meta.ly_do } });
     } catch (error) {
-      this.logger.warn(`Không lưu được encrypted DLQ payload v3.10.3: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.warn(`Không lưu được encrypted DLQ payload v3.10.5: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -585,7 +585,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     for (let index = 0; index <= cau_hinh.max_retries; index++) {
       const lan_thu = index + 1;
       const timestamp = String(Math.floor(Date.now() / 1000));
-      const headers: Record<string, string> = { "content-type": "application/json", "user-agent": "NhienIn3d-Ops/3.10.3", "x-nhienin3d-timestamp": timestamp, "x-nhienin3d-adapter": cau_hinh.adapter };
+      const headers: Record<string, string> = { "content-type": "application/json", "user-agent": "NhienIn3d-Ops/3.10.5", "x-nhienin3d-timestamp": timestamp, "x-nhienin3d-adapter": cau_hinh.adapter };
       if (token) headers.authorization = `Bearer ${token}`;
       if (secret) headers["x-nhienin3d-signature"] = `sha256=${createHmac("sha256", secret).update(`${timestamp}.${body}`).digest("hex")}`;
       const bat_dau = performance.now();
@@ -663,7 +663,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       }).filter(x => !trang_thai || x.trang_thai_dlq === trang_thai || (trang_thai === "CHO_REPLAY" && x.trang_thai_dlq === "CHO_RETRY")).slice(0, gioi_han);
       return { du_lieu: mapped, gioi_han, bo_loc: { trang_thai: trang_thai || null }, cau_hinh: { ...cau_hinh, encrypted_payload_store: true, scheduler: this.cau_hinh_webhook_dlq_scheduler() } };
     } catch (error) {
-      this.logger.debug(`DLQ v3.10.3 fallback sang lịch sử v3.9: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.debug(`DLQ v3.10.5 fallback sang lịch sử v3.9: ${error instanceof Error ? error.message : String(error)}`);
       const [ds, replay, ack] = await Promise.all([
         this.db.lichSuVanHanh.findMany({ where: { loai: "WEBHOOK_DLQ" }, orderBy: { id: "desc" }, take: Math.max(gioi_han * 4, 100) }),
         this.db.lichSuVanHanh.findMany({ where: { loai: "WEBHOOK_REPLAY", trang_thai: "THANH_CONG" }, orderBy: { id: "desc" }, take: 1000, select: { chi_tiet: true } }),
@@ -773,9 +773,9 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
           await this.db.webhookDlqPayload.update({ where: { id: item.id }, data: { so_lan_retry_tu_dong: attempts, trang_thai: attempts >= policy.max_attempts ? "RETRY_THAT_BAI" : "CHO_RETRY", retry_tiep_theo_luc: attempts >= policy.max_attempts ? null : new Date(Date.now() + policy.chu_ky_phut * 60_000 * Math.max(1, 2 ** Math.min(6, attempts))), loi_cuoi: error instanceof Error ? error.message : String(error) } });
         }
       }
-      if (expired || processed) await this.ghi_lich_su_van_hanh("WEBHOOK_DLQ_JOB", "THANH_CONG", "Scheduled retry/retention cleanup DLQ v3.10.3", { processed, success, expired, max_attempts: policy.max_attempts, interval_minutes: policy.chu_ky_phut });
+      if (expired || processed) await this.ghi_lich_su_van_hanh("WEBHOOK_DLQ_JOB", "THANH_CONG", "Scheduled retry/retention cleanup DLQ v3.10.5", { processed, success, expired, max_attempts: policy.max_attempts, interval_minutes: policy.chu_ky_phut });
     } catch (error) {
-      this.logger.debug(`Webhook DLQ v3.10.3 job chưa sẵn sàng: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.debug(`Webhook DLQ v3.10.5 job chưa sẵn sàng: ${error instanceof Error ? error.message : String(error)}`);
     }
     return { processed, success, expired, policy };
   }
@@ -790,7 +790,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       if (row) value = { tong_incident: Number(row.tong_incident), dang_mo: Number(row.dang_mo), da_khac_phuc: Number(row.da_khac_phuc), mtta_phut: row.mtta_phut == null ? null : Number(row.mtta_phut), mtta_p95_phut: row.mtta_p95_phut == null ? null : Number(row.mtta_p95_phut), mttr_phut: row.mttr_phut == null ? null : Number(row.mttr_phut), mttr_p95_phut: row.mttr_p95_phut == null ? null : Number(row.mttr_p95_phut), refreshed_at: row.refreshed_at.toISOString(), nguon: "MATERIALIZED_VIEW_CACHE_V3100" };
       await this.db.opsMetricCache.upsert({ where: { khoa: "incident_metrics" }, create: { khoa: "incident_metrics", gia_tri: this.chuan_hoa_json_object(value), refreshed_at: now }, update: { gia_tri: this.chuan_hoa_json_object(value), refreshed_at: now } });
     } catch (error) {
-      this.logger.debug(`Ops metric cache v3.10.3 chưa sẵn sàng: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.debug(`Ops metric cache v3.10.5 chưa sẵn sàng: ${error instanceof Error ? error.message : String(error)}`);
     }
     return value;
   }
@@ -803,7 +803,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     try {
       history = (await this.db.lichSuVanHanh.deleteMany({ where: { ngay_tao: { lt: cutoff }, chu_ky_canh_bao: null, loai: { in: ["SLO_ENDPOINT", "WEBHOOK", "WEBHOOK_REPLAY", "WEBHOOK_DLQ_JOB"] } } })).count;
     } catch {}
-    if (endpoint_samples || history) await this.ghi_lich_su_van_hanh("OPS_RETENTION", "THANH_CONG", "Dọn telemetry vận hành theo retention v3.10.3", { retention_days: policy.retention_days, endpoint_samples, history });
+    if (endpoint_samples || history) await this.ghi_lich_su_van_hanh("OPS_RETENTION", "THANH_CONG", "Dọn telemetry vận hành theo retention v3.10.5", { retention_days: policy.retention_days, endpoint_samples, history });
     return { retention_days: policy.retention_days, endpoint_samples, history };
   }
 
@@ -823,11 +823,11 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       cached = cache?.gia_tri && typeof cache.gia_tri === "object" && !Array.isArray(cache.gia_tri) ? cache.gia_tri as Record<string, unknown> : null;
       endpoint_samples = countSamples; assignments = countAssignments;
     } catch {}
-    return { phien_ban: "3.10.3", probe_agent: agent, endpoint_samples, dlq: { ...dlq, payload_encryption_ready: !!crypto, key_id: crypto?.key_id || null, key_source: crypto?.nguon || null }, ops_metrics: { ...scheduler, cache: cached }, rbac: { active_assignments: assignments, roles: ["OPS_VIEWER", "ON_CALL", "SERVICE_OWNER"] } };
+    return { phien_ban: "3.10.5", probe_agent: agent, endpoint_samples, dlq: { ...dlq, payload_encryption_ready: !!crypto, key_id: crypto?.key_id || null, key_source: crypto?.nguon || null }, ops_metrics: { ...scheduler, cache: cached }, rbac: { active_assignments: assignments, roles: ["OPS_VIEWER", "ON_CALL", "SERVICE_OWNER"] } };
   }
 
   private tao_headers_slo_endpoint(endpoint: SloEndpointCheckV390) {
-    const headers: Record<string, string> = { "user-agent": "NhienIn3d-SLO-Probe/3.10.3" };
+    const headers: Record<string, string> = { "user-agent": "NhienIn3d-SLO-Probe/3.10.5" };
     const resolveTemplate = (value: string) => value.replace(/\$\{ENV:([A-Z][A-Z0-9_]*)\}/g, (_all, name: string) => process.env[name] || "");
     for (const [nameRaw, valueRaw] of Object.entries(endpoint.headers || {})) {
       const name = nameRaw.trim().toLowerCase();
@@ -863,7 +863,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       results.push(item);
       try {
         await this.db.sloEndpointMau.create({ data: { endpoint_id: endpoint.id, agent_id: agent.agent_id, region: agent.region, node_name: agent.node_name, trang_thai: ok ? "TOT" : "LOI", http_status, do_tre_ms, latency_target_ms: endpoint.latency_target_ms, apdex_t_ms, apdex_bucket, maintenance_active: bao_tri.dang_bao_tri } });
-      } catch (error) { this.logger.debug(`Persistent SLO sample v3.10.3 fallback: ${error instanceof Error ? error.message : String(error)}`); }
+      } catch (error) { this.logger.debug(`Persistent SLO sample v3.10.5 fallback: ${error instanceof Error ? error.message : String(error)}`); }
       await this.ghi_lich_su_van_hanh("SLO_ENDPOINT", ok ? "TOT" : "LOI", ok ? `Endpoint ${endpoint.ten} đáp ứng SLO probe` : `Endpoint ${endpoint.ten} không đáp ứng SLO probe`, {
         endpoint_id: endpoint.id, endpoint_ten: endpoint.ten, path: endpoint.path, method: endpoint.method,
         header_names: Object.keys(endpoint.headers || {}), auth_template: endpoint.auth_template,
@@ -976,7 +976,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const trang_thai = !database.ket_noi ? "LOI" : (van_de.length ? "CANH_BAO" : "TOT");
     const ket_qua = {
       trang_thai,
-      phien_ban: "3.10.3",
+      phien_ban: "3.10.5",
       thoi_gian: new Date().toISOString(),
       api: { uptime_giay: Math.floor(process.uptime()), node: process.version, pid: process.pid, rss_bytes: bo_nho.rss, heap_used_bytes: bo_nho.heapUsed, heap_total_bytes: bo_nho.heapTotal },
       database,
@@ -1082,7 +1082,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       }
     }
     const webhook = await this.gui_webhook_canh_bao({
-      event: "nhienin3d.system.alert", version: "3.10.3", trang_thai: trang_thai_canh_bao, chu_ky, van_de, thoi_gian: health.thoi_gian, cap_leo_thang, ton_tai_phut
+      event: "nhienin3d.system.alert", version: "3.10.5", trang_thai: trang_thai_canh_bao, chu_ky, van_de, thoi_gian: health.thoi_gian, cap_leo_thang, ton_tai_phut
     });
     const da_gui = email.da_gui || webhook.da_gui;
     if (!da_gui) return { da_gui: false, ly_do: `Không có kênh cảnh báo gửi thành công. Email: ${email.ly_do || "không gửi"}; Webhook: ${webhook.ly_do || "không gửi"}`, van_de, cap_leo_thang, ton_tai_phut, email, webhook, bao_tri };
@@ -1184,7 +1184,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       this.danh_sach_su_co_van_hanh("100", trangThaiXuLyRaw, tuNgayRaw, denNgayRaw)
     ]);
     const rows: unknown[][] = [
-      ["NhienIn3d Ops Dashboard v3.10.3"],
+      ["NhienIn3d Ops Dashboard v3.10.5"],
       ["Tạo lúc", new Date().toISOString()],
       ["Bộ lọc incident", `${tuNgayRaw || "*"} → ${denNgayRaw || "*"} · ${trangThaiXuLyRaw || "Tất cả"}`],
       [],
@@ -1212,7 +1212,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     for (const item of sla.burn_rate_policy) rows.push([item.gio, item.nguong, item.muc_do, item.sla.burn_rate ?? "", item.uptime.burn_rate ?? ""]);
     rows.push([], ["Incident"], ["Chữ ký", "Trạng thái", "Vấn đề", "Bắt đầu", "Gần nhất", "Sự kiện", "Tiếp nhận", "Khắc phục"]);
     for (const item of incidents.du_lieu) rows.push([item.chu_ky, item.trang_thai_xu_ly, item.van_de.join(" | "), item.bat_dau.toISOString(), item.gan_nhat.toISOString(), item.so_su_kien, item.tiep_nhan_luc?.toISOString() || "", item.khac_phuc_luc?.toISOString() || ""]);
-    const buffer = this.tao_xlsx(rows, "Ops v3.10.3");
+    const buffer = this.tao_xlsx(rows, "Ops v3.10.5");
     return { ten_file: `ops-slo-incident-${new Date().toISOString().slice(0, 10)}.xlsx`, mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", base64: buffer.toString("base64") };
   }
 
@@ -1472,7 +1472,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     try {
       return await this.db.sloEndpointMau.findMany({ where: { ngay_tao: { gte: tu } }, orderBy: { ngay_tao: "asc" } });
     } catch (error) {
-      this.logger.debug(`Persistent endpoint SLI v3.10.3 chưa sẵn sàng: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.debug(`Persistent endpoint SLI v3.10.5 chưa sẵn sàng: ${error instanceof Error ? error.message : String(error)}`);
       return [];
     }
   }

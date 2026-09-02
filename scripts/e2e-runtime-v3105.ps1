@@ -28,7 +28,7 @@ function Assert-True([bool]$Condition, [string]$Message) {
 
 try {
   if (-not $KhongKiemTraBackupRestore) {
-    Write-Host "[E2E v3.10.4] Backup/SHA/restore runtime nền..." -ForegroundColor Cyan
+    Write-Host "[E2E v3.10.5] Backup/SHA/restore runtime nền..." -ForegroundColor Cyan
     & (Join-Path $PSScriptRoot "e2e-runtime-v320.ps1")
     if ($LASTEXITCODE -ne 0) { throw "E2E backup/restore v3.2.0 thất bại." }
   }
@@ -41,13 +41,13 @@ try {
   $adminPassword = Get-ProjectEnv "ADMIN_PASSWORD"
   if (-not $adminPassword) { throw "Thiếu ADMIN_PASSWORD trong biến môi trường hoặc file .env." }
 
-  Write-Host "[E2E v3.10.4] Preflight API version để tránh kiểm tra nhầm container cũ..." -ForegroundColor Cyan
+  Write-Host "[E2E v3.10.5] Preflight API version để tránh kiểm tra nhầm container cũ..." -ForegroundColor Cyan
   $publicHealth = Invoke-RestMethod -Uri "$base/suc-khoe" -Method Get -TimeoutSec 20
-  Assert-True ($publicHealth.phien_ban -eq "v3.10.4") "API đang chạy $($publicHealth.phien_ban), không phải v3.10.4. Docker build trước đó có thể đã thất bại và container cũ vẫn đang chạy. Hãy chạy lại: docker compose up -d --build --remove-orphans"
+  Assert-True ($publicHealth.phien_ban -eq "v3.10.5") "API đang chạy $($publicHealth.phien_ban), không phải v3.10.5. Docker build trước đó có thể đã thất bại và container cũ vẫn đang chạy. Hãy chạy lại: docker compose up -d --build --remove-orphans"
 
-  Write-Host "[E2E v3.10.4] Đăng nhập Admin qua cookie session..." -ForegroundColor Cyan
+  Write-Host "[E2E v3.10.5] Đăng nhập Admin qua cookie session..." -ForegroundColor Cyan
   $session = New-Object Microsoft.PowerShell.Commands.WebRequestSession
-  $loginBody = @{ thu_dien_tu = $adminEmail; mat_khau = $adminPassword; trinh_duyet_hien_thi = "NhienIn3d E2E v3.10.4" } | ConvertTo-Json
+  $loginBody = @{ thu_dien_tu = $adminEmail; mat_khau = $adminPassword; trinh_duyet_hien_thi = "NhienIn3d E2E v3.10.5" } | ConvertTo-Json
 
   # Docker mặc định WEB_PUBLIC_URL=https://localhost:3000 nên API phát cookie access có cờ Secure.
   # Runtime smoke CI lại gọi trực tiếp http://localhost:API_PORT và không khởi động Caddy; WebRequestSession
@@ -63,32 +63,32 @@ try {
   Assert-True $accessMatch.Success "Đăng nhập không phát cookie nhienin3d_phien."
   $adminHeaders = @{ Cookie = "nhienin3d_phien=$($accessMatch.Groups[1].Value)" }
 
-  Write-Host "[E2E v3.10.4] Kiểm tra đơn hàng + sản phẩm..."
+  Write-Host "[E2E v3.10.5] Kiểm tra đơn hàng + sản phẩm..."
   $orders = @(Invoke-RestMethod -Uri "$base/quan-tri/don-hang" -Method Get -Headers $adminHeaders -TimeoutSec 20)
   $products = @(Invoke-RestMethod -Uri "$base/quan-tri/san-pham" -Method Get -Headers $adminHeaders -TimeoutSec 20)
   Assert-True ($null -ne $orders) "API danh sách đơn hàng không phản hồi."
   Assert-True ($products.Count -gt 0) "Không có sản phẩm để kiểm tra runtime Admin."
 
-  Write-Host "[E2E v3.10.4] Preview nhập kho CSV, không thay đổi tồn kho..."
+  Write-Host "[E2E v3.10.5] Preview nhập kho CSV, không thay đổi tồn kho..."
   $variant = $null
   foreach ($product in $products) {
     if ($product.bien_the -and @($product.bien_the).Count -gt 0) { $variant = @($product.bien_the)[0]; break }
   }
   Assert-True ($null -ne $variant) "Không có biến thể để kiểm tra preview nhập kho."
-  $csv = "ma_bien_the,so_luong_nhap,ly_do`r`n$($variant.ma_bien_the),1,E2E preview v3.10.4`r`n"
+  $csv = "ma_bien_the,so_luong_nhap,ly_do`r`n$($variant.ma_bien_the),1,E2E preview v3.10.5`r`n"
   $base64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($csv))
   $previewBody = @{ ten_file = "e2e-v3100.csv"; du_lieu_base64 = $base64 } | ConvertTo-Json
   $preview = Invoke-RestMethod -Uri "$base/quan-tri/kho/import/kiem-tra" -Method Post -ContentType "application/json; charset=utf-8" -Body $previewBody -Headers $adminHeaders -TimeoutSec 20
   Assert-True ($preview.tong_dong -eq 1) "Preview nhập kho không đọc đúng 1 dòng."
   Assert-True ($preview.hop_le -eq 1) "Preview nhập kho không hợp lệ với biến thể đang tồn tại."
 
-  Write-Host "[E2E v3.10.4] Kiểm tra báo cáo Excel + phiếu nhập..."
+  Write-Host "[E2E v3.10.5] Kiểm tra báo cáo Excel + phiếu nhập..."
   $receipts = @(Invoke-RestMethod -Uri "$base/quan-tri/kho/phieu-nhap" -Method Get -Headers $adminHeaders -TimeoutSec 20)
   $report = Invoke-RestMethod -Uri "$base/quan-tri/bao-cao/ton-kho/excel" -Method Get -Headers $adminHeaders -TimeoutSec 30
   Assert-True ($report.ten_file -like "*.xlsx") "Báo cáo tồn kho không trả về file XLSX."
   Assert-True (-not [string]::IsNullOrWhiteSpace([string]$report.base64)) "Báo cáo tồn kho Excel không có dữ liệu base64."
 
-  Write-Host "[E2E v3.10.4] Kiểm tra Ops: persistent SLI/Apdex, encrypted DLQ scheduler, metrics cache, RBAC on-call..."
+  Write-Host "[E2E v3.10.5] Kiểm tra Ops: persistent SLI/Apdex, encrypted DLQ scheduler, metrics cache, RBAC on-call..."
   $health = Invoke-RestMethod -Uri "$base/quan-tri/he-thong/suc-khoe" -Method Get -Headers $adminHeaders -TimeoutSec 20
   $alertConfig = Invoke-RestMethod -Uri "$base/quan-tri/he-thong/cau-hinh-canh-bao" -Method Get -Headers $adminHeaders -TimeoutSec 20
   $sloConfig = Invoke-RestMethod -Uri "$base/quan-tri/he-thong/cau-hinh-slo" -Method Get -Headers $adminHeaders -TimeoutSec 20
@@ -105,22 +105,22 @@ try {
   $incidentExcel = Invoke-RestMethod -Uri "$base/quan-tri/he-thong/su-co/excel" -Method Get -Headers $adminHeaders -TimeoutSec 30
   $opsCursor = Invoke-RestMethod -Uri "$base/quan-tri/he-thong/lich-su/cursor?kich_thuoc=10" -Method Get -Headers $adminHeaders -TimeoutSec 20
   $auditCursor = Invoke-RestMethod -Uri "$base/quan-tri/nhat-ky/cursor?kich_thuoc=10" -Method Get -Headers $adminHeaders -TimeoutSec 20
-  Assert-True ($health.phien_ban -eq "3.10.4") "Health endpoint chưa lên v3.10.4."
+  Assert-True ($health.phien_ban -eq "3.10.5") "Health endpoint chưa lên v3.10.5."
   Assert-True ($alertConfig.chu_ky_phut -ge 15) "Cấu hình cảnh báo runtime không hợp lệ."
   Assert-True ($null -ne $maintenance.dang_bao_tri) "Maintenance window chưa trả trạng thái runtime."
-  Assert-True ($null -ne $maintenanceList.du_lieu) "Danh sách maintenance v3.10.4 chưa phản hồi."
+  Assert-True ($null -ne $maintenanceList.du_lieu) "Danh sách maintenance v3.10.5 chưa phản hồi."
   Assert-True (@($sloAdvanced.burn_windows).Count -ge 1) "SLO nâng cao chưa có burn-rate windows."
   Assert-True ($sloAdvanced.service_targets.postgresql -ge 90) "SLO theo dịch vụ chưa hợp lệ."
   Assert-True (@($sloAdvanced.endpoint_checks).Count -ge 1) "SLO nâng cao chưa có endpoint probe thật."
-  Assert-True ($null -ne $sloAdvanced.maintenance_policy) "SLO nang cao chua tra maintenance policy v3.10.4."
+  Assert-True ($null -ne $sloAdvanced.maintenance_policy) "SLO nang cao chua tra maintenance policy v3.10.5."
   $endpoint0 = @($sloAdvanced.endpoint_checks)[0]
   Assert-True ($endpoint0.method -in @("GET","HEAD")) "Endpoint probe method khong hop le."
-  Assert-True ($endpoint0.latency_target_ms -ge 50) "Endpoint probe chua co latency target v3.10.4."
-  Assert-True ($null -ne $health.webhook.san_sang) "Health chưa trả trạng thái webhook v3.10.4."
+  Assert-True ($endpoint0.latency_target_ms -ge 50) "Endpoint probe chua co latency target v3.10.5."
+  Assert-True ($null -ne $health.webhook.san_sang) "Health chưa trả trạng thái webhook v3.10.5."
   Assert-True ($health.webhook.adapter -in @("GENERIC","SLACK","TEAMS","DISCORD")) "Webhook adapter preset không hợp lệ."
-  Assert-True ($health.webhook.dlq_retention_days -ge 1) "Health chua tra DLQ retention v3.10.4."
-  Assert-True ($null -ne $health.webhook.dlq_encryption_ready) "Health chưa trả trạng thái mã hóa DLQ v3.10.4."
-  Assert-True ($opsRuntime.phien_ban -eq "3.10.4") "Ops runtime chưa lên v3.10.4."
+  Assert-True ($health.webhook.dlq_retention_days -ge 1) "Health chua tra DLQ retention v3.10.5."
+  Assert-True ($null -ne $health.webhook.dlq_encryption_ready) "Health chưa trả trạng thái mã hóa DLQ v3.10.5."
+  Assert-True ($opsRuntime.phien_ban -eq "3.10.5") "Ops runtime chưa lên v3.10.5."
   Assert-True (-not [string]::IsNullOrWhiteSpace([string]$opsRuntime.probe_agent.agent_id)) "Ops runtime chưa trả probe agent id."
   Assert-True ($opsRuntime.endpoint_samples -ge 0) "Ops runtime chưa trả số persistent endpoint samples."
   Assert-True ($opsRuntime.dlq.chu_ky_phut -ge 1) "Ops runtime chưa trả DLQ scheduled retry policy."
@@ -137,15 +137,15 @@ try {
   Assert-True ($null -ne $sla.ngan_sach_dich_vu.postgresql) "SLA chưa trả error budget theo dịch vụ."
   Assert-True ($null -ne $sla.incident_metrics.tong_incident) "SLA chưa trả MTTA/MTTR incident metrics."
   Assert-True ($null -ne $sla.endpoint_slo.time_weighted) "SLA chưa trả endpoint SLO time-weighted."
-  Assert-True ($sla.endpoint_slo.maintenance_aware -eq $true) "Endpoint SLO chua bat maintenance-aware v3.10.4."
+  Assert-True ($sla.endpoint_slo.maintenance_aware -eq $true) "Endpoint SLO chua bat maintenance-aware v3.10.5."
   Assert-True ($null -ne $sla.maintenance_policy_applied) "SLA chua tra maintenance policy applied."
   Assert-True (@($sla.endpoint_slo.endpoints).Count -ge 1) "SLA chưa trả availability endpoint."
   $endpointSla0 = @($sla.endpoint_slo.endpoints)[0]
   Assert-True ($null -ne $endpointSla0.latency) "Endpoint SLO chua tra latency SLI."
   Assert-True ($null -ne $endpointSla0.latency.histogram) "Endpoint SLO chua tra latency histogram."
-  Assert-True ($null -ne $endpointSla0.latency.apdex) "Endpoint SLO chưa trả Apdex v3.10.4."
-  Assert-True ($null -ne $endpointSla0.persistent_samples) "Endpoint SLO chưa trả persistent sample count v3.10.4."
-  Assert-True ($null -ne $endpointSla0.probe_agents) "Endpoint SLO chưa trả probe agents v3.10.4."
+  Assert-True ($null -ne $endpointSla0.latency.apdex) "Endpoint SLO chưa trả Apdex v3.10.5."
+  Assert-True ($null -ne $endpointSla0.persistent_samples) "Endpoint SLO chưa trả persistent sample count v3.10.5."
+  Assert-True ($null -ne $endpointSla0.probe_agents) "Endpoint SLO chưa trả probe agents v3.10.5."
   Assert-True (@($sla.burn_rate_series).Count -ge 1) "SLA chưa trả burn-rate timeline."
   Assert-True ($null -ne $sla.comparison.chin_muoi_ngay) "SLA chưa trả comparison 90 ngày."
   Assert-True ($null -ne $sla.maintenance_annotations) "SLA chưa trả maintenance annotation."
@@ -154,7 +154,7 @@ try {
   Assert-True ($opsExcel.ten_file -like "*.xlsx") "Ops aggregate Excel không trả XLSX."
   Assert-True ($sloConfig.sla_muc_tieu_percent -ge 90) "Cấu hình SLO không hợp lệ."
   Assert-True ($null -ne $incidents.du_lieu) "Endpoint incident không trả danh sách."
-  Assert-True ($incidents.nguon -eq "BANG_TONG_HOP") "Incident chưa đọc từ bảng tổng hợp v3.10.4."
+  Assert-True ($incidents.nguon -eq "BANG_TONG_HOP") "Incident chưa đọc từ bảng tổng hợp v3.10.5."
   Assert-True ($incidentExcel.ten_file -like "*.xlsx") "Incident Excel không trả tên file XLSX."
   Assert-True (-not [string]::IsNullOrWhiteSpace([string]$incidentExcel.base64)) "Incident Excel không có base64."
   if (@($incidents.du_lieu).Count -gt 0) {
@@ -164,7 +164,7 @@ try {
     $timelineCursor = Invoke-RestMethod -Uri "$base/quan-tri/he-thong/su-co/$($incident0.chu_ky)/timeline?q=E2E&kich_thuoc=10" -Method Get -Headers $adminHeaders -TimeoutSec 20
     Assert-True ($null -ne $timelineCursor.cursor) "Incident timeline cursor/full-text chưa phản hồi."
   }
-  Assert-True ($health.database.migration_gan_nhat.ten -eq "202609010003_v3100_ops_persistence_dlq_oncall") "Migration moi nhat phai la 202609010003_v3100_ops_persistence_dlq_oncall cua v3.10.4."
+  Assert-True ($health.database.migration_gan_nhat.ten -eq "202609010003_v3100_ops_persistence_dlq_oncall") "Migration moi nhat phai la 202609010003_v3100_ops_persistence_dlq_oncall cua v3.10.5."
   Assert-True ($null -ne $opsCursor.cursor) "Cursor lịch sử vận hành không hợp lệ."
   Assert-True ($null -ne $auditCursor.cursor) "Cursor audit không hợp lệ."
 
@@ -177,17 +177,17 @@ try {
     $dbUser = Get-ProjectEnv "POSTGRES_USER"; if (-not $dbUser) { $dbUser = "nhienin3d_app" }
     $sql = @"
 INSERT INTO su_co_van_hanh (chu_ky,trang_thai_xu_ly,van_de,bat_dau,gan_nhat,so_su_kien,so_health,so_alert,trang_thai_gan_nhat,ngay_tao,ngay_cap_nhat)
-VALUES ('$sig','MOI','["E2E browser v3.10.4 synthetic incident"]'::jsonb,now(),now(),1,1,0,'CANH_BAO',now(),now())
+VALUES ('$sig','MOI','["E2E browser v3.10.5 synthetic incident"]'::jsonb,now(),now(),1,1,0,'CANH_BAO',now(),now())
 ON CONFLICT (chu_ky) DO UPDATE SET trang_thai_xu_ly='MOI', van_de=EXCLUDED.van_de, gan_nhat=now(), trang_thai_gan_nhat='CANH_BAO', ghi_chu=NULL, nguoi_tiep_nhan_id=NULL, nguoi_tiep_nhan_ten=NULL, tiep_nhan_luc=NULL, nguoi_khac_phuc_id=NULL, nguoi_khac_phuc_ten=NULL, khac_phuc_luc=NULL, ngay_cap_nhat=now();
 INSERT INTO lich_su_van_hanh (loai,trang_thai,mo_ta,chi_tiet,chu_ky_canh_bao,ngay_ket_thuc,ngay_tao)
-VALUES ('HEALTH','CANH_BAO','E2E browser v3.10.4 synthetic incident','{"van_de":["E2E browser v3.10.4 synthetic incident"]}'::jsonb,'$sig',now(),now());
+VALUES ('HEALTH','CANH_BAO','E2E browser v3.10.5 synthetic incident','{"van_de":["E2E browser v3.10.5 synthetic incident"]}'::jsonb,'$sig',now(),now());
 "@
     $sql | docker compose exec -T postgres psql -v ON_ERROR_STOP=1 -U $dbUser -d $dbName | Out-Null
-    if ($LASTEXITCODE -ne 0) { throw "Không seed được incident E2E v3.10.4 cho browser CI." }
+    if ($LASTEXITCODE -ne 0) { throw "Không seed được incident E2E v3.10.5 cho browser CI." }
     Write-Host "Synthetic incident : PASS ($sig)"
   }
 
-  Write-Host "Runtime E2E v3.10.4 PASS ✅" -ForegroundColor Green
+  Write-Host "Runtime E2E v3.10.5 PASS ✅" -ForegroundColor Green
   Write-Host "Admin login       : PASS"
   Write-Host "Orders / products : PASS ($($orders.Count) đơn / $($products.Count) sản phẩm)"
   Write-Host "Stock import      : PASS (preview, không ghi tồn)"

@@ -3,16 +3,16 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 const read = p => readFileSync(p, "utf8");
 
-test("v3.9.0 contract duoc giu khi nang v3.10.3", () => {
+test("v3.9.0 contract duoc giu khi nang v3.10.5", () => {
   const pkg = JSON.parse(read("package.json"));
   const ci = read(".github/workflows/ci.yml");
-  assert.equal(read("VERSION").trim(), "3.10.3");
-  assert.equal(pkg.version, "3.10.3");
-  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3103.mjs");
+  assert.equal(read("VERSION").trim(), "3.10.5");
+  assert.equal(pkg.version, "3.10.5");
+  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3105.mjs");
   assert.equal(existsSync("scripts/e2e-runtime-v3100.ps1"), true);
   assert.equal(existsSync("scripts/e2e-browser-v3100.mjs"), true);
-  assert.match(ci, /e2e-runtime-v3103\.ps1/);
-  assert.match(ci, /Browser E2E Admin HTTPS v3\.10\.3/);
+  assert.match(ci, /e2e-runtime-v3105\.ps1/);
+  assert.match(ci, /Browser E2E Admin HTTPS v3\.10\.5/);
 });
 
 test("v3.9.0 co migration GIN search vector va materialized incident metrics", () => {

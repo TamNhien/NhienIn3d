@@ -20,7 +20,7 @@ const port = env("WEB_PORT", "3000");
 const base = env("E2E_WEB_URL", `https://localhost:${port}`);
 const email = env("ADMIN_EMAIL", "admin@nhienin3d.local");
 const password = env("ADMIN_PASSWORD");
-if (!password) throw new Error("Thiếu ADMIN_PASSWORD trong biến môi trường hoặc file .env để chạy browser E2E v3.10.4");
+if (!password) throw new Error("Thiếu ADMIN_PASSWORD trong biến môi trường hoặc file .env để chạy browser E2E v3.10.5");
 const mutateIncident = process.env.CI === "true" || boolEnv("E2E_MUTATE_INCIDENT");
 const syntheticSignature = "fdde222e3bc7582312ed975e75f8e8fde98f263fd36a42183ad5f77be11e6f21";
 
@@ -32,7 +32,7 @@ try {
   const healthResponse = await context.request.get(`${base}/api/v1/suc-khoe`);
   if (!healthResponse.ok()) throw new Error(`Health API qua HTTPS trả ${healthResponse.status()}.`);
   const health = await healthResponse.json();
-  if (health.phien_ban !== "v3.10.4") throw new Error(`API đang chạy ${health.phien_ban || "không rõ version"}, không phải v3.10.4. Docker có thể vẫn dùng container/image cũ.`);
+  if (health.phien_ban !== "v3.10.5") throw new Error(`API đang chạy ${health.phien_ban || "không rõ version"}, không phải v3.10.5. Docker có thể vẫn dùng container/image cũ.`);
 
   await page.goto(`${base}/dang-nhap?chuyen_den=/quan-tri`, { waitUntil: "domcontentloaded" });
   await page.getByLabel("Email", { exact: true }).fill(email);
@@ -68,7 +68,7 @@ try {
     const incidentsRes = await context.request.get(`${base}/api/v1/quan-tri/he-thong/su-co?gioi_han=100`);
     const incidents = await incidentsRes.json();
     const synthetic = incidents.du_lieu?.find((x) => x.chu_ky === syntheticSignature);
-    if (!synthetic) throw new Error("Không tìm thấy synthetic incident v3.10.4 do runtime E2E seed cho browser CI.");
+    if (!synthetic) throw new Error("Không tìm thấy synthetic incident v3.10.5 do runtime E2E seed cho browser CI.");
     const openSynthetic = async () => {
       const signatureLabel = `#${syntheticSignature.slice(0, 12)}`;
       const incidentButton = page
@@ -86,7 +86,7 @@ try {
       if (actual !== expected) throw new Error(`Synthetic incident status mong ${expected}, nhận ${actual || "trống"}.`);
     };
     await openSynthetic();
-    await page.getByLabel("Ghi chú xử lý / khắc phục", { exact: true }).fill("Browser E2E v3.10.4 acknowledge persistence");
+    await page.getByLabel("Ghi chú xử lý / khắc phục", { exact: true }).fill("Browser E2E v3.10.5 acknowledge persistence");
     await page.getByRole("button", { name: "Tiếp nhận incident", exact: true }).click();
     await page.getByText("Đã tiếp nhận incident", { exact: false }).waitFor({ timeout: 30_000 });
     await page.reload({ waitUntil: "domcontentloaded" });
@@ -122,7 +122,7 @@ try {
   await page.getByLabel("Endpoint latency 1", { exact: true }).waitFor();
   await page.getByLabel("Endpoint auth 1", { exact: true }).waitFor();
 
-  console.log("Browser E2E v3.10.4 PASS ✅");
+  console.log("Browser E2E v3.10.5 PASS ✅");
   console.log(`HTTPS Admin: ${base}/quan-tri`);
   console.log("SLO update + reload persistence : PASS");
   console.log(`Incident acknowledge/resolve    : ${mutateIncident ? "PASS" : "SKIP an toàn trên local"}`);
@@ -130,7 +130,7 @@ try {
   console.log("Endpoint persistent/Apdex       : PASS");
   console.log("Encrypted DLQ scheduled retry   : PASS");
   console.log("GIN timeline / RBAC on-call     : PASS");
-  console.log("Ops Dashboard v3.10.4           : PASS");
+  console.log("Ops Dashboard v3.10.5           : PASS");
 } finally {
   if (originalSlo) {
     try {

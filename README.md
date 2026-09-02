@@ -1,7 +1,7 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v3.10.3** — 02/09/2026
-- **Security install-tree hotfix v3.10.3**: `mysql2` được khai báo trực tiếp tại root `devDependencies` ở `3.22.0`, còn `overrides.mysql2` tham chiếu `$mysql2`. Cách này buộc `npm install` đồng bộ `package-lock.json`/`node_modules` thay vì chỉ để lại transitive `mysql2@3.15.3` bị `npm ls` đánh dấu `invalid`. `npm run audit:security` nay kiểm tra cả version mysql2 đang cài trước khi chạy `npm audit`.
+> Phiên bản hiện tại: **v3.10.5** — 02/09/2026
+- **mysql2 installed-tree scanner hotfix v3.10.5**: sửa checker v3.10.4 bị phụ thuộc vào entrypoint nội bộ của package Prisma (`build/types.js`) trên Windows/GitHub runner. Security gate mới quét trực tiếp mọi package `mysql2` thực tế trong `node_modules` (kể cả nested dependency), bắt buộc tất cả >=3.22.0 rồi mới chạy `npm audit`; không dùng `npm ls` và không resolve entrypoint Prisma.
 
 NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **frontend Next.js** và **backend NestJS/Fastify** kết nối **PostgreSQL qua Prisma**.
 
@@ -19,13 +19,13 @@ NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **fro
 
 ## Điểm chính bản hiện tại
 
-- **Security dependency hotfix v3.10.3**: khóa `mysql2@3.22.0` bằng root direct devDependency + `overrides: { "mysql2": "$mysql2" }`, để npm phải reconcile cây cài đặt thay vì giữ `mysql2@3.15.3 invalid`. Prisma vẫn ở 7.10.0 và NhienIn3d vẫn dùng PostgreSQL qua `@prisma/adapter-pg`; không dùng `npm audit fix --force`.
+- **Installed-tree security validation v3.10.5**: giữ `mysql2@3.22.0` root direct devDependency + `overrides: { "mysql2": "$mysql2" }`, nhưng checker quét trực tiếp mọi `node_modules/**/mysql2/package.json` thực tế thay vì resolve entrypoint Prisma hoặc dùng `npm ls`. Nhờ vậy tránh cả `ELSPROBLEMS` lẫn lỗi `prisma/build/types.js` mà vẫn fail nếu tồn tại bất kỳ mysql2 <3.22.0. `npm audit` vẫn là gate lỗ hổng cuối.
 - **Persistent Endpoint SLI + Apdex v3.10.0**: mỗi probe được lưu vào `slo_endpoint_mau` cùng agent/node/region, HTTP status, latency, maintenance flag và Apdex bucket; thống kê ưu tiên dữ liệu persistent nhưng vẫn fallback lịch sử v3.9 khi nâng cấp.
 - **Probe agent identity**: `SYSTEM_SLO_PROBE_AGENT_ID`, `SYSTEM_SLO_PROBE_REGION`, `SYSTEM_SLO_PROBE_NODE` giúp phân biệt nhiều node/region và hiển thị `probe_agents`/persistent sample count trên Ops Dashboard.
 - **Encrypted Webhook DLQ + scheduler**: payload dead-letter được tách khỏi history và mã hóa AES-256-GCM trong `webhook_dlq_payload`; history chỉ giữ payload reference/hash. Scheduler retry theo policy, exponential backoff, retention expiry và trạng thái `CHO_RETRY/RETRY_THAT_BAI/HET_HAN`; hỗ trợ replay/ack hiện có.
 - **Cached Ops metrics + retention**: refresh materialized incident metrics được chuyển khỏi request path sang scheduler và `ops_metric_cache`; cleanup telemetry cũ theo retention nhưng giữ dữ liệu liên kết incident.
 - **RBAC Ops/on-call**: thêm `OPS_VIEWER`, `ON_CALL`, `SERVICE_OWNER`, escalation 1-5 và phân quyền theo dịch vụ. Non-Admin được vào `/quan-tri/ops` ở chế độ read-only hoặc xử lý incident khi có on-call/service-owner assignment; Admin quản trị assignment.
-- **Database**: migration mới nhất vẫn là `202609010003_v3100_ops_persistence_dlq_oncall`; v3.10.3 không đổi schema. Runtime/browser smoke hiện dùng `scripts/e2e-runtime-v3103.ps1` / `scripts/e2e-browser-v3103.mjs`; CI/Health/OpenAPI đồng bộ **v3.10.3**.
+- **Database**: migration mới nhất vẫn là `202609010003_v3100_ops_persistence_dlq_oncall`; v3.10.5 không đổi schema. Runtime/browser smoke hiện dùng `scripts/e2e-runtime-v3105.ps1` / `scripts/e2e-browser-v3105.mjs`; CI/Health/OpenAPI đồng bộ **v3.10.5**.
 
 ## Tài khoản và bảo mật
 
@@ -1426,6 +1426,23 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 - Thêm `scripts/kiem-tra-mysql2-security.mjs`; `npm run audit:security` và `scripts/kiem-tra.ps1` xác minh mysql2 đang cài đặt >=3.22.0 trước khi audit/release.
 - Giữ Prisma 7.10.0 và PostgreSQL adapter; không dùng `npm audit fix --force`. Runtime/Browser E2E, CI, Health/OpenAPI đồng bộ v3.10.3. Không có migration mới.
 - Quy trình release: `npm install` → `npm ls mysql2 --all` → `npm audit` → `npm test` → `npm run typecheck` → `npm run build` → Docker → `./scripts/e2e-runtime-v3103.ps1` → `npm run e2e:browser` → `./scripts/release.ps1 v3.10.3`.
+
+
+## v3.10.4 — 02/09/2026
+
+- Sửa false-fail GitHub Actions ở bước `npm ls mysql2 --all`: trên runner, Prisma 7.10.0 vẫn khai báo exact `mysql2@3.15.3` trong package manifest nên npm có thể trả `ELSPROBLEMS` dù intentional root override đã làm module thực tế resolve tới `mysql2@3.22.0`.
+- `scripts/kiem-tra-mysql2-security.mjs` nay dùng Node `createRequire()` để resolve `mysql2/package.json` từ root và từ context của Prisma; mọi package path thực tế phải đạt `>=3.22.0`. CI và `scripts/kiem-tra.ps1` không còn dùng `npm ls` làm security gate.
+- Giữ direct pin `mysql2@3.22.0`, linked override `$mysql2`, Prisma 7.10.0 và `npm audit --audit-level=high`. Không downgrade Prisma và không dùng `npm audit fix --force`.
+- Runtime/Browser E2E, CI, Health/OpenAPI đồng bộ **v3.10.4**. Không có migration mới; migration mới nhất vẫn `202609010003_v3100_ops_persistence_dlq_oncall`.
+- Quy trình release: `npm install` → `npm run security:mysql2` → `npm audit` → `npm test` → `npm run typecheck` → `npm run build` → Docker → `./scripts/e2e-runtime-v3104.ps1` → `npm run e2e:browser` → `./scripts/release.ps1 v3.10.4`.
+
+## v3.10.5 — 02/09/2026
+
+- Sửa checker v3.10.4 lỗi `Cannot find module .../node_modules/prisma/build/types.js` khi cố resolve package Prisma trên Windows. Đây là lỗi validation script, không phải lỗ hổng dependency: `npm audit` vẫn 0 và test/typecheck/build đều PASS.
+- `scripts/kiem-tra-mysql2-security.mjs` không còn phụ thuộc `createRequire()`/entrypoint/exports của Prisma. Checker quét installed `node_modules` tree theo package boundary, theo cả nested `node_modules`, đọc trực tiếp `package.json` của mọi package có `name === "mysql2"` và fail nếu bất kỳ version nào `<3.22.0`.
+- Thêm regression test thực thi checker trên dependency tree giả: PASS với `mysql2@3.22.0`, FAIL khi xuất hiện nested `mysql2@3.15.3`. Giữ direct pin `mysql2@3.22.0`, linked override `$mysql2`, Prisma 7.10.0 và `npm audit --audit-level=high`.
+- Runtime/Browser E2E, CI, Health/OpenAPI đồng bộ **v3.10.5**. Không có migration mới; migration mới nhất vẫn `202609010003_v3100_ops_persistence_dlq_oncall`.
+- Quy trình release: `npm install` → `npm run security:mysql2` → `npm audit` → `npm test` → `npm run typecheck` → `npm run build` → Docker → `./scripts/e2e-runtime-v3105.ps1` → `npm run e2e:browser` → `./scripts/release.ps1 v3.10.5`.
 
 
 # Lộ trình tiếp theo
