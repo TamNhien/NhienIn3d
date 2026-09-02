@@ -1,7 +1,7 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v3.12.0** — 02/09/2026
-- **Managed probe fleet v3.12.0**: quản lý tập agent theo profile, đối chiếu per-agent keyring với agent đã đăng ký trong PostgreSQL, phân loại ONLINE/STALE/OFFLINE/MISSING, kiểm tra key/registration coverage và tuyệt đối không trả secret raw ra Ops runtime/UI.
+> Phiên bản hiện tại: **v3.13.0** — 02/09/2026
+- **Multi-region quorum + asymmetric probe v3.13.0**: bổ sung Ed25519 signing tùy chọn bên cạnh HMAC, public-key rotation grace-period, quorum/consensus theo region và anomaly detection latency/status trên persistent probe samples.
 
 NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **frontend Next.js** và **backend NestJS/Fastify** kết nối **PostgreSQL qua Prisma**.
 
@@ -19,13 +19,14 @@ NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **fro
 
 ## Điểm chính bản hiện tại
 
-- **Managed probe fleet v3.12.0**: `SYSTEM_SLO_AGENT_PROFILES_JSON` khai báo tập agent mong đợi; Ops runtime đối chiếu profile, `SYSTEM_SLO_AGENT_KEYS_JSON` và `slo_probe_agent` để tính expected/online, key coverage, registration coverage và trạng thái `ONLINE` / `STALE` / `OFFLINE` / `MISSING`.
-- **Không lộ secret**: API chỉ trả metadata `key_configured`/`per_agent_key` và `secret_values_exposed=false`; script fleet chỉ in độ dài secret, không in giá trị khóa.
-- **Managed probe fleet runner**: `npm run probe:fleet` chạy liên tục và làm mới heartbeat cho toàn bộ agent theo `NH3D_PROBE_INTERVAL_SECONDS` (mặc định 300 giây); `npm run probe:fleet:once` dùng cho smoke một vòng. Nếu không có runner/agent process chạy lâu dài, agent sẽ chuyển `STALE` rồi `OFFLINE` đúng theo ngưỡng cấu hình.
-- **Distributed signed probe kế thừa v3.11.0**: tiếp tục HMAC-SHA256 + timestamp + nonce anti-replay, fallback `public-health` có `timeout_ms=5000`, SLO persistent breakdown theo region/node và Apdex.
-- **Ops Dashboard**: thêm panel **Managed probe fleet**, badge READY/ATTENTION, coverage và danh sách agent; badge `online/offline` của Distributed probe được thu gọn 22px, không bị flex kéo cao và chữ được canh giữa.
-- **DLQ / Archive / On-call**: giữ keyring/replay jobs/retry budget, archive verify-before-prune và on-call/escalation/incident ownership của v3.11.0.
-- **Database**: v3.12.0 không thêm migration; migration mới nhất vẫn `202609020001_v3110_distributed_probe_dlq_keyring_oncall_archive` (23 migrations). Runtime/browser dùng `scripts/e2e-runtime-v3120.ps1` / `scripts/e2e-browser-v3120.mjs`; CI/Health/OpenAPI đồng bộ **v3.12.0**.
+- **Ed25519 probe signing**: `scripts/probe-agent-v3130.mjs` ưu tiên private key Ed25519 qua `NH3D_PROBE_AGENT_PRIVATE_KEY` / `NH3D_PROBE_AGENT_PRIVATE_KEY_FILE`; API xác minh bằng `SYSTEM_SLO_AGENT_PUBLIC_KEYS_JSON`. HMAC-SHA256 v3.11 vẫn tương thích ngược.
+- **Rotation grace-period**: mỗi agent trong `SYSTEM_SLO_AGENT_PUBLIC_KEYS_JSON` có thể trỏ tới một public key hoặc mảng nhiều public key; server chấp nhận bất kỳ key hợp lệ nào trong lúc rotate, không cần giữ private key phía server.
+- **Key generation an toàn**: `npm run probe:keygen -- agent-hcm-01` tạo Ed25519 keypair vào `.probe-keys/`; thư mục này bị `.gitignore`, source không chứa private key.
+- **Multi-region quorum/consensus**: Ops runtime tính quorum theo persistent `slo_endpoint_mau`, `SYSTEM_SLO_QUORUM_MIN_REGIONS`, `SYSTEM_SLO_QUORUM_HEALTHY_PERCENT` và `SYSTEM_SLO_QUORUM_WINDOW_SECONDS`; phân loại `QUORUM_OK` / `DEGRADED` / `OUTAGE` và phát hiện region bất đồng.
+- **Anomaly detection**: so latency mới nhất với median baseline theo region/endpoint, ngưỡng multiplier cấu hình; đồng thời phát hiện status anomaly khi baseline ổn định nhưng sample mới chuyển xấu.
+- **Managed probe fleet v3.12 được giữ nguyên**: ONLINE/STALE/OFFLINE/MISSING, key/registration coverage, keepalive runner và compact badge; v3.13 mở rộng coverage để chấp nhận cả HMAC per-agent key lẫn Ed25519 public key.
+- **Ops Dashboard v3.13**: thêm panel **Multi-region quorum · anomaly detection**, badge compact `QUORUM OK` / `DEGRADED`, số endpoint/quorum/disagreement/anomaly và trạng thái signing; không hiển thị raw secret/private key.
+- **Database**: v3.13.0 không thêm migration; tiếp tục dùng 23 migrations, migration mới nhất `202609020001_v3110_distributed_probe_dlq_keyring_oncall_archive`. Runtime/browser dùng `scripts/e2e-runtime-v3130.ps1` / `scripts/e2e-browser-v3130.mjs`; CI/Health/OpenAPI đồng bộ **v3.13.0**.
 
 ## Tài khoản và bảo mật
 
@@ -1469,11 +1470,24 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 - Probe Fleet PowerShell hotfix: dùng `${id}: ...` khi nội suy chuỗi để tránh `InvalidVariableReferenceWithDrive` trên Windows PowerShell; lưu runner dạng UTF-8 BOM để thông báo tiếng Việt không bị mojibake.
 - Quy trình release: `npm install` → `npm run security:mysql2` → `npm audit` → `npm test` → `npm run typecheck` → `npm run build` → Docker → `./scripts/e2e-runtime-v3120.ps1` → `npm run e2e:browser` → `./scripts/release.ps1 v3.12.0`.
 
+## v3.13.0 — 02/09/2026
+
+- Bổ sung **Ed25519 asymmetric signing** cho distributed probe; header `x-nhienin3d-signature-alg=ED25519`, API chỉ cần public key và tiếp tục dùng timestamp + nonce anti-replay.
+- Giữ **HMAC-SHA256** làm chế độ tương thích ngược; agent tự chọn Ed25519 khi có private key, nếu không dùng per-agent/shared HMAC như v3.12.
+- `SYSTEM_SLO_AGENT_PUBLIC_KEYS_JSON` hỗ trợ một public key hoặc mảng nhiều public key trên mỗi agent để rotate theo grace-period; Ops fleet tính signing coverage từ HMAC hoặc Ed25519.
+- Thêm `scripts/probe-keygen-v3130.mjs` và `npm run probe:keygen`; keypair lưu ở `.probe-keys/` và không commit private key.
+- Thêm **multi-region quorum/consensus** cho endpoint persistent samples với ngưỡng window/min-regions/healthy-percent cấu hình qua ENV; phát hiện `QUORUM_OK`, `DEGRADED`, `OUTAGE` và region disagreement.
+- Thêm **latency/status anomaly detection** theo region: median baseline, multiplier, minimum samples và lookback configurable; Ops runtime trả anomaly regions mà không cần migration mới.
+- Ops Dashboard thêm panel compact quorum/anomaly; Managed probe fleet và distributed probe badges giữ layout nhỏ, chữ canh giữa.
+- Không thêm migration; tiếp tục 23 migrations và giữ DLQ keyring/replay jobs, archive verify-before-prune, on-call/escalation của v3.11-v3.12.
+- Runtime/Browser E2E, CI, Health/OpenAPI và package version đồng bộ **v3.13.0**.
+- Quy trình release: `npm install` → `npm run security:mysql2` → `npm audit` → `npm test` → `npm run typecheck` → `npm run build` → Docker → `./scripts/e2e-runtime-v3130.ps1` → `npm run e2e:browser` → `./scripts/release.ps1 v3.13.0`.
+
 # Lộ trình tiếp theo
 
-## v3.13.0
+## v3.14.0
 
-- Probe agent enrollment/rotation key tự phục vụ, mTLS hoặc asymmetric signing và quorum/consensus khi nhiều region báo trạng thái khác nhau.
-- SLO alert theo multi-region quorum, anomaly detection latency/burn-rate và service dependency map.
+- Probe enrollment token/self-service rotation nâng cao hoặc mTLS; bổ sung revoke/expiry metadata cho asymmetric keys.
+- SLO alert chủ động theo quorum + burn-rate anomaly và service dependency map.
 - Archive export sang object storage S3-compatible, restore/replay từng partition và retention policy theo legal/audit class.
 - On-call calendar import/export, override/absence, handoff report và escalation notification acknowledgment.

@@ -22,9 +22,9 @@ test("v3.6.4 health-version fix duoc giu khi nang patch tiep theo", () => {
   const pkg = JSON.parse(readFileSync("package.json", "utf8"));
   const ci = readFileSync(".github/workflows/ci.yml", "utf8");
   const browser = readFileSync("scripts/e2e-browser-v364.mjs", "utf8");
-  assert.match(pkg.version, /^(?:3\.6\.[4567]|3\.7\.[012]|3\.8\.0|3\.9\.0|3\.10\.[012345]|3\.11\.0|3\.12\.0)$/);
-  assert.match(pkg.scripts["e2e:browser"], /^node scripts\/e2e-browser-v(?:36[4567]|37[012]|380|390|3100|3101|3102|3103|3104|3105|3110|3120)\.mjs$/);
-  assert.match(ci, /e2e-runtime-v(?:36[4567]|37[012]|380|390|3100|3101|3102|3103|3104|3105|3110|3120)\.ps1/);
-  assert.match(ci, /Browser E2E Admin HTTPS v(?:3\.6\.[4567]|3\.7\.[012]|3\.8\.0|3\.9\.0|3\.10\.[012345]|3\.11\.0|3\.12\.0)/);
+  assert.match(pkg.version, /^(?:3\.6\.[4567]|3\.7\.[012]|3\.8\.0|3\.9\.0|3\.10\.[012345]|3\.11\.0|3\.12\.0|3\.13\.0)$/);
+  assert.match(pkg.scripts["e2e:browser"], /^node scripts\/e2e-browser-v(?:36[4567]|37[012]|380|390|3100|3101|3102|3103|3104|3105|3110|3120|3130)\.mjs$/);
+  assert.match(ci, /e2e-runtime-v(?:36[4567]|37[012]|380|390|3100|3101|3102|3103|3104|3105|3110|3120|3130)\.ps1/);
+  assert.match(ci, /Browser E2E Admin HTTPS v(?:3\.6\.[4567]|3\.7\.[012]|3\.8\.0|3\.9\.0|3\.10\.[012345]|3\.11\.0|3\.12\.0|3\.13\.0)/);
   assert.match(browser, /v3\.6\.4/);
 });

@@ -1,7 +1,7 @@
 {
   "name": "nhienin3d",
   "private": true,
-  "version": "3.12.0",
+  "version": "3.13.0",
   "description": "NhienIn3d - cửa hàng sản phẩm in 3D hiện đại",
   "engines": {
     "node": ">=24.0.0",
@@ -28,11 +28,12 @@
     "https:local": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/https-local.ps1",
     "docker:up": "docker compose up -d --build --remove-orphans",
     "docker:ps": "docker compose ps",
-    "e2e:browser": "node scripts/e2e-browser-v3120.mjs",
-    "probe:agent": "node scripts/probe-agent-v3120.mjs",
+    "e2e:browser": "node scripts/e2e-browser-v3130.mjs",
+    "probe:agent": "node scripts/probe-agent-v3130.mjs",
     "security:mysql2": "node scripts/kiem-tra-mysql2-security.mjs",
-    "probe:fleet": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/probe-fleet-v3120.ps1",
-    "probe:fleet:once": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/probe-fleet-v3120.ps1 -Once"
+    "probe:fleet": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/probe-fleet-v3130.ps1",
+    "probe:fleet:once": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/probe-fleet-v3130.ps1 -Once",
+    "probe:keygen": "node scripts/probe-keygen-v3130.mjs"
   },
   "workspaces": [
     "apps/api",

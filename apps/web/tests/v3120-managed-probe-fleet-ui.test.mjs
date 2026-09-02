@@ -9,7 +9,7 @@ test("v3.12.0 Ops Dashboard hien managed probe fleet compact", () => {
   const lib = read("../lib/quan-tri.ts");
   assert.match(page, />Managed probe fleet</);
   assert.match(page, /runtime\?\.probe_fleet\?\.key_coverage_percent/);
-  assert.match(page, /per-agent key/);
+  assert.match(page, /per-agent HMAC|Ed25519 public key/);
   assert.match(css, /\.compactPanel\{/);
   assert.match(css, /\.fleetStats\{/);
   assert.match(css, /\.fleetList\{/);

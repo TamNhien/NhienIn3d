@@ -16,10 +16,11 @@ export class ProbeAgentController {
     @Headers("x-nhienin3d-timestamp") timestamp: string | undefined,
     @Headers("x-nhienin3d-nonce") nonce: string | undefined,
     @Headers("x-nhienin3d-signature") signature: string | undefined,
+    @Headers("x-nhienin3d-signature-alg") algorithm: string | undefined,
     @Body() dto: ProbeAgentHeartbeatDto,
   ) {
     const signedBody = request.body as Record<string, unknown>;
-    return this.service.probe_agent_heartbeat_v3110({ agent, timestamp, nonce, signature }, dto, signedBody);
+    return this.service.probe_agent_heartbeat_v3110({ agent, timestamp, nonce, signature, algorithm }, dto, signedBody);
   }
 
   @Post("ingest")
@@ -29,9 +30,10 @@ export class ProbeAgentController {
     @Headers("x-nhienin3d-timestamp") timestamp: string | undefined,
     @Headers("x-nhienin3d-nonce") nonce: string | undefined,
     @Headers("x-nhienin3d-signature") signature: string | undefined,
+    @Headers("x-nhienin3d-signature-alg") algorithm: string | undefined,
     @Body() dto: ProbeAgentIngestDto,
   ) {
     const signedBody = request.body as Record<string, unknown>;
-    return this.service.probe_agent_ingest_v3110({ agent, timestamp, nonce, signature }, dto, signedBody);
+    return this.service.probe_agent_ingest_v3110({ agent, timestamp, nonce, signature, algorithm }, dto, signedBody);
   }
 }

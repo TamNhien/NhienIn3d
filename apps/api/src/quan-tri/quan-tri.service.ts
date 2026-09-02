@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, NotFoundException, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
 import * as argon2 from "argon2";
-import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
+import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes, randomUUID, timingSafeEqual, verify as verifySignature } from "node:crypto";
 import { inflateRawSync } from "node:zlib";
 import { readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
@@ -126,7 +126,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     setTimeout(cleanupOps, 120_000).unref();
     this.bo_hen_ops_retention = setInterval(cleanupOps, 6 * 60 * 60_000);
     this.bo_hen_ops_retention.unref();
-    this.logger.log(`Ops v3.12.0 schedulers: DLQ ${dlqPolicy.chu_ky_phut}m, metrics ${opsPolicy.refresh_phut}m, retention ${opsPolicy.retention_days}d.`);
+    this.logger.log(`Ops v3.13.0 schedulers: DLQ ${dlqPolicy.chu_ky_phut}m, metrics ${opsPolicy.refresh_phut}m, retention ${opsPolicy.retention_days}d.`);
   }
 
   onModuleDestroy() {
@@ -618,7 +618,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     for (let index = 0; index <= cau_hinh.max_retries; index++) {
       const lan_thu = index + 1;
       const timestamp = String(Math.floor(Date.now() / 1000));
-      const headers: Record<string, string> = { "content-type": "application/json", "user-agent": "NhienIn3d-Ops/3.12.0", "x-nhienin3d-timestamp": timestamp, "x-nhienin3d-adapter": cau_hinh.adapter };
+      const headers: Record<string, string> = { "content-type": "application/json", "user-agent": "NhienIn3d-Ops/3.13.0", "x-nhienin3d-timestamp": timestamp, "x-nhienin3d-adapter": cau_hinh.adapter };
       if (token) headers.authorization = `Bearer ${token}`;
       if (secret) headers["x-nhienin3d-signature"] = `sha256=${createHmac("sha256", secret).update(`${timestamp}.${body}`).digest("hex")}`;
       const bat_dau = performance.now();
@@ -872,11 +872,11 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       cached = cache?.gia_tri && typeof cache.gia_tri === "object" && !Array.isArray(cache.gia_tri) ? cache.gia_tri as Record<string, unknown> : null;
       endpoint_samples = countSamples; assignments = countAssignments;
     } catch {}
-    return { phien_ban: "3.12.0", probe_agent: agent, endpoint_samples, dlq: { ...dlq, payload_encryption_ready: !!crypto, key_id: crypto?.key_id || null, key_source: crypto?.nguon || null }, ops_metrics: { ...scheduler, cache: cached }, rbac: { active_assignments: assignments, roles: ["OPS_VIEWER", "ON_CALL", "SERVICE_OWNER"] } };
+    return { phien_ban: "3.13.0", probe_agent: agent, endpoint_samples, dlq: { ...dlq, payload_encryption_ready: !!crypto, key_id: crypto?.key_id || null, key_source: crypto?.nguon || null }, ops_metrics: { ...scheduler, cache: cached }, rbac: { active_assignments: assignments, roles: ["OPS_VIEWER", "ON_CALL", "SERVICE_OWNER"] } };
   }
 
   private tao_headers_slo_endpoint(endpoint: SloEndpointCheckV390) {
-    const headers: Record<string, string> = { "user-agent": "NhienIn3d-SLO-Probe/3.12.0" };
+    const headers: Record<string, string> = { "user-agent": "NhienIn3d-SLO-Probe/3.13.0" };
     const resolveTemplate = (value: string) => value.replace(/\$\{ENV:([A-Z][A-Z0-9_]*)\}/g, (_all, name: string) => process.env[name] || "");
     for (const [nameRaw, valueRaw] of Object.entries(endpoint.headers || {})) {
       const name = nameRaw.trim().toLowerCase();
@@ -1026,7 +1026,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const trang_thai = !database.ket_noi ? "LOI" : (van_de.length ? "CANH_BAO" : "TOT");
     const ket_qua = {
       trang_thai,
-      phien_ban: "3.12.0",
+      phien_ban: "3.13.0",
       thoi_gian: new Date().toISOString(),
       api: { uptime_giay: Math.floor(process.uptime()), node: process.version, pid: process.pid, rss_bytes: bo_nho.rss, heap_used_bytes: bo_nho.heapUsed, heap_total_bytes: bo_nho.heapTotal },
       database,
@@ -1150,7 +1150,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const webhook = onCallRouting.kenh === "EMAIL" && onCallRouting.people.length
       ? { da_gui: false, ly_do: "Escalation policy hiện tại chỉ định EMAIL", so_lan_thu: 0, adapter: this.cau_hinh_webhook_canh_bao().adapter }
       : await this.gui_webhook_canh_bao({
-          event: "nhienin3d.system.alert", version: "3.12.0", trang_thai: trang_thai_canh_bao, chu_ky, dich_vu, van_de, thoi_gian: health.thoi_gian, cap_leo_thang, ton_tai_phut, on_call: onCallRouting
+          event: "nhienin3d.system.alert", version: "3.13.0", trang_thai: trang_thai_canh_bao, chu_ky, dich_vu, van_de, thoi_gian: health.thoi_gian, cap_leo_thang, ton_tai_phut, on_call: onCallRouting
         });
     const da_gui = email.da_gui || webhook.da_gui;
     if (!da_gui) return { da_gui: false, ly_do: `Không có kênh cảnh báo gửi thành công. Email: ${email.ly_do || "không gửi"}; Webhook: ${webhook.ly_do || "không gửi"}`, van_de, cap_leo_thang, ton_tai_phut, email, webhook, bao_tri };
@@ -1252,7 +1252,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       this.danh_sach_su_co_van_hanh("100", trangThaiXuLyRaw, tuNgayRaw, denNgayRaw)
     ]);
     const rows: unknown[][] = [
-      ["NhienIn3d Ops Dashboard v3.12.0"],
+      ["NhienIn3d Ops Dashboard v3.13.0"],
       ["Tạo lúc", new Date().toISOString()],
       ["Bộ lọc incident", `${tuNgayRaw || "*"} → ${denNgayRaw || "*"} · ${trangThaiXuLyRaw || "Tất cả"}`],
       [],
@@ -1280,7 +1280,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     for (const item of sla.burn_rate_policy) rows.push([item.gio, item.nguong, item.muc_do, item.sla.burn_rate ?? "", item.uptime.burn_rate ?? ""]);
     rows.push([], ["Incident"], ["Chữ ký", "Trạng thái", "Vấn đề", "Bắt đầu", "Gần nhất", "Sự kiện", "Tiếp nhận", "Khắc phục"]);
     for (const item of incidents.du_lieu) rows.push([item.chu_ky, item.trang_thai_xu_ly, item.van_de.join(" | "), item.bat_dau.toISOString(), item.gan_nhat.toISOString(), item.so_su_kien, item.tiep_nhan_luc?.toISOString() || "", item.khac_phuc_luc?.toISOString() || ""]);
-    const buffer = this.tao_xlsx(rows, "Ops v3.12.0");
+    const buffer = this.tao_xlsx(rows, "Ops v3.13.0");
     return { ten_file: `ops-slo-incident-${new Date().toISOString().slice(0, 10)}.xlsx`, mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", base64: buffer.toString("base64") };
   }
 
@@ -1561,42 +1561,84 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     return { secret, max_skew_seconds: maxSkew, configured: secret.length >= 16, source: rawMap ? "AGENT_KEYRING" : "SHARED_SECRET" };
   }
 
+  private cau_hinh_probe_agent_public_keys_v3130(agentId: string) {
+    const rawMap = process.env.SYSTEM_SLO_AGENT_PUBLIC_KEYS_JSON?.trim();
+    const keys: string[] = [];
+    if (rawMap) {
+      try {
+        const parsed = JSON.parse(rawMap) as Record<string, unknown>;
+        const selected = parsed[agentId];
+        const values = Array.isArray(selected) ? selected : selected == null ? [] : [selected];
+        for (const raw of values) {
+          if (typeof raw !== "string") continue;
+          const resolved = this.giai_quyet_secret_ref_v3110(raw).replace(/\\n/g, "\n").trim();
+          if (resolved.includes("BEGIN PUBLIC KEY")) keys.push(resolved);
+        }
+      } catch (error) {
+        this.logger.warn(`SYSTEM_SLO_AGENT_PUBLIC_KEYS_JSON không hợp lệ: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+    return { keys, configured: keys.length > 0, source: rawMap ? "ED25519_PUBLIC_KEYRING" : "UNCONFIGURED" };
+  }
+
   private async xac_thuc_probe_agent_v3110(
-    headers: { agent?: string; timestamp?: string; nonce?: string; signature?: string },
+    headers: { agent?: string; timestamp?: string; nonce?: string; signature?: string; algorithm?: string },
     body: Record<string, unknown>,
   ) {
     const agent = headers.agent?.trim() || "";
     const timestampRaw = headers.timestamp?.trim() || "";
     const nonce = headers.nonce?.trim() || "";
-    const signature = headers.signature?.trim().toLowerCase() || "";
+    const signatureRaw = headers.signature?.trim() || "";
+    const algorithm = (headers.algorithm?.trim().toUpperCase() || "HMAC-SHA256");
     if (!/^[A-Za-z0-9._-]{2,80}$/.test(agent) || String(body.agent_id || "") !== agent) throw new ForbiddenException("Probe agent identity không hợp lệ");
     if (!/^[A-Za-z0-9._-]{12,80}$/.test(nonce)) throw new ForbiddenException("Probe agent nonce không hợp lệ");
-    if (!/^[a-f0-9]{64}$/.test(signature)) throw new ForbiddenException("Probe agent signature không hợp lệ");
     const timestamp = Number(timestampRaw);
     if (!Number.isFinite(timestamp)) throw new ForbiddenException("Probe agent timestamp không hợp lệ");
-    const config = this.cau_hinh_probe_agent_signed_v3110(agent);
-    if (!config.configured) throw new ForbiddenException("Probe agent signing key chưa được cấu hình");
+    const hmacConfig = this.cau_hinh_probe_agent_signed_v3110(agent);
+    const maxSkew = hmacConfig.max_skew_seconds;
     const skew = Math.abs(Date.now() - timestamp);
-    if (skew > config.max_skew_seconds * 1000) throw new ForbiddenException("Probe agent timestamp vượt clock-skew cho phép");
-    const canonical = this.json_on_dinh_v3110(body);
-    const expected = createHmac("sha256", config.secret).update(`${agent}\n${timestampRaw}\n${nonce}\n${canonical}`).digest();
-    const actual = Buffer.from(signature, "hex");
-    if (actual.length !== expected.length || !timingSafeEqual(actual, expected)) throw new ForbiddenException("Probe agent HMAC signature không hợp lệ");
+    if (skew > maxSkew * 1000) throw new ForbiddenException("Probe agent timestamp vượt clock-skew cho phép");
+    const canonicalBody = this.json_on_dinh_v3110(body);
+    const canonical = `${agent}\n${timestampRaw}\n${nonce}\n${canonicalBody}`;
+    let protocol = "HMAC-SHA256-v3110";
+
+    if (algorithm === "ED25519") {
+      if (!/^[A-Za-z0-9+/=]{80,120}$/.test(signatureRaw)) throw new ForbiddenException("Probe agent Ed25519 signature không hợp lệ");
+      const publicKeys = this.cau_hinh_probe_agent_public_keys_v3130(agent);
+      if (!publicKeys.configured) throw new ForbiddenException("Probe agent Ed25519 public key chưa được cấu hình");
+      const signature = Buffer.from(signatureRaw, "base64");
+      let valid = false;
+      for (const publicKey of publicKeys.keys) {
+        try {
+          if (verifySignature(null, Buffer.from(canonical, "utf8"), publicKey, signature)) { valid = true; break; }
+        } catch {}
+      }
+      if (!valid) throw new ForbiddenException("Probe agent Ed25519 signature không hợp lệ");
+      protocol = "ED25519-v3130";
+    } else {
+      const signature = signatureRaw.toLowerCase();
+      if (!/^[a-f0-9]{64}$/.test(signature)) throw new ForbiddenException("Probe agent signature không hợp lệ");
+      if (!hmacConfig.configured) throw new ForbiddenException("Probe agent signing key chưa được cấu hình");
+      const expected = createHmac("sha256", hmacConfig.secret).update(canonical).digest();
+      const actual = Buffer.from(signature, "hex");
+      if (actual.length !== expected.length || !timingSafeEqual(actual, expected)) throw new ForbiddenException("Probe agent HMAC signature không hợp lệ");
+    }
+
     try {
       await this.db.sloProbeNonce.deleteMany({ where: { het_han_luc: { lt: new Date() } } });
-      await this.db.sloProbeNonce.create({ data: { agent_id: agent, nonce, het_han_luc: new Date(Date.now() + config.max_skew_seconds * 2000) } });
+      await this.db.sloProbeNonce.create({ data: { agent_id: agent, nonce, het_han_luc: new Date(Date.now() + maxSkew * 2000) } });
     } catch {
       throw new ForbiddenException("Probe agent nonce đã được sử dụng hoặc nonce-store chưa sẵn sàng");
     }
-    return { agent, config };
+    return { agent, config: hmacConfig, protocol };
   }
 
   async probe_agent_heartbeat_v3110(
-    headers: { agent?: string; timestamp?: string; nonce?: string; signature?: string },
+    headers: { agent?: string; timestamp?: string; nonce?: string; signature?: string; algorithm?: string },
     dto: { agent_id: string; region: string; node_name: string; phien_ban?: string; metadata?: Record<string, unknown> },
     signedBody?: Record<string, unknown>,
   ) {
-    await this.xac_thuc_probe_agent_v3110(headers, signedBody ?? (dto as unknown as Record<string, unknown>));
+    const auth = await this.xac_thuc_probe_agent_v3110(headers, signedBody ?? (dto as unknown as Record<string, unknown>));
     const region = dto.region.trim().slice(0, 80) || "unknown";
     const node_name = dto.node_name.trim().slice(0, 120) || dto.agent_id;
     const now = new Date();
@@ -1606,15 +1648,15 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       create: { agent_id: dto.agent_id, region, node_name, phien_ban: dto.phien_ban?.trim().slice(0, 40) || null, trang_thai: "ONLINE", lan_heartbeat: now, metadata },
       update: { region, node_name, phien_ban: dto.phien_ban?.trim().slice(0, 40) || null, trang_thai: "ONLINE", lan_heartbeat: now, metadata },
     });
-    return { da_nhan: true, agent_id: dto.agent_id, server_time: now.toISOString(), protocol: "HMAC-SHA256-v3110" };
+    return { da_nhan: true, agent_id: dto.agent_id, server_time: now.toISOString(), protocol: auth.protocol };
   }
 
   async probe_agent_ingest_v3110(
-    headers: { agent?: string; timestamp?: string; nonce?: string; signature?: string },
+    headers: { agent?: string; timestamp?: string; nonce?: string; signature?: string; algorithm?: string },
     dto: { agent_id: string; region: string; node_name: string; phien_ban?: string; metadata?: Record<string, unknown>; samples: Array<{ endpoint_id: string; trang_thai: "TOT" | "LOI" | "CANH_BAO"; http_status?: number; do_tre_ms: number; latency_target_ms: number; maintenance_active?: boolean; observed_at?: string }> },
     signedBody?: Record<string, unknown>,
   ) {
-    await this.xac_thuc_probe_agent_v3110(headers, signedBody ?? (dto as unknown as Record<string, unknown>));
+    const auth = await this.xac_thuc_probe_agent_v3110(headers, signedBody ?? (dto as unknown as Record<string, unknown>));
     const region = dto.region.trim().slice(0, 80) || "unknown";
     const node_name = dto.node_name.trim().slice(0, 120) || dto.agent_id;
     const now = new Date();
@@ -1636,7 +1678,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
         update: { region, node_name, phien_ban: dto.phien_ban?.trim().slice(0, 40) || null, trang_thai: "ONLINE", lan_heartbeat: now, lan_mau: now, metadata: this.chuan_hoa_json_object(dto.metadata || {}) },
       }),
     ]);
-    return { da_nhan: true, agent_id: dto.agent_id, so_mau: samples.length, server_time: now.toISOString() };
+    return { da_nhan: true, agent_id: dto.agent_id, so_mau: samples.length, server_time: now.toISOString(), protocol: auth.protocol };
   }
 
   private async suc_khoe_probe_agents_v3110() {
@@ -1673,10 +1715,27 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
           if (resolved.length >= 16) key_ids.push(agent_id);
         }
       } catch (error) {
-        this.logger.warn(`SYSTEM_SLO_AGENT_KEYS_JSON không hợp lệ cho probe fleet v3.12.0: ${error instanceof Error ? error.message : String(error)}`);
+        this.logger.warn(`SYSTEM_SLO_AGENT_KEYS_JSON không hợp lệ cho probe fleet v3.13.0: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
     key_ids.sort();
+
+    const public_key_ids: string[] = [];
+    const rawPublicKeys = process.env.SYSTEM_SLO_AGENT_PUBLIC_KEYS_JSON?.trim();
+    if (rawPublicKeys) {
+      try {
+        const parsed = JSON.parse(rawPublicKeys) as Record<string, unknown>;
+        for (const [agent_id, value] of Object.entries(parsed)) {
+          if (!/^[A-Za-z0-9._-]{2,80}$/.test(agent_id)) continue;
+          const values = Array.isArray(value) ? value : [value];
+          const configured = values.some(item => typeof item === "string" && this.giai_quyet_secret_ref_v3110(item).replace(/\\n/g, "\n").includes("BEGIN PUBLIC KEY"));
+          if (configured) public_key_ids.push(agent_id);
+        }
+      } catch (error) {
+        this.logger.warn(`SYSTEM_SLO_AGENT_PUBLIC_KEYS_JSON không hợp lệ cho probe fleet v3.13.0: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+    public_key_ids.sort();
 
     type FleetProfile = { agent_id: string; region: string | null; node_name: string | null; required: boolean; source: "PROFILE" | "KEYRING" };
     const profileMap = new Map<string, FleetProfile>();
@@ -1704,12 +1763,12 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
         this.logger.warn(`SYSTEM_SLO_AGENT_PROFILES_JSON không hợp lệ: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
-    for (const agent_id of key_ids) {
+    for (const agent_id of [...new Set([...key_ids, ...public_key_ids])]) {
       if (!profileMap.has(agent_id)) profileMap.set(agent_id, { agent_id, region: null, node_name: null, required: true, source: "KEYRING" });
     }
     const profiles = [...profileMap.values()].sort((a, b) => a.agent_id.localeCompare(b.agent_id));
-    const mode = rawProfiles ? "PROFILES+KEYRING" : key_ids.length ? "KEYRING_DERIVED" : shared_secret_enabled ? "SHARED_SECRET_ONLY" : "UNCONFIGURED";
-    return { stale_after_seconds, offline_after_seconds, shared_secret_enabled, key_ids, profiles, mode };
+    const mode = rawProfiles ? "PROFILES+KEYRING" : (key_ids.length || public_key_ids.length) ? "KEYRING_DERIVED" : shared_secret_enabled ? "SHARED_SECRET_ONLY" : "UNCONFIGURED";
+    return { stale_after_seconds, offline_after_seconds, shared_secret_enabled, key_ids, public_key_ids, profiles, mode };
   }
 
   private async suc_khoe_probe_fleet_v3120() {
@@ -1718,6 +1777,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       const rows = await this.db.sloProbeAgent.findMany({ orderBy: [{ region: "asc" }, { agent_id: "asc" }] });
       const byId = new Map(rows.map(row => [row.agent_id, row]));
       const keySet = new Set(config.key_ids);
+      const publicKeySet = new Set(config.public_key_ids);
       const profileSet = new Set(config.profiles.map(x => x.agent_id));
       const now = Date.now();
       const statusFor = (heartbeat: Date | null) => {
@@ -1732,10 +1792,11 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
         const row = byId.get(profile.agent_id);
         const state = statusFor(row?.lan_heartbeat || null);
         const per_agent_key = keySet.has(profile.agent_id);
-        const key_configured = per_agent_key || config.shared_secret_enabled;
+        const asymmetric_key = publicKeySet.has(profile.agent_id);
+        const key_configured = per_agent_key || asymmetric_key || config.shared_secret_enabled;
         const warnings: string[] = [];
         if (!key_configured) warnings.push("MISSING_SIGNING_KEY");
-        else if (!per_agent_key && config.shared_secret_enabled) warnings.push("SHARED_SECRET_FALLBACK");
+        else if (!per_agent_key && !asymmetric_key && config.shared_secret_enabled) warnings.push("SHARED_SECRET_FALLBACK");
         if (!row) warnings.push("NOT_REGISTERED");
         if (row && profile.region && row.region !== profile.region) warnings.push("REGION_MISMATCH");
         if (row && profile.node_name && row.node_name !== profile.node_name) warnings.push("NODE_MISMATCH");
@@ -1746,6 +1807,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
           source: profile.source,
           key_configured,
           per_agent_key,
+          asymmetric_key,
           registered: !!row,
           status: state.status,
           heartbeat_age_seconds: state.age,
@@ -1764,7 +1826,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
         const state = statusFor(row.lan_heartbeat);
         return {
           agent_id: row.agent_id, required: false, managed: false, source: "UNMANAGED" as const,
-          key_configured: keySet.has(row.agent_id) || config.shared_secret_enabled, per_agent_key: keySet.has(row.agent_id), registered: true,
+          key_configured: keySet.has(row.agent_id) || publicKeySet.has(row.agent_id) || config.shared_secret_enabled, per_agent_key: keySet.has(row.agent_id), asymmetric_key: publicKeySet.has(row.agent_id), registered: true,
           status: state.status, heartbeat_age_seconds: state.age, expected_region: null, expected_node_name: null, region: row.region, node_name: row.node_name, phien_ban: row.phien_ban, lan_heartbeat: row.lan_heartbeat, lan_mau: row.lan_mau, warnings: ["UNMANAGED_AGENT"],
         };
       });
@@ -1776,33 +1838,162 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       const stale = required.filter(x => x.status === "STALE").length;
       const offline = required.filter(x => x.status === "OFFLINE").length;
       const missing = required.filter(x => x.status === "MISSING").length;
-      const keyReady = required.filter(x => x.per_agent_key).length;
+      const keyReady = required.filter(x => x.per_agent_key || x.asymmetric_key).length;
       const percent = (value: number) => requiredCount ? Math.round((value / requiredCount) * 10_000) / 100 : 100;
       const warnings = [...new Set([...managed, ...unmanaged].flatMap(x => x.warnings))];
       return {
-        phien_ban: "3.12.0",
+        phien_ban: "3.13.0",
         mode: config.mode,
         stale_after_seconds: config.stale_after_seconds,
         offline_after_seconds: config.offline_after_seconds,
         expected: requiredCount,
         configured_profiles: config.profiles.length,
         per_agent_keys: config.key_ids.length,
+        asymmetric_public_keys: config.public_key_ids.length,
         shared_secret_enabled: config.shared_secret_enabled,
         registered, online, stale, offline, missing, unmanaged: unmanaged.length,
         registration_coverage_percent: percent(registered),
         online_coverage_percent: percent(online),
         key_coverage_percent: percent(keyReady),
-        ready: required.length > 0 && required.every(x => x.registered && x.per_agent_key && x.status === "ONLINE"),
+        ready: required.length > 0 && required.every(x => x.registered && (x.per_agent_key || x.asymmetric_key) && x.status === "ONLINE"),
         warnings,
         agents: [...managed, ...unmanaged].sort((a, b) => a.agent_id.localeCompare(b.agent_id)),
         secret_values_exposed: false,
       };
     } catch (error) {
       return {
-        phien_ban: "3.12.0", mode: config.mode, stale_after_seconds: config.stale_after_seconds, offline_after_seconds: config.offline_after_seconds,
-        expected: config.profiles.filter(x => x.required).length, configured_profiles: config.profiles.length, per_agent_keys: config.key_ids.length, shared_secret_enabled: config.shared_secret_enabled,
+        phien_ban: "3.13.0", mode: config.mode, stale_after_seconds: config.stale_after_seconds, offline_after_seconds: config.offline_after_seconds,
+        expected: config.profiles.filter(x => x.required).length, configured_profiles: config.profiles.length, per_agent_keys: config.key_ids.length, asymmetric_public_keys: config.public_key_ids.length, shared_secret_enabled: config.shared_secret_enabled,
         registered: 0, online: 0, stale: 0, offline: 0, missing: config.profiles.filter(x => x.required).length, unmanaged: 0,
         registration_coverage_percent: 0, online_coverage_percent: 0, key_coverage_percent: 0, ready: false, warnings: ["FLEET_STORE_UNAVAILABLE"], agents: [], secret_values_exposed: false,
+        loi: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  private cau_hinh_quorum_v3130() {
+    const clampInt = (name: string, fallback: number, min: number, max: number) => Math.max(min, Math.min(max, Number.parseInt(process.env[name] || String(fallback), 10) || fallback));
+    const multiplierRaw = Number(process.env.SYSTEM_SLO_ANOMALY_LATENCY_MULTIPLIER || "2.5");
+    return {
+      window_seconds: clampInt("SYSTEM_SLO_QUORUM_WINDOW_SECONDS", 900, 60, 86_400),
+      min_regions: clampInt("SYSTEM_SLO_QUORUM_MIN_REGIONS", 2, 1, 32),
+      healthy_percent: clampInt("SYSTEM_SLO_QUORUM_HEALTHY_PERCENT", 67, 50, 100),
+      anomaly_lookback_minutes: clampInt("SYSTEM_SLO_ANOMALY_LOOKBACK_MINUTES", 60, 15, 1440),
+      anomaly_min_samples: clampInt("SYSTEM_SLO_ANOMALY_MIN_SAMPLES", 6, 3, 500),
+      anomaly_latency_multiplier: Number.isFinite(multiplierRaw) ? Math.max(1.2, Math.min(10, multiplierRaw)) : 2.5,
+    };
+  }
+
+  private trung_vi_v3130(values: number[]) {
+    if (!values.length) return null;
+    const sorted = [...values].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+  }
+
+  private async phan_tich_quorum_v3130() {
+    const config = this.cau_hinh_quorum_v3130();
+    const fleetConfig = this.cau_hinh_probe_fleet_v3120();
+    const lookbackSeconds = Math.max(config.window_seconds, config.anomaly_lookback_minutes * 60);
+    const since = new Date(Date.now() - lookbackSeconds * 1000);
+    try {
+      const rows = await this.db.sloEndpointMau.findMany({
+        where: { ngay_tao: { gte: since } },
+        orderBy: { ngay_tao: "asc" },
+        select: { endpoint_id: true, agent_id: true, region: true, node_name: true, trang_thai: true, http_status: true, do_tre_ms: true, latency_target_ms: true, maintenance_active: true, ngay_tao: true },
+      });
+      const expectedRegions = [...new Set(fleetConfig.profiles.filter(x => x.required && x.region).map(x => x.region as string))].sort();
+      const endpointMap = new Map<string, typeof rows>();
+      for (const row of rows) {
+        const list = endpointMap.get(row.endpoint_id) || [];
+        list.push(row);
+        endpointMap.set(row.endpoint_id, list);
+      }
+      const now = Date.now();
+      const endpoints = [...endpointMap.entries()].map(([endpoint_id, endpointRows]) => {
+        const regionMap = new Map<string, typeof rows>();
+        for (const row of endpointRows) {
+          const list = regionMap.get(row.region) || [];
+          list.push(row);
+          regionMap.set(row.region, list);
+        }
+        const observedRegions = [...regionMap.keys()].sort();
+        const regionUniverse = expectedRegions.length ? expectedRegions : observedRegions;
+        const expectedCount = Math.max(1, regionUniverse.length);
+        const quorumRequired = Math.max(1, Math.min(expectedCount, Math.max(config.min_regions, Math.ceil(expectedCount * config.healthy_percent / 100))));
+        const regions = regionUniverse.map(region => {
+          const history = [...(regionMap.get(region) || [])].sort((a, b) => a.ngay_tao.getTime() - b.ngay_tao.getTime());
+          const latest = history.length ? history[history.length - 1] : null;
+          const ageSeconds = latest ? Math.max(0, Math.round((now - latest.ngay_tao.getTime()) / 1000)) : null;
+          const inWindow = latest != null && ageSeconds != null && ageSeconds <= config.window_seconds;
+          const healthy = !!latest && inWindow && !latest.maintenance_active && latest.trang_thai === "TOT";
+          const baseline = history.slice(0, -1).filter(x => !x.maintenance_active && x.trang_thai === "TOT").map(x => x.do_tre_ms).slice(-200);
+          const median = this.trung_vi_v3130(baseline);
+          const latencyThreshold = latest && median != null ? Math.max(latest.latency_target_ms, median * config.anomaly_latency_multiplier) : null;
+          const latencyAnomaly = !!latest && baseline.length >= config.anomaly_min_samples && latencyThreshold != null && latest.do_tre_ms > latencyThreshold;
+          const baselineStatus = history.slice(0, -1).filter(x => !x.maintenance_active).slice(-50);
+          const healthyBaselinePercent = baselineStatus.length ? (baselineStatus.filter(x => x.trang_thai === "TOT").length / baselineStatus.length) * 100 : null;
+          const statusAnomaly = !!latest && baselineStatus.length >= config.anomaly_min_samples && (healthyBaselinePercent ?? 0) >= 90 && latest.trang_thai !== "TOT";
+          return {
+            region,
+            observed: !!latest,
+            healthy,
+            status: latest?.trang_thai || "MISSING",
+            agent_id: latest?.agent_id || null,
+            node_name: latest?.node_name || null,
+            http_status: latest?.http_status ?? null,
+            latency_ms: latest?.do_tre_ms ?? null,
+            latency_target_ms: latest?.latency_target_ms ?? null,
+            heartbeat_age_seconds: ageSeconds,
+            baseline_median_ms: median == null ? null : Math.round(median * 10) / 10,
+            latency_threshold_ms: latencyThreshold == null ? null : Math.round(latencyThreshold * 10) / 10,
+            latency_anomaly: latencyAnomaly,
+            status_anomaly: statusAnomaly,
+          };
+        });
+        const healthyRegions = regions.filter(x => x.healthy).length;
+        const observedInWindow = regions.filter(x => x.observed && (x.heartbeat_age_seconds ?? Number.MAX_SAFE_INTEGER) <= config.window_seconds).length;
+        const statuses = new Set(regions.filter(x => x.observed).map(x => x.status));
+        const disagreement = statuses.size > 1;
+        const anomalyRegions = regions.filter(x => x.latency_anomaly || x.status_anomaly).map(x => x.region);
+        const consensus = healthyRegions >= quorumRequired ? "QUORUM_OK" : healthyRegions === 0 && observedInWindow >= quorumRequired ? "OUTAGE" : "DEGRADED";
+        return {
+          endpoint_id,
+          expected_regions: expectedCount,
+          observed_regions: observedInWindow,
+          healthy_regions: healthyRegions,
+          quorum_required: quorumRequired,
+          quorum_met: healthyRegions >= quorumRequired,
+          consensus,
+          disagreement,
+          anomaly_regions: anomalyRegions,
+          regions,
+        };
+      }).sort((a, b) => a.endpoint_id.localeCompare(b.endpoint_id));
+      const summary = {
+        endpoints: endpoints.length,
+        quorum_ok: endpoints.filter(x => x.consensus === "QUORUM_OK").length,
+        degraded: endpoints.filter(x => x.consensus === "DEGRADED").length,
+        outage: endpoints.filter(x => x.consensus === "OUTAGE").length,
+        disagreements: endpoints.filter(x => x.disagreement).length,
+        anomalies: endpoints.reduce((sum, x) => sum + x.anomaly_regions.length, 0),
+      };
+      return {
+        phien_ban: "3.13.0",
+        config,
+        expected_regions: expectedRegions,
+        summary,
+        ready: endpoints.length > 0 && endpoints.every(x => x.quorum_met) && summary.anomalies === 0,
+        endpoints,
+      };
+    } catch (error) {
+      return {
+        phien_ban: "3.13.0",
+        config,
+        expected_regions: [],
+        summary: { endpoints: 0, quorum_ok: 0, degraded: 0, outage: 0, disagreements: 0, anomalies: 0 },
+        ready: false,
+        endpoints: [],
         loi: error instanceof Error ? error.message : String(error),
       };
     }
@@ -2092,7 +2283,12 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
 
   async trang_thai_ops_v3120() {
     const [base, probe_fleet] = await Promise.all([this.trang_thai_ops_v3110(), this.suc_khoe_probe_fleet_v3120()]);
-    return { ...base, phien_ban: "3.12.0", probe_fleet };
+    return { ...base, phien_ban: "3.13.0", probe_fleet };
+  }
+
+  async trang_thai_ops_v3130() {
+    const [base, multi_region_quorum] = await Promise.all([this.trang_thai_ops_v3120(), this.phan_tich_quorum_v3130()]);
+    return { ...base, phien_ban: "3.13.0", multi_region_quorum, asymmetric_probe_signing: { algorithm: "Ed25519", public_keyring_configured: (process.env.SYSTEM_SLO_AGENT_PUBLIC_KEYS_JSON?.trim() || "").length > 0, hmac_backward_compatible: true, secret_values_exposed: false } };
   }
 
   private async lay_slo_endpoint_mau_v3100(tu: Date) {
@@ -2375,7 +2571,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
 
   async ops_dashboard_readonly(actor: NguoiDungXacThuc, soNgayRaw?: string) {
     const access = await this.kiem_tra_quyen_ops(actor, false);
-    const [sla, incidents, runtime] = await Promise.all([this.thong_ke_sla_van_hanh(soNgayRaw), this.danh_sach_su_co_van_hanh("100"), this.trang_thai_ops_v3120()]);
+    const [sla, incidents, runtime] = await Promise.all([this.thong_ke_sla_van_hanh(soNgayRaw), this.danh_sach_su_co_van_hanh("100"), this.trang_thai_ops_v3130()]);
     return { access, sla, incidents, runtime };
   }
 
