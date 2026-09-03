@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from "node:fs";
 import { basename, join } from "node:path";
 
-const minimum = [3, 22, 0];
+const minimum = [3, 23, 1];
 const projectRoot = process.cwd();
 const visitedNodeModules = new Set();
 const visitedPackages = new Set();
@@ -103,13 +103,13 @@ let failed = false;
 for (const item of [...mysql2Packages.values()].sort((a, b) => a.path.localeCompare(b.path))) {
   const ok = gte(parseVersion(item.version), minimum);
   const relative = item.path.startsWith(projectRoot) ? item.path.slice(projectRoot.length + 1) : item.path;
-  console.log(`[security] ${relative}: mysql2 ${item.version} ${ok ? ">=3.22.0: PASS" : "<3.22.0: FAIL"}`);
+  console.log(`[security] ${relative}: mysql2 ${item.version} ${ok ? ">=3.23.1: PASS" : "<3.23.1: FAIL"}`);
   if (!ok) failed = true;
 }
 
 if (failed) {
-  console.error("[security] Installed dependency tree con mysql2 <3.22.0. Hay chay npm install de dong bo dependency tree.");
+  console.error("[security] Installed dependency tree con mysql2 <3.23.1. Hay chay npm install de dong bo dependency tree.");
   process.exit(1);
 }
 
-console.log(`[security] mysql2 installed tree: ${mysql2Packages.size} package path(s), tat ca >=3.22.0: PASS`);
+console.log(`[security] mysql2 installed tree: ${mysql2Packages.size} package path(s), tat ca >=3.23.1: PASS`);

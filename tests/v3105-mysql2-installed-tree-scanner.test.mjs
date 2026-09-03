@@ -27,19 +27,24 @@ test("v3.11.0 security checker scan installed node_modules thay vi resolve Prism
   assert.doesNotMatch(script, /resolvePackage\(rootRequire, "prisma"\)/);
 });
 
-test("v3.11.0 scanner PASS voi mysql2 3.22.0 va FAIL voi nested mysql2 cu", () => {
+test("v3.18.0 scanner PASS voi mysql2 da va GHSA-rgwj va FAIL voi nested mysql2 cu", () => {
   const base = join(tmpdir(), `nhienin3d-v3110-mysql2-${process.pid}-${Date.now()}`);
   try {
-    makePackage(join(base, "node_modules", "mysql2"), "mysql2", "3.22.0");
+    makePackage(join(base, "node_modules", "mysql2"), "mysql2", "3.23.0");
+    const boundaryFail = runScanner(base);
+    assert.notEqual(boundaryFail.status, 0);
+    assert.match(`${boundaryFail.stdout}\n${boundaryFail.stderr}`, /mysql2 3\.23\.0 <3\.23\.1: FAIL/);
+
+    makePackage(join(base, "node_modules", "mysql2"), "mysql2", "3.23.4");
     const pass = runScanner(base);
     assert.equal(pass.status, 0, pass.stderr || pass.stdout);
-    assert.match(pass.stdout, /mysql2 3\.22\.0 >=3\.22\.0: PASS/);
+    assert.match(pass.stdout, /mysql2 3\.23\.4 >=3\.23\.1: PASS/);
 
     makePackage(join(base, "node_modules", "prisma", "node_modules", "mysql2"), "mysql2", "3.15.3");
     makePackage(join(base, "node_modules", "prisma"), "prisma", "7.10.0");
     const fail = runScanner(base);
     assert.notEqual(fail.status, 0);
-    assert.match(`${fail.stdout}\n${fail.stderr}`, /mysql2 3\.15\.3 <3\.22\.0: FAIL/);
+    assert.match(`${fail.stdout}\n${fail.stderr}`, /mysql2 3\.15\.3 <3\.23\.1: FAIL/);
   } finally {
     rmSync(base, { recursive: true, force: true });
   }
@@ -50,8 +55,8 @@ test("v3.11.0 CI verify va release dung security:mysql2 khong dung npm ls", () =
   const ci = read(".github/workflows/ci.yml");
   const verify = read("scripts/kiem-tra.ps1");
   const release = read(".github/workflows/release.yml");
-  assert.equal(pkg.version, "3.17.0");
-  assert.equal(pkg.devDependencies.mysql2, "3.22.0");
+  assert.equal(pkg.version, "3.18.0");
+  assert.equal(pkg.devDependencies.mysql2, "3.23.4");
   assert.equal(pkg.overrides.mysql2, "$mysql2");
   assert.match(ci, /npm run security:mysql2/);
   assert.match(verify, /npm run security:mysql2/);
@@ -65,12 +70,12 @@ test("v3.11.0 dong bo Runtime Browser CI Health OpenAPI", () => {
   const ci = read(".github/workflows/ci.yml");
   const health = read("apps/api/src/suc-khoe/suc-khoe.controller.ts");
   const main = read("apps/api/src/main.ts");
-  assert.equal(read("VERSION").trim(), "3.17.0");
-  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3170.mjs");
+  assert.equal(read("VERSION").trim(), "3.18.0");
+  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3180.mjs");
   assert.equal(existsSync("scripts/e2e-runtime-v3110.ps1"), true);
   assert.equal(existsSync("scripts/e2e-browser-v3110.mjs"), true);
-  assert.match(ci, /e2e-runtime-v3170\.ps1/);
-  assert.match(ci, /Browser E2E Admin HTTPS v3\.17\.0/);
-  assert.match(health, /phien_ban: "v3\.17\.0"/);
-  assert.match(main, /setVersion\("3\.17\.0"\)/);
+  assert.match(ci, /e2e-runtime-v3180\.ps1/);
+  assert.match(ci, /Browser E2E Admin HTTPS v3\.18\.0/);
+  assert.match(health, /phien_ban: "v3\.18\.0"/);
+  assert.match(main, /setVersion\("3\.18\.0"\)/);
 });

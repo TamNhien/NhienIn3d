@@ -119,6 +119,23 @@ type IncidentPostmortemV3170 = {
   updated_by: string | null;
 };
 
+type IncidentPostmortemApprovalV3180 = "NOT_READY" | "PENDING" | "APPROVED" | "CHANGES_REQUESTED";
+type IncidentPostmortemV3180 = IncidentPostmortemV3170 & {
+  approval_status: IncidentPostmortemApprovalV3180;
+  approval_note: string;
+  approved_at: string | null;
+  approved_by: string | null;
+};
+
+type ProbeHealthGateV3180 = {
+  enabled: boolean;
+  auto_rollback: boolean;
+  min_online_percent: number;
+  max_quorum_failures: number;
+  grace_seconds: number;
+  check_minutes: number;
+};
+
 
 type WebhookSendResultV390 = {
   da_gui: boolean;
@@ -138,6 +155,8 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
   private bo_hen_webhook_dlq: NodeJS.Timeout | null = null;
   private bo_hen_ops_metrics: NodeJS.Timeout | null = null;
   private bo_hen_ops_retention: NodeJS.Timeout | null = null;
+  private bo_hen_probe_health_gate: NodeJS.Timeout | null = null;
+  private bo_hen_postmortem_reminder: NodeJS.Timeout | null = null;
   private chu_ky_canh_bao_he_thong: string | null = null;
 
   constructor(private readonly db: CoSoDuLieuService, private readonly thu_dien_tu: ThuDienTuService) {}
@@ -177,7 +196,23 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     setTimeout(cleanupOps, 120_000).unref();
     this.bo_hen_ops_retention = setInterval(cleanupOps, 6 * 60 * 60_000);
     this.bo_hen_ops_retention.unref();
-    this.logger.log(`Ops v3.17.0 schedulers: DLQ ${dlqPolicy.chu_ky_phut}m, metrics ${opsPolicy.refresh_phut}m, retention ${opsPolicy.retention_days}d.`);
+    this.logger.log(`Ops v3.18.0 schedulers: DLQ ${dlqPolicy.chu_ky_phut}m, metrics ${opsPolicy.refresh_phut}m, retention ${opsPolicy.retention_days}d.`);
+
+    const healthGate = this.probe_health_gate_config_v3180();
+    if (healthGate.enabled) {
+      const checkGate = () => this.auto_rollback_probe_desired_state_v3180().catch(error => this.logger.warn(`Probe health-gate failed: ${error instanceof Error ? error.message : String(error)}`));
+      setTimeout(checkGate, 150_000).unref();
+      this.bo_hen_probe_health_gate = setInterval(checkGate, healthGate.check_minutes * 60_000);
+      this.bo_hen_probe_health_gate.unref();
+    }
+
+    const reminder = this.postmortem_reminder_config_v3180();
+    if (reminder.enabled) {
+      const checkReminder = () => this.kiem_tra_postmortem_action_reminder_v3180().catch(error => this.logger.warn(`Postmortem reminder failed: ${error instanceof Error ? error.message : String(error)}`));
+      setTimeout(checkReminder, 180_000).unref();
+      this.bo_hen_postmortem_reminder = setInterval(checkReminder, reminder.interval_hours * 60 * 60_000);
+      this.bo_hen_postmortem_reminder.unref();
+    }
   }
 
   onModuleDestroy() {
@@ -187,6 +222,8 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     if (this.bo_hen_webhook_dlq) clearInterval(this.bo_hen_webhook_dlq);
     if (this.bo_hen_ops_metrics) clearInterval(this.bo_hen_ops_metrics);
     if (this.bo_hen_ops_retention) clearInterval(this.bo_hen_ops_retention);
+    if (this.bo_hen_probe_health_gate) clearInterval(this.bo_hen_probe_health_gate);
+    if (this.bo_hen_postmortem_reminder) clearInterval(this.bo_hen_postmortem_reminder);
   }
 
   private cau_hinh_canh_bao_kho_runtime() {
@@ -669,7 +706,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     for (let index = 0; index <= cau_hinh.max_retries; index++) {
       const lan_thu = index + 1;
       const timestamp = String(Math.floor(Date.now() / 1000));
-      const headers: Record<string, string> = { "content-type": "application/json", "user-agent": "NhienIn3d-Ops/3.17.0", "x-nhienin3d-timestamp": timestamp, "x-nhienin3d-adapter": cau_hinh.adapter };
+      const headers: Record<string, string> = { "content-type": "application/json", "user-agent": "NhienIn3d-Ops/3.18.0", "x-nhienin3d-timestamp": timestamp, "x-nhienin3d-adapter": cau_hinh.adapter };
       if (token) headers.authorization = `Bearer ${token}`;
       if (secret) headers["x-nhienin3d-signature"] = `sha256=${createHmac("sha256", secret).update(`${timestamp}.${body}`).digest("hex")}`;
       const bat_dau = performance.now();
@@ -1077,7 +1114,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const trang_thai = !database.ket_noi ? "LOI" : (van_de.length ? "CANH_BAO" : "TOT");
     const ket_qua = {
       trang_thai,
-      phien_ban: "3.17.0",
+      phien_ban: "3.18.0",
       thoi_gian: new Date().toISOString(),
       api: { uptime_giay: Math.floor(process.uptime()), node: process.version, pid: process.pid, rss_bytes: bo_nho.rss, heap_used_bytes: bo_nho.heapUsed, heap_total_bytes: bo_nho.heapTotal },
       database,
@@ -1333,7 +1370,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     for (const item of sla.burn_rate_policy) rows.push([item.gio, item.nguong, item.muc_do, item.sla.burn_rate ?? "", item.uptime.burn_rate ?? ""]);
     rows.push([], ["Incident"], ["Chữ ký", "Trạng thái", "Vấn đề", "Bắt đầu", "Gần nhất", "Sự kiện", "Tiếp nhận", "Khắc phục"]);
     for (const item of incidents.du_lieu) rows.push([item.chu_ky, item.trang_thai_xu_ly, item.van_de.join(" | "), item.bat_dau.toISOString(), item.gan_nhat.toISOString(), item.so_su_kien, item.tiep_nhan_luc?.toISOString() || "", item.khac_phuc_luc?.toISOString() || ""]);
-    const buffer = this.tao_xlsx(rows, "Ops v3.17.0");
+    const buffer = this.tao_xlsx(rows, "Ops v3.18.0");
     return { ten_file: `ops-slo-incident-${new Date().toISOString().slice(0, 10)}.xlsx`, mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", base64: buffer.toString("base64") };
   }
 
@@ -2968,7 +3005,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const canary = (process.env.SYSTEM_SLO_PROBE_DESIRED_CANARY_AGENTS || "").split(",").map(x => x.trim()).filter(x => /^[A-Za-z0-9._-]{2,80}$/.test(x)).slice(0, 50);
     return {
       revision: 0,
-      target_version: (process.env.SYSTEM_SLO_PROBE_DESIRED_TARGET_VERSION || "3.17.0").trim(),
+      target_version: (process.env.SYSTEM_SLO_PROBE_DESIRED_TARGET_VERSION || "3.18.0").trim(),
       interval_seconds: Math.max(30, Math.min(3600, intervalRaw)),
       rollout_percent: Math.max(0, Math.min(100, rolloutRaw)),
       canary_agents: [...new Set(canary)],
@@ -3250,6 +3287,183 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       probe_desired_state: { ...desired_state, remote_code_execution: false },
       incident_postmortem: postmortem,
       database_recovery,
+    };
+  }
+
+
+  private probe_health_gate_config_v3180(): ProbeHealthGateV3180 {
+    const yes = (name: string, fallback: string) => ["1", "true", "yes", "on"].includes((process.env[name] || fallback).trim().toLowerCase());
+    const online = Number.parseInt(process.env.SYSTEM_SLO_PROBE_HEALTH_GATE_MIN_ONLINE_PERCENT || "80", 10);
+    const failures = Number.parseInt(process.env.SYSTEM_SLO_PROBE_HEALTH_GATE_MAX_QUORUM_FAILURES || "0", 10);
+    const grace = Number.parseInt(process.env.SYSTEM_SLO_PROBE_HEALTH_GATE_GRACE_SECONDS || "300", 10);
+    const interval = Number.parseInt(process.env.SYSTEM_SLO_PROBE_HEALTH_GATE_CHECK_MINUTES || "2", 10);
+    return {
+      enabled: yes("SYSTEM_SLO_PROBE_HEALTH_GATE_ENABLED", "true"),
+      auto_rollback: yes("SYSTEM_SLO_PROBE_HEALTH_GATE_AUTO_ROLLBACK", "true"),
+      min_online_percent: Number.isFinite(online) ? Math.max(1, Math.min(100, online)) : 80,
+      max_quorum_failures: Number.isFinite(failures) ? Math.max(0, Math.min(100, failures)) : 0,
+      grace_seconds: Number.isFinite(grace) ? Math.max(30, Math.min(3600, grace)) : 300,
+      check_minutes: Number.isFinite(interval) ? Math.max(1, Math.min(60, interval)) : 2,
+    };
+  }
+
+  private async probe_health_gate_status_v3180() {
+    const config = this.probe_health_gate_config_v3180();
+    const [state, fleet, quorum] = await Promise.all([this.lay_probe_desired_state_v3170(), this.suc_khoe_probe_fleet_v3120(), this.phan_tich_quorum_v3130()]);
+    const active = !state.current.paused && (state.current.rollout_percent > 0 || state.current.canary_agents.length > 0);
+    const ageSeconds = Math.max(0, Math.floor((Date.now() - Date.parse(state.current.updated_at || new Date(0).toISOString())) / 1000));
+    const quorumFailures = Number(quorum.summary.degraded || 0) + Number(quorum.summary.outage || 0);
+    const onlinePercent = Number(fleet.online_coverage_percent || 0);
+    const inGrace = active && ageSeconds < config.grace_seconds;
+    const healthy = onlinePercent >= config.min_online_percent && quorumFailures <= config.max_quorum_failures && quorum.alert?.active !== true;
+    const status = !config.enabled ? "DISABLED" : !active ? "IDLE" : inGrace ? "GRACE" : healthy ? "PASS" : "BLOCKED";
+    return {
+      phien_ban: "3.18.0",
+      ...config,
+      status,
+      active,
+      healthy,
+      in_grace: inGrace,
+      revision: state.current.revision,
+      revision_age_seconds: ageSeconds,
+      online_percent: onlinePercent,
+      quorum_failures: quorumFailures,
+      quorum_alert_active: quorum.alert?.active === true,
+      previous_available: !!state.previous,
+      remote_code_execution: false,
+    };
+  }
+
+  private async auto_rollback_probe_desired_state_v3180() {
+    const gate = await this.probe_health_gate_status_v3180();
+    if (!gate.enabled || !gate.auto_rollback || gate.status !== "BLOCKED" || !gate.previous_available) return gate;
+    const before = await this.lay_probe_desired_state_v3170();
+    if (!before.previous || before.current.rollback_of !== null) return gate;
+    const gateRow = await this.db.cauHinhHeThong.findUnique({ where: { khoa: "PROBE_HEALTH_GATE_V3180" } });
+    const gateObj = gateRow?.gia_tri && typeof gateRow.gia_tri === "object" && !Array.isArray(gateRow.gia_tri) ? gateRow.gia_tri as Record<string, unknown> : {};
+    if (Number(gateObj.last_rollback_revision || 0) === before.current.revision) return gate;
+    const revision = Math.max(Date.now(), before.current.revision + 1);
+    const current: ProbeDesiredStateV3170 = { ...before.previous, revision, updated_at: new Date().toISOString(), updated_by: "SYSTEM_HEALTH_GATE", rollback_of: before.current.revision, note: `AUTO_ROLLBACK health-gate v3.18.0: online ${gate.online_percent}% / quorum failures ${gate.quorum_failures}` };
+    const payload = { current, previous: before.current, history: [before.current, ...before.history].slice(0, 10) };
+    await this.db.cauHinhHeThong.upsert({ where: { khoa: "PROBE_DESIRED_STATE_V3170" }, create: { khoa: "PROBE_DESIRED_STATE_V3170", gia_tri: this.chuan_hoa_json_object(payload) }, update: { gia_tri: this.chuan_hoa_json_object(payload) } });
+    const gateState = { last_checked_at: new Date().toISOString(), last_rollback_revision: before.current.revision, rollback_to_revision: current.revision, reason: gate.status, online_percent: gate.online_percent, quorum_failures: gate.quorum_failures };
+    await this.db.cauHinhHeThong.upsert({ where: { khoa: "PROBE_HEALTH_GATE_V3180" }, create: { khoa: "PROBE_HEALTH_GATE_V3180", gia_tri: this.chuan_hoa_json_object(gateState) }, update: { gia_tri: this.chuan_hoa_json_object(gateState) } });
+    await this.ghi_lich_su_van_hanh("PROBE_DESIRED_STATE", "AUTO_ROLLBACK", "Health-gated canary v3.18.0 tự rollback desired-state", { rollback_of: before.current.revision, revision, online_percent: gate.online_percent, quorum_failures: gate.quorum_failures, remote_code_execution: false });
+    return { ...gate, status: "AUTO_ROLLED_BACK", rollback_revision: revision };
+  }
+
+  private service_runbooks_v3180() {
+    const raw = process.env.SYSTEM_OPS_SERVICE_RUNBOOKS_JSON?.trim() || "{}";
+    let parsed: Record<string, unknown> = {};
+    try { parsed = JSON.parse(raw) as Record<string, unknown>; } catch { parsed = {}; }
+    const runbooks: Record<string, string> = {};
+    for (const [serviceRaw, urlRaw] of Object.entries(parsed)) {
+      const service = serviceRaw.trim().toLowerCase();
+      if (!/^[a-z0-9._-]{2,80}$/.test(service)) continue;
+      const value = String(urlRaw || "").trim();
+      if (!value) continue;
+      try { const url = new URL(value); if (url.protocol === "https:") runbooks[service] = url.toString().slice(0, 500); } catch {}
+    }
+    return { configured: Object.keys(runbooks).length > 0, runbooks, https_only: true, secret_values_exposed: false as const };
+  }
+
+  private normalize_postmortem_v3180(raw: unknown): IncidentPostmortemV3180 {
+    const value = raw && typeof raw === "object" && !Array.isArray(raw) ? raw as Record<string, unknown> : {};
+    const base = value as unknown as IncidentPostmortemV3170;
+    const statusRaw = String(value.approval_status || (base.status === "COMPLETE" ? "PENDING" : "NOT_READY"));
+    const approval_status = (["NOT_READY", "PENDING", "APPROVED", "CHANGES_REQUESTED"].includes(statusRaw) ? statusRaw : "PENDING") as IncidentPostmortemApprovalV3180;
+    return { ...base, approval_status, approval_note: String(value.approval_note || "").slice(0, 1000), approved_at: typeof value.approved_at === "string" ? value.approved_at : null, approved_by: typeof value.approved_by === "string" ? value.approved_by : null };
+  }
+
+  async lay_incident_postmortem_v3180(chuKyRaw: string) {
+    return this.normalize_postmortem_v3180(await this.lay_incident_postmortem_v3170(chuKyRaw));
+  }
+
+  async luu_incident_postmortem_v3180(actor: NguoiDungXacThuc, chuKyRaw: string, dto: { summary: string; impact: string; root_cause: string; detection: string; resolution: string; runbook_url?: string; lessons?: string; action_items: Array<Record<string, unknown>> }) {
+    const saved = await this.luu_incident_postmortem_v3170(actor, chuKyRaw, dto);
+    const { key } = this.incident_postmortem_key_v3170(chuKyRaw);
+    const value: IncidentPostmortemV3180 = { ...saved, approval_status: saved.status === "COMPLETE" ? "PENDING" : "NOT_READY", approval_note: "", approved_at: null, approved_by: null };
+    await this.db.cauHinhHeThong.update({ where: { khoa: key }, data: { gia_tri: this.chuan_hoa_json_object(value as unknown as Record<string, unknown>), nguoi_cap_nhat_id: actor.id } });
+    return value;
+  }
+
+  async duyet_incident_postmortem_v3180(actor: NguoiDungXacThuc, chuKyRaw: string, dto: { decision: "APPROVED" | "CHANGES_REQUESTED"; note?: string }) {
+    const { chuKy, key } = this.incident_postmortem_key_v3170(chuKyRaw);
+    const current = await this.lay_incident_postmortem_v3180(chuKy);
+    if (current.status !== "COMPLETE") throw new ConflictException("Postmortem phai COMPLETE truoc khi duyet");
+    const decision = dto.decision === "APPROVED" ? "APPROVED" : "CHANGES_REQUESTED";
+    const value: IncidentPostmortemV3180 = { ...current, approval_status: decision, approval_note: (dto.note || "").trim().slice(0, 1000), approved_at: new Date().toISOString(), approved_by: actor.ho_ten, updated_at: new Date().toISOString(), updated_by: actor.ho_ten };
+    await this.db.cauHinhHeThong.update({ where: { khoa: key }, data: { gia_tri: this.chuan_hoa_json_object(value as unknown as Record<string, unknown>), nguoi_cap_nhat_id: actor.id } });
+    await this.ghi_lich_su_van_hanh("INCIDENT_POSTMORTEM_APPROVAL", decision, `Admin ${actor.ho_ten} ${decision === "APPROVED" ? "duyệt" : "yêu cầu chỉnh sửa"} postmortem`, { chu_ky: chuKy, decision, note: value.approval_note }, undefined, chuKy);
+    return value;
+  }
+
+  private postmortem_reminder_config_v3180() {
+    const enabled = ["1", "true", "yes", "on"].includes((process.env.SYSTEM_INCIDENT_ACTION_REMINDER_ENABLED || "false").trim().toLowerCase());
+    const hours = Number.parseInt(process.env.SYSTEM_INCIDENT_ACTION_REMINDER_INTERVAL_HOURS || "6", 10);
+    const dueSoon = Number.parseInt(process.env.SYSTEM_INCIDENT_ACTION_REMINDER_DUE_SOON_DAYS || "3", 10);
+    return { enabled, interval_hours: Number.isFinite(hours) ? Math.max(1, Math.min(168, hours)) : 6, due_soon_days: Number.isFinite(dueSoon) ? Math.max(0, Math.min(30, dueSoon)) : 3 };
+  }
+
+  private async postmortem_summary_v3180() {
+    const base = await this.postmortem_summary_v3170();
+    const rows = await this.db.cauHinhHeThong.findMany({ where: { khoa: { startsWith: "INCIDENT_PM_" } }, select: { gia_tri: true } });
+    let approved = 0, pending_approval = 0, changes_requested = 0, overdue_actions = 0, due_soon_actions = 0;
+    const today = new Date(); today.setUTCHours(0, 0, 0, 0);
+    const config = this.postmortem_reminder_config_v3180();
+    const dueSoonLimit = new Date(today.getTime() + config.due_soon_days * 86_400_000);
+    for (const row of rows) {
+      const pm = this.normalize_postmortem_v3180(row.gia_tri);
+      if (pm.approval_status === "APPROVED") approved += 1;
+      else if (pm.approval_status === "CHANGES_REQUESTED") changes_requested += 1;
+      else if (pm.status === "COMPLETE") pending_approval += 1;
+      for (const action of pm.action_items || []) {
+        if (action.status === "DONE" || !action.due_date || !Number.isFinite(Date.parse(action.due_date))) continue;
+        const due = new Date(`${action.due_date}T00:00:00.000Z`);
+        if (due < today) overdue_actions += 1; else if (due <= dueSoonLimit) due_soon_actions += 1;
+      }
+    }
+    return { ...base, approved, pending_approval, changes_requested, overdue_actions, due_soon_actions, approval_required: true, action_reminders: config };
+  }
+
+  private async kiem_tra_postmortem_action_reminder_v3180() {
+    const config = this.postmortem_reminder_config_v3180();
+    if (!config.enabled) return { sent: false, reason: "DISABLED" };
+    const summary = await this.postmortem_summary_v3180();
+    if (summary.overdue_actions + summary.due_soon_actions <= 0) return { sent: false, reason: "NO_DUE_ACTION" };
+    const start = new Date(); start.setUTCHours(0, 0, 0, 0);
+    const existing = await this.db.lichSuVanHanh.count({ where: { loai: "POSTMORTEM_ACTION_REMINDER", ngay_tao: { gte: start } } });
+    if (existing > 0) return { sent: false, reason: "ALREADY_TODAY" };
+    await this.ghi_lich_su_van_hanh("POSTMORTEM_ACTION_REMINDER", "CANH_BAO", "Nhắc action item postmortem v3.18.0", { overdue_actions: summary.overdue_actions, due_soon_actions: summary.due_soon_actions, due_soon_days: config.due_soon_days });
+    return { sent: true, overdue_actions: summary.overdue_actions, due_soon_actions: summary.due_soon_actions };
+  }
+
+  private async recovery_readiness_v3180() {
+    const base = await this.recovery_readiness_v3170();
+    let logical: Record<string, unknown> | null = null;
+    let pitr: Record<string, unknown> | null = null;
+    const backupDir = process.env.BACKUP_DIRECTORY?.trim() || "/app/backups";
+    try { logical = JSON.parse(await readFile(join(backupDir, "recovery-drill-v3180-latest.json"), "utf8")) as Record<string, unknown>; } catch {}
+    try { pitr = JSON.parse(await readFile(join(backupDir, "recovery-pitr-v3180-latest.json"), "utf8")) as Record<string, unknown>; } catch {}
+    const exercised = pitr?.pitr_restore_exercised === true && pitr?.target_value_verified === true;
+    const logicalRto = logical && Number.isFinite(Number(logical.rto_seconds)) ? Number(logical.rto_seconds) : base.observed_rto_seconds;
+    const logicalCompletedAt = logical && Number.isFinite(Date.parse(String(logical.completed_at || ""))) ? Date.parse(String(logical.completed_at)) : null;
+    const drillAgeDays = logicalCompletedAt == null ? base.drill_age_days : Math.max(0, Math.round((Date.now() - logicalCompletedAt) / 86_400_000 * 10) / 10);
+    return { ...base, method: exercised ? "TARGET_TIME_PITR+LOGICAL_DRILL" : base.pitr_ready ? "WAL_ARCHIVE+LOGICAL_DRILL" : "LOGICAL_BACKUP_FALLBACK", pitr_restore_exercised: exercised, pitr_target_time_supported: true, pitr_target_time_report: pitr, pitr_drill_opt_in: true, pitr_drill_script: "scripts/recovery-pitr-drill-v3180.ps1", last_drill: logical || base.last_drill, observed_rto_seconds: logicalRto, rto_met: logicalRto == null ? base.rto_met : logicalRto <= base.rto_target_minutes * 60, drill_age_days: drillAgeDays, drill_fresh: drillAgeDays == null ? false : drillAgeDays <= base.drill_max_age_days };
+  }
+
+  async trang_thai_ops_v3180() {
+    const [base, gate, postmortem, database_recovery] = await Promise.all([this.trang_thai_ops_v3170(), this.probe_health_gate_status_v3180(), this.postmortem_summary_v3180(), this.recovery_readiness_v3180()]);
+    const fleet = base.probe_fleet as Record<string, unknown> | undefined;
+    return {
+      ...base,
+      phien_ban: "3.18.0",
+      probe_fleet: fleet ? { ...fleet, phien_ban: "3.18.0" } : base.probe_fleet,
+      multi_region_quorum: { ...base.multi_region_quorum, phien_ban: "3.18.0" },
+      probe_health_gate: gate,
+      incident_postmortem: postmortem,
+      database_recovery,
+      service_runbooks: this.service_runbooks_v3180(),
     };
   }
 

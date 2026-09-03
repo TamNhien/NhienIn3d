@@ -100,8 +100,8 @@ jobs:
           exit 1
       - name: Runtime E2E Admin + backup restore
         shell: pwsh
-        # e2e-runtime-v3170.ps1 gọi lại e2e-runtime-v320.ps1 để giữ regression backup/restore.
-        run: ./scripts/e2e-runtime-v3170.ps1
+        # e2e-runtime-v3180.ps1 gọi lại e2e-runtime-v320.ps1 để giữ regression backup/restore.
+        run: ./scripts/e2e-runtime-v3180.ps1
       - name: Khởi động Web HTTPS cho browser E2E
         run: |
           docker compose up -d --build web https
@@ -116,7 +116,7 @@ jobs:
           npm install
           npm run audit:security
           npx playwright install --with-deps chromium
-      - name: Browser E2E Admin HTTPS v3.17.0
+      - name: Browser E2E Admin HTTPS v3.18.0
         run: npm run e2e:browser
       - name: Docker logs khi thất bại
         if: failure()

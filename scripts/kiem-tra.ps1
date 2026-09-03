@@ -1,4 +1,4 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "Stop"
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 Set-Location $RepoRoot
 Write-Host "Repo root: $RepoRoot" -ForegroundColor DarkGray
@@ -10,7 +10,7 @@ if ($LASTEXITCODE -ne 0) { throw "npm install that bai" }
 
 Write-Host "[1b/5] Kiem tra mysql2 security tree..." -ForegroundColor Cyan
 npm run security:mysql2
-if ($LASTEXITCODE -ne 0) { throw "mysql2 chua dat ban va bao mat >=3.22.0" }
+if ($LASTEXITCODE -ne 0) { throw "mysql2 chua dat ban va bao mat >=3.23.1" }
 
 Write-Host "[2/5] Chay test..." -ForegroundColor Cyan
 npm test

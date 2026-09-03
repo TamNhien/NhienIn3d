@@ -10,7 +10,7 @@ test("v3.10.4 bo npm ls false-fail va contract nay duoc giu o v3.11.0", () => {
   const pkg = JSON.parse(read("package.json"));
   assert.doesNotMatch(ci, /npm ls mysql2 --all/);
   assert.doesNotMatch(verify, /npm ls mysql2 --all/);
-  assert.equal(pkg.devDependencies.mysql2, "3.22.0");
+  assert.equal(pkg.devDependencies.mysql2, "3.23.4");
   assert.equal(pkg.overrides.mysql2, "$mysql2");
   assert.match(ci, /npm run security:mysql2/);
   assert.match(verify, /npm run security:mysql2/);

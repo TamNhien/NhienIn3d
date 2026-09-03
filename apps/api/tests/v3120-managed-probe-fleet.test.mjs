@@ -13,12 +13,12 @@ test("v3.12.0 API co managed probe fleet coverage an toan", () => {
   assert.match(service, /REGION_MISMATCH/);
   assert.match(service, /NODE_MISMATCH/);
   assert.match(service, /secret_values_exposed: false/);
-  assert.match(controller, /ops_runtime\(\) \{ return this\.service\.trang_thai_ops_v3170\(\); \}/);
+  assert.match(controller, /ops_runtime\(\) \{ return this\.service\.trang_thai_ops_v3180\(\); \}/);
 });
 
 test("v3.12.0 API health va OpenAPI dong bo version", () => {
   const health = read("../src/suc-khoe/suc-khoe.controller.ts");
   const main = read("../src/main.ts");
-  assert.match(health, /phien_ban: "v3\.17\.0"/);
-  assert.match(main, /setVersion\("3\.17\.0"\)/);
+  assert.match(health, /phien_ban: "v3\.18\.0"/);
+  assert.match(main, /setVersion\("3\.18\.0"\)/);
 });
