@@ -3,23 +3,23 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 const read = (p) => readFileSync(p, "utf8");
 
-test("v3.16.0 contract duoc giu khi nang v3.18.0 va current scripts dong bo", () => {
+test("v3.16.0 contract duoc giu khi nang v3.19.0 va current scripts dong bo", () => {
   const pkg = JSON.parse(read("package.json"));
-  assert.equal(read("VERSION").trim(), "3.18.0");
-  assert.equal(pkg.version, "3.18.0");
-  assert.equal(JSON.parse(read("apps/api/package.json")).version, "3.18.0");
-  assert.equal(JSON.parse(read("apps/web/package.json")).version, "3.18.0");
-  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3180.mjs");
-  assert.equal(pkg.scripts["probe:agent"], "node scripts/probe-agent-v3180.mjs");
-  assert.match(pkg.scripts["probe:fleet"], /probe-fleet-v3180\.ps1/);
-  assert.match(pkg.scripts["verify:v318"], /verify-v3180\.ps1/);
-  assert.equal(pkg.scripts.verify, "npm run verify:v318");
-  assert.equal(pkg.scripts["verify:full"], "npm run verify:full:v318");
+  assert.equal(read("VERSION").trim(), "3.19.0");
+  assert.equal(pkg.version, "3.19.0");
+  assert.equal(JSON.parse(read("apps/api/package.json")).version, "3.19.0");
+  assert.equal(JSON.parse(read("apps/web/package.json")).version, "3.19.0");
+  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3190.mjs");
+  assert.equal(pkg.scripts["probe:agent"], "node scripts/probe-agent-v3190.mjs");
+  assert.match(pkg.scripts["probe:fleet"], /probe-fleet-v3190\.ps1/);
+  assert.match(pkg.scripts["verify:v319"], /verify-v3190\.ps1/);
+  assert.equal(pkg.scripts.verify, "npm run verify:v319");
+  assert.equal(pkg.scripts["verify:full"], "npm run verify:full:v319");
   assert.equal(existsSync("scripts/e2e-runtime-v3160.ps1"), true);
-  assert.equal(existsSync("scripts/e2e-runtime-v3180.ps1"), true);
-  assert.match(read(".github/workflows/ci.yml"), /e2e-runtime-v3180\.ps1/);
-  assert.match(read("apps/api/src/suc-khoe/suc-khoe.controller.ts"), /phien_ban: "v3\.18\.0"/);
-  assert.match(read("apps/api/src/main.ts"), /setVersion\("3\.18\.0"\)/);
+  assert.equal(existsSync("scripts/e2e-runtime-v3190.ps1"), true);
+  assert.match(read(".github/workflows/ci.yml"), /e2e-runtime-v3190\.ps1/);
+  assert.match(read("apps/api/src/suc-khoe/suc-khoe.controller.ts"), /phien_ban: "v3\.19\.0"/);
+  assert.match(read("apps/api/src/main.ts"), /setVersion\("3\.19\.0"\)/);
 });
 
 test("v3.16.0 archive portability co JSONL GZIP S3 allowlist va restore replay dry-run", () => {

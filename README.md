@@ -1,6 +1,6 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v3.18.0** — 03/09/2026
+> Phiên bản hiện tại: **v3.19.0** — 03/09/2026
 - **v3.18.0 · recovery governance**: thêm target-time PITR rehearsal opt-in trên restore cluster cô lập, health-gated probe canary có grace window + auto rollback, postmortem approval/action reminder và HTTPS service-runbook mapping.
 - **Ops UI compact**: badge `COMPLETE · DRAFT` được thu nhỏ, canh giữa cả ngang/dọc; approval status dùng cùng visual compact để không chiếm chiều cao panel.
 - **Security hotfix mysql2**: nâng root pin/override từ `mysql2@3.22.0` lên `mysql2@3.23.4`; security scanner yêu cầu `>=3.23.1` để vá GHSA-rgwj-5xj2-c3m3 (decompression-bomb DoS), giữ Prisma `7.10.0` và tuyệt đối không dùng `npm audit fix --force`.
@@ -1570,10 +1570,18 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 - Current scripts chuyển sang v3.18 (`verify`, `verify:full`, Runtime/Browser E2E, probe tools, recovery drill), vẫn giữ các script v3.17 làm historical regression.
 - Không thêm migration; tổng số migration vẫn **23**.
 
-### Roadmap v3.19
+## v3.19.0 — 03/09/2026
 
-- Health gate mở rộng từ fleet/quorum sang **error-budget burn-rate**, có cooldown và approval policy trước auto rollback ở môi trường production.
-- PITR drill thêm retention/report history và recovery evidence export để so sánh RPO/RTO qua nhiều lần diễn tập.
-- Postmortem action items có owner/due-date workflow sâu hơn, escalation/reminder theo on-call và dashboard theo dõi remediation backlog.
+- Health gate mở rộng fleet/quorum sang **error-budget burn-rate**, thêm rollback cooldown và approval policy trước auto rollback production; remote code execution vẫn OFF.
+- Recovery drill có **evidence history** tối đa 30 lần, export JSON để so sánh RPO/RTO/PITR qua nhiều lần diễn tập.
+- Postmortem action items được tổng hợp thành **remediation backlog** theo owner/due-date, overdue/due-soon/unowned và sẵn sàng nối escalation on-call.
+- `verify:full` thêm Docker Engine preflight rõ ràng trước backup/Docker pipeline, tránh lỗi npipe khó hiểu khi Docker Desktop chưa chạy.
+- Không thêm migration; tổng số migration vẫn **23**.
+
+### Roadmap v3.20
+
+- Production rollout approval có TTL/two-person rule và audit diff đầy đủ.
+- Recovery evidence ký SHA-256/Ed25519 và export bundle phục vụ audit.
+- Remediation backlog có SLA theo severity, on-call escalation thực thi và báo cáo Excel.
 
 # Lộ trình tiếp theo

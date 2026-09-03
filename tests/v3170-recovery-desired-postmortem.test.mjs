@@ -3,35 +3,35 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 const read = (p) => readFileSync(p, "utf8");
 
-test("v3.17.0 contract duoc giu khi nang v3.18.0 va current scripts dong bo", () => {
+test("v3.17.0 contract duoc giu khi nang v3.19.0 va current scripts dong bo", () => {
   const pkg = JSON.parse(read("package.json"));
-  assert.equal(read("VERSION").trim(), "3.18.0");
-  assert.equal(pkg.version, "3.18.0");
-  assert.equal(JSON.parse(read("apps/api/package.json")).version, "3.18.0");
-  assert.equal(JSON.parse(read("apps/web/package.json")).version, "3.18.0");
-  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3180.mjs");
-  assert.equal(pkg.scripts["probe:agent"], "node scripts/probe-agent-v3180.mjs");
-  assert.match(pkg.scripts["recovery:drill"], /recovery-drill-v3180\.ps1/);
-  assert.match(pkg.scripts["recovery:pitr"], /recovery-pitr-drill-v3180\.ps1/);
-  assert.equal(pkg.scripts.verify, "npm run verify:v318");
-  assert.equal(pkg.scripts["verify:full"], "npm run verify:full:v318");
+  assert.equal(read("VERSION").trim(), "3.19.0");
+  assert.equal(pkg.version, "3.19.0");
+  assert.equal(JSON.parse(read("apps/api/package.json")).version, "3.19.0");
+  assert.equal(JSON.parse(read("apps/web/package.json")).version, "3.19.0");
+  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3190.mjs");
+  assert.equal(pkg.scripts["probe:agent"], "node scripts/probe-agent-v3190.mjs");
+  assert.match(pkg.scripts["recovery:drill"], /recovery-drill-v3190\.ps1/);
+  assert.match(pkg.scripts["recovery:pitr"], /recovery-pitr-drill-v3190\.ps1/);
+  assert.equal(pkg.scripts.verify, "npm run verify:v319");
+  assert.equal(pkg.scripts["verify:full"], "npm run verify:full:v319");
   assert.equal(existsSync("scripts/e2e-runtime-v3170.ps1"), true);
   assert.equal(existsSync("scripts/e2e-browser-v3170.mjs"), true);
-  assert.match(read(".github/workflows/ci.yml"), /e2e-runtime-v3180\.ps1/);
-  assert.match(read("apps/api/src/suc-khoe/suc-khoe.controller.ts"), /phien_ban: "v3\.18\.0"/);
-  assert.match(read("apps/api/src/main.ts"), /setVersion\("3\.18\.0"\)/);
+  assert.match(read(".github/workflows/ci.yml"), /e2e-runtime-v3190\.ps1/);
+  assert.match(read("apps/api/src/suc-khoe/suc-khoe.controller.ts"), /phien_ban: "v3\.19\.0"/);
+  assert.match(read("apps/api/src/main.ts"), /setVersion\("3\.19\.0"\)/);
 });
 
-test("v3.18.0 Admin system health dong bo phien_ban runtime", () => {
+test("v3.19.0 Admin system health dong bo phien_ban runtime", () => {
   const service = read("apps/api/src/quan-tri/quan-tri.service.ts");
   const start = service.indexOf("async suc_khoe_he_thong");
   const end = service.indexOf("async ", start + 10);
   const healthMethod = service.slice(start, end > start ? end : undefined);
-  assert.match(healthMethod, /phien_ban:\s*"3\.18\.0"/);
+  assert.match(healthMethod, /phien_ban:\s*"3\.19\.0"/);
   assert.doesNotMatch(healthMethod, /phien_ban:\s*"3\.16\.0"/);
 });
 
-test("v3.18.0 Runtime E2E giu on-call contract v3160 thay vi doi ten property khong ton tai", () => {
+test("v3.19.0 Runtime E2E giu on-call contract v3160 thay vi doi ten property khong ton tai", () => {
   const runtime = read("scripts/e2e-runtime-v3170.ps1");
   const service = read("apps/api/src/quan-tri/quan-tri.service.ts");
   const webLib = read("apps/web/lib/quan-tri.ts");
@@ -42,7 +42,7 @@ test("v3.18.0 Runtime E2E giu on-call contract v3160 thay vi doi ten property kh
   assert.match(webLib, /on_call_v3160\?/);
 });
 
-test("v3.18.0 recovery readiness co optional WAL archive va khong overclaim target-time PITR", () => {
+test("v3.19.0 recovery readiness co optional WAL archive va khong overclaim target-time PITR", () => {
   const service = read("apps/api/src/quan-tri/quan-tri.service.ts");
   const drill = read("scripts/recovery-drill-v3170.ps1");
   const compose = read("docker-compose.pitr.yml");
@@ -58,7 +58,7 @@ test("v3.18.0 recovery readiness co optional WAL archive va khong overclaim targ
   assert.match(env, /SYSTEM_DB_RECOVERY_RTO_TARGET_MINUTES=30/);
 });
 
-test("v3.18.0 signed probe desired-state co canary rollback va remote code execution OFF", () => {
+test("v3.19.0 signed probe desired-state co canary rollback va remote code execution OFF", () => {
   const service = read("apps/api/src/quan-tri/quan-tri.service.ts");
   const controller = read("apps/api/src/quan-tri/quan-tri.controller.ts");
   const agent = read("scripts/probe-agent-v3170.mjs");
@@ -82,7 +82,7 @@ test("v3.18.0 signed probe desired-state co canary rollback va remote code execu
   assert.doesNotMatch(agent, /child_process|exec\(|spawn\(/);
 });
 
-test("v3.18.0 incident postmortem co timeline snapshot HTTPS runbook va action items", () => {
+test("v3.19.0 incident postmortem co timeline snapshot HTTPS runbook va action items", () => {
   const service = read("apps/api/src/quan-tri/quan-tri.service.ts");
   const controller = read("apps/api/src/quan-tri/quan-tri.controller.ts");
   assert.match(service, /timeline_snapshot_v3170/);
@@ -93,7 +93,7 @@ test("v3.18.0 incident postmortem co timeline snapshot HTTPS runbook va action i
   assert.match(controller, /su-co\/:chu_ky\/postmortem/);
 });
 
-test("v3.18.0 giu 23 migration", () => {
+test("v3.19.0 giu 23 migration", () => {
   assert.equal(readdirSync("apps/api/prisma/migrations", { withFileTypes: true }).filter(x => x.isDirectory()).length, 23);
   assert.equal(existsSync("docker-compose.pitr.yml"), true);
 });

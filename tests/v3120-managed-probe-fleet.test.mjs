@@ -7,15 +7,15 @@ const read = (p) => readFileSync(p, "utf8");
 test("v3.12.0 dong bo version runtime browser probe fleet va CI", () => {
   const pkg = JSON.parse(read("package.json"));
   const ci = read(".github/workflows/ci.yml");
-  assert.equal(read("VERSION").trim(), "3.18.0");
-  assert.equal(pkg.version, "3.18.0");
-  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3180.mjs");
-  assert.equal(pkg.scripts["probe:agent"], "node scripts/probe-agent-v3180.mjs");
-  assert.match(pkg.scripts["probe:fleet"], /probe-fleet-v3180\.ps1/);
-  assert.match(pkg.scripts["probe:fleet:once"], /probe-fleet-v3180\.ps1 -Once/);
+  assert.equal(read("VERSION").trim(), "3.19.0");
+  assert.equal(pkg.version, "3.19.0");
+  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3190.mjs");
+  assert.equal(pkg.scripts["probe:agent"], "node scripts/probe-agent-v3190.mjs");
+  assert.match(pkg.scripts["probe:fleet"], /probe-fleet-v3190\.ps1/);
+  assert.match(pkg.scripts["probe:fleet:once"], /probe-fleet-v3190\.ps1 -Once/);
   assert.equal(existsSync("scripts/probe-fleet-v3140.ps1"), true);
-  assert.match(ci, /e2e-runtime-v3180\.ps1/);
-  assert.match(ci, /Browser E2E Admin HTTPS v3\.18\.0/);
+  assert.match(ci, /e2e-runtime-v3190\.ps1/);
+  assert.match(ci, /Browser E2E Admin HTTPS v3\.19\.0/);
 });
 
 test("v3.12.0 managed probe fleet doi chieu keyring profile va PostgreSQL", () => {
@@ -32,7 +32,7 @@ test("v3.12.0 managed probe fleet doi chieu keyring profile va PostgreSQL", () =
   assert.match(service, /"OFFLINE" as const/);
   assert.match(service, /"MISSING" as const/);
   assert.match(service, /secret_values_exposed: false/);
-  assert.match(controller, /trang_thai_ops_v3180/);
+  assert.match(controller, /trang_thai_ops_v3190/);
   assert.match(env, /SYSTEM_SLO_AGENT_PROFILES_JSON=/);
 });
 

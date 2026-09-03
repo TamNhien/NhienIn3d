@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 const read = (p) => readFileSync(new URL(p, import.meta.url), "utf8");
 
-test("v3.18.0 Ops UI co health gate PITR approval va badge compact", () => {
+test("v3.19.0 Ops UI co health gate PITR approval va badge compact", () => {
   const page = read("../app/quan-tri/ops/page.tsx");
   const css = read("../app/quan-tri/ops/page.module.css");
   const lib = read("../lib/quan-tri.ts");

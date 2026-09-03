@@ -22,10 +22,10 @@ test("v3.15.0 API service dependency blast radius runtime va version", () => {
   const health = read("../src/suc-khoe/suc-khoe.controller.ts");
   const main = read("../src/main.ts");
   assert.match(service, /phan_tich_blast_radius_v3150/);
-  assert.match(service, /trang_thai_ops_v3180/);
+  assert.match(service, /trang_thai_ops_v3190/);
   assert.match(service, /service_dependency/);
   assert.match(service, /probe_enrollment/);
-  assert.match(controller, /trang_thai_ops_v3180/);
-  assert.match(health, /phien_ban: "v3\.18\.0"/);
-  assert.match(main, /setVersion\("3\.18\.0"\)/);
+  assert.match(controller, /trang_thai_ops_v3190/);
+  assert.match(health, /phien_ban: "v3\.19\.0"/);
+  assert.match(main, /setVersion\("3\.19\.0"\)/);
 });

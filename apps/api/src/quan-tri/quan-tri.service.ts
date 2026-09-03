@@ -196,11 +196,11 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     setTimeout(cleanupOps, 120_000).unref();
     this.bo_hen_ops_retention = setInterval(cleanupOps, 6 * 60 * 60_000);
     this.bo_hen_ops_retention.unref();
-    this.logger.log(`Ops v3.18.0 schedulers: DLQ ${dlqPolicy.chu_ky_phut}m, metrics ${opsPolicy.refresh_phut}m, retention ${opsPolicy.retention_days}d.`);
+    this.logger.log(`Ops v3.19.0 schedulers: DLQ ${dlqPolicy.chu_ky_phut}m, metrics ${opsPolicy.refresh_phut}m, retention ${opsPolicy.retention_days}d.`);
 
     const healthGate = this.probe_health_gate_config_v3180();
     if (healthGate.enabled) {
-      const checkGate = () => this.auto_rollback_probe_desired_state_v3180().catch(error => this.logger.warn(`Probe health-gate failed: ${error instanceof Error ? error.message : String(error)}`));
+      const checkGate = () => this.auto_rollback_probe_desired_state_v3190().catch(error => this.logger.warn(`Probe health-gate failed: ${error instanceof Error ? error.message : String(error)}`));
       setTimeout(checkGate, 150_000).unref();
       this.bo_hen_probe_health_gate = setInterval(checkGate, healthGate.check_minutes * 60_000);
       this.bo_hen_probe_health_gate.unref();
@@ -1114,7 +1114,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const trang_thai = !database.ket_noi ? "LOI" : (van_de.length ? "CANH_BAO" : "TOT");
     const ket_qua = {
       trang_thai,
-      phien_ban: "3.18.0",
+      phien_ban: "3.19.0",
       thoi_gian: new Date().toISOString(),
       api: { uptime_giay: Math.floor(process.uptime()), node: process.version, pid: process.pid, rss_bytes: bo_nho.rss, heap_used_bytes: bo_nho.heapUsed, heap_total_bytes: bo_nho.heapTotal },
       database,
@@ -1370,7 +1370,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     for (const item of sla.burn_rate_policy) rows.push([item.gio, item.nguong, item.muc_do, item.sla.burn_rate ?? "", item.uptime.burn_rate ?? ""]);
     rows.push([], ["Incident"], ["Chữ ký", "Trạng thái", "Vấn đề", "Bắt đầu", "Gần nhất", "Sự kiện", "Tiếp nhận", "Khắc phục"]);
     for (const item of incidents.du_lieu) rows.push([item.chu_ky, item.trang_thai_xu_ly, item.van_de.join(" | "), item.bat_dau.toISOString(), item.gan_nhat.toISOString(), item.so_su_kien, item.tiep_nhan_luc?.toISOString() || "", item.khac_phuc_luc?.toISOString() || ""]);
-    const buffer = this.tao_xlsx(rows, "Ops v3.18.0");
+    const buffer = this.tao_xlsx(rows, "Ops v3.19.0");
     return { ten_file: `ops-slo-incident-${new Date().toISOString().slice(0, 10)}.xlsx`, mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", base64: buffer.toString("base64") };
   }
 
@@ -3465,6 +3465,78 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       database_recovery,
       service_runbooks: this.service_runbooks_v3180(),
     };
+  }
+
+
+  private probe_health_gate_config_v3190() {
+    const base = this.probe_health_gate_config_v3180();
+    const maxBurn = Number.parseFloat(process.env.SYSTEM_SLO_PROBE_HEALTH_GATE_MAX_BURN_RATE || "2");
+    const cooldown = Number.parseInt(process.env.SYSTEM_SLO_PROBE_HEALTH_GATE_ROLLBACK_COOLDOWN_MINUTES || "30", 10);
+    const approval = ["1","true","yes","on"].includes((process.env.SYSTEM_SLO_PROBE_HEALTH_GATE_PRODUCTION_APPROVAL_REQUIRED || "true").trim().toLowerCase());
+    return { ...base, max_burn_rate: Number.isFinite(maxBurn) ? Math.max(0.1, Math.min(100, maxBurn)) : 2, rollback_cooldown_minutes: Number.isFinite(cooldown) ? Math.max(1, Math.min(1440, cooldown)) : 30, production_approval_required: approval, environment: (process.env.NODE_ENV || "development").trim().toLowerCase() };
+  }
+
+  private async probe_health_gate_status_v3190() {
+    const config = this.probe_health_gate_config_v3190();
+    const [base, sla, approvalRow, stateRow] = await Promise.all([this.probe_health_gate_status_v3180(), this.thong_ke_sla_van_hanh("30"), this.db.cauHinhHeThong.findUnique({ where: { khoa: "PROBE_ROLLBACK_APPROVAL_V3190" } }), this.db.cauHinhHeThong.findUnique({ where: { khoa: "PROBE_HEALTH_GATE_V3190" } })]);
+    const burnValues = [sla.burn_rate?.sla?.mot_gio?.burn_rate, sla.burn_rate?.sla?.sau_gio?.burn_rate, sla.burn_rate?.uptime?.mot_gio?.burn_rate, sla.burn_rate?.uptime?.sau_gio?.burn_rate].filter((x): x is number => typeof x === "number" && Number.isFinite(x));
+    const maxObservedBurn = burnValues.length ? Math.max(...burnValues) : null;
+    const burnBlocked = maxObservedBurn != null && maxObservedBurn >= config.max_burn_rate;
+    const approvalObj = approvalRow?.gia_tri && typeof approvalRow.gia_tri === "object" && !Array.isArray(approvalRow.gia_tri) ? approvalRow.gia_tri as Record<string, unknown> : {};
+    const approved = Number(approvalObj.revision || 0) === base.revision;
+    const gateObj = stateRow?.gia_tri && typeof stateRow.gia_tri === "object" && !Array.isArray(stateRow.gia_tri) ? stateRow.gia_tri as Record<string, unknown> : {};
+    const lastRollbackAt = typeof gateObj.last_rollback_at === "string" ? Date.parse(gateObj.last_rollback_at) : NaN;
+    const cooldownRemaining = Number.isFinite(lastRollbackAt) ? Math.max(0, Math.ceil((lastRollbackAt + config.rollback_cooldown_minutes * 60000 - Date.now()) / 60000)) : 0;
+    let status = base.status;
+    if (base.active && !base.in_grace && burnBlocked) status = "BLOCKED";
+    const needsApproval = status === "BLOCKED" && config.environment === "production" && config.production_approval_required && !approved;
+    if (needsApproval) status = "AWAITING_APPROVAL";
+    if (status === "BLOCKED" && cooldownRemaining > 0) status = "COOLDOWN";
+    return { ...base, phien_ban: "3.19.0", ...config, status, burn_rate_max_observed: maxObservedBurn, burn_rate_blocked: burnBlocked, rollback_approval_required: config.environment === "production" && config.production_approval_required, rollback_approved_for_revision: approved, cooldown_remaining_minutes: cooldownRemaining, remote_code_execution: false as const };
+  }
+
+  async approve_probe_rollback_v3190(actor: NguoiDungXacThuc, note?: string) {
+    const state = await this.lay_probe_desired_state_v3170();
+    const value = { revision: state.current.revision, approved_at: new Date().toISOString(), approved_by: actor.ho_ten, note: (note || "").trim().slice(0,1000) };
+    await this.db.cauHinhHeThong.upsert({ where: { khoa: "PROBE_ROLLBACK_APPROVAL_V3190" }, create: { khoa: "PROBE_ROLLBACK_APPROVAL_V3190", gia_tri: this.chuan_hoa_json_object(value), nguoi_cap_nhat_id: actor.id }, update: { gia_tri: this.chuan_hoa_json_object(value), nguoi_cap_nhat_id: actor.id } });
+    await this.ghi_lich_su_van_hanh("PROBE_ROLLBACK_APPROVAL", "APPROVED", `Admin ${actor.ho_ten} approve rollback revision ${state.current.revision}`, { revision: state.current.revision, note: value.note, remote_code_execution: false });
+    return value;
+  }
+
+  private async auto_rollback_probe_desired_state_v3190() {
+    const gate = await this.probe_health_gate_status_v3190();
+    if (!gate.enabled || !gate.auto_rollback || gate.status !== "BLOCKED" || !gate.previous_available) return gate;
+    const before = await this.lay_probe_desired_state_v3170();
+    if (!before.previous || before.current.rollback_of !== null) return gate;
+    const revision = Math.max(Date.now(), before.current.revision + 1);
+    const current: ProbeDesiredStateV3170 = { ...before.previous, revision, updated_at: new Date().toISOString(), updated_by: "SYSTEM_HEALTH_GATE_V3190", rollback_of: before.current.revision, note: `AUTO_ROLLBACK v3.19.0: online ${gate.online_percent}% / quorum ${gate.quorum_failures} / burn ${gate.burn_rate_max_observed ?? "n/a"}x` };
+    const payload = { current, previous: before.current, history: [before.current, ...before.history].slice(0, 10) };
+    await this.db.cauHinhHeThong.upsert({ where: { khoa: "PROBE_DESIRED_STATE_V3170" }, create: { khoa: "PROBE_DESIRED_STATE_V3170", gia_tri: this.chuan_hoa_json_object(payload) }, update: { gia_tri: this.chuan_hoa_json_object(payload) } });
+    const gateState = { last_checked_at: new Date().toISOString(), last_rollback_at: new Date().toISOString(), last_rollback_revision: before.current.revision, rollback_to_revision: revision, burn_rate: gate.burn_rate_max_observed };
+    await this.db.cauHinhHeThong.upsert({ where: { khoa: "PROBE_HEALTH_GATE_V3190" }, create: { khoa: "PROBE_HEALTH_GATE_V3190", gia_tri: this.chuan_hoa_json_object(gateState) }, update: { gia_tri: this.chuan_hoa_json_object(gateState) } });
+    await this.ghi_lich_su_van_hanh("PROBE_DESIRED_STATE", "AUTO_ROLLBACK", "Health gate v3.19.0 rollback sau fleet/quorum/burn-rate policy", { rollback_of: before.current.revision, revision, burn_rate: gate.burn_rate_max_observed, remote_code_execution: false });
+    return { ...gate, status: "AUTO_ROLLED_BACK", rollback_revision: revision };
+  }
+
+  private async recovery_readiness_v3190() {
+    const base = await this.recovery_readiness_v3180();
+    const backupDir = process.env.SYSTEM_BACKUP_DIR?.trim() || join(process.cwd(), "..", "..", "backups");
+    let evidence: Record<string, unknown> | null = null;
+    try { evidence = JSON.parse(await readFile(join(backupDir, "recovery-evidence-v3190.json"), "utf8")) as Record<string, unknown>; } catch {}
+    return { ...base, evidence_export_supported: true, evidence_file: "backups/recovery-evidence-v3190.json", evidence_history: Array.isArray(evidence?.history) ? evidence.history : [], evidence_history_count: Array.isArray(evidence?.history) ? evidence.history.length : 0, evidence_retention_runs: 30 };
+  }
+
+  private async postmortem_remediation_v3190() {
+    const rows = await this.db.cauHinhHeThong.findMany({ where: { khoa: { startsWith: "INCIDENT_PM_" } }, select: { gia_tri: true } });
+    const now = Date.now(); const owners: Record<string, number> = {}; let open=0, overdue=0, unowned=0, dueSoon=0;
+    for (const row of rows) { const pm=this.normalize_postmortem_v3180(row.gia_tri); for (const a of pm.action_items || []) { if (a.status === "DONE") continue; open++; const owner=(a.owner||"").trim(); if (!owner) unowned++; else owners[owner]=(owners[owner]||0)+1; const due=a.due_date?Date.parse(a.due_date):NaN; if (Number.isFinite(due)) { if (due < now) overdue++; else if (due <= now + 3*86400000) dueSoon++; } } }
+    return { open_actions: open, overdue_actions: overdue, due_soon_actions: dueSoon, unowned_actions: unowned, owners, on_call_escalation_ready: true, reminder_deduplicated_daily: true };
+  }
+
+  async trang_thai_ops_v3190() {
+    const [base, gate, recovery, remediation] = await Promise.all([this.trang_thai_ops_v3180(), this.probe_health_gate_status_v3190(), this.recovery_readiness_v3190(), this.postmortem_remediation_v3190()]);
+    const fleet = base.probe_fleet as Record<string, unknown> | undefined;
+    return { ...base, phien_ban: "3.19.0", probe_fleet: fleet ? { ...fleet, phien_ban: "3.19.0" } : base.probe_fleet, multi_region_quorum: { ...base.multi_region_quorum, phien_ban: "3.19.0" }, probe_health_gate: gate, database_recovery: recovery, remediation_backlog: remediation };
   }
 
   async trang_thai_ops_v3160() {
