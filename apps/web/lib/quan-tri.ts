@@ -33,7 +33,7 @@ export type XungDotPhanCaAdmin = {
 
 
 export type AdminThanhToanTomTat = { trang_thai: string; ma_giao_dich: string };
-export type AdminThanhToanChiTiet = { id: string; ma_giao_dich: string; so_tien: number; trang_thai: string; ngay_tao: string; ngay_thanh_toan?: string | null; phuong_thuc: { ten_phuong_thuc: string; ma_phuong_thuc: string } };
+export type AdminThanhToanChiTiet = { id: string; ma_giao_dich: string; so_tien: number; trang_thai: string; ngay_tao: string; ngay_cap_nhat?: string; ngay_thanh_toan?: string | null; phuong_thuc: { ten_phuong_thuc: string; ma_phuong_thuc: string } };
 export type AdminDonHang = {
   id: string; ma_don_hang: string; ho_ten_nguoi_nhan: string; so_dien_thoai: string; tong_tien: number; trang_thai: string; ngay_tao: string; ngay_cap_nhat: string;
   khach_hang?: { id: string; thu_dien_tu: string; ho_ten: string } | null; so_mat_hang: number; tong_so_luong: number; thanh_toan?: AdminThanhToanTomTat | null;
@@ -45,6 +45,12 @@ export type AdminDonHangChiTiet = Omit<AdminDonHang, "thanh_toan"> & {
   thanh_toan: AdminThanhToanChiTiet[];
   lich_su: Array<{ id: string; trang_thai_cu?: string | null; trang_thai_moi: string; ghi_chu?: string | null; ngay_tao: string; nguoi_thuc_hien?: { ho_ten: string; thu_dien_tu: string; vai_tro: string } | null }>;
   cap_nhat_doanh_thu?: { da_ghi_nhan_moi: boolean; da_co_tu_truoc: boolean; so_tien: number; ngay_ghi_nhan?: string | null; nguon?: "CHOT_KHI_GIAO" | "DA_THANH_TOAN_TRUOC" | "LEGACY_KHONG_GIAO_DICH" | "KHONG_PHAT_SINH" | string };
+  hoan_tien?: { can_xu_ly: boolean; da_hoan_tien: boolean; so_giao_dich_can_hoan: number; so_giao_dich_da_hoan: number; so_tien_can_hoan: number; so_tien_da_hoan: number; gateway_auto_refund: boolean; manual_confirmation_required: boolean };
+  xac_nhan_hoan_tien?: { da_cap_nhat_moi: boolean; da_hoan_tien_tu_truoc: boolean; so_giao_dich: number; so_tien: number };
+};
+export type HoanTienCanXuLyAdmin = {
+  phien_ban: string; tong_don_can_hoan: number; tong_tien_can_hoan: number; gateway_auto_refund: boolean; manual_confirmation_required: boolean;
+  items: Array<{ id: string; ma_don_hang: string; ho_ten_nguoi_nhan: string; thu_dien_tu?: string | null; ngay_huy_cap_nhat: string; so_giao_dich: number; so_tien_can_hoan: number; giao_dich: Array<{ id: string; ma_giao_dich: string; so_tien: number; phuong_thuc: string; ngay_thanh_toan?: string | null }> }>;
 };
 export type AdminBienThe = { id: string; ma_bien_the: string; so_luong_ton: number; ton_toi_thieu: number; ton_toi_da: number; dang_hien_thi: boolean; gia_chenh_lech: number | string; vat_lieu?: { id: string; ten_vat_lieu: string } | null; mau_sac?: { id: string; ten_mau: string; ma_hex: string } | null };
 export type AdminDanhMuc = { id: string; ma_danh_muc: string; ten_danh_muc: string; duong_dan: string; mo_ta?: string | null; thu_tu: number; dang_hien_thi: boolean; so_san_pham: number };
@@ -113,11 +119,12 @@ export type NhaCungCapAdmin = { id: string; ma_nha_cung_cap: string; ten_nha_cun
 export type PhieuNhapKhoAdmin = { id: string; ma_phieu: string; ma_lo?: string | null; nha_cung_cap?: string | null; nha_cung_cap_id?: string | null; nha_cung_cap_ref?: { id: string; ma_nha_cung_cap: string; ten_nha_cung_cap: string } | null; ghi_chu?: string | null; nguoi_tao_id?: string | null; so_dong: number; tong_so_luong: number; ngay_tao: string; chi_tiet: Array<{ id?: string; ma_bien_the: string; so_luong_nhap: number; ton_truoc: number; ton_sau: number; ly_do?: string | null; ma_san_pham?: string; ten_san_pham?: string; vat_lieu?: string; mau_sac?: string }> };
 export type TrangThaiCanhBaoKhoEmailAdmin = { bat: boolean; chu_ky_phut: number; so_nguoi_nhan: number; lan_gui_cuoi?: string | null; tong_canh_bao_lan_cuoi: number; trang_thai_lan_cuoi: string };
 export type KeHoachNhapKhoAdmin = {
-  phien_ban: string; tao_luc: string; tong_bien_the_can_nhap: number; tong_so_luong_de_xuat: number; het_hang: number; khong_co_nha_cung_cap: number; nha_cung_cap_ngung_hoat_dong: number; supplier_inference: string; write_operation: boolean;
+  phien_ban: string; tao_luc: string; history_days?: number; forecast_days?: number; forecast_basis?: string; tong_bien_the_can_nhap: number; tong_so_luong_de_xuat: number; het_hang: number; rui_ro_du_bao?: number; ap_luc_gio_hang?: number; tong_nhu_cau_gio_hang_mo?: number; legacy_unmapped_sales_lines?: number; khong_co_nha_cung_cap: number; nha_cung_cap_ngung_hoat_dong: number; supplier_inference: string; write_operation: boolean; auto_purchase_order?: boolean; cart_demand_is_reservation?: boolean;
   theo_nha_cung_cap: Array<{ nha_cung_cap: { id: string | null; ma_nha_cung_cap: string | null; ten_nha_cung_cap: string; dang_hoat_dong: boolean | null } | null; so_bien_the: number; so_luong_de_xuat: number }>;
   items: Array<{
     bien_the_id: string; ma_bien_the: string; ma_san_pham: string; ten_san_pham: string; vat_lieu: string; mau_sac: string;
-    ton_hien_tai: number; ton_toi_thieu: number; ton_toi_da: number; muc_tieu_sau_nhap: number; so_luong_de_xuat: number; muc_do: string;
+    ton_hien_tai: number; ton_toi_thieu: number; ton_toi_da: number; muc_tieu_sau_nhap: number; so_luong_de_xuat: number; de_xuat_theo_dinh_muc?: number; de_xuat_theo_du_bao?: number; muc_do: string;
+    ban_30_ngay?: number; ban_trung_binh_ngay?: number; forecast_days?: number; forecast_demand?: number; days_of_cover?: number | null; active_cart_demand?: number; cart_pressure?: boolean; cart_demand_is_reservation?: boolean;
     nha_cung_cap: { id: string | null; ma_nha_cung_cap: string | null; ten_nha_cung_cap: string; dang_hoat_dong: boolean | null } | null;
     nguon_nha_cung_cap: string; phieu_nhap_gan_nhat: { ma_phieu: string; ngay_tao: string } | null;
   }>;
@@ -259,6 +266,8 @@ export const layDonHangAdmin = (trang_thai = "", tim_kiem = "") => {
 };
 export const layChiTietDonHangAdmin = (id: string) => goi<AdminDonHangChiTiet>(`/quan-tri/don-hang/${id}`);
 export const capNhatTrangThaiDonHangAdmin = (id: string, payload: { trang_thai: string; ghi_chu?: string }) => goi<AdminDonHangChiTiet>(`/quan-tri/don-hang/${id}/trang-thai`, { method: "POST", body: JSON.stringify(payload) });
+export const layHoanTienCanXuLyAdmin = () => goi<HoanTienCanXuLyAdmin>("/quan-tri/don-hang/hoan-tien-can-xu-ly");
+export const xacNhanHoanTienDonHangAdmin = (id: string, ghi_chu?: string) => goi<AdminDonHangChiTiet>(`/quan-tri/don-hang/${id}/xac-nhan-hoan-tien`, { method: "POST", body: JSON.stringify({ ghi_chu }) });
 export const doiSoatDoanhThuDonDaGiaoAdmin = () => goi<KetQuaDoiSoatDoanhThuDonDaGiao>("/quan-tri/don-hang/doi-soat-doanh-thu", { method: "POST" });
 export const layDanhMucAdmin = () => goi<AdminDanhMuc[]>("/quan-tri/danh-muc");
 export const laySanPhamAdmin = () => goi<AdminSanPham[]>("/quan-tri/san-pham");

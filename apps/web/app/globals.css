@@ -1084,7 +1084,7 @@ footer{border-top:1px solid var(--line);max-width:1240px;margin:auto;padding:30p
 @media(max-width:620px){.cine-replenishment-stats-v324,.cine-replenishment-row-v324{grid-template-columns:1fr}.cine-replenishment-head-v324 .cine-btn{width:100%}}
 
 
-/* v3.24.1 hotfix - Admin luôn nằm trọn viewport và không cắt tab bên phải. */
+/* v3.25.0 hotfix - Admin luôn nằm trọn viewport và không cắt tab bên phải. */
 .cine-admin-shell.page-shell{
   width:min(1240px,calc(100vw - 32px));
   max-width:calc(100vw - 32px);
@@ -1117,7 +1117,7 @@ footer{border-top:1px solid var(--line);max-width:1240px;margin:auto;padding:30p
   .cine-admin-tabs .cine-btn{flex-basis:100%}
 }
 
-/* v3.24.1 hotfix - bang kho khong bi cat cot ben phai tren desktop nho.
+/* v3.25.0 hotfix - bang kho khong bi cat cot ben phai tren desktop nho.
    Bang giu day du 13 cot trong mot viewport cuon rieng, co thanh cuon ngang luon de tiep can
    va header sticky de doi chieu cot khi cuon doc. */
 .cine-inventory-table-card-v214{
@@ -1152,3 +1152,22 @@ footer{border-top:1px solid var(--line);max-width:1240px;margin:auto;padding:30p
     min-width:1880px;
   }
 }
+
+
+/* v3.25.0 refund reconciliation + demand forecast */
+.cine-refund-queue-v325{display:inline-flex;align-items:center;min-height:38px;padding:0 12px;border:1px solid #334155;border-radius:12px;background:#0f172a;color:#cbd5e1;font-size:.78rem;font-weight:800;white-space:nowrap}
+.cine-refund-queue-v325.has-pending{border-color:#fb7185;color:#fecdd3;background:rgba(159,18,57,.18)}
+.cine-refund-action-v325{display:flex;gap:14px;align-items:center;justify-content:space-between;margin-top:14px;padding:14px;border:1px solid #be123c;border-radius:14px;background:rgba(136,19,55,.18)}
+.cine-refund-action-v325>div{display:grid;gap:4px}.cine-refund-action-v325 b{color:#ffe4e6}.cine-refund-action-v325 small{color:#fecdd3;line-height:1.5}
+.cine-refund-done-v325{color:#86efac!important}
+@media(max-width:900px){.cine-refund-action-v325{align-items:stretch;flex-direction:column}.cine-refund-action-v325 .cine-btn{width:100%}.cine-refund-queue-v325{white-space:normal}}
+
+/* v3.25.0: refund reconciliation queue + demand-aware replenishment */
+.cine-refund-queue-panel-v325{display:grid;gap:12px;border-color:rgba(251,113,133,.45)!important;background:linear-gradient(135deg,rgba(76,5,25,.24),rgba(15,23,42,.92))!important}
+.cine-refund-queue-panel-v325 h3{margin:0 0 4px;color:#ffe4e6}.cine-refund-queue-panel-v325 p,.cine-refund-queue-panel-v325>small{margin:0;color:#fda4af}
+.cine-refund-queue-items-v325{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px}
+.cine-refund-queue-items-v325 button{display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;border:1px solid #4c1d2f;border-radius:12px;background:#0b1220;color:#e2e8f0;padding:11px 12px;cursor:pointer}
+.cine-refund-queue-items-v325 button:hover{border-color:#fb7185;background:#111827}.cine-refund-queue-items-v325 button span{display:grid;gap:3px}.cine-refund-queue-items-v325 button small{color:#94a3b8}.cine-refund-queue-items-v325 button strong{color:#fecdd3;white-space:nowrap}
+.cine-replenishment-row-v325>span:nth-child(2){min-width:250px}.cine-demand-risk-v325{display:inline-flex;width:max-content;margin-top:4px;padding:3px 7px;border-radius:999px;border:1px solid #334155;color:#cbd5e1;font-size:.67rem;font-weight:800;letter-spacing:.04em}
+.cine-demand-risk-v325[data-risk="HET_HANG"],.cine-demand-risk-v325[data-risk="DUOI_DINH_MUC"]{border-color:#fb7185;color:#fecdd3}.cine-demand-risk-v325[data-risk="RUI_RO_DU_BAO"]{border-color:#f59e0b;color:#fde68a}.cine-demand-risk-v325[data-risk="AP_LUC_GIO_HANG"]{border-color:#38bdf8;color:#bae6fd}
+@media(max-width:760px){.cine-refund-queue-items-v325{grid-template-columns:1fr}.cine-replenishment-row-v325>span:nth-child(2){min-width:0}}

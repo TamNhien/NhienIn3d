@@ -6,13 +6,13 @@ const read = p => readFileSync(p, "utf8");
 test("v3.9.0 contract duoc giu khi nang v3.11.0", () => {
   const pkg = JSON.parse(read("package.json"));
   const ci = read(".github/workflows/ci.yml");
-  assert.equal(read("VERSION").trim(), "3.24.1");
-  assert.equal(pkg.version, "3.24.1");
-  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3241.mjs");
+  assert.equal(read("VERSION").trim(), "3.25.0");
+  assert.equal(pkg.version, "3.25.0");
+  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3250.mjs");
   assert.equal(existsSync("scripts/e2e-runtime-v3100.ps1"), true);
   assert.equal(existsSync("scripts/e2e-browser-v3100.mjs"), true);
-  assert.match(ci, /e2e-runtime-v3241\.ps1/);
-  assert.match(ci, /Browser E2E Admin HTTPS v3\.24\.1/);
+  assert.match(ci, /e2e-runtime-v3250\.ps1/);
+  assert.match(ci, /Browser E2E Admin HTTPS v3\.25\.0/);
 });
 
 test("v3.9.0 co migration GIN search vector va materialized incident metrics", () => {

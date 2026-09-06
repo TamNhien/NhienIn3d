@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 
 const read = (p) => readFileSync(p, "utf8");
 
-test("v3.24.1 Web hien ke hoach nhap va canh bao overlap, giu dark picker", () => {
+test("v3.25.0 Web hien ke hoach nhap va canh bao overlap, giu dark picker", () => {
   const page = read("app/quan-tri/page.tsx");
   const lib = read("lib/quan-tri.ts");
   const css = read("app/globals.css");
@@ -22,10 +22,10 @@ test("v3.24.1 Web hien ke hoach nhap va canh bao overlap, giu dark picker", () =
   assert.match(css, /cine-replenishment-v324/);
   assert.match(css, /cine-schedule-conflict-v324/);
   assert.match(css, /:root\{\s*color-scheme:dark;/);
-  assert.match(ops, /OPS v3\.24\.1/);
+  assert.match(ops, /OPS v3\.25\.0/);
 });
 
-test("v3.24.1 bang kho co viewport cuon rieng de khong cat cac cot ben phai", () => {
+test("v3.25.0 bang kho co viewport cuon rieng de khong cat cac cot ben phai", () => {
   const css = read("app/globals.css");
   assert.match(css, /\.cine-inventory-scroll-v214\{[^}]*max-height:min\(68vh,760px\)[^}]*overflow:auto/s);
   assert.match(css, /scrollbar-gutter:stable both-edges/);

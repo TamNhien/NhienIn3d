@@ -1,6 +1,6 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v3.24.1** — 06/09/2026
+> Phiên bản hiện tại: **v3.25.0** — 06/09/2026
 - **v3.18.0 · recovery governance**: thêm target-time PITR rehearsal opt-in trên restore cluster cô lập, health-gated probe canary có grace window + auto rollback, postmortem approval/action reminder và HTTPS service-runbook mapping.
 - **Ops UI compact**: badge `COMPLETE · DRAFT` được thu nhỏ, canh giữa cả ngang/dọc; approval status dùng cùng visual compact để không chiếm chiều cao panel.
 - **Security hotfix mysql2**: nâng root pin/override từ `mysql2@3.22.0` lên `mysql2@3.23.4`; security scanner yêu cầu `>=3.23.1` để vá GHSA-rgwj-5xj2-c3m3 (decompression-bomb DoS), giữ Prisma `7.10.0` và tuyệt đối không dùng `npm audit fix --force`.
@@ -1650,3 +1650,21 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 - Fix bảng Kho trên desktop hẹp: viewport cuộn ngang/dọc riêng, sticky header và không cắt các cột bên phải.
 - Giữ dark theme cho select/date/time/datetime-local/month/week picker.
 - Không thêm migration; tổng migration vẫn là 23.
+
+## v3.25.0 — 06/09/2026
+
+- **Đối soát hoàn tiền đơn hủy đã trả trước:** Admin có hàng đợi riêng cho đơn `ĐÃ HỦY` nhưng còn giao dịch `ĐÃ THANH TOÁN`; thao tác **Xác nhận đã hoàn tiền** chuyển giao dịch sang `ĐÃ HOÀN TIỀN`, ghi lịch sử đơn và audit. Hệ thống **không tự gọi cổng thanh toán**, nên Admin chỉ xác nhận sau khi tiền đã được hoàn thực tế.
+- **Kế hoạch nhập kho theo nhu cầu:** ngoài tồn min/max, v3.25 dùng tốc độ bán của **30 ngày gần nhất** để dự báo nhu cầu theo `SYSTEM_INVENTORY_FORECAST_DAYS` (mặc định 14 ngày, giới hạn 1–90).
+- **Áp lực giỏ hàng chỉ đọc:** số lượng trong giỏ đang mở được hiển thị như tín hiệu nhu cầu nhưng **không phải reservation**, không trừ tồn và không tự tạo đơn mua.
+- **Xuất Excel kế hoạch nhập v3.25:** bổ sung bán 30 ngày, trung bình/ngày, nhu cầu dự báo, ngày phủ tồn, áp lực giỏ mở, đề xuất theo định mức/dự báo và mức độ rủi ro.
+- Giữ nguyên shift-overlap guard, layout bảng Kho cuộn ngang/sticky header, dark dropdown/picker, Browser E2E synthetic-incident fix, rollout receipt chain, recovery trusted/revoked-key fail-closed.
+- Không thêm migration mới; tổng migration vẫn **23**.
+
+Cấu hình tùy chọn mới:
+
+```env
+SYSTEM_INVENTORY_FORECAST_DAYS=14
+```
+
+Không khai báo biến trên thì hệ thống dùng mặc định 14 ngày. `docker-compose.yml` đã truyền biến này vào API với fallback `14`, nên cấu hình local và Docker đồng nhất.
+
