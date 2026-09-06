@@ -1,6 +1,6 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v3.22.0** — 06/09/2026
+> Phiên bản hiện tại: **v3.23.0** — 06/09/2026
 - **v3.18.0 · recovery governance**: thêm target-time PITR rehearsal opt-in trên restore cluster cô lập, health-gated probe canary có grace window + auto rollback, postmortem approval/action reminder và HTTPS service-runbook mapping.
 - **Ops UI compact**: badge `COMPLETE · DRAFT` được thu nhỏ, canh giữa cả ngang/dọc; approval status dùng cùng visual compact để không chiếm chiều cao panel.
 - **Security hotfix mysql2**: nâng root pin/override từ `mysql2@3.22.0` lên `mysql2@3.23.4`; security scanner yêu cầu `>=3.23.1` để vá GHSA-rgwj-5xj2-c3m3 (decompression-bomb DoS), giữ Prisma `7.10.0` và tuyệt đối không dùng `npm audit fix --force`.
@@ -25,11 +25,12 @@ NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **fro
 
 ## Điểm chính bản hiện tại
 
-- **Production rollout governance v3.21**: proposal production có SHA-256 chống sửa ngoài workflow, chỉ cho một proposal `PENDING`, hết TTL được persist thành `EXPIRED`, hỗ trợ `APPROVE / REJECT / CANCEL` và health preflight trước khi apply.
-- **Recovery evidence verifier v3.21**: `npm run recovery:evidence:verify` tự tính lại SHA-256, public-key fingerprint và Ed25519 signature; API chặn download audit bundle nếu integrity verification không PASS.
-- **Remediation escalation v3.21**: acknowledge/snooze theo fingerprint của tập SLA breach, breach mới tự vô hiệu ack; retry exponential backoff và escalation level L1/L2/L3 theo tuổi breach.
-- **Grouped verification v3.21**: `npm run verify` cho local gate; `npm run verify:full` chạy Docker preflight → backup → build/up → migration → Runtime E2E → recovery drill/PITR → evidence generate + verify → Browser E2E.
-- **Database**: v3.21.0 không thêm migration; tiếp tục **23 migrations** và tương thích `.env` v3.20 nhờ safe defaults cho biến mới.
+- **Production rollout governance v3.23**: giữ proposal/envelope/decision receipt SHA-256 của v3.22 và thêm tamper-evident **decision receipt hash chain**; chain sai sequence/previous hash/entry SHA hoặc metadata head/length sẽ fail-closed trước thao tác production tiếp theo.
+- **Recovery evidence v3.23**: trusted-key pinning + key rotation của v3.22 được bổ sung **revoked signing-key denylist**; key đã revoke luôn bị từ chối dù vẫn còn trong trust store/current signing key.
+- **Ops Dashboard v3.23**: hiển thị receipt-chain PASS/FAIL, chain length, recovery trust anchor và revoked-key policy; vẫn giữ acknowledgement/retry/escalation remediation.
+- **Grouped verification v3.23**: `npm run verify` chạy local security/test/typecheck/build; `npm run verify:full` chạy Docker preflight → backup → build/up → migration → Runtime E2E → recovery drill/PITR → evidence generate + verify → Browser E2E.
+- **UI dark native controls**: giữ fix v3.22 cho `select`, `option/optgroup`, `date`, `time`, `datetime-local`, `month`, `week` trên Chromium/Brave/Edge.
+- **Database**: v3.23.0 không thêm migration; tiếp tục **23 migrations** và tương thích `.env` v3.22 nhờ safe defaults cho biến mới.
 
 - **Recovery/PITR v3.18**: giữ readiness RPO/RTO và logical drill v3.17; bổ sung target-time PITR rehearsal opt-in trên restore container/volume cô lập, chỉ báo `pitr_restore_exercised=true` khi recovery target được xác minh thật.
 - **Signed desired-state fail-closed**: server ký payload bằng Ed25519, agent verify signature + SPKI fingerprint + tuổi chữ ký; thiếu key thì HOLD/SIGNING_REQUIRED, không áp dụng rollout. Remote code execution luôn OFF.
@@ -1612,11 +1613,22 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 
 ## v3.22.0 — 06/09/2026
 
+- **Hotfix dark native dropdown/picker**: rà soát toàn bộ frontend và áp dụng `color-scheme: dark` cho native `select`, `option/optgroup`, `date`, `time`, `datetime-local`, `month`/`week`. Menu trạng thái, lịch chọn ngày, bộ chọn giờ và lịch Ops/Admin không còn bật nền trắng lệch theme trên Chromium/Brave/Edge; thêm fallback nền tối cho `option` trên Windows.
+
 - Recovery evidence v3.22 thêm **trusted-key pinning**: public key nằm trong bundle chỉ là dữ liệu kiểm tra chữ ký, không tự được xem là trust anchor. API/CLI đối chiếu `key_id + SHA-256 fingerprint` với current signing key hoặc `SYSTEM_RECOVERY_EVIDENCE_TRUSTED_KEYS_JSON`; signed bundle dùng key lạ bị fail-closed khi export.
 - `recovery:evidence` và `recovery:evidence:verify` tự đọc `.env` ở project root nếu biến chưa có trong process, nên private key/trust store cấu hình trong `.env` hoạt động trực tiếp khi chạy grouped verify.
 - Key rotation giữ được khả năng verify bundle cũ bằng trust store nhiều `key_id`; `recovery:evidence:keygen` in thêm cấu hình trusted fingerprint gợi ý nhưng không ghi private key ra file.
 - Production rollout v3.22 thêm **immutable proposal envelope SHA-256** bảo vệ ID/TTL/proposer/base revision/payload/diff và **decision receipt SHA-256** cho APPLIED/REJECTED/CANCELLED/EXPIRED. Approve fail-closed nếu envelope bị sửa ngoài workflow.
 - Ops Dashboard hiển thị proposal SHA/envelope/decision receipt và recovery trust-anchor state; remote code execution tiếp tục OFF.
 - Current scripts/CI/Health/OpenAPI chuyển sang v3.22.0; vẫn giữ toàn bộ script v3.21 làm historical regression. Không thêm migration; tổng số migration vẫn **23**.
+
+## v3.23.0 — 06/09/2026
+
+- Giữ toàn bộ **dark native dropdown/picker fix** của v3.22.0 cho `select/date/time/datetime-local/month/week` trên Chromium/Brave/Edge.
+- Production probe rollout thêm **tamper-evident decision receipt hash chain**. Mỗi quyết định `APPLIED/REJECTED/CANCELLED/EXPIRED` nối `decision_receipt_sha256` với hash entry trước, lưu tối đa `SYSTEM_SLO_PROBE_ROLLOUT_RECEIPT_HISTORY_LIMIT` (mặc định 100, giới hạn 20–500). Chain sai sequence/previous hash/entry SHA-256 sẽ **fail-closed**, chặn tạo/approve/reject/cancel proposal mới để không che khuất lịch sử bị sửa.
+- Ops runtime/UI hiển thị `receipt_chain_valid`, số receipt và chain head SHA-256; chain chỉ nhằm phát hiện sửa/xóa/reorder trong lịch sử vận hành, không thay thế external signing/immutable storage. Remote code execution tiếp tục **OFF**.
+- Recovery evidence thêm **revoked signing-key denylist** qua `SYSTEM_RECOVERY_EVIDENCE_REVOKED_KEYS_JSON`. Fingerprint đã revoke luôn bị từ chối kể cả vẫn nằm trong trusted-key store/current signing key; audit bundle export tiếp tục fail-closed.
+- CLI `npm run recovery:evidence:verify` kiểm tra thêm revoked-key policy và báo `Revoked signing key` khi gặp key đã thu hồi. Generator v3.23 ghi rõ `revoked_key_fail_closed=true` trong manifest và vẫn tự đọc `.env`.
+- Current scripts/CI/Health/OpenAPI chuyển sang v3.23.0; giữ toàn bộ v3.22 scripts làm historical regression. Không thêm migration; tổng số migration vẫn **23**. `.env` v3.22 vẫn chạy vì receipt history/revocation đều có safe default.
 
 # Lộ trình tiếp theo

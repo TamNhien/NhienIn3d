@@ -5,19 +5,19 @@ const read = (p) => readFileSync(p, "utf8");
 
 test("v3.20.0 dong bo current version scripts CI va grouped verify", () => {
   const pkg = JSON.parse(read("package.json"));
-  assert.equal(read("VERSION").trim(), "3.22.0");
-  assert.equal(pkg.version, "3.22.0");
-  assert.equal(JSON.parse(read("apps/api/package.json")).version, "3.22.0");
-  assert.equal(JSON.parse(read("apps/web/package.json")).version, "3.22.0");
-  assert.equal(pkg.scripts.verify, "npm run verify:v322");
-  assert.equal(pkg.scripts["verify:full"], "npm run verify:full:v322");
-  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3220.mjs");
-  assert.match(pkg.scripts["recovery:pitr"], /recovery-pitr-drill-v3220\.ps1/);
-  assert.match(read(".github/workflows/ci.yml"), /e2e-runtime-v3220\.ps1/);
-  assert.match(read("apps/api/src/suc-khoe/suc-khoe.controller.ts"), /v3\.22\.0/);
-  assert.match(read("apps/api/src/main.ts"), /setVersion\("3\.22\.0"\)/);
+  assert.equal(read("VERSION").trim(), "3.23.0");
+  assert.equal(pkg.version, "3.23.0");
+  assert.equal(JSON.parse(read("apps/api/package.json")).version, "3.23.0");
+  assert.equal(JSON.parse(read("apps/web/package.json")).version, "3.23.0");
+  assert.equal(pkg.scripts.verify, "npm run verify:v323");
+  assert.equal(pkg.scripts["verify:full"], "npm run verify:full:v323");
+  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3230.mjs");
+  assert.match(pkg.scripts["recovery:pitr"], /recovery-pitr-drill-v3230\.ps1/);
+  assert.match(read(".github/workflows/ci.yml"), /e2e-runtime-v3230\.ps1/);
+  assert.match(read("apps/api/src/suc-khoe/suc-khoe.controller.ts"), /v3\.23\.0/);
+  assert.match(read("apps/api/src/main.ts"), /setVersion\("3\.23\.0"\)/);
   const compose = read("docker-compose.yml");
-  assert.match(compose, /SYSTEM_SLO_PROBE_DESIRED_TARGET_VERSION: \${SYSTEM_SLO_PROBE_DESIRED_TARGET_VERSION:-3\.22\.0}/);
+  assert.match(compose, /SYSTEM_SLO_PROBE_DESIRED_TARGET_VERSION: \${SYSTEM_SLO_PROBE_DESIRED_TARGET_VERSION:-3\.23\.0}/);
   assert.match(compose, /SYSTEM_OPS_SERVICE_RUNBOOKS_JSON: \${SYSTEM_OPS_SERVICE_RUNBOOKS_JSON:-}/);
 });
 

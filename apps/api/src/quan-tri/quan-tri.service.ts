@@ -167,6 +167,16 @@ type ProbeRolloutProposalV3200 = {
 };
 
 
+type ProbeRolloutReceiptChainEntryV3230 = {
+  sequence: number;
+  proposal_id: string;
+  status: "APPLIED" | "EXPIRED" | "CANCELLED" | "REJECTED";
+  decision_receipt_sha256: string;
+  decided_at: string;
+  previous_entry_sha256: string | null;
+  entry_sha256: string;
+};
+
 type WebhookSendResultV390 = {
   da_gui: boolean;
   ly_do?: string;
@@ -226,7 +236,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     setTimeout(cleanupOps, 120_000).unref();
     this.bo_hen_ops_retention = setInterval(cleanupOps, 6 * 60 * 60_000);
     this.bo_hen_ops_retention.unref();
-    this.logger.log(`Ops v3.22.0 schedulers: DLQ ${dlqPolicy.chu_ky_phut}m, metrics ${opsPolicy.refresh_phut}m, retention ${opsPolicy.retention_days}d.`);
+    this.logger.log(`Ops v3.23.0 schedulers: DLQ ${dlqPolicy.chu_ky_phut}m, metrics ${opsPolicy.refresh_phut}m, retention ${opsPolicy.retention_days}d.`);
 
     const healthGate = this.probe_health_gate_config_v3180();
     if (healthGate.enabled) {
@@ -1149,7 +1159,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const trang_thai = !database.ket_noi ? "LOI" : (van_de.length ? "CANH_BAO" : "TOT");
     const ket_qua = {
       trang_thai,
-      phien_ban: "3.22.0",
+      phien_ban: "3.23.0",
       thoi_gian: new Date().toISOString(),
       api: { uptime_giay: Math.floor(process.uptime()), node: process.version, pid: process.pid, rss_bytes: bo_nho.rss, heap_used_bytes: bo_nho.heapUsed, heap_total_bytes: bo_nho.heapTotal },
       database,
@@ -3040,7 +3050,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const canary = (process.env.SYSTEM_SLO_PROBE_DESIRED_CANARY_AGENTS || "").split(",").map(x => x.trim()).filter(x => /^[A-Za-z0-9._-]{2,80}$/.test(x)).slice(0, 50);
     return {
       revision: 0,
-      target_version: (process.env.SYSTEM_SLO_PROBE_DESIRED_TARGET_VERSION || "3.18.0").trim(),
+      target_version: (process.env.SYSTEM_SLO_PROBE_DESIRED_TARGET_VERSION || "3.23.0").trim(),
       interval_seconds: Math.max(30, Math.min(3600, intervalRaw)),
       rollout_percent: Math.max(0, Math.min(100, rolloutRaw)),
       canary_agents: [...new Set(canary)],
@@ -3928,6 +3938,169 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     return await this.lay_probe_rollout_proposal_v3220();
   }
 
+  private probe_rollout_receipt_history_limit_v3230() {
+    const raw = Number.parseInt(process.env.SYSTEM_SLO_PROBE_ROLLOUT_RECEIPT_HISTORY_LIMIT || "100", 10);
+    return Number.isFinite(raw) ? Math.max(20, Math.min(500, raw)) : 100;
+  }
+
+  private probe_rollout_receipt_entry_sha256_v3230(entry: Omit<ProbeRolloutReceiptChainEntryV3230, "entry_sha256">) {
+    return createHash("sha256").update(this.json_on_dinh_v3110(entry), "utf8").digest("hex");
+  }
+
+  private normalize_probe_rollout_receipt_chain_v3230(raw: unknown): ProbeRolloutReceiptChainEntryV3230[] {
+    if (!Array.isArray(raw)) return [];
+    const out: ProbeRolloutReceiptChainEntryV3230[] = [];
+    for (const item of raw) {
+      if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+      const obj = item as Record<string, unknown>;
+      const statusRaw = String(obj.status || "").toUpperCase();
+      if (!["APPLIED", "EXPIRED", "CANCELLED", "REJECTED"].includes(statusRaw)) continue;
+      const receipt = String(obj.decision_receipt_sha256 || "").trim().toLowerCase();
+      const hash = String(obj.entry_sha256 || "").trim().toLowerCase();
+      const previous = typeof obj.previous_entry_sha256 === "string" ? obj.previous_entry_sha256.trim().toLowerCase() : null;
+      if (!/^[a-f0-9]{64}$/.test(receipt) || !/^[a-f0-9]{64}$/.test(hash) || (previous && !/^[a-f0-9]{64}$/.test(previous))) continue;
+      out.push({
+        sequence: Math.max(1, Math.floor(Number(obj.sequence || 0))),
+        proposal_id: String(obj.proposal_id || "").trim().slice(0, 80),
+        status: statusRaw as ProbeRolloutReceiptChainEntryV3230["status"],
+        decision_receipt_sha256: receipt,
+        decided_at: String(obj.decided_at || ""),
+        previous_entry_sha256: previous,
+        entry_sha256: hash,
+      });
+    }
+    return out;
+  }
+
+  private probe_rollout_receipt_chain_verify_v3230(entries: ProbeRolloutReceiptChainEntryV3230[]) {
+    let previous: string | null = null;
+    for (let index = 0; index < entries.length; index += 1) {
+      const item = entries[index];
+      const expectedSequence = index + 1;
+      const payload = {
+        sequence: item.sequence,
+        proposal_id: item.proposal_id,
+        status: item.status,
+        decision_receipt_sha256: item.decision_receipt_sha256,
+        decided_at: item.decided_at,
+        previous_entry_sha256: item.previous_entry_sha256,
+      } satisfies Omit<ProbeRolloutReceiptChainEntryV3230, "entry_sha256">;
+      const expectedHash = this.probe_rollout_receipt_entry_sha256_v3230(payload);
+      if (item.sequence !== expectedSequence) return { valid: false, reason: "SEQUENCE_GAP", invalid_sequence: item.sequence, head_sha256: entries[entries.length - 1]?.entry_sha256 || null };
+      if (item.previous_entry_sha256 !== previous) return { valid: false, reason: "PREVIOUS_HASH_MISMATCH", invalid_sequence: item.sequence, head_sha256: entries[entries.length - 1]?.entry_sha256 || null };
+      if (item.entry_sha256 !== expectedHash) return { valid: false, reason: "ENTRY_SHA256_MISMATCH", invalid_sequence: item.sequence, head_sha256: entries[entries.length - 1]?.entry_sha256 || null };
+      previous = item.entry_sha256;
+    }
+    return { valid: true, reason: entries.length ? "VERIFIED" : "EMPTY", invalid_sequence: null, head_sha256: previous };
+  }
+
+  async lay_probe_rollout_receipt_chain_v3230() {
+    const row = await this.db.cauHinhHeThong.findUnique({ where: { khoa: "PROBE_ROLLOUT_RECEIPT_CHAIN_V3230" } });
+    const obj = row?.gia_tri && typeof row.gia_tri === "object" && !Array.isArray(row.gia_tri) ? row.gia_tri as Record<string, unknown> : {};
+    const rawEntries = Array.isArray(obj.entries) ? obj.entries : [];
+    const entries = this.normalize_probe_rollout_receipt_chain_v3230(rawEntries);
+    let verification = this.probe_rollout_receipt_chain_verify_v3230(entries);
+    const storedLength = Number(obj.chain_length);
+    const storedHead = typeof obj.head_sha256 === "string" ? obj.head_sha256.trim().toLowerCase() : null;
+    if (verification.valid && rawEntries.length !== entries.length) verification = { valid: false, reason: "MALFORMED_ENTRY", invalid_sequence: null, head_sha256: verification.head_sha256 };
+    if (verification.valid && Number.isFinite(storedLength) && storedLength >= 0 && storedLength !== entries.length) verification = { valid: false, reason: "STORED_LENGTH_MISMATCH", invalid_sequence: null, head_sha256: verification.head_sha256 };
+    if (verification.valid && storedHead && storedHead !== verification.head_sha256) verification = { valid: false, reason: "STORED_HEAD_MISMATCH", invalid_sequence: null, head_sha256: verification.head_sha256 };
+    return {
+      phien_ban: "3.23.0",
+      receipt_chain_supported: true as const,
+      receipt_chain_valid: verification.valid,
+      receipt_chain_reason: verification.reason,
+      receipt_chain_invalid_sequence: verification.invalid_sequence,
+      receipt_chain_length: entries.length,
+      receipt_chain_head_sha256: verification.head_sha256,
+      receipt_chain_history_limit: this.probe_rollout_receipt_history_limit_v3230(),
+      entries,
+      secret_values_exposed: false as const,
+    };
+  }
+
+  private async append_probe_rollout_receipt_chain_v3230(proposal: ProbeRolloutProposalV3200) {
+    if (!["APPLIED", "EXPIRED", "CANCELLED", "REJECTED"].includes(proposal.status) || !proposal.decision_receipt_sha256) return this.lay_probe_rollout_receipt_chain_v3230();
+    const current = await this.lay_probe_rollout_receipt_chain_v3230();
+    if (!current.receipt_chain_valid) throw new ConflictException(`Rollout decision receipt chain không hợp lệ (${current.receipt_chain_reason}); chặn ghi nối tiếp để tránh che khuất lịch sử bị sửa`);
+    const sameProposal = current.entries.find(x => x.proposal_id === proposal.id);
+    if (sameProposal) {
+      if (sameProposal.decision_receipt_sha256 !== proposal.decision_receipt_sha256) throw new ConflictException("Rollout proposal đã có receipt khác trong chain; từ chối ghi đè lịch sử quyết định");
+      return current;
+    }
+    const decidedAt = proposal.status === "APPLIED" ? proposal.approved_at : proposal.status === "REJECTED" ? proposal.rejected_at : proposal.status === "CANCELLED" ? proposal.cancelled_at : proposal.expires_at;
+    const base = {
+      sequence: current.entries.length + 1,
+      proposal_id: proposal.id,
+      status: proposal.status as ProbeRolloutReceiptChainEntryV3230["status"],
+      decision_receipt_sha256: proposal.decision_receipt_sha256,
+      decided_at: decidedAt || new Date().toISOString(),
+      previous_entry_sha256: current.receipt_chain_head_sha256,
+    } satisfies Omit<ProbeRolloutReceiptChainEntryV3230, "entry_sha256">;
+    const entry: ProbeRolloutReceiptChainEntryV3230 = { ...base, entry_sha256: this.probe_rollout_receipt_entry_sha256_v3230(base) };
+    const retained = [...current.entries, entry].slice(-this.probe_rollout_receipt_history_limit_v3230());
+    const normalized: ProbeRolloutReceiptChainEntryV3230[] = [];
+    for (let index = 0; index < retained.length; index += 1) {
+      const item = retained[index];
+      const previous = normalized.length ? normalized[normalized.length - 1].entry_sha256 : null;
+      const payload = { sequence: index + 1, proposal_id: item.proposal_id, status: item.status, decision_receipt_sha256: item.decision_receipt_sha256, decided_at: item.decided_at, previous_entry_sha256: previous } satisfies Omit<ProbeRolloutReceiptChainEntryV3230, "entry_sha256">;
+      normalized.push({ ...payload, entry_sha256: this.probe_rollout_receipt_entry_sha256_v3230(payload) });
+    }
+    await this.db.cauHinhHeThong.upsert({
+      where: { khoa: "PROBE_ROLLOUT_RECEIPT_CHAIN_V3230" },
+      create: { khoa: "PROBE_ROLLOUT_RECEIPT_CHAIN_V3230", gia_tri: this.chuan_hoa_json_object({ entries: normalized, chain_length: normalized.length, head_sha256: normalized[normalized.length - 1]?.entry_sha256 || null, updated_at: new Date().toISOString() }) },
+      update: { gia_tri: this.chuan_hoa_json_object({ entries: normalized, chain_length: normalized.length, head_sha256: normalized[normalized.length - 1]?.entry_sha256 || null, updated_at: new Date().toISOString() }) },
+    });
+    await this.ghi_lich_su_van_hanh("PROBE_ROLLOUT_APPROVAL", "RECEIPT_CHAIN_APPENDED", `Đã nối decision receipt vào hash chain #${normalized.length}`, { proposal_id: proposal.id, status: proposal.status, decision_receipt_sha256: proposal.decision_receipt_sha256, receipt_chain_entry_sha256: normalized[normalized.length - 1]?.entry_sha256 || null, previous_entry_sha256: normalized[normalized.length - 1]?.previous_entry_sha256 || null, remote_code_execution: false });
+    return this.lay_probe_rollout_receipt_chain_v3230();
+  }
+
+  private probe_rollout_approval_config_v3230() {
+    const base = this.probe_rollout_approval_config_v3220();
+    return { ...base, phien_ban: "3.23.0", decision_receipt_hash_chain: true as const, decision_receipt_chain_fail_closed: true as const, receipt_history_limit: this.probe_rollout_receipt_history_limit_v3230() };
+  }
+
+  async lay_probe_rollout_proposal_v3230() {
+    const base = await this.lay_probe_rollout_proposal_v3220();
+    if (base.proposal && ["APPLIED", "EXPIRED", "CANCELLED", "REJECTED"].includes(base.proposal.status) && base.proposal.decision_receipt_sha256) await this.append_probe_rollout_receipt_chain_v3230(base.proposal);
+    const chain = await this.lay_probe_rollout_receipt_chain_v3230();
+    return { ...base, ...this.probe_rollout_approval_config_v3230(), receipt_chain_valid: chain.receipt_chain_valid, receipt_chain_reason: chain.receipt_chain_reason, receipt_chain_length: chain.receipt_chain_length, receipt_chain_head_sha256: chain.receipt_chain_head_sha256, receipt_chain_history_limit: chain.receipt_chain_history_limit, secret_values_exposed: false as const };
+  }
+
+  async cap_nhat_probe_desired_state_v3230(actor: NguoiDungXacThuc, dto: { target_version: string; interval_seconds: number; rollout_percent: number; canary_agents: string[]; paused: boolean; note?: string }) {
+    const chain = await this.lay_probe_rollout_receipt_chain_v3230();
+    if (!chain.receipt_chain_valid) throw new ConflictException(`Rollout decision receipt chain không hợp lệ (${chain.receipt_chain_reason}); chặn tạo proposal mới`);
+    const result = await this.cap_nhat_probe_desired_state_v3220(actor, dto);
+    return { ...result, rollout_approval: await this.lay_probe_rollout_proposal_v3230() };
+  }
+
+  async approve_probe_rollout_v3230(actor: NguoiDungXacThuc, proposalIdRaw: string, note?: string) {
+    const chain = await this.lay_probe_rollout_receipt_chain_v3230();
+    if (!chain.receipt_chain_valid) throw new ConflictException(`Rollout decision receipt chain không hợp lệ (${chain.receipt_chain_reason}); chặn approve fail-closed`);
+    await this.approve_probe_rollout_v3220(actor, proposalIdRaw, note);
+    const current = await this.lay_probe_rollout_proposal_v3220();
+    if (current.proposal) await this.append_probe_rollout_receipt_chain_v3230(current.proposal);
+    return this.lay_probe_rollout_proposal_v3230();
+  }
+
+  async reject_probe_rollout_v3230(actor: NguoiDungXacThuc, proposalIdRaw: string, note?: string) {
+    const chain = await this.lay_probe_rollout_receipt_chain_v3230();
+    if (!chain.receipt_chain_valid) throw new ConflictException(`Rollout decision receipt chain không hợp lệ (${chain.receipt_chain_reason}); chặn reject fail-closed`);
+    await this.reject_probe_rollout_v3220(actor, proposalIdRaw, note);
+    const current = await this.lay_probe_rollout_proposal_v3220();
+    if (current.proposal) await this.append_probe_rollout_receipt_chain_v3230(current.proposal);
+    return this.lay_probe_rollout_proposal_v3230();
+  }
+
+  async cancel_probe_rollout_v3230(actor: NguoiDungXacThuc, proposalIdRaw: string, note?: string) {
+    const chain = await this.lay_probe_rollout_receipt_chain_v3230();
+    if (!chain.receipt_chain_valid) throw new ConflictException(`Rollout decision receipt chain không hợp lệ (${chain.receipt_chain_reason}); chặn cancel fail-closed`);
+    await this.cancel_probe_rollout_v3220(actor, proposalIdRaw, note);
+    const current = await this.lay_probe_rollout_proposal_v3220();
+    if (current.proposal) await this.append_probe_rollout_receipt_chain_v3230(current.proposal);
+    return this.lay_probe_rollout_proposal_v3230();
+  }
+
   private async recovery_readiness_v3200() {
     const base = await this.recovery_readiness_v3190();
     const backupDir = process.env.SYSTEM_BACKUP_DIR?.trim() || join(process.cwd(), "..", "..", "backups");
@@ -4181,6 +4354,106 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     return { ten_file: `recovery-evidence-audit-bundle-v3.22.0-${new Date().toISOString().slice(0, 10)}.json`, mime_type: "application/json", base64: Buffer.from(raw, "utf8").toString("base64"), manifest: parsed.manifest || {}, integrity: parsed.integrity || {}, signature: parsed.signature || {}, verification, secret_values_exposed: false as const };
   }
 
+  private recovery_evidence_revocation_config_v3230() {
+    const revoked = new Map<string, Set<string>>();
+    const add = (keyIdRaw: unknown, fingerprintRaw: unknown) => {
+      const keyId = String(keyIdRaw || "").trim().slice(0, 80);
+      const fingerprint = String(fingerprintRaw || "").trim().toLowerCase();
+      if (!keyId || !/^[a-f0-9]{64}$/.test(fingerprint)) return;
+      if (!revoked.has(keyId)) revoked.set(keyId, new Set<string>());
+      revoked.get(keyId)!.add(fingerprint);
+    };
+    try {
+      const parsed = JSON.parse(process.env.SYSTEM_RECOVERY_EVIDENCE_REVOKED_KEYS_JSON?.trim() || "{}") as Record<string, unknown>;
+      for (const [keyId, value] of Object.entries(parsed)) {
+        if (Array.isArray(value)) for (const fp of value) add(keyId, fp); else add(keyId, value);
+      }
+    } catch {}
+    return {
+      revoked,
+      revoked_key_ids: [...revoked.keys()].sort(),
+      revoked_fingerprints: [...revoked.values()].reduce((n, set) => n + set.size, 0),
+      revocation_configured: revoked.size > 0,
+      secret_values_exposed: false as const,
+    };
+  }
+
+  private verify_recovery_evidence_bundle_v3230(bundle: Record<string, unknown>) {
+    const base = this.verify_recovery_evidence_bundle_v3220(bundle);
+    const config = this.recovery_evidence_revocation_config_v3230();
+    const signature = bundle.signature && typeof bundle.signature === "object" && !Array.isArray(bundle.signature) ? bundle.signature as Record<string, unknown> : {};
+    const keyId = typeof signature.key_id === "string" ? signature.key_id.trim().slice(0, 80) : "";
+    const fingerprint = typeof signature.public_key_fingerprint_sha256 === "string" ? signature.public_key_fingerprint_sha256.trim().toLowerCase() : "";
+    const keyRevoked = base.signature_configured && (!!config.revoked.get(keyId)?.has(fingerprint) || !!config.revoked.get("*")?.has(fingerprint));
+    const overall = base.overall_verified && !keyRevoked;
+    return {
+      ...base,
+      key_revoked: keyRevoked,
+      revocation_configured: config.revocation_configured,
+      revoked_key_ids: config.revoked_key_ids,
+      revoked_fingerprints: config.revoked_fingerprints,
+      key_trusted: keyRevoked ? false : base.key_trusted,
+      trust_source: keyRevoked ? "REVOKED" : base.trust_source,
+      overall_verified: overall,
+      reason: keyRevoked ? "REVOKED_SIGNING_KEY" : base.reason,
+      revocation_fail_closed: true as const,
+      private_key_required: false as const,
+      secret_values_exposed: false as const,
+    };
+  }
+
+  private async recovery_readiness_v3230() {
+    const base = await this.recovery_readiness_v3220();
+    const backupDir = process.env.SYSTEM_BACKUP_DIR?.trim() || join(process.cwd(), "..", "..", "backups");
+    let bundle: Record<string, unknown> | null = null;
+    let source = "recovery-evidence-bundle-v3230.json";
+    try { bundle = JSON.parse(await readFile(join(backupDir, source), "utf8")) as Record<string, unknown>; }
+    catch {
+      source = "recovery-evidence-bundle-v3220.json";
+      try { bundle = JSON.parse(await readFile(join(backupDir, source), "utf8")) as Record<string, unknown>; } catch {}
+    }
+    const verification = bundle ? this.verify_recovery_evidence_bundle_v3230(bundle) : null;
+    const manifest = bundle?.manifest && typeof bundle.manifest === "object" && !Array.isArray(bundle.manifest) ? bundle.manifest as Record<string, unknown> : {};
+    return {
+      ...base,
+      evidence_bundle_file: `backups/${source}`,
+      evidence_bundle_version: typeof manifest.version === "string" ? manifest.version : base.evidence_bundle_version,
+      evidence_current_version: manifest.version === "3.23.0",
+      evidence_verification: verification || base.evidence_verification,
+      evidence_key_revoked: verification?.key_revoked ?? false,
+      evidence_revocation_configured: verification?.revocation_configured ?? false,
+      evidence_revoked_key_ids: verification?.revoked_key_ids ?? [],
+      evidence_revoked_fingerprints: verification?.revoked_fingerprints ?? 0,
+      evidence_key_trusted: verification?.key_trusted ?? base.evidence_key_trusted,
+      evidence_trust_source: verification?.trust_source ?? base.evidence_trust_source,
+      audit_bundle_ready: !!bundle && verification?.overall_verified === true,
+      audit_bundle_revocation_fail_closed: true as const,
+      private_key_exposed: false as const,
+      secret_values_exposed: false as const,
+    };
+  }
+
+  async verify_recovery_evidence_v3230() {
+    const backupDir = process.env.SYSTEM_BACKUP_DIR?.trim() || join(process.cwd(), "..", "..", "backups");
+    const path = join(backupDir, "recovery-evidence-bundle-v3230.json");
+    let parsed: Record<string, unknown>;
+    try { parsed = JSON.parse(await readFile(path, "utf8")) as Record<string, unknown>; }
+    catch { throw new NotFoundException("Chưa có recovery evidence bundle v3.23.0; chạy npm run recovery:evidence trước"); }
+    const verification = this.verify_recovery_evidence_bundle_v3230(parsed);
+    return { phien_ban: "3.23.0", file: "backups/recovery-evidence-bundle-v3230.json", ...verification, secret_values_exposed: false as const };
+  }
+
+  async xuat_recovery_evidence_bundle_v3230() {
+    const backupDir = process.env.SYSTEM_BACKUP_DIR?.trim() || join(process.cwd(), "..", "..", "backups");
+    const path = join(backupDir, "recovery-evidence-bundle-v3230.json");
+    let raw: string; let parsed: Record<string, unknown>;
+    try { raw = await readFile(path, "utf8"); parsed = JSON.parse(raw) as Record<string, unknown>; }
+    catch { throw new NotFoundException("Chưa có recovery evidence bundle v3.23.0; chạy npm run recovery:evidence trước"); }
+    const verification = this.verify_recovery_evidence_bundle_v3230(parsed);
+    if (!verification.overall_verified) throw new ConflictException(`Recovery evidence bundle không qua trusted + revocation verification (${verification.reason}); không cho phép export audit bundle`);
+    return { ten_file: `recovery-evidence-audit-bundle-v3.23.0-${new Date().toISOString().slice(0, 10)}.json`, mime_type: "application/json", base64: Buffer.from(raw, "utf8").toString("base64"), manifest: parsed.manifest || {}, integrity: parsed.integrity || {}, signature: parsed.signature || {}, verification, secret_values_exposed: false as const };
+  }
+
   private remediation_sla_config_v3200() {
     const defaults: Record<"P1" | "P2" | "P3" | "P4", number> = { P1: 4, P2: 24, P3: 72, P4: 168 };
     let parsed: Record<string, unknown> = {};
@@ -4424,6 +4697,19 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     return { ...result, ten_file: result.ten_file.replace("v3.21.0", "v3.22.0") };
   }
 
+  async acknowledge_remediation_v3230(actor: NguoiDungXacThuc, serviceRaw: string, note?: string, snoozeHoursRaw?: number) {
+    return this.acknowledge_remediation_v3220(actor, serviceRaw, note, snoozeHoursRaw);
+  }
+
+  async kiem_tra_remediation_escalation_v3230(force = false) {
+    return this.kiem_tra_remediation_escalation_v3220(force);
+  }
+
+  async xuat_remediation_backlog_excel_v3230() {
+    const result = await this.xuat_remediation_backlog_excel_v3220();
+    return { ...result, ten_file: result.ten_file.replace("v3.22.0", "v3.23.0") };
+  }
+
   async trang_thai_ops_v3200() {
     const [base, rolloutApproval, recovery, remediation] = await Promise.all([this.trang_thai_ops_v3190(), this.lay_probe_rollout_proposal_v3200(), this.recovery_readiness_v3200(), this.postmortem_remediation_v3200()]);
     const fleet = base.probe_fleet as Record<string, unknown> | undefined;
@@ -4441,6 +4727,12 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const [base, rolloutApproval, recovery, remediation] = await Promise.all([this.trang_thai_ops_v3210(), this.lay_probe_rollout_proposal_v3220(), this.recovery_readiness_v3220(), this.postmortem_remediation_v3210()]);
     const fleet = base.probe_fleet as Record<string, unknown> | undefined;
     return { ...base, phien_ban: "3.22.0", probe_fleet: fleet ? { ...fleet, phien_ban: "3.22.0" } : base.probe_fleet, multi_region_quorum: { ...base.multi_region_quorum, phien_ban: "3.22.0" }, rollout_approval: rolloutApproval, database_recovery: recovery, remediation_backlog: remediation };
+  }
+
+  async trang_thai_ops_v3230() {
+    const [base, rolloutApproval, recovery, remediation] = await Promise.all([this.trang_thai_ops_v3220(), this.lay_probe_rollout_proposal_v3230(), this.recovery_readiness_v3230(), this.postmortem_remediation_v3210()]);
+    const fleet = base.probe_fleet as Record<string, unknown> | undefined;
+    return { ...base, phien_ban: "3.23.0", probe_fleet: fleet ? { ...fleet, phien_ban: "3.23.0" } : base.probe_fleet, multi_region_quorum: { ...base.multi_region_quorum, phien_ban: "3.23.0" }, rollout_approval: rolloutApproval, database_recovery: recovery, remediation_backlog: remediation };
   }
 
   async trang_thai_ops_v3160() {

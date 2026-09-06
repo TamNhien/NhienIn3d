@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 :root{
+  color-scheme:dark;
   --bg:#080a10;
   --card:#10131c;
   --line:#232838;
@@ -11,7 +12,7 @@
 }
 
 *{box-sizing:border-box}
-html{scroll-behavior:smooth}
+html{scroll-behavior:smooth;color-scheme:dark}
 body{
   margin:0;
   min-height:100vh;
@@ -33,6 +34,39 @@ body{
   transition:background-image .25s ease;
 }
 button,input,textarea,select{font:inherit}
+
+/* v3.22.0 hotfix - đồng bộ toàn bộ native dropdown/picker với dark UI trên Chromium/Brave/Edge.
+   color-scheme buộc popup hệ thống của select/date/time/datetime-local/month dùng palette tối;
+   option/optgroup là fallback cho menu select trên Windows. */
+select,
+option,
+optgroup,
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"],
+input[type="month"],
+input[type="week"]{
+  color-scheme:dark;
+}
+select option,select optgroup{
+  background-color:#0b1322;
+  color:#f8fafc;
+}
+select option:checked{
+  background-color:#312e81;
+  color:#fff;
+}
+select option:disabled{
+  color:#64748b;
+}
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+input[type="month"]::-webkit-calendar-picker-indicator,
+input[type="week"]::-webkit-calendar-picker-indicator{
+  opacity:.9;
+  cursor:pointer;
+}
 
 .nav{height:74px;display:flex;align-items:center;justify-content:space-between;max-width:1240px;margin:auto;padding:0 24px;border-bottom:1px solid rgba(255,255,255,.08)}
 .brand{font-weight:850;font-size:22px;letter-spacing:-.8px;color:white;text-decoration:none}.brand span{color:var(--accent)}

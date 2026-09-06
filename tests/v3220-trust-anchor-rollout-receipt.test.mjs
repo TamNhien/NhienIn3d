@@ -12,12 +12,12 @@ test("v3.22.0 trusted recovery key rollout envelope decision receipt va current 
   const verifier = read("scripts/recovery-evidence-verify-v3220.mjs");
   const env = read(".env.example");
   const compose = read("docker-compose.yml");
-  assert.equal(read("VERSION").trim(), "3.22.0");
-  assert.equal(pkg.version, "3.22.0");
-  assert.equal(pkg.scripts.verify, "npm run verify:v322");
-  assert.equal(pkg.scripts["verify:full"], "npm run verify:full:v322");
-  assert.equal(pkg.scripts["recovery:evidence:verify"], "node scripts/recovery-evidence-verify-v3220.mjs");
-  assert.match(controller, /trang_thai_ops_v3220/);
+  assert.equal(read("VERSION").trim(), "3.23.0");
+  assert.equal(pkg.version, "3.23.0");
+  assert.equal(pkg.scripts.verify, "npm run verify:v323");
+  assert.equal(pkg.scripts["verify:full"], "npm run verify:full:v323");
+  assert.equal(pkg.scripts["recovery:evidence:verify"], "node scripts/recovery-evidence-verify-v3230.mjs");
+  assert.match(controller, /trang_thai_ops_v3230/);
   assert.match(service, /SYSTEM_RECOVERY_EVIDENCE_TRUSTED_KEYS_JSON/);
   assert.match(service, /SYSTEM_RECOVERY_EVIDENCE_REQUIRE_TRUSTED_KEY/);
   assert.match(service, /UNTRUSTED_SIGNING_KEY/);
@@ -35,4 +35,5 @@ test("v3.22.0 trusted recovery key rollout envelope decision receipt va current 
   assert.equal(readdirSync("apps/api/prisma/migrations", { withFileTypes: true }).filter((x) => x.isDirectory()).length, 23);
   assert.equal(existsSync("scripts/verify-v3210.ps1"), true);
   assert.equal(existsSync("scripts/verify-v3220.ps1"), true);
+  assert.equal(existsSync("scripts/verify-v3230.ps1"), true);
 });
