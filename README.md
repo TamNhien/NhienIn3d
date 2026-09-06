@@ -1,6 +1,6 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v3.23.0** — 06/09/2026
+> Phiên bản hiện tại: **v3.24.0** — 06/09/2026
 - **v3.18.0 · recovery governance**: thêm target-time PITR rehearsal opt-in trên restore cluster cô lập, health-gated probe canary có grace window + auto rollback, postmortem approval/action reminder và HTTPS service-runbook mapping.
 - **Ops UI compact**: badge `COMPLETE · DRAFT` được thu nhỏ, canh giữa cả ngang/dọc; approval status dùng cùng visual compact để không chiếm chiều cao panel.
 - **Security hotfix mysql2**: nâng root pin/override từ `mysql2@3.22.0` lên `mysql2@3.23.4`; security scanner yêu cầu `>=3.23.1` để vá GHSA-rgwj-5xj2-c3m3 (decompression-bomb DoS), giữ Prisma `7.10.0` và tuyệt đối không dùng `npm audit fix --force`.
@@ -1630,5 +1630,14 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 - Recovery evidence thêm **revoked signing-key denylist** qua `SYSTEM_RECOVERY_EVIDENCE_REVOKED_KEYS_JSON`. Fingerprint đã revoke luôn bị từ chối kể cả vẫn nằm trong trusted-key store/current signing key; audit bundle export tiếp tục fail-closed.
 - CLI `npm run recovery:evidence:verify` kiểm tra thêm revoked-key policy và báo `Revoked signing key` khi gặp key đã thu hồi. Generator v3.23 ghi rõ `revoked_key_fail_closed=true` trong manifest và vẫn tự đọc `.env`.
 - Current scripts/CI/Health/OpenAPI chuyển sang v3.23.0; giữ toàn bộ v3.22 scripts làm historical regression. Không thêm migration; tổng số migration vẫn **23**. `.env` v3.22 vẫn chạy vì receipt history/revocation đều có safe default.
+
+## v3.24.0 — 06/09/2026
+
+- Nâng an toàn **xếp ca nhân viên**: backend chặn mọi phân ca chồng giờ của cùng nhân viên trong cùng ngày khi tạo/sửa; hai ca chỉ chạm biên vẫn hợp lệ. Khi sửa khung giờ của mẫu ca, hệ thống rà toàn bộ phân công hiện có và fail-closed nếu giờ mới tạo xung đột.
+- Thêm API rà soát lịch sử `GET /quan-tri/phan-ca/xung-dot` để phát hiện dữ liệu chồng giờ đã tồn tại; giao diện Xếp ca hiển thị số cặp xung đột và đánh dấu các dòng liên quan để Admin xử lý.
+- Thêm **kế hoạch nhập kho đề xuất** theo tồn tối thiểu/tối đa. Hệ thống tính số lượng cần bổ sung tới mức mục tiêu, ưu tiên biến thể hết hàng và suy luận nhà cung cấp từ phiếu nhập gần nhất.
+- Kế hoạch nhập kho là **read-only**: không tự tạo đơn mua/phiếu nhập. Có panel riêng trong tab Kho và xuất Excel để đối soát/gửi nhà cung cấp; các biến thể chưa có lịch sử NCC hoặc NCC đã ngừng hoạt động được đánh dấu rõ.
+- Ops runtime công bố `admin_business_safety` cho overlap guard, conflict scan và replenishment planning; giữ nguyên tamper-evident rollout receipt chain, trusted/revoked recovery key policy và toàn bộ dark native dropdown/picker fix từ v3.22-v3.23.
+- Current scripts/CI/Health/OpenAPI chuyển sang v3.24.0; giữ script v3.23 làm historical regression. **Không thêm migration**, tổng số migration vẫn **23**; không cần thêm biến `.env` cho hai nâng cấp nghiệp vụ này.
 
 # Lộ trình tiếp theo

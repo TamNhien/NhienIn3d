@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 const read = (p) => readFileSync(new URL(p, import.meta.url), "utf8");
 
-test("v3.19.0 contract health gate PITR governance duoc giu khi current v3.23.0", () => {
+test("v3.19.0 contract health gate PITR governance duoc giu khi current v3.24.0", () => {
   const service = read("../src/quan-tri/quan-tri.service.ts");
   const controller = read("../src/quan-tri/quan-tri.controller.ts");
   const health = read("../src/suc-khoe/suc-khoe.controller.ts");
@@ -11,9 +11,9 @@ test("v3.19.0 contract health gate PITR governance duoc giu khi current v3.23.0"
   assert.match(service, /probe_health_gate/);
   assert.match(service, /pitr_target_time_supported/);
   assert.match(service, /service_runbooks/);
-  assert.match(controller, /trang_thai_ops_v3230/);
+  assert.match(controller, /trang_thai_ops_v3240/);
   assert.match(controller, /postmortem\/approval/);
-  assert.match(health, /v3\.23\.0/);
+  assert.match(health, /v3\.24\.0/);
 });
 
 test("v3.19.0 API health gate khong co remote code execution", () => {

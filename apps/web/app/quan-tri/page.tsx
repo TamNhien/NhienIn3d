@@ -19,6 +19,7 @@ import {
   PhieuNhapKhoAdmin,
   NhaCungCapAdmin,
   TrangThaiCanhBaoKhoEmailAdmin,
+  KeHoachNhapKhoAdmin,
   AdminSucKhoeHeThong,
   LichSuVanHanhAdmin,
   ThongKeVanHanhAdmin,
@@ -66,6 +67,8 @@ import {
   layPhieuNhapKhoAdmin,
   layChiTietPhieuNhapKhoAdmin,
   xuatExcelPhieuNhapKhoAdmin,
+  layGoiYNhapKhoAdmin,
+  xuatGoiYNhapKhoExcelAdmin,
   layNhaCungCapAdmin,
   taoNhaCungCapAdmin,
   capNhatNhaCungCapAdmin,
@@ -280,6 +283,7 @@ export default function QuanTriPage() {
   const [phieu_nhap_chi_tiet, setPhieuNhapChiTiet] = useState<PhieuNhapKhoAdmin | null>(null);
   const [nha_cung_cap_qt, setNhaCungCapQt] = useState<NhaCungCapAdmin[]>([]);
   const [canh_bao_kho_email, setCanhBaoKhoEmail] = useState<TrangThaiCanhBaoKhoEmailAdmin | null>(null);
+  const [ke_hoach_nhap, setKeHoachNhap] = useState<KeHoachNhapKhoAdmin | null>(null);
   const [nhap_lo_meta, setNhapLoMeta] = useState({ ma_lo: "", nha_cung_cap_id: "", ghi_chu: "" });
   const [kho_ly_do, setKhoLyDo] = useState<Record<string, string>>({});
   const [lich_su_kho_loc_loai, setLichSuKhoLocLoai] = useState("");
@@ -357,7 +361,7 @@ export default function QuanTriPage() {
     }
     setTaiKhoan(tk);
     if (!tk || tk.vai_tro !== "ADMIN") return;
-    const [tq, nd, nvData, caData, pcData, donData, spData, dmData, vlData, msData, chKhoData, lsKhoData, phieuNhapData, nccData, emailKhoData, dgData, nkPage, heThongData, vanHanhPage, thongKeVanHanh, cauHinhCanhBao, cauHinhSlo, baoTriHeThong, slaVanHanh, suCoVanHanh] = await Promise.all([layTongQuan(), layNguoiDung(), layNhanVien(), layCaLam(), layPhanCa(), layDonHangAdmin(), laySanPhamAdmin(), layDanhMucAdmin(), layVatLieuAdmin(), layMauSacAdmin(), layCauHinhKhoAdmin(), layLichSuKhoAdmin(), layPhieuNhapKhoAdmin(), layNhaCungCapAdmin(), layTrangThaiCanhBaoKhoEmailAdmin(), layDanhGiaAdmin(), layNhatKyCursorAdmin({ kich_thuoc: 25 }), laySucKhoeHeThongAdmin(), layLichSuVanHanhCursorAdmin({ kich_thuoc: 20 }), layThongKeVanHanhAdmin(), layCauHinhCanhBaoHeThongAdmin(), layCauHinhSloVanHanhAdmin(), layBaoTriHeThongAdmin(), laySlaVanHanhAdmin(90), layDanhSachSuCoVanHanhAdmin(20)]);
+    const [tq, nd, nvData, caData, pcData, donData, spData, dmData, vlData, msData, chKhoData, lsKhoData, phieuNhapData, nccData, emailKhoData, keHoachNhapData, dgData, nkPage, heThongData, vanHanhPage, thongKeVanHanh, cauHinhCanhBao, cauHinhSlo, baoTriHeThong, slaVanHanh, suCoVanHanh] = await Promise.all([layTongQuan(), layNguoiDung(), layNhanVien(), layCaLam(), layPhanCa(), layDonHangAdmin(), laySanPhamAdmin(), layDanhMucAdmin(), layVatLieuAdmin(), layMauSacAdmin(), layCauHinhKhoAdmin(), layLichSuKhoAdmin(), layPhieuNhapKhoAdmin(), layNhaCungCapAdmin(), layTrangThaiCanhBaoKhoEmailAdmin(), layGoiYNhapKhoAdmin(), layDanhGiaAdmin(), layNhatKyCursorAdmin({ kich_thuoc: 25 }), laySucKhoeHeThongAdmin(), layLichSuVanHanhCursorAdmin({ kich_thuoc: 20 }), layThongKeVanHanhAdmin(), layCauHinhCanhBaoHeThongAdmin(), layCauHinhSloVanHanhAdmin(), layBaoTriHeThongAdmin(), laySlaVanHanhAdmin(90), layDanhSachSuCoVanHanhAdmin(20)]);
     setTongQuan(tq);
     setNguoiDung(nd);
     setNhanVien(nvData);
@@ -373,6 +377,7 @@ export default function QuanTriPage() {
     setPhieuNhapKho(phieuNhapData);
     setNhaCungCapQt(nccData);
     setCanhBaoKhoEmail(emailKhoData);
+    setKeHoachNhap(keHoachNhapData);
     setDanhGiaQt(dgData);
     setSpMoi(x => ({ ...x, danh_muc_id: x.danh_muc_id || dmData[0]?.id || "" }));
     setBtMoi(x => ({ ...x, san_pham_id: x.san_pham_id || spData[0]?.id || "" }));
@@ -846,8 +851,8 @@ export default function QuanTriPage() {
         gia_chenh_lech: Number(bt.gia_chenh_lech) || 0, so_luong_ton: Number(bt.so_luong_ton), ton_toi_thieu: Math.max(0, Number(bt.ton_toi_thieu) || 0), ton_toi_da: Math.max(0, Number(bt.ton_toi_da) || 0), dang_hien_thi: bt.dang_hien_thi,
         ly_do_ton_kho: kho_ly_do[bien_the_id]?.trim() || "Điều chỉnh tồn kho"
       });
-      const [ds, tq, nk, lsKho] = await Promise.all([laySanPhamAdmin(), layTongQuan(), layNhatKyAdmin(), layLichSuKhoAdmin()]);
-      setSanPhamQt(ds); setTongQuan(tq); setNhatKy(nk); setLichSuKho(lsKho);
+      const [ds, tq, nk, lsKho, keHoachNhap] = await Promise.all([laySanPhamAdmin(), layTongQuan(), layNhatKyAdmin(), layLichSuKhoAdmin(), layGoiYNhapKhoAdmin()]);
+      setSanPhamQt(ds); setTongQuan(tq); setNhatKy(nk); setLichSuKho(lsKho); setKeHoachNhap(keHoachNhap);
       setKhoLyDo(x => ({ ...x, [bien_the_id]: "" }));
       const goiY = bt.ton_toi_da > bt.ton_toi_thieu && bt.so_luong_ton <= bt.ton_toi_thieu ? Math.max(0, bt.ton_toi_da - bt.so_luong_ton) : 0;
       setThongBao(`Đã lưu biến thể ${bt.ma_bien_the}: tồn ${bt.so_luong_ton}, định mức ${bt.ton_toi_thieu}–${bt.ton_toi_da || "∞"}${goiY ? ` · gợi ý nhập ${goiY}` : ""}.`);
@@ -863,6 +868,16 @@ export default function QuanTriPage() {
       setCauHinhKho(da_luu); setTongQuan(tq); setNhatKy(nk);
       setThongBao(`Đã cập nhật ngưỡng sắp hết hàng: ≤ ${da_luu.nguong_sap_het}.`);
     } catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể cập nhật cấu hình kho"); }
+    finally { setDangXuLy(null); }
+  }
+
+  async function taiKeHoachNhapKhoExcel() {
+    setDangXuLy("excel-goi-y-nhap"); setThongBao("");
+    try {
+      const kq = await xuatGoiYNhapKhoExcelAdmin();
+      taiTepBase64(kq);
+      setThongBao(`Đã xuất ${kq.ten_file}. Kế hoạch chỉ là đề xuất đọc, không tự tạo phiếu nhập.`);
+    } catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể xuất kế hoạch nhập kho"); }
     finally { setDangXuLy(null); }
   }
 
@@ -900,8 +915,8 @@ export default function QuanTriPage() {
         ghi_chu: nhap_lo_meta.ghi_chu.trim() || undefined,
         dong: import_kho.dong.map(x => ({ ma_bien_the: x.ma_bien_the, so_luong_nhap: x.so_luong_nhap, ly_do: x.ly_do || "Nhập kho theo lô" }))
       });
-      const [sp, tq, ls, pn, ncc, nk, emailState] = await Promise.all([laySanPhamAdmin(), layTongQuan(), layLichSuKhoAdmin(), layPhieuNhapKhoAdmin(), layNhaCungCapAdmin(), layNhatKyAdmin(), layTrangThaiCanhBaoKhoEmailAdmin()]);
-      setSanPhamQt(sp); setTongQuan(tq); setLichSuKho(ls); setPhieuNhapKho(pn); setNhaCungCapQt(ncc); setNhatKy(nk); setCanhBaoKhoEmail(emailState);
+      const [sp, tq, ls, pn, ncc, nk, emailState, keHoachNhap] = await Promise.all([laySanPhamAdmin(), layTongQuan(), layLichSuKhoAdmin(), layPhieuNhapKhoAdmin(), layNhaCungCapAdmin(), layNhatKyAdmin(), layTrangThaiCanhBaoKhoEmailAdmin(), layGoiYNhapKhoAdmin()]);
+      setSanPhamQt(sp); setTongQuan(tq); setLichSuKho(ls); setPhieuNhapKho(pn); setNhaCungCapQt(ncc); setNhatKy(nk); setCanhBaoKhoEmail(emailState); setKeHoachNhap(keHoachNhap);
       setImportKho(null); setNhapLoMeta({ ma_lo: "", nha_cung_cap_id: "", ghi_chu: "" });
       setThongBao(`Đã nhập kho theo phiếu ${phieu.ma_phieu}: ${phieu.so_dong} dòng · ${phieu.tong_so_luong} sản phẩm.`);
     } catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể nhập kho theo lô"); }
@@ -1341,6 +1356,22 @@ export default function QuanTriPage() {
     return ngay >= tu_ngay && ngay <= den_ngay;
   }), [phan_ca, tu_ngay, den_ngay]);
 
+  const phanCaXungDot = useMemo(() => {
+    const ids = new Set<string>();
+    let so_cap = 0;
+    for (let i = 0; i < phanCaTrongKhoang.length; i++) {
+      const a = phanCaTrongKhoang[i];
+      for (let j = i + 1; j < phanCaTrongKhoang.length; j++) {
+        const b = phanCaTrongKhoang[j];
+        if (a.nhan_vien.id !== b.nhan_vien.id || ngayTuIso(a.ngay_lam) !== ngayTuIso(b.ngay_lam)) continue;
+        if (a.ca_lam_viec.gio_bat_dau < b.ca_lam_viec.gio_ket_thuc && a.ca_lam_viec.gio_ket_thuc > b.ca_lam_viec.gio_bat_dau) {
+          so_cap += 1; ids.add(a.id); ids.add(b.id);
+        }
+      }
+    }
+    return { so_cap, so_phan_ca: ids.size, ids };
+  }, [phanCaTrongKhoang]);
+
   const phanCaTheoNgay = useMemo(() => {
     const nhom = new Map<string, PhanCa[]>();
     for (const item of phanCaTrongKhoang) {
@@ -1565,6 +1596,12 @@ export default function QuanTriPage() {
       <div className="cine-card cine-stock-email-v218">
         <div><h3>Cảnh báo tồn kho qua email</h3><p>{canh_bao_kho_email?.bat ? `Đang bật · kiểm tra mỗi ${canh_bao_kho_email.chu_ky_phut} phút · ${canh_bao_kho_email.so_nguoi_nhan} người nhận.` : "Đang tắt theo cấu hình môi trường LOW_STOCK_EMAIL_ENABLED."}</p><small>{canh_bao_kho_email?.lan_gui_cuoi ? `Lần gửi gần nhất: ${new Date(canh_bao_kho_email.lan_gui_cuoi).toLocaleString("vi-VN")} · ${canh_bao_kho_email.tong_canh_bao_lan_cuoi} cảnh báo` : "Chưa có lần gửi cảnh báo thành công."}</small></div>
         <button type="button" className="cine-btn cine-btn-secondary" onClick={guiCanhBaoKhoNgay} disabled={dang_xu_ly==="gui-canh-bao-kho-email"}>{dang_xu_ly==="gui-canh-bao-kho-email"?"Đang kiểm tra…":"Kiểm tra & gửi ngay"}</button>
+      </div>
+
+      <div className="cine-card cine-replenishment-v324">
+        <div className="cine-replenishment-head-v324"><div><h3>Kế hoạch nhập đề xuất</h3><p>v3.24 tính theo tồn tối thiểu/tối đa và suy luận nhà cung cấp từ phiếu nhập gần nhất. Chỉ đọc, không tự tạo đơn mua hoặc phiếu nhập.</p></div><button type="button" className="cine-btn cine-btn-secondary" onClick={taiKeHoachNhapKhoExcel} disabled={dang_xu_ly==="excel-goi-y-nhap"}>{dang_xu_ly==="excel-goi-y-nhap"?"Đang xuất…":"Xuất kế hoạch Excel"}</button></div>
+        <div className="cine-replenishment-stats-v324"><span><b>{ke_hoach_nhap?.tong_bien_the_can_nhap ?? 0}</b><small>biến thể cần nhập</small></span><span><b>+{ke_hoach_nhap?.tong_so_luong_de_xuat ?? 0}</b><small>số lượng đề xuất</small></span><span><b>{ke_hoach_nhap?.het_hang ?? 0}</b><small>đã hết hàng</small></span><span><b>{ke_hoach_nhap?.khong_co_nha_cung_cap ?? 0}</b><small>chưa có NCC</small></span></div>
+        <div className="cine-replenishment-list-v324">{ke_hoach_nhap?.items.slice(0,12).map(item=><div className="cine-replenishment-row-v324" key={item.bien_the_id}><span><b>{item.ma_bien_the}</b><small>{item.ma_san_pham} · {item.ten_san_pham}</small></span><span><b>{item.ton_hien_tai} → {item.muc_tieu_sau_nhap}</b><small>Min {item.ton_toi_thieu} · Max {item.ton_toi_da || "—"}</small></span><strong>+{item.so_luong_de_xuat}</strong><span><b>{item.nha_cung_cap?.ten_nha_cung_cap || "Chưa xác định NCC"}</b><small>{item.nha_cung_cap?.dang_hoat_dong === false ? "NCC đã ngừng hoạt động" : item.nguon_nha_cung_cap === "PHIEU_NHAP_GAN_NHAT" ? "Theo phiếu nhập gần nhất" : "Cần gán thủ công"}</small></span></div>)}{ke_hoach_nhap && ke_hoach_nhap.items.length===0&&<div className="cine-dashboard-empty">Tất cả biến thể đang đạt định mức tồn kho.</div>}</div>
       </div>
 
       <div className="cine-card cine-batch-import-v218">
@@ -1892,7 +1929,7 @@ export default function QuanTriPage() {
           <label><span>Ngày làm</span><input type="date" value={pc.ngay_lam} onChange={e => setPc({...pc, ngay_lam:e.target.value})} required/></label>
           <label><span>Ca làm</span><select value={pc.ca_lam_viec_id} onChange={e => setPc({...pc, ca_lam_viec_id:e.target.value})} required><option value="">Chọn ca</option>{ca_lam.filter(c => c.dang_hoat_dong || c.id === pc.ca_lam_viec_id).map(c => <option key={c.id} value={c.id}>{c.ma_ca} · {c.ten_ca} · {c.gio_bat_dau}–{c.gio_ket_thuc}</option>)}</select></label>
           <label><span>Ghi chú</span><textarea value={pc.ghi_chu} onChange={e => setPc({...pc, ghi_chu:e.target.value})} placeholder="Khu vực làm việc, công việc ưu tiên..."/></label>
-          <div className="cine-shift-help">Một nhân viên không thể nhận trùng cùng một mẫu ca trong cùng ngày. Tài khoản đã khóa không xuất hiện trong danh sách xếp ca.</div>
+          <div className="cine-shift-help">Backend v3.24 chặn mọi phân ca chồng giờ của cùng nhân viên trong cùng ngày; hai ca chỉ chạm biên vẫn hợp lệ. Tài khoản đã khóa không xuất hiện trong danh sách xếp ca.</div>
           <div className="cine-shift-form-actions">
             <button className="cine-btn cine-btn-primary" disabled={dang_xu_ly === "tao-phan-ca" || (pc_dang_sua_id ? dang_xu_ly === `pc-${pc_dang_sua_id}` : false)}>{pc_dang_sua_id ? "Lưu thay đổi" : "Xếp ca"}</button>
             {pc_dang_sua_id && <button type="button" className="cine-btn cine-btn-secondary" onClick={datLaiFormPhanCa}>Hủy chỉnh sửa</button>}
@@ -1904,12 +1941,13 @@ export default function QuanTriPage() {
             <label><span>Từ ngày</span><input type="date" value={tu_ngay} onChange={e => setTuNgay(e.target.value)}/></label>
             <label><span>Đến ngày</span><input type="date" value={den_ngay} onChange={e => setDenNgay(e.target.value)}/></label>
             <div><span>Trong khoảng</span><b>{phanCaTrongKhoang.length} phân ca</b></div>
+            <div className={`cine-schedule-conflict-v324 ${phanCaXungDot.so_cap ? "is-conflict" : ""}`}><span>Chồng giờ</span><b>{phanCaXungDot.so_cap} cặp</b><small>{phanCaXungDot.so_phan_ca} phân ca liên quan</small></div>
           </div>
 
           {phanCaTheoNgay.length === 0 && <div className="cine-card cine-empty-state">Chưa có ca làm trong khoảng ngày này.</div>}
           <div className="cine-schedule-groups">{phanCaTheoNgay.map(([ngay, danh_sach]) => <section key={ngay} className="cine-schedule-day">
             <h3>📅 {dinhDangNgay(ngay)}</h3>
-            <div className="cine-schedule-day-list">{danh_sach.map(x => <article key={x.id} className="cine-card cine-schedule-row">
+            <div className="cine-schedule-day-list">{danh_sach.map(x => <article key={x.id} className={`cine-card cine-schedule-row ${phanCaXungDot.ids.has(x.id) ? "is-conflict-v324" : ""}`}>
               <i style={{background:x.ca_lam_viec.mau_hien_thi || "#8b5cf6"}}/>
               <div className="cine-schedule-person"><b>{x.nhan_vien.ma_nhan_vien} · {x.nhan_vien.nguoi_dung.ho_ten}</b><span>{x.nhan_vien.bo_phan} · {x.nhan_vien.chuc_danh}</span>{x.ghi_chu && <small>{x.ghi_chu}</small>}</div>
               <div className="cine-schedule-shift"><b>{x.ca_lam_viec.ten_ca}</b><span>{x.ca_lam_viec.gio_bat_dau}–{x.ca_lam_viec.gio_ket_thuc}</span></div>

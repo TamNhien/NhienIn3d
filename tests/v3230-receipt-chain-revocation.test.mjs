@@ -10,28 +10,28 @@ test("v3.23.0 receipt hash chain + recovery revoked-key fail-closed", () => {
   const webPkg = JSON.parse(read("apps/web/package.json"));
   const service = read("apps/api/src/quan-tri/quan-tri.service.ts");
   const controller = read("apps/api/src/quan-tri/quan-tri.controller.ts");
-  const verifier = read("scripts/recovery-evidence-verify-v3230.mjs");
-  const generator = read("scripts/recovery-evidence-v3230.mjs");
+  const verifier = read("scripts/recovery-evidence-verify-v3240.mjs");
+  const generator = read("scripts/recovery-evidence-v3240.mjs");
   const env = read(".env.example");
   const apiEnv = read("apps/api/.env.example");
   const compose = read("docker-compose.yml");
   const readme = read("README.md");
 
-  assert.equal(read("VERSION").trim(), "3.23.0");
-  assert.equal(pkg.version, "3.23.0");
-  assert.equal(apiPkg.version, "3.23.0");
-  assert.equal(webPkg.version, "3.23.0");
-  assert.equal(pkg.scripts.verify, "npm run verify:v323");
-  assert.equal(pkg.scripts["verify:full"], "npm run verify:full:v323");
-  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3230.mjs");
-  assert.equal(pkg.scripts["recovery:evidence"], "node scripts/recovery-evidence-v3230.mjs");
-  assert.equal(pkg.scripts["recovery:evidence:verify"], "node scripts/recovery-evidence-verify-v3230.mjs");
+  assert.equal(read("VERSION").trim(), "3.24.0");
+  assert.equal(pkg.version, "3.24.0");
+  assert.equal(apiPkg.version, "3.24.0");
+  assert.equal(webPkg.version, "3.24.0");
+  assert.equal(pkg.scripts.verify, "npm run verify:v324");
+  assert.equal(pkg.scripts["verify:full"], "npm run verify:full:v324");
+  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3240.mjs");
+  assert.equal(pkg.scripts["recovery:evidence"], "node scripts/recovery-evidence-v3240.mjs");
+  assert.equal(pkg.scripts["recovery:evidence:verify"], "node scripts/recovery-evidence-verify-v3240.mjs");
 
-  assert.match(controller, /trang_thai_ops_v3230/);
-  assert.match(controller, /cap_nhat_probe_desired_state_v3230/);
-  assert.match(controller, /approve_probe_rollout_v3230/);
-  assert.match(controller, /xuat_recovery_evidence_bundle_v3230/);
-  assert.match(controller, /verify_recovery_evidence_v3230/);
+  assert.match(controller, /trang_thai_ops_v3240/);
+  assert.match(controller, /cap_nhat_probe_desired_state_v3240/);
+  assert.match(controller, /approve_probe_rollout_v3240/);
+  assert.match(controller, /xuat_recovery_evidence_bundle_v3240/);
+  assert.match(controller, /verify_recovery_evidence_v3240/);
 
   assert.match(service, /PROBE_ROLLOUT_RECEIPT_CHAIN_V3230/);
   assert.match(service, /probe_rollout_receipt_chain_verify_v3230/);
@@ -60,7 +60,7 @@ test("v3.23.0 receipt hash chain + recovery revoked-key fail-closed", () => {
   }
   assert.match(compose, /SYSTEM_SLO_PROBE_ROLLOUT_RECEIPT_HISTORY_LIMIT/);
   assert.match(compose, /SYSTEM_RECOVERY_EVIDENCE_REVOKED_KEYS_JSON/);
-  assert.match(readme, /## v3\.23\.0/);
+  assert.match(readme, /## v3\.24\.0/);
   assert.match(readme, /tamper-evident decision receipt hash chain/);
   assert.match(readme, /revoked signing-key denylist/);
 

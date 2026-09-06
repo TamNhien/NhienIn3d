@@ -4,11 +4,11 @@ import { readFileSync } from "node:fs";
 
 const read = (p) => readFileSync(p, "utf8");
 
-test("v3.22.0 dark/trust UI duoc giu khi current v3.23.0", () => {
+test("v3.22.0 dark/trust UI duoc giu khi current v3.24.0", () => {
   const page = read("app/quan-tri/ops/page.tsx");
   const lib = read("lib/quan-tri.ts");
   const globals = read("app/globals.css");
-  assert.match(page, /OPS v3\.23\.0/);
+  assert.match(page, /OPS v3\.24\.0/);
   assert.match(page, /immutable envelope \+ decision receipt \+ tamper-evident receipt chain/);
   assert.match(page, /proposal_envelope_sha256_valid/);
   assert.match(page, /decision_receipt_sha256_valid/);
