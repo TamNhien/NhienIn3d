@@ -13,9 +13,9 @@ test("v3.16.0 API archive portability on-call continuity va runtime version", ()
   assert.match(service, /restore_archive_partition_v3160/);
   assert.match(service, /xuat_on_call_calendar_v3160/);
   assert.match(service, /handoff_on_call_v3160/);
-  assert.match(controller, /trang_thai_ops_v3210/);
-  assert.match(health, /phien_ban: "v3\.21\.0"/);
-  assert.match(main, /setVersion\("3\.21\.0"\)/);
+  assert.match(controller, /trang_thai_ops_v3220/);
+  assert.match(health, /phien_ban: "v3\.22\.0"/);
+  assert.match(main, /setVersion\("3\.22\.0"\)/);
 });
 
 test("v3.16.0 API device-bound enrollment chi luu hash va co rotation metadata", () => {

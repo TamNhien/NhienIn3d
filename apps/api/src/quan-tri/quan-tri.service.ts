@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, NotFoundException, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
 import * as argon2 from "argon2";
-import { createCipheriv, createDecipheriv, createHash, createHmac, createPublicKey, randomBytes, randomUUID, sign as signPayload, timingSafeEqual, verify as verifySignature } from "node:crypto";
+import { createCipheriv, createDecipheriv, createHash, createHmac, createPrivateKey, createPublicKey, randomBytes, randomUUID, sign as signPayload, timingSafeEqual, verify as verifySignature } from "node:crypto";
 import { gzipSync, inflateRawSync } from "node:zlib";
 import { readFile, readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
@@ -154,6 +154,8 @@ type ProbeRolloutProposalV3200 = {
   approval_note?: string;
   applied_revision?: number | null;
   proposal_sha256?: string | null;
+  proposal_envelope_sha256?: string | null;
+  decision_receipt_sha256?: string | null;
   rejected_at?: string | null;
   rejected_by_id?: string | null;
   rejected_by?: string | null;
@@ -224,7 +226,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     setTimeout(cleanupOps, 120_000).unref();
     this.bo_hen_ops_retention = setInterval(cleanupOps, 6 * 60 * 60_000);
     this.bo_hen_ops_retention.unref();
-    this.logger.log(`Ops v3.21.0 schedulers: DLQ ${dlqPolicy.chu_ky_phut}m, metrics ${opsPolicy.refresh_phut}m, retention ${opsPolicy.retention_days}d.`);
+    this.logger.log(`Ops v3.22.0 schedulers: DLQ ${dlqPolicy.chu_ky_phut}m, metrics ${opsPolicy.refresh_phut}m, retention ${opsPolicy.retention_days}d.`);
 
     const healthGate = this.probe_health_gate_config_v3180();
     if (healthGate.enabled) {
@@ -239,7 +241,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     if (reminder.enabled || remediationEscalation.enabled) {
       const checkReminder = async () => {
         if (reminder.enabled) await this.kiem_tra_postmortem_action_reminder_v3180();
-        if (remediationEscalation.enabled) await this.kiem_tra_remediation_escalation_v3210(false);
+        if (remediationEscalation.enabled) await this.kiem_tra_remediation_escalation_v3220(false);
       };
       const intervalHours = Math.max(1, Math.min(reminder.enabled ? reminder.interval_hours : 168, remediationEscalation.enabled ? remediationEscalation.interval_hours : 168));
       setTimeout(() => checkReminder().catch(error => this.logger.warn(`Postmortem/remediation scheduler failed: ${error instanceof Error ? error.message : String(error)}`)), 180_000).unref();
@@ -1147,7 +1149,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const trang_thai = !database.ket_noi ? "LOI" : (van_de.length ? "CANH_BAO" : "TOT");
     const ket_qua = {
       trang_thai,
-      phien_ban: "3.21.0",
+      phien_ban: "3.22.0",
       thoi_gian: new Date().toISOString(),
       api: { uptime_giay: Math.floor(process.uptime()), node: process.version, pid: process.pid, rss_bytes: bo_nho.rss, heap_used_bytes: bo_nho.heapUsed, heap_total_bytes: bo_nho.heapTotal },
       database,
@@ -3637,6 +3639,8 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       approval_note: String(obj.approval_note || "").slice(0, 1000),
       applied_revision: Number.isFinite(Number(obj.applied_revision)) ? Number(obj.applied_revision) : null,
       proposal_sha256: typeof obj.proposal_sha256 === "string" ? obj.proposal_sha256 : null,
+      proposal_envelope_sha256: typeof obj.proposal_envelope_sha256 === "string" ? obj.proposal_envelope_sha256 : null,
+      decision_receipt_sha256: typeof obj.decision_receipt_sha256 === "string" ? obj.decision_receipt_sha256 : null,
       rejected_at: typeof obj.rejected_at === "string" ? obj.rejected_at : null,
       rejected_by_id: typeof obj.rejected_by_id === "string" ? obj.rejected_by_id : null,
       rejected_by: typeof obj.rejected_by === "string" ? obj.rejected_by : null,
@@ -3818,6 +3822,112 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     return { ...current, proposal: cancelled, proposal_sha256_valid: true };
   }
 
+
+  private probe_rollout_envelope_sha256_v3220(proposal: ProbeRolloutProposalV3200) {
+    return createHash("sha256").update(this.json_on_dinh_v3110({
+      id: proposal.id,
+      base_revision: proposal.base_revision,
+      payload: proposal.payload,
+      diff: proposal.diff,
+      proposed_at: proposal.proposed_at,
+      expires_at: proposal.expires_at,
+      proposed_by_id: proposal.proposed_by_id,
+      proposed_by: proposal.proposed_by,
+    }), "utf8").digest("hex");
+  }
+
+  private probe_rollout_decision_receipt_sha256_v3220(proposal: ProbeRolloutProposalV3200) {
+    if (!["APPLIED", "REJECTED", "CANCELLED", "EXPIRED"].includes(proposal.status)) return null;
+    const decision = proposal.status;
+    const decidedAt = proposal.status === "APPLIED" ? proposal.approved_at : proposal.status === "REJECTED" ? proposal.rejected_at : proposal.status === "CANCELLED" ? proposal.cancelled_at : proposal.expires_at;
+    const decidedById = proposal.status === "APPLIED" ? proposal.approved_by_id : proposal.status === "REJECTED" ? proposal.rejected_by_id : proposal.status === "CANCELLED" ? proposal.cancelled_by_id : null;
+    const decidedBy = proposal.status === "APPLIED" ? proposal.approved_by : proposal.status === "REJECTED" ? proposal.rejected_by : proposal.status === "CANCELLED" ? proposal.cancelled_by : "SYSTEM_TTL";
+    return createHash("sha256").update(this.json_on_dinh_v3110({
+      proposal_id: proposal.id,
+      proposal_sha256: proposal.proposal_sha256 || null,
+      proposal_envelope_sha256: proposal.proposal_envelope_sha256 || null,
+      decision,
+      decided_at: decidedAt || null,
+      decided_by_id: decidedById || null,
+      decided_by: decidedBy || null,
+      decision_note: proposal.decision_note || "",
+      applied_revision: proposal.applied_revision ?? null,
+      approval_health_snapshot: proposal.approval_health_snapshot || null,
+    }), "utf8").digest("hex");
+  }
+
+  private probe_rollout_approval_config_v3220() {
+    const base = this.probe_rollout_approval_config_v3210();
+    return { ...base, phien_ban: "3.22.0", proposal_envelope_sha256: true as const, decision_receipt_sha256: true as const, decision_receipt_fail_closed: true as const };
+  }
+
+  async lay_probe_rollout_proposal_v3220() {
+    const base = await this.lay_probe_rollout_proposal_v3210();
+    const config = this.probe_rollout_approval_config_v3220();
+    let proposal = base.proposal;
+    if (!proposal) return { ...base, ...config, proposal: null, proposal_envelope_sha256_valid: true, decision_receipt_sha256_valid: true, secret_values_exposed: false as const };
+    const row = await this.db.cauHinhHeThong.findUnique({ where: { khoa: "PROBE_ROLLOUT_PROPOSAL_V3200" } });
+    const expectedEnvelope = this.probe_rollout_envelope_sha256_v3220(proposal);
+    let envelope = proposal.proposal_envelope_sha256 || null;
+    let changed = false;
+    if (!envelope) {
+      envelope = expectedEnvelope;
+      proposal = { ...proposal, proposal_envelope_sha256: envelope };
+      changed = true;
+      await this.ghi_lich_su_van_hanh("PROBE_ROLLOUT_APPROVAL", "ENVELOPE_SHA_BACKFILLED", "Đã bổ sung immutable envelope SHA-256 cho rollout proposal khi nâng lên v3.22.0", { proposal_id: proposal.id, proposal_envelope_sha256: envelope, remote_code_execution: false });
+    }
+    const expectedReceipt = this.probe_rollout_decision_receipt_sha256_v3220(proposal);
+    let receipt = proposal.decision_receipt_sha256 || null;
+    if (expectedReceipt && !receipt) {
+      receipt = expectedReceipt;
+      proposal = { ...proposal, decision_receipt_sha256: receipt };
+      changed = true;
+      await this.ghi_lich_su_van_hanh("PROBE_ROLLOUT_APPROVAL", "DECISION_RECEIPT_BACKFILLED", "Đã bổ sung decision receipt SHA-256 cho rollout proposal terminal khi nâng lên v3.22.0", { proposal_id: proposal.id, status: proposal.status, decision_receipt_sha256: receipt, remote_code_execution: false });
+    }
+    if (changed && row) await this.db.cauHinhHeThong.update({ where: { khoa: "PROBE_ROLLOUT_PROPOSAL_V3200" }, data: { gia_tri: this.chuan_hoa_json_object(proposal as unknown as Record<string, unknown>) } });
+    const envelopeValid = envelope === expectedEnvelope;
+    const receiptValid = expectedReceipt ? receipt === expectedReceipt : true;
+    return { ...base, ...config, proposal, proposal_envelope_sha256_valid: envelopeValid, decision_receipt_sha256_valid: receiptValid, secret_values_exposed: false as const };
+  }
+
+  async cap_nhat_probe_desired_state_v3220(actor: NguoiDungXacThuc, dto: { target_version: string; interval_seconds: number; rollout_percent: number; canary_agents: string[]; paused: boolean; note?: string }) {
+    const result = await this.cap_nhat_probe_desired_state_v3210(actor, dto);
+    const approval = await this.lay_probe_rollout_proposal_v3220();
+    return { ...result, rollout_approval: approval };
+  }
+
+  private async finalize_probe_rollout_receipt_v3220(actor: NguoiDungXacThuc, proposal: ProbeRolloutProposalV3200) {
+    const envelope = proposal.proposal_envelope_sha256 || this.probe_rollout_envelope_sha256_v3220(proposal);
+    const withEnvelope = { ...proposal, proposal_envelope_sha256: envelope };
+    const receipt = this.probe_rollout_decision_receipt_sha256_v3220(withEnvelope);
+    const finalized = { ...withEnvelope, decision_receipt_sha256: receipt };
+    await this.db.cauHinhHeThong.update({ where: { khoa: "PROBE_ROLLOUT_PROPOSAL_V3200" }, data: { gia_tri: this.chuan_hoa_json_object(finalized as unknown as Record<string, unknown>), nguoi_cap_nhat_id: actor.id } });
+    await this.ghi_lich_su_van_hanh("PROBE_ROLLOUT_APPROVAL", "DECISION_RECEIPT", `Đã chốt decision receipt SHA-256 cho production rollout ${finalized.status}`, { proposal_id: finalized.id, status: finalized.status, proposal_envelope_sha256: envelope, decision_receipt_sha256: receipt, remote_code_execution: false });
+    return finalized;
+  }
+
+  async approve_probe_rollout_v3220(actor: NguoiDungXacThuc, proposalIdRaw: string, note?: string) {
+    const integrity = await this.lay_probe_rollout_proposal_v3220();
+    if (!integrity.proposal_envelope_sha256_valid) throw new ConflictException("Rollout proposal envelope SHA-256 không hợp lệ; từ chối apply vì metadata proposal có thể đã bị sửa ngoài workflow");
+    const applied = await this.approve_probe_rollout_v3210(actor, proposalIdRaw, note);
+    const proposal = applied.rollout_approval?.proposal as ProbeRolloutProposalV3200 | undefined;
+    if (!proposal) return applied;
+    await this.finalize_probe_rollout_receipt_v3220(actor, proposal);
+    return { ...applied, rollout_approval: await this.lay_probe_rollout_proposal_v3220() };
+  }
+
+  async reject_probe_rollout_v3220(actor: NguoiDungXacThuc, proposalIdRaw: string, note?: string) {
+    const result = await this.reject_probe_rollout_v3210(actor, proposalIdRaw, note);
+    if (result.proposal) await this.finalize_probe_rollout_receipt_v3220(actor, result.proposal);
+    return await this.lay_probe_rollout_proposal_v3220();
+  }
+
+  async cancel_probe_rollout_v3220(actor: NguoiDungXacThuc, proposalIdRaw: string, note?: string) {
+    const result = await this.cancel_probe_rollout_v3210(actor, proposalIdRaw, note);
+    if (result.proposal) await this.finalize_probe_rollout_receipt_v3220(actor, result.proposal);
+    return await this.lay_probe_rollout_proposal_v3220();
+  }
+
   private async recovery_readiness_v3200() {
     const base = await this.recovery_readiness_v3190();
     const backupDir = process.env.SYSTEM_BACKUP_DIR?.trim() || join(process.cwd(), "..", "..", "backups");
@@ -3948,6 +4058,127 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const verification = this.verify_recovery_evidence_bundle_v3210(parsed);
     if (!verification.overall_verified) throw new ConflictException(`Recovery evidence bundle không qua integrity verification (${verification.reason}); không cho phép export audit bundle bị lỗi`);
     return { ten_file: `recovery-evidence-audit-bundle-v3.21.0-${new Date().toISOString().slice(0, 10)}.json`, mime_type: "application/json", base64: Buffer.from(raw, "utf8").toString("base64"), manifest: parsed.manifest || {}, integrity: parsed.integrity || {}, signature: parsed.signature || {}, verification, secret_values_exposed: false as const };
+  }
+
+
+  private recovery_evidence_trust_config_v3220() {
+    const requireTrusted = !["0", "false", "no", "off"].includes((process.env.SYSTEM_RECOVERY_EVIDENCE_REQUIRE_TRUSTED_KEY || "true").trim().toLowerCase());
+    const trusted = new Map<string, Set<string>>();
+    const add = (keyIdRaw: unknown, fingerprintRaw: unknown) => {
+      const keyId = String(keyIdRaw || "").trim().slice(0, 80);
+      const fingerprint = String(fingerprintRaw || "").trim().toLowerCase();
+      if (!keyId || !/^[a-f0-9]{64}$/.test(fingerprint)) return;
+      if (!trusted.has(keyId)) trusted.set(keyId, new Set<string>());
+      trusted.get(keyId)!.add(fingerprint);
+    };
+    try {
+      const parsed = JSON.parse(process.env.SYSTEM_RECOVERY_EVIDENCE_TRUSTED_KEYS_JSON?.trim() || "{}") as Record<string, unknown>;
+      for (const [keyId, value] of Object.entries(parsed)) {
+        if (Array.isArray(value)) for (const fp of value) add(keyId, fp); else add(keyId, value);
+      }
+    } catch {}
+    let currentSigningFingerprint: string | null = null;
+    const privateB64 = (process.env.SYSTEM_RECOVERY_EVIDENCE_ED25519_PRIVATE_KEY_B64 || "").trim();
+    const currentKeyId = (process.env.SYSTEM_RECOVERY_EVIDENCE_ED25519_KEY_ID || "recovery-audit-v1").trim().slice(0, 80);
+    if (privateB64) {
+      try {
+        const privatePem = Buffer.from(privateB64, "base64").toString("utf8");
+        const publicPem = createPublicKey(createPrivateKey(privatePem)).export({ type: "spki", format: "pem" }).toString();
+        currentSigningFingerprint = createHash("sha256").update(publicPem, "utf8").digest("hex");
+        add(currentKeyId, currentSigningFingerprint);
+      } catch {}
+    }
+    return {
+      require_trusted_key: requireTrusted,
+      trusted,
+      trusted_key_ids: [...trusted.keys()].sort(),
+      trusted_fingerprints: [...trusted.values()].reduce((n, set) => n + set.size, 0),
+      current_signing_key_id: currentKeyId,
+      current_signing_key_fingerprint: currentSigningFingerprint,
+      secret_values_exposed: false as const,
+    };
+  }
+
+  private verify_recovery_evidence_bundle_v3220(bundle: Record<string, unknown>) {
+    const base = this.verify_recovery_evidence_bundle_v3210(bundle);
+    const config = this.recovery_evidence_trust_config_v3220();
+    const signature = bundle.signature && typeof bundle.signature === "object" && !Array.isArray(bundle.signature) ? bundle.signature as Record<string, unknown> : {};
+    const keyId = typeof signature.key_id === "string" ? signature.key_id.trim().slice(0, 80) : "";
+    const fingerprint = typeof signature.public_key_fingerprint_sha256 === "string" ? signature.public_key_fingerprint_sha256.trim().toLowerCase() : "";
+    const trustedForKey = config.trusted.get(keyId);
+    const keyTrusted = base.signature_configured ? !!trustedForKey?.has(fingerprint) : false;
+    const trustSource = keyTrusted && config.current_signing_key_id === keyId && config.current_signing_key_fingerprint === fingerprint ? "CURRENT_SIGNING_KEY" : keyTrusted ? "TRUST_STORE" : "NONE";
+    const trustRequiredForBundle = base.signature_configured && config.require_trusted_key;
+    const overall = base.overall_verified && (!trustRequiredForBundle || keyTrusted);
+    let reason = base.reason;
+    if (base.overall_verified && trustRequiredForBundle && !keyTrusted) reason = "UNTRUSTED_SIGNING_KEY";
+    if (overall) reason = base.signature_configured ? "VERIFIED_TRUSTED" : "VERIFIED_UNSIGNED";
+    return {
+      ...base,
+      trusted_key_required: config.require_trusted_key,
+      trust_configured: config.trusted_fingerprints > 0,
+      trusted_key_ids: config.trusted_key_ids,
+      trusted_fingerprints: config.trusted_fingerprints,
+      signing_key_id: keyId || null,
+      key_trusted: keyTrusted,
+      trust_source: trustSource,
+      overall_verified: overall,
+      reason,
+      private_key_required: false as const,
+      secret_values_exposed: false as const,
+    };
+  }
+
+  private async recovery_readiness_v3220() {
+    const base = await this.recovery_readiness_v3210();
+    const backupDir = process.env.SYSTEM_BACKUP_DIR?.trim() || join(process.cwd(), "..", "..", "backups");
+    let bundle: Record<string, unknown> | null = null;
+    let source = "recovery-evidence-bundle-v3220.json";
+    try { bundle = JSON.parse(await readFile(join(backupDir, source), "utf8")) as Record<string, unknown>; }
+    catch {
+      source = "recovery-evidence-bundle-v3210.json";
+      try { bundle = JSON.parse(await readFile(join(backupDir, source), "utf8")) as Record<string, unknown>; } catch {}
+    }
+    const verification = bundle ? this.verify_recovery_evidence_bundle_v3220(bundle) : null;
+    const manifest = bundle?.manifest && typeof bundle.manifest === "object" && !Array.isArray(bundle.manifest) ? bundle.manifest as Record<string, unknown> : {};
+    return {
+      ...base,
+      evidence_bundle_file: `backups/${source}`,
+      evidence_bundle_version: typeof manifest.version === "string" ? manifest.version : base.evidence_bundle_version,
+      evidence_current_version: manifest.version === "3.22.0",
+      evidence_verification: verification || base.evidence_verification,
+      evidence_trusted_key_required: verification?.trusted_key_required ?? true,
+      evidence_trust_configured: verification?.trust_configured ?? false,
+      evidence_key_trusted: verification?.key_trusted ?? false,
+      evidence_trust_source: verification?.trust_source ?? "NONE",
+      evidence_trusted_key_ids: verification?.trusted_key_ids ?? [],
+      audit_bundle_ready: !!bundle && verification?.overall_verified === true,
+      audit_bundle_integrity_required: true as const,
+      audit_bundle_trust_anchor_required_for_signed_bundle: true as const,
+      private_key_exposed: false as const,
+      secret_values_exposed: false as const,
+    };
+  }
+
+  async verify_recovery_evidence_v3220() {
+    const backupDir = process.env.SYSTEM_BACKUP_DIR?.trim() || join(process.cwd(), "..", "..", "backups");
+    const path = join(backupDir, "recovery-evidence-bundle-v3220.json");
+    let parsed: Record<string, unknown>;
+    try { parsed = JSON.parse(await readFile(path, "utf8")) as Record<string, unknown>; }
+    catch { throw new NotFoundException("Chưa có recovery evidence bundle v3.22.0; chạy npm run recovery:evidence trước"); }
+    const verification = this.verify_recovery_evidence_bundle_v3220(parsed);
+    return { phien_ban: "3.22.0", file: "backups/recovery-evidence-bundle-v3220.json", ...verification, secret_values_exposed: false as const };
+  }
+
+  async xuat_recovery_evidence_bundle_v3220() {
+    const backupDir = process.env.SYSTEM_BACKUP_DIR?.trim() || join(process.cwd(), "..", "..", "backups");
+    const path = join(backupDir, "recovery-evidence-bundle-v3220.json");
+    let raw: string; let parsed: Record<string, unknown>;
+    try { raw = await readFile(path, "utf8"); parsed = JSON.parse(raw) as Record<string, unknown>; }
+    catch { throw new NotFoundException("Chưa có recovery evidence bundle v3.22.0; chạy npm run recovery:evidence trước"); }
+    const verification = this.verify_recovery_evidence_bundle_v3220(parsed);
+    if (!verification.overall_verified) throw new ConflictException(`Recovery evidence bundle không qua trusted verification (${verification.reason}); không cho phép export audit bundle`);
+    return { ten_file: `recovery-evidence-audit-bundle-v3.22.0-${new Date().toISOString().slice(0, 10)}.json`, mime_type: "application/json", base64: Buffer.from(raw, "utf8").toString("base64"), manifest: parsed.manifest || {}, integrity: parsed.integrity || {}, signature: parsed.signature || {}, verification, secret_values_exposed: false as const };
   }
 
   private remediation_sla_config_v3200() {
@@ -4179,6 +4410,20 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     return { ten_file: `remediation-backlog-v3.21.0-${new Date().toISOString().slice(0, 10)}.xlsx`, mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", base64: buffer.toString("base64"), tong: backlog.open_actions, sla_breached: backlog.sla_breached_actions, acknowledged_services: backlog.acknowledged_services, retry_pending_services: backlog.retry_pending_services };
   }
 
+
+  async acknowledge_remediation_v3220(actor: NguoiDungXacThuc, serviceRaw: string, note?: string, snoozeHoursRaw?: number) {
+    return this.acknowledge_remediation_v3210(actor, serviceRaw, note, snoozeHoursRaw);
+  }
+
+  async kiem_tra_remediation_escalation_v3220(force = false) {
+    return this.kiem_tra_remediation_escalation_v3210(force);
+  }
+
+  async xuat_remediation_backlog_excel_v3220() {
+    const result = await this.xuat_remediation_backlog_excel_v3210();
+    return { ...result, ten_file: result.ten_file.replace("v3.21.0", "v3.22.0") };
+  }
+
   async trang_thai_ops_v3200() {
     const [base, rolloutApproval, recovery, remediation] = await Promise.all([this.trang_thai_ops_v3190(), this.lay_probe_rollout_proposal_v3200(), this.recovery_readiness_v3200(), this.postmortem_remediation_v3200()]);
     const fleet = base.probe_fleet as Record<string, unknown> | undefined;
@@ -4189,6 +4434,13 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const [base, rolloutApproval, recovery, remediation] = await Promise.all([this.trang_thai_ops_v3200(), this.lay_probe_rollout_proposal_v3210(), this.recovery_readiness_v3210(), this.postmortem_remediation_v3210()]);
     const fleet = base.probe_fleet as Record<string, unknown> | undefined;
     return { ...base, phien_ban: "3.21.0", probe_fleet: fleet ? { ...fleet, phien_ban: "3.21.0" } : base.probe_fleet, multi_region_quorum: { ...base.multi_region_quorum, phien_ban: "3.21.0" }, rollout_approval: rolloutApproval, database_recovery: recovery, remediation_backlog: remediation };
+  }
+
+
+  async trang_thai_ops_v3220() {
+    const [base, rolloutApproval, recovery, remediation] = await Promise.all([this.trang_thai_ops_v3210(), this.lay_probe_rollout_proposal_v3220(), this.recovery_readiness_v3220(), this.postmortem_remediation_v3210()]);
+    const fleet = base.probe_fleet as Record<string, unknown> | undefined;
+    return { ...base, phien_ban: "3.22.0", probe_fleet: fleet ? { ...fleet, phien_ban: "3.22.0" } : base.probe_fleet, multi_region_quorum: { ...base.multi_region_quorum, phien_ban: "3.22.0" }, rollout_approval: rolloutApproval, database_recovery: recovery, remediation_backlog: remediation };
   }
 
   async trang_thai_ops_v3160() {

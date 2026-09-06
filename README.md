@@ -1,6 +1,6 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v3.21.0** — 06/09/2026
+> Phiên bản hiện tại: **v3.22.0** — 06/09/2026
 - **v3.18.0 · recovery governance**: thêm target-time PITR rehearsal opt-in trên restore cluster cô lập, health-gated probe canary có grace window + auto rollback, postmortem approval/action reminder và HTTPS service-runbook mapping.
 - **Ops UI compact**: badge `COMPLETE · DRAFT` được thu nhỏ, canh giữa cả ngang/dọc; approval status dùng cùng visual compact để không chiếm chiều cao panel.
 - **Security hotfix mysql2**: nâng root pin/override từ `mysql2@3.22.0` lên `mysql2@3.23.4`; security scanner yêu cầu `>=3.23.1` để vá GHSA-rgwj-5xj2-c3m3 (decompression-bomb DoS), giữ Prisma `7.10.0` và tuyệt đối không dùng `npm audit fix --force`.
@@ -1609,5 +1609,14 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 - Ops Dashboard thêm nút `Verify evidence`, `Reject`, `Cancel`, ack theo service và hiển thị trạng thái SHA-256/health preflight/retry.
 - `verify:full` chạy thêm bước **Recovery evidence verify** sau khi sinh evidence và trước Browser E2E.
 - **Không thêm migration**; tổng số migration vẫn **23**. `.env` v3.20 tiếp tục chạy vì biến v3.21 có safe default.
+
+## v3.22.0 — 06/09/2026
+
+- Recovery evidence v3.22 thêm **trusted-key pinning**: public key nằm trong bundle chỉ là dữ liệu kiểm tra chữ ký, không tự được xem là trust anchor. API/CLI đối chiếu `key_id + SHA-256 fingerprint` với current signing key hoặc `SYSTEM_RECOVERY_EVIDENCE_TRUSTED_KEYS_JSON`; signed bundle dùng key lạ bị fail-closed khi export.
+- `recovery:evidence` và `recovery:evidence:verify` tự đọc `.env` ở project root nếu biến chưa có trong process, nên private key/trust store cấu hình trong `.env` hoạt động trực tiếp khi chạy grouped verify.
+- Key rotation giữ được khả năng verify bundle cũ bằng trust store nhiều `key_id`; `recovery:evidence:keygen` in thêm cấu hình trusted fingerprint gợi ý nhưng không ghi private key ra file.
+- Production rollout v3.22 thêm **immutable proposal envelope SHA-256** bảo vệ ID/TTL/proposer/base revision/payload/diff và **decision receipt SHA-256** cho APPLIED/REJECTED/CANCELLED/EXPIRED. Approve fail-closed nếu envelope bị sửa ngoài workflow.
+- Ops Dashboard hiển thị proposal SHA/envelope/decision receipt và recovery trust-anchor state; remote code execution tiếp tục OFF.
+- Current scripts/CI/Health/OpenAPI chuyển sang v3.22.0; vẫn giữ toàn bộ script v3.21 làm historical regression. Không thêm migration; tổng số migration vẫn **23**.
 
 # Lộ trình tiếp theo

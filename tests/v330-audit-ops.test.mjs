@@ -54,5 +54,5 @@ test("v3.3.0 CI co runtime Docker migration API va backup restore", () => {
   assert.match(ci, /runtime-docker:/);
   assert.match(ci, /docker compose up -d --build postgres migrate api/);
   assert.match(ci, /api\/v1\/suc-khoe/);
-  assert.match(ci, /e2e-runtime-v3210\.ps1/);
+  assert.match(ci, /e2e-runtime-v3220\.ps1/);
 });

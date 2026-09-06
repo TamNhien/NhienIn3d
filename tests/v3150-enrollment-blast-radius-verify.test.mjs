@@ -5,21 +5,21 @@ const read = (p) => readFileSync(p, "utf8");
 
 test("v3.15.0 contract duoc giu khi nang v3.19.0 va current scripts dong bo", () => {
   const pkg = JSON.parse(read("package.json"));
-  assert.equal(read("VERSION").trim(), "3.21.0");
-  assert.equal(pkg.version, "3.21.0");
-  assert.equal(JSON.parse(read("apps/api/package.json")).version, "3.21.0");
-  assert.equal(JSON.parse(read("apps/web/package.json")).version, "3.21.0");
-  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3210.mjs");
-  assert.equal(pkg.scripts["probe:agent"], "node scripts/probe-agent-v3210.mjs");
-  assert.match(pkg.scripts["probe:fleet"], /probe-fleet-v3210\.ps1/);
+  assert.equal(read("VERSION").trim(), "3.22.0");
+  assert.equal(pkg.version, "3.22.0");
+  assert.equal(JSON.parse(read("apps/api/package.json")).version, "3.22.0");
+  assert.equal(JSON.parse(read("apps/web/package.json")).version, "3.22.0");
+  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3220.mjs");
+  assert.equal(pkg.scripts["probe:agent"], "node scripts/probe-agent-v3220.mjs");
+  assert.match(pkg.scripts["probe:fleet"], /probe-fleet-v3220\.ps1/);
   assert.match(pkg.scripts["verify:v320"], /verify-v3200\.ps1/);
   assert.match(pkg.scripts["verify:full:v320"], /verify-v3200\.ps1 -Full/);
-  assert.equal(pkg.scripts.verify, "npm run verify:v321");
-  assert.equal(pkg.scripts["verify:full"], "npm run verify:full:v321");
+  assert.equal(pkg.scripts.verify, "npm run verify:v322");
+  assert.equal(pkg.scripts["verify:full"], "npm run verify:full:v322");
   assert.equal(existsSync("scripts/e2e-runtime-v3150.ps1"), true);
   assert.equal(existsSync("scripts/probe-enroll-v3150.mjs"), true);
   assert.equal(existsSync("scripts/probe-enrollment-token-v3170.ps1"), true);
-  assert.match(read(".github/workflows/ci.yml"), /e2e-runtime-v3210\.ps1/);
+  assert.match(read(".github/workflows/ci.yml"), /e2e-runtime-v3220\.ps1/);
 });
 
 test("v3.15.0 probe self enrollment dung one-time token va khong lo private key", () => {

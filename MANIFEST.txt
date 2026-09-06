@@ -6,7 +6,7 @@
 .gitignore
 .npmrc
 MANIFEST.txt
-MANIFEST.txt.tmp
+MANIFEST.txt.new
 README.md
 VERSION
 apps/api/.dockerignore
@@ -197,6 +197,7 @@ apps/api/tests/v3170-recovery-desired-postmortem.test.mjs
 apps/api/tests/v3180-pitr-healthgate-postmortem.test.mjs
 apps/api/tests/v320-operations.test.mjs
 apps/api/tests/v321-order-delivered-typecheck.test.mjs
+apps/api/tests/v3220-trust-anchor-rollout-receipt.test.mjs
 apps/api/tests/v330-audit-ops.test.mjs
 apps/api/tests/v331-session-revenue.test.mjs
 apps/api/tests/v332-revenue-delivery-reconcile.test.mjs
@@ -271,6 +272,7 @@ apps/web/tests/v320-operations.test.mjs
 apps/web/tests/v3200-ops-governance-ui.test.mjs
 apps/web/tests/v321-order-delivered.test.mjs
 apps/web/tests/v322-order-update-ux.test.mjs
+apps/web/tests/v3220-ops-trust-anchor-receipt-ui.test.mjs
 apps/web/tests/v323-order-payment-type.test.mjs
 apps/web/tests/v330-audit-ops.test.mjs
 apps/web/tests/v331-session-revenue.test.mjs
@@ -312,6 +314,7 @@ scripts/e2e-browser-v3180.mjs
 scripts/e2e-browser-v3190.mjs
 scripts/e2e-browser-v3200.mjs
 scripts/e2e-browser-v3210.mjs
+scripts/e2e-browser-v3220.mjs
 scripts/e2e-browser-v350.mjs
 scripts/e2e-browser-v351.mjs
 scripts/e2e-browser-v352.mjs
@@ -348,6 +351,7 @@ scripts/e2e-runtime-v3190.ps1
 scripts/e2e-runtime-v320.ps1
 scripts/e2e-runtime-v3200.ps1
 scripts/e2e-runtime-v3210.ps1
+scripts/e2e-runtime-v3220.ps1
 scripts/e2e-runtime-v340.ps1
 scripts/e2e-runtime-v341.ps1
 scripts/e2e-runtime-v350.ps1
@@ -385,6 +389,7 @@ scripts/probe-agent-v3180.mjs
 scripts/probe-agent-v3190.mjs
 scripts/probe-agent-v3200.mjs
 scripts/probe-agent-v3210.mjs
+scripts/probe-agent-v3220.mjs
 scripts/probe-enroll-v3150.mjs
 scripts/probe-enroll-v3160.mjs
 scripts/probe-enroll-v3170.mjs
@@ -392,6 +397,7 @@ scripts/probe-enroll-v3180.mjs
 scripts/probe-enroll-v3190.mjs
 scripts/probe-enroll-v3200.mjs
 scripts/probe-enroll-v3210.mjs
+scripts/probe-enroll-v3220.mjs
 scripts/probe-enrollment-token-v3150.ps1
 scripts/probe-enrollment-token-v3160.ps1
 scripts/probe-enrollment-token-v3170.ps1
@@ -399,6 +405,7 @@ scripts/probe-enrollment-token-v3180.ps1
 scripts/probe-enrollment-token-v3190.ps1
 scripts/probe-enrollment-token-v3200.ps1
 scripts/probe-enrollment-token-v3210.ps1
+scripts/probe-enrollment-token-v3220.ps1
 scripts/probe-fleet-v3120.ps1
 scripts/probe-fleet-v3130.ps1
 scripts/probe-fleet-v3140.ps1
@@ -409,6 +416,7 @@ scripts/probe-fleet-v3180.ps1
 scripts/probe-fleet-v3190.ps1
 scripts/probe-fleet-v3200.ps1
 scripts/probe-fleet-v3210.ps1
+scripts/probe-fleet-v3220.ps1
 scripts/probe-keygen-v3130.mjs
 scripts/probe-keygen-v3140.mjs
 scripts/probe-keygen-v3150.mjs
@@ -418,21 +426,27 @@ scripts/probe-keygen-v3180.mjs
 scripts/probe-keygen-v3190.mjs
 scripts/probe-keygen-v3200.mjs
 scripts/probe-keygen-v3210.mjs
+scripts/probe-keygen-v3220.mjs
 scripts/recovery-drill-v3170.ps1
 scripts/recovery-drill-v3180.ps1
 scripts/recovery-drill-v3190.ps1
 scripts/recovery-drill-v3200.ps1
 scripts/recovery-drill-v3210.ps1
+scripts/recovery-drill-v3220.ps1
 scripts/recovery-evidence-keygen-v3200.mjs
 scripts/recovery-evidence-keygen-v3210.mjs
+scripts/recovery-evidence-keygen-v3220.mjs
 scripts/recovery-evidence-v3190.mjs
 scripts/recovery-evidence-v3200.mjs
 scripts/recovery-evidence-v3210.mjs
+scripts/recovery-evidence-v3220.mjs
 scripts/recovery-evidence-verify-v3210.mjs
+scripts/recovery-evidence-verify-v3220.mjs
 scripts/recovery-pitr-drill-v3180.ps1
 scripts/recovery-pitr-drill-v3190.ps1
 scripts/recovery-pitr-drill-v3200.ps1
 scripts/recovery-pitr-drill-v3210.ps1
+scripts/recovery-pitr-drill-v3220.ps1
 scripts/release.ps1
 scripts/restore-db.ps1
 scripts/verify-v3150.ps1
@@ -442,6 +456,7 @@ scripts/verify-v3180.ps1
 scripts/verify-v3190.ps1
 scripts/verify-v3200.ps1
 scripts/verify-v3210.ps1
+scripts/verify-v3220.ps1
 tests/cau-truc.test.mjs
 tests/e2e-admin-v218.test.mjs
 tests/e2e-admin-v219.test.mjs
@@ -467,6 +482,7 @@ tests/v3200-rollout-recovery-remediation.test.mjs
 tests/v321-order-delivered-typecheck.test.mjs
 tests/v3210-integrity-ack-retry.test.mjs
 tests/v322-order-update-ux.test.mjs
+tests/v3220-trust-anchor-rollout-receipt.test.mjs
 tests/v323-order-payment-type.test.mjs
 tests/v330-audit-ops.test.mjs
 tests/v331-session-revenue.test.mjs

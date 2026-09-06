@@ -6,23 +6,23 @@ const read = (p) => readFileSync(p, "utf8");
 
 test("v3.20.0 dong bo version, current scripts, CI va grouped verify", () => {
   const pkg = JSON.parse(read("package.json"));
-  assert.equal(read("VERSION").trim(), "3.21.0");
-  assert.equal(pkg.version, "3.21.0");
-  assert.equal(JSON.parse(read("apps/api/package.json")).version, "3.21.0");
-  assert.equal(JSON.parse(read("apps/web/package.json")).version, "3.21.0");
-  assert.equal(pkg.scripts.verify, "npm run verify:v321");
-  assert.equal(pkg.scripts["verify:full"], "npm run verify:full:v321");
+  assert.equal(read("VERSION").trim(), "3.22.0");
+  assert.equal(pkg.version, "3.22.0");
+  assert.equal(JSON.parse(read("apps/api/package.json")).version, "3.22.0");
+  assert.equal(JSON.parse(read("apps/web/package.json")).version, "3.22.0");
+  assert.equal(pkg.scripts.verify, "npm run verify:v322");
+  assert.equal(pkg.scripts["verify:full"], "npm run verify:full:v322");
   assert.match(pkg.scripts["verify:v320"], /verify-v3200\.ps1/);
   assert.match(pkg.scripts["verify:full:v320"], /verify-v3200\.ps1 -Full/);
-  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3210.mjs");
-  assert.equal(pkg.scripts["probe:agent"], "node scripts/probe-agent-v3210.mjs");
-  assert.match(pkg.scripts["recovery:drill"], /recovery-drill-v3210\.ps1/);
-  assert.match(pkg.scripts["recovery:pitr"], /recovery-pitr-drill-v3210\.ps1/);
-  assert.equal(pkg.scripts["recovery:evidence"], "node scripts/recovery-evidence-v3210.mjs");
-  assert.equal(pkg.scripts["recovery:evidence:keygen"], "node scripts/recovery-evidence-keygen-v3210.mjs");
-  assert.match(read(".github/workflows/ci.yml"), /e2e-runtime-v3210\.ps1/);
-  assert.match(read("apps/api/src/suc-khoe/suc-khoe.controller.ts"), /v3\.21\.0/);
-  assert.match(read("apps/api/src/main.ts"), /setVersion\("3\.21\.0"\)/);
+  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3220.mjs");
+  assert.equal(pkg.scripts["probe:agent"], "node scripts/probe-agent-v3220.mjs");
+  assert.match(pkg.scripts["recovery:drill"], /recovery-drill-v3220\.ps1/);
+  assert.match(pkg.scripts["recovery:pitr"], /recovery-pitr-drill-v3220\.ps1/);
+  assert.equal(pkg.scripts["recovery:evidence"], "node scripts/recovery-evidence-v3220.mjs");
+  assert.equal(pkg.scripts["recovery:evidence:keygen"], "node scripts/recovery-evidence-keygen-v3220.mjs");
+  assert.match(read(".github/workflows/ci.yml"), /e2e-runtime-v3220\.ps1/);
+  assert.match(read("apps/api/src/suc-khoe/suc-khoe.controller.ts"), /v3\.22\.0/);
+  assert.match(read("apps/api/src/main.ts"), /setVersion\("3\.22\.0"\)/);
 });
 
 test("v3.20.0 production rollout approval co TTL two-person va audit diff", () => {

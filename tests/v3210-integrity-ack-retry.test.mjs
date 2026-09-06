@@ -4,20 +4,14 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 
 const read = (p) => readFileSync(p, "utf8");
 
-test("v3.21.0 dong bo version current scripts CI health va OpenAPI", () => {
+test("v3.21.0 historical grouped verify va evidence verifier duoc giu", () => {
   const pkg = JSON.parse(read("package.json"));
-  assert.equal(read("VERSION").trim(), "3.21.0");
-  assert.equal(pkg.version, "3.21.0");
-  assert.equal(JSON.parse(read("apps/api/package.json")).version, "3.21.0");
-  assert.equal(JSON.parse(read("apps/web/package.json")).version, "3.21.0");
-  assert.equal(pkg.scripts.verify, "npm run verify:v321");
-  assert.equal(pkg.scripts["verify:full"], "npm run verify:full:v321");
-  assert.match(pkg.scripts["verify:v321"], /verify-v3210\.ps1/);
-  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3210.mjs");
-  assert.equal(pkg.scripts["recovery:evidence:verify"], "node scripts/recovery-evidence-verify-v3210.mjs");
-  assert.match(read(".github/workflows/ci.yml"), /e2e-runtime-v3210\.ps1/);
-  assert.match(read("apps/api/src/suc-khoe/suc-khoe.controller.ts"), /v3\.21\.0/);
-  assert.match(read("apps/api/src/main.ts"), /setVersion\("3\.21\.0"\)/);
+  assert.equal(pkg.scripts["verify:v321"], "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-v3210.ps1");
+  assert.equal(pkg.scripts["verify:full:v321"], "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-v3210.ps1 -Full");
+  assert.equal(existsSync("scripts/e2e-runtime-v3210.ps1"), true);
+  assert.equal(existsSync("scripts/e2e-browser-v3210.mjs"), true);
+  assert.equal(existsSync("scripts/recovery-evidence-v3210.mjs"), true);
+  assert.equal(existsSync("scripts/recovery-evidence-verify-v3210.mjs"), true);
 });
 
 test("v3.21.0 rollout proposal co SHA-256 single-pending reject cancel va health preflight", () => {
