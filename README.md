@@ -1,6 +1,6 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v3.20.0** — 06/09/2026
+> Phiên bản hiện tại: **v3.21.0** — 06/09/2026
 - **v3.18.0 · recovery governance**: thêm target-time PITR rehearsal opt-in trên restore cluster cô lập, health-gated probe canary có grace window + auto rollback, postmortem approval/action reminder và HTTPS service-runbook mapping.
 - **Ops UI compact**: badge `COMPLETE · DRAFT` được thu nhỏ, canh giữa cả ngang/dọc; approval status dùng cùng visual compact để không chiếm chiều cao panel.
 - **Security hotfix mysql2**: nâng root pin/override từ `mysql2@3.22.0` lên `mysql2@3.23.4`; security scanner yêu cầu `>=3.23.1` để vá GHSA-rgwj-5xj2-c3m3 (decompression-bomb DoS), giữ Prisma `7.10.0` và tuyệt đối không dùng `npm audit fix --force`.
@@ -24,6 +24,12 @@ NhienIn3d là web thương mại điện tử cho sản phẩm in 3D với **fro
 - CI/Release: GitHub Actions + GitHub CLI.
 
 ## Điểm chính bản hiện tại
+
+- **Production rollout governance v3.21**: proposal production có SHA-256 chống sửa ngoài workflow, chỉ cho một proposal `PENDING`, hết TTL được persist thành `EXPIRED`, hỗ trợ `APPROVE / REJECT / CANCEL` và health preflight trước khi apply.
+- **Recovery evidence verifier v3.21**: `npm run recovery:evidence:verify` tự tính lại SHA-256, public-key fingerprint và Ed25519 signature; API chặn download audit bundle nếu integrity verification không PASS.
+- **Remediation escalation v3.21**: acknowledge/snooze theo fingerprint của tập SLA breach, breach mới tự vô hiệu ack; retry exponential backoff và escalation level L1/L2/L3 theo tuổi breach.
+- **Grouped verification v3.21**: `npm run verify` cho local gate; `npm run verify:full` chạy Docker preflight → backup → build/up → migration → Runtime E2E → recovery drill/PITR → evidence generate + verify → Browser E2E.
+- **Database**: v3.21.0 không thêm migration; tiếp tục **23 migrations** và tương thích `.env` v3.20 nhờ safe defaults cho biến mới.
 
 - **Recovery/PITR v3.18**: giữ readiness RPO/RTO và logical drill v3.17; bổ sung target-time PITR rehearsal opt-in trên restore container/volume cô lập, chỉ báo `pitr_restore_exercised=true` khi recovery target được xác minh thật.
 - **Signed desired-state fail-closed**: server ký payload bằng Ed25519, agent verify signature + SPKI fingerprint + tuổi chữ ký; thiếu key thì HOLD/SIGNING_REQUIRED, không áp dụng rollout. Remote code execution luôn OFF.
@@ -1589,5 +1595,19 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 - Thêm **Remediation Excel** và **Recovery audit bundle** download trực tiếp từ Ops Dashboard.
 - Current scripts/CI/Health/OpenAPI chuyển sang v3.20.0; grouped verification vẫn là `npm run verify` và `npm run verify:full`.
 - **Không thêm migration**; tổng số migration vẫn **23**. `.env` v3.19 hiện tại vẫn chạy được vì toàn bộ biến v3.20 có safe default.
+
+## v3.21.0 — 06/09/2026
+
+- Fix pre-release: chuẩn hóa kiểu trả về của recovery evidence verifier để TypeScript luôn có `stored_sha256`/`calculated_sha256` ở mọi nhánh, loại lỗi TS2339 khi chạy `npm run verify`.
+
+- Harden **production probe rollout approval** bằng SHA-256 proposal integrity. Khi production đang có proposal `PENDING`, hệ thống không cho tạo proposal thứ hai; proposal hết TTL được ghi trạng thái `EXPIRED` bền vững vào `cau_hinh_he_thong`.
+- Thêm quyết định **Approve / Reject / Cancel**: two-person rule vẫn chặn người đề xuất tự approve/reject; người đề xuất được cancel, người duyệt thứ hai được reject. Approval lưu health snapshot và có health preflight opt-out bằng `SYSTEM_SLO_PROBE_ROLLOUT_APPROVAL_REQUIRE_HEALTHY=false`.
+- Thêm **independent recovery evidence verifier** ở CLI (`npm run recovery:evidence:verify`) và API. Verifier tự tính lại SHA-256, Ed25519 signature và public fingerprint thay vì tin cờ `verified` bên trong bundle.
+- Recovery audit download trở thành **fail-closed**: bundle sai SHA/signature/fingerprint bị chặn export. Bundle v3.21 ghi `verification_required_before_export=true`.
+- Remediation SLA escalation có **fingerprint-scoped acknowledge + snooze**; mặc định 24 giờ. Khi tập breach thay đổi, fingerprint đổi và ack cũ không còn hiệu lực.
+- Thêm **retry backoff** cho lỗi gửi/no-on-call với base mặc định 15 phút, tối đa 360 phút; escalation level tự tăng L1 → L2 sau 24h → L3 sau 72h. Excel remediation bổ sung level/ack/retry.
+- Ops Dashboard thêm nút `Verify evidence`, `Reject`, `Cancel`, ack theo service và hiển thị trạng thái SHA-256/health preflight/retry.
+- `verify:full` chạy thêm bước **Recovery evidence verify** sau khi sinh evidence và trước Browser E2E.
+- **Không thêm migration**; tổng số migration vẫn **23**. `.env` v3.20 tiếp tục chạy vì biến v3.21 có safe default.
 
 # Lộ trình tiếp theo
