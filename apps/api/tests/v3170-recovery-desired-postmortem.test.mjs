@@ -11,10 +11,10 @@ test("v3.17.0 contract recovery desired-state postmortem duoc giu khi current v3
   assert.match(service, /probe_desired_state/);
   assert.match(service, /database_recovery/);
   assert.match(service, /incident_postmortem/);
-  assert.match(controller, /trang_thai_ops_v3190/);
+  assert.match(controller, /trang_thai_ops_v3200/);
   assert.match(controller, /probe-desired-state/);
   assert.match(controller, /postmortem/);
-  assert.match(health, /v3\.19\.0/);
+  assert.match(health, /v3\.20\.0/);
 });
 
 test("v3.17.0 API desired-state khong co remote code execution", () => {
@@ -33,5 +33,5 @@ test("v3.17.0 Admin health contract duoc dong bo current v3.19.0", () => {
   const start = service.indexOf("async suc_khoe_he_thong");
   const end = service.indexOf("async ", start + 10);
   const healthMethod = service.slice(start, end > start ? end : undefined);
-  assert.match(healthMethod, /phien_ban:\s*"3\.19\.0"/);
+  assert.match(healthMethod, /phien_ban:\s*"3\.20\.0"/);
 });

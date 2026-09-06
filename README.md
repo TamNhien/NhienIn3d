@@ -1,6 +1,6 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v3.19.0** — 03/09/2026
+> Phiên bản hiện tại: **v3.20.0** — 06/09/2026
 - **v3.18.0 · recovery governance**: thêm target-time PITR rehearsal opt-in trên restore cluster cô lập, health-gated probe canary có grace window + auto rollback, postmortem approval/action reminder và HTTPS service-runbook mapping.
 - **Ops UI compact**: badge `COMPLETE · DRAFT` được thu nhỏ, canh giữa cả ngang/dọc; approval status dùng cùng visual compact để không chiếm chiều cao panel.
 - **Security hotfix mysql2**: nâng root pin/override từ `mysql2@3.22.0` lên `mysql2@3.23.4`; security scanner yêu cầu `>=3.23.1` để vá GHSA-rgwj-5xj2-c3m3 (decompression-bomb DoS), giữ Prisma `7.10.0` và tuyệt đối không dùng `npm audit fix --force`.
@@ -1578,10 +1578,16 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 - `verify:full` thêm Docker Engine preflight rõ ràng trước backup/Docker pipeline, tránh lỗi npipe khó hiểu khi Docker Desktop chưa chạy.
 - Không thêm migration; tổng số migration vẫn **23**.
 
-### Roadmap v3.20
+## v3.20.0 — 06/09/2026
 
-- Production rollout approval có TTL/two-person rule và audit diff đầy đủ.
-- Recovery evidence ký SHA-256/Ed25519 và export bundle phục vụ audit.
-- Remediation backlog có SLA theo severity, on-call escalation thực thi và báo cáo Excel.
+- Production probe rollout có **approval TTL** và **two-person rule** khi `NODE_ENV=production`: người đề xuất không thể tự duyệt; proposal lưu base revision, thời hạn và **audit diff đầy đủ** trước/sau. Development giữ luồng trực tiếp để không phá workflow local.
+- Thêm API/UI xem proposal pending và duyệt production rollout; proposal hết TTL hoặc base revision thay đổi sẽ không được áp dụng. Remote code execution tiếp tục **OFF**.
+- Recovery evidence v3.20 tạo bundle audit có **SHA-256** luôn bật; hỗ trợ ký **Ed25519** tùy chọn bằng `SYSTEM_RECOVERY_EVIDENCE_ED25519_PRIVATE_KEY_B64`, chỉ export public key/signature/key-id và không expose private key.
+- Thêm `npm run recovery:evidence:keygen` để sinh key Ed25519 local; private key chỉ in ra để người vận hành tự đưa vào `.env`, không ghi vào source.
+- Remediation backlog có SLA theo severity mặc định **P1=4h, P2=24h, P3=72h, P4=168h**, tính `BREACHED/DUE_SOON/OK`, thống kê theo severity/service và hỗ trợ override bằng JSON env.
+- Thêm **on-call escalation thực thi** cho SLA breach với daily dedup + audit trail; scheduler là opt-in qua `SYSTEM_REMEDIATION_ESCALATION_ENABLED`, đồng thời có nút manual escalation trên Ops Dashboard.
+- Thêm **Remediation Excel** và **Recovery audit bundle** download trực tiếp từ Ops Dashboard.
+- Current scripts/CI/Health/OpenAPI chuyển sang v3.20.0; grouped verification vẫn là `npm run verify` và `npm run verify:full`.
+- **Không thêm migration**; tổng số migration vẫn **23**. `.env` v3.19 hiện tại vẫn chạy được vì toàn bộ biến v3.20 có safe default.
 
 # Lộ trình tiếp theo

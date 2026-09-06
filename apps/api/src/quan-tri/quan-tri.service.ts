@@ -101,6 +101,8 @@ type IncidentActionItemV3170 = {
   owner: string;
   status: "OPEN" | "IN_PROGRESS" | "DONE";
   due_date: string | null;
+  severity?: "P1" | "P2" | "P3" | "P4";
+  service?: string;
 };
 
 type IncidentPostmortemV3170 = {
@@ -134,6 +136,23 @@ type ProbeHealthGateV3180 = {
   max_quorum_failures: number;
   grace_seconds: number;
   check_minutes: number;
+};
+
+type ProbeRolloutProposalV3200 = {
+  id: string;
+  status: "PENDING" | "APPLIED" | "EXPIRED" | "CANCELLED";
+  base_revision: number;
+  payload: { target_version: string; interval_seconds: number; rollout_percent: number; canary_agents: string[]; paused: boolean; note?: string };
+  diff: Record<string, { before: unknown; after: unknown }>;
+  proposed_at: string;
+  expires_at: string;
+  proposed_by_id: string;
+  proposed_by: string;
+  approved_at?: string | null;
+  approved_by_id?: string | null;
+  approved_by?: string | null;
+  approval_note?: string;
+  applied_revision?: number | null;
 };
 
 
@@ -196,7 +215,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     setTimeout(cleanupOps, 120_000).unref();
     this.bo_hen_ops_retention = setInterval(cleanupOps, 6 * 60 * 60_000);
     this.bo_hen_ops_retention.unref();
-    this.logger.log(`Ops v3.19.0 schedulers: DLQ ${dlqPolicy.chu_ky_phut}m, metrics ${opsPolicy.refresh_phut}m, retention ${opsPolicy.retention_days}d.`);
+    this.logger.log(`Ops v3.20.0 schedulers: DLQ ${dlqPolicy.chu_ky_phut}m, metrics ${opsPolicy.refresh_phut}m, retention ${opsPolicy.retention_days}d.`);
 
     const healthGate = this.probe_health_gate_config_v3180();
     if (healthGate.enabled) {
@@ -207,10 +226,15 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     }
 
     const reminder = this.postmortem_reminder_config_v3180();
-    if (reminder.enabled) {
-      const checkReminder = () => this.kiem_tra_postmortem_action_reminder_v3180().catch(error => this.logger.warn(`Postmortem reminder failed: ${error instanceof Error ? error.message : String(error)}`));
-      setTimeout(checkReminder, 180_000).unref();
-      this.bo_hen_postmortem_reminder = setInterval(checkReminder, reminder.interval_hours * 60 * 60_000);
+    const remediationEscalation = this.remediation_escalation_config_v3200();
+    if (reminder.enabled || remediationEscalation.enabled) {
+      const checkReminder = async () => {
+        if (reminder.enabled) await this.kiem_tra_postmortem_action_reminder_v3180();
+        if (remediationEscalation.enabled) await this.kiem_tra_remediation_escalation_v3200(false);
+      };
+      const intervalHours = Math.max(1, Math.min(reminder.enabled ? reminder.interval_hours : 168, remediationEscalation.enabled ? remediationEscalation.interval_hours : 168));
+      setTimeout(() => checkReminder().catch(error => this.logger.warn(`Postmortem/remediation scheduler failed: ${error instanceof Error ? error.message : String(error)}`)), 180_000).unref();
+      this.bo_hen_postmortem_reminder = setInterval(() => checkReminder().catch(error => this.logger.warn(`Postmortem/remediation scheduler failed: ${error instanceof Error ? error.message : String(error)}`)), intervalHours * 60 * 60_000);
       this.bo_hen_postmortem_reminder.unref();
     }
   }
@@ -1114,7 +1138,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const trang_thai = !database.ket_noi ? "LOI" : (van_de.length ? "CANH_BAO" : "TOT");
     const ket_qua = {
       trang_thai,
-      phien_ban: "3.19.0",
+      phien_ban: "3.20.0",
       thoi_gian: new Date().toISOString(),
       api: { uptime_giay: Math.floor(process.uptime()), node: process.version, pid: process.pid, rss_bytes: bo_nho.rss, heap_used_bytes: bo_nho.heapUsed, heap_total_bytes: bo_nho.heapTotal },
       database,
@@ -1370,7 +1394,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     for (const item of sla.burn_rate_policy) rows.push([item.gio, item.nguong, item.muc_do, item.sla.burn_rate ?? "", item.uptime.burn_rate ?? ""]);
     rows.push([], ["Incident"], ["Chữ ký", "Trạng thái", "Vấn đề", "Bắt đầu", "Gần nhất", "Sự kiện", "Tiếp nhận", "Khắc phục"]);
     for (const item of incidents.du_lieu) rows.push([item.chu_ky, item.trang_thai_xu_ly, item.van_de.join(" | "), item.bat_dau.toISOString(), item.gan_nhat.toISOString(), item.so_su_kien, item.tiep_nhan_luc?.toISOString() || "", item.khac_phuc_luc?.toISOString() || ""]);
-    const buffer = this.tao_xlsx(rows, "Ops v3.19.0");
+    const buffer = this.tao_xlsx(rows, "Ops v3.20.0");
     return { ten_file: `ops-slo-incident-${new Date().toISOString().slice(0, 10)}.xlsx`, mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", base64: buffer.toString("base64") };
   }
 
@@ -3186,8 +3210,12 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       const status = (["OPEN", "IN_PROGRESS", "DONE"].includes(statusRaw) ? statusRaw : "OPEN") as IncidentActionItemV3170["status"];
       const dueRaw = String(raw.due_date || "").trim();
       const due_date = dueRaw && Number.isFinite(Date.parse(dueRaw)) ? new Date(dueRaw).toISOString().slice(0, 10) : null;
+      const severityRaw = String(raw.severity || "P3").trim().toUpperCase();
+      const severity = (["P1", "P2", "P3", "P4"].includes(severityRaw) ? severityRaw : "P3") as IncidentActionItemV3170["severity"];
+      const serviceRaw = String(raw.service || incident.dich_vu || "api").trim().toLowerCase();
+      const service = /^[a-z0-9._-]{2,80}$/.test(serviceRaw) ? serviceRaw : "api";
       if (!title || title.length > 300) throw new BadRequestException(`Action item ${index + 1} khong hop le`);
-      return { id: /^[A-Za-z0-9._-]{4,80}$/.test(String(raw.id || "")) ? String(raw.id) : randomUUID(), title, owner, status, due_date };
+      return { id: /^[A-Za-z0-9._-]{4,80}$/.test(String(raw.id || "")) ? String(raw.id) : randomUUID(), title, owner, status, due_date, severity, service };
     });
     const timeline_snapshot = await this.timeline_snapshot_v3170(chuKy);
     const complete = incident.trang_thai_xu_ly === "DA_KHAC_PHUC" && dto.summary.trim().length > 0 && dto.root_cause.trim().length > 0 && dto.resolution.trim().length > 0;
@@ -3537,6 +3565,245 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const [base, gate, recovery, remediation] = await Promise.all([this.trang_thai_ops_v3180(), this.probe_health_gate_status_v3190(), this.recovery_readiness_v3190(), this.postmortem_remediation_v3190()]);
     const fleet = base.probe_fleet as Record<string, unknown> | undefined;
     return { ...base, phien_ban: "3.19.0", probe_fleet: fleet ? { ...fleet, phien_ban: "3.19.0" } : base.probe_fleet, multi_region_quorum: { ...base.multi_region_quorum, phien_ban: "3.19.0" }, probe_health_gate: gate, database_recovery: recovery, remediation_backlog: remediation };
+  }
+
+
+  private probe_rollout_approval_config_v3200() {
+    const yes = (name: string, fallback: string) => ["1", "true", "yes", "on"].includes((process.env[name] || fallback).trim().toLowerCase());
+    const ttlRaw = Number.parseInt(process.env.SYSTEM_SLO_PROBE_ROLLOUT_APPROVAL_TTL_MINUTES || "30", 10);
+    const environment = (process.env.NODE_ENV || "development").trim().toLowerCase();
+    const configuredRequired = yes("SYSTEM_SLO_PROBE_ROLLOUT_APPROVAL_REQUIRED", "true");
+    return {
+      environment,
+      required: environment === "production" && configuredRequired,
+      configured_required: configuredRequired,
+      ttl_minutes: Number.isFinite(ttlRaw) ? Math.max(5, Math.min(1440, ttlRaw)) : 30,
+      two_person_rule: yes("SYSTEM_SLO_PROBE_ROLLOUT_TWO_PERSON_RULE", "true"),
+      audit_diff: true as const,
+      remote_code_execution: false as const,
+    };
+  }
+
+  private probe_rollout_diff_v3200(current: ProbeDesiredStateV3170, next: ProbeRolloutProposalV3200["payload"]) {
+    const diff: Record<string, { before: unknown; after: unknown }> = {};
+    const pairs: Array<[keyof ProbeRolloutProposalV3200["payload"], unknown, unknown]> = [
+      ["target_version", current.target_version, next.target_version],
+      ["interval_seconds", current.interval_seconds, next.interval_seconds],
+      ["rollout_percent", current.rollout_percent, next.rollout_percent],
+      ["canary_agents", current.canary_agents, next.canary_agents],
+      ["paused", current.paused, next.paused],
+      ["note", current.note, next.note || ""],
+    ];
+    for (const [key, before, after] of pairs) if (JSON.stringify(before) !== JSON.stringify(after)) diff[String(key)] = { before, after };
+    return diff;
+  }
+
+  private normalize_probe_rollout_proposal_v3200(raw: unknown): ProbeRolloutProposalV3200 | null {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+    const obj = raw as Record<string, unknown>;
+    if (typeof obj.id !== "string" || !obj.payload || typeof obj.payload !== "object" || Array.isArray(obj.payload)) return null;
+    const payloadObj = obj.payload as Record<string, unknown>;
+    const statusRaw = String(obj.status || "PENDING").toUpperCase();
+    const status = (["PENDING", "APPLIED", "EXPIRED", "CANCELLED"].includes(statusRaw) ? statusRaw : "PENDING") as ProbeRolloutProposalV3200["status"];
+    return {
+      id: obj.id,
+      status,
+      base_revision: Math.max(0, Number(obj.base_revision || 0)),
+      payload: {
+        target_version: String(payloadObj.target_version || "").trim().slice(0, 40),
+        interval_seconds: Math.max(30, Math.min(3600, Number(payloadObj.interval_seconds || 300))),
+        rollout_percent: Math.max(0, Math.min(100, Number(payloadObj.rollout_percent || 0))),
+        canary_agents: Array.isArray(payloadObj.canary_agents) ? payloadObj.canary_agents.map(x => String(x).trim().slice(0, 80)).filter(Boolean).slice(0, 50) : [],
+        paused: payloadObj.paused === true,
+        note: String(payloadObj.note || "").trim().slice(0, 500),
+      },
+      diff: obj.diff && typeof obj.diff === "object" && !Array.isArray(obj.diff) ? obj.diff as ProbeRolloutProposalV3200["diff"] : {},
+      proposed_at: String(obj.proposed_at || ""),
+      expires_at: String(obj.expires_at || ""),
+      proposed_by_id: String(obj.proposed_by_id || ""),
+      proposed_by: String(obj.proposed_by || ""),
+      approved_at: typeof obj.approved_at === "string" ? obj.approved_at : null,
+      approved_by_id: typeof obj.approved_by_id === "string" ? obj.approved_by_id : null,
+      approved_by: typeof obj.approved_by === "string" ? obj.approved_by : null,
+      approval_note: String(obj.approval_note || "").slice(0, 1000),
+      applied_revision: Number.isFinite(Number(obj.applied_revision)) ? Number(obj.applied_revision) : null,
+    };
+  }
+
+  async lay_probe_rollout_proposal_v3200() {
+    const config = this.probe_rollout_approval_config_v3200();
+    const row = await this.db.cauHinhHeThong.findUnique({ where: { khoa: "PROBE_ROLLOUT_PROPOSAL_V3200" } });
+    let proposal = this.normalize_probe_rollout_proposal_v3200(row?.gia_tri);
+    if (proposal?.status === "PENDING" && Number.isFinite(Date.parse(proposal.expires_at)) && Date.parse(proposal.expires_at) <= Date.now()) proposal = { ...proposal, status: "EXPIRED" };
+    return { phien_ban: "3.20.0", ...config, proposal, secret_values_exposed: false as const };
+  }
+
+  async cap_nhat_probe_desired_state_v3200(actor: NguoiDungXacThuc, dto: { target_version: string; interval_seconds: number; rollout_percent: number; canary_agents: string[]; paused: boolean; note?: string }) {
+    const config = this.probe_rollout_approval_config_v3200();
+    if (!config.required) return this.cap_nhat_probe_desired_state_v3170(actor, dto);
+    const state = await this.lay_probe_desired_state_v3170();
+    const payload: ProbeRolloutProposalV3200["payload"] = {
+      target_version: dto.target_version.trim(),
+      interval_seconds: dto.interval_seconds,
+      rollout_percent: dto.rollout_percent,
+      canary_agents: [...new Set(dto.canary_agents.map(x => x.trim()).filter(Boolean))].slice(0, 50),
+      paused: dto.paused,
+      note: (dto.note || "").trim().slice(0, 500),
+    };
+    const diff = this.probe_rollout_diff_v3200(state.current, payload);
+    if (!Object.keys(diff).length) return state;
+    const proposedAt = new Date();
+    const proposal: ProbeRolloutProposalV3200 = {
+      id: randomUUID(), status: "PENDING", base_revision: state.current.revision, payload, diff,
+      proposed_at: proposedAt.toISOString(), expires_at: new Date(proposedAt.getTime() + config.ttl_minutes * 60_000).toISOString(),
+      proposed_by_id: actor.id, proposed_by: actor.ho_ten, approved_at: null, approved_by_id: null, approved_by: null, approval_note: "", applied_revision: null,
+    };
+    await this.db.cauHinhHeThong.upsert({ where: { khoa: "PROBE_ROLLOUT_PROPOSAL_V3200" }, create: { khoa: "PROBE_ROLLOUT_PROPOSAL_V3200", gia_tri: this.chuan_hoa_json_object(proposal as unknown as Record<string, unknown>), nguoi_cap_nhat_id: actor.id }, update: { gia_tri: this.chuan_hoa_json_object(proposal as unknown as Record<string, unknown>), nguoi_cap_nhat_id: actor.id } });
+    await this.ghi_lich_su_van_hanh("PROBE_ROLLOUT_APPROVAL", "PENDING", `Admin ${actor.ho_ten} đề xuất production rollout`, { proposal_id: proposal.id, base_revision: proposal.base_revision, expires_at: proposal.expires_at, ttl_minutes: config.ttl_minutes, two_person_rule: config.two_person_rule, diff, remote_code_execution: false });
+    return { ...state, pending_approval: true as const, rollout_approval: { ...config, proposal } };
+  }
+
+  async approve_probe_rollout_v3200(actor: NguoiDungXacThuc, proposalIdRaw: string, note?: string) {
+    const config = this.probe_rollout_approval_config_v3200();
+    const currentProposal = await this.lay_probe_rollout_proposal_v3200();
+    const proposal = currentProposal.proposal;
+    const proposalId = proposalIdRaw.trim();
+    if (!proposal || proposal.id !== proposalId) throw new NotFoundException("Không tìm thấy rollout proposal đang chờ duyệt");
+    if (proposal.status !== "PENDING") throw new ConflictException(`Rollout proposal không còn ở trạng thái PENDING (${proposal.status})`);
+    if (Date.parse(proposal.expires_at) <= Date.now()) throw new ConflictException("Rollout proposal đã hết TTL; hãy tạo proposal mới");
+    if (config.two_person_rule && proposal.proposed_by_id === actor.id) throw new ForbiddenException("Two-person rule: người đề xuất không được tự duyệt production rollout");
+    const state = await this.lay_probe_desired_state_v3170();
+    if (state.current.revision !== proposal.base_revision) throw new ConflictException("Desired-state đã thay đổi sau khi proposal được tạo; hãy tạo proposal mới");
+    const applied = await this.cap_nhat_probe_desired_state_v3170(actor, proposal.payload);
+    const approved: ProbeRolloutProposalV3200 = { ...proposal, status: "APPLIED", approved_at: new Date().toISOString(), approved_by_id: actor.id, approved_by: actor.ho_ten, approval_note: (note || "").trim().slice(0, 1000), applied_revision: applied.current.revision };
+    await this.db.cauHinhHeThong.update({ where: { khoa: "PROBE_ROLLOUT_PROPOSAL_V3200" }, data: { gia_tri: this.chuan_hoa_json_object(approved as unknown as Record<string, unknown>), nguoi_cap_nhat_id: actor.id } });
+    await this.ghi_lich_su_van_hanh("PROBE_ROLLOUT_APPROVAL", "APPLIED", `Admin ${actor.ho_ten} duyệt production rollout theo two-person rule`, { proposal_id: approved.id, proposer: approved.proposed_by, approver: actor.ho_ten, base_revision: approved.base_revision, applied_revision: approved.applied_revision, ttl_minutes: config.ttl_minutes, diff: approved.diff, approval_note: approved.approval_note, remote_code_execution: false });
+    return { ...applied, rollout_approval: { ...config, proposal: approved } };
+  }
+
+  private async recovery_readiness_v3200() {
+    const base = await this.recovery_readiness_v3190();
+    const backupDir = process.env.SYSTEM_BACKUP_DIR?.trim() || join(process.cwd(), "..", "..", "backups");
+    let bundle: Record<string, unknown> | null = null;
+    try { bundle = JSON.parse(await readFile(join(backupDir, "recovery-evidence-bundle-v3200.json"), "utf8")) as Record<string, unknown>; } catch {}
+    const integrity = bundle?.integrity && typeof bundle.integrity === "object" && !Array.isArray(bundle.integrity) ? bundle.integrity as Record<string, unknown> : {};
+    const signature = bundle?.signature && typeof bundle.signature === "object" && !Array.isArray(bundle.signature) ? bundle.signature as Record<string, unknown> : {};
+    return {
+      ...base,
+      evidence_export_supported: true,
+      evidence_file: "backups/recovery-evidence-v3200.json",
+      evidence_bundle_file: "backups/recovery-evidence-bundle-v3200.json",
+      evidence_sha256_supported: true as const,
+      evidence_ed25519_supported: true as const,
+      evidence_sha256: typeof integrity.sha256 === "string" ? integrity.sha256 : null,
+      evidence_ed25519_configured: signature.configured === true,
+      evidence_signature_verified: signature.verified === true,
+      evidence_signature_key_id: typeof signature.key_id === "string" ? signature.key_id : null,
+      evidence_signature_public_fingerprint: typeof signature.public_key_fingerprint_sha256 === "string" ? signature.public_key_fingerprint_sha256 : null,
+      audit_bundle_ready: !!bundle && typeof integrity.sha256 === "string",
+      private_key_exposed: false as const,
+      secret_values_exposed: false as const,
+    };
+  }
+
+  async xuat_recovery_evidence_bundle_v3200() {
+    const backupDir = process.env.SYSTEM_BACKUP_DIR?.trim() || join(process.cwd(), "..", "..", "backups");
+    const path = join(backupDir, "recovery-evidence-bundle-v3200.json");
+    let raw: string;
+    try { raw = await readFile(path, "utf8"); } catch { throw new NotFoundException("Chưa có recovery evidence bundle v3.20.0; chạy npm run recovery:evidence trước"); }
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    return { ten_file: `recovery-evidence-audit-bundle-${new Date().toISOString().slice(0, 10)}.json`, mime_type: "application/json", base64: Buffer.from(raw, "utf8").toString("base64"), manifest: parsed.manifest || {}, integrity: parsed.integrity || {}, signature: parsed.signature || {}, secret_values_exposed: false as const };
+  }
+
+  private remediation_sla_config_v3200() {
+    const defaults: Record<"P1" | "P2" | "P3" | "P4", number> = { P1: 4, P2: 24, P3: 72, P4: 168 };
+    let parsed: Record<string, unknown> = {};
+    try { parsed = JSON.parse(process.env.SYSTEM_REMEDIATION_SLA_HOURS_JSON?.trim() || "{}") as Record<string, unknown>; } catch {}
+    const sla_hours = { ...defaults };
+    for (const key of Object.keys(defaults) as Array<keyof typeof defaults>) {
+      const value = Number(parsed[key]); if (Number.isFinite(value)) sla_hours[key] = Math.max(1, Math.min(720, Math.floor(value)));
+    }
+    return { sla_hours, due_soon_hours: 24 };
+  }
+
+  private remediation_escalation_config_v3200() {
+    const enabled = ["1", "true", "yes", "on"].includes((process.env.SYSTEM_REMEDIATION_ESCALATION_ENABLED || "false").trim().toLowerCase());
+    const interval = Number.parseInt(process.env.SYSTEM_REMEDIATION_ESCALATION_INTERVAL_HOURS || "6", 10);
+    return { enabled, interval_hours: Number.isFinite(interval) ? Math.max(1, Math.min(168, interval)) : 6, daily_dedup: true as const };
+  }
+
+  private async postmortem_remediation_v3200() {
+    const rows = await this.db.cauHinhHeThong.findMany({ where: { khoa: { startsWith: "INCIDENT_PM_" } }, select: { gia_tri: true } });
+    const config = this.remediation_sla_config_v3200();
+    const now = Date.now();
+    const owners: Record<string, number> = {}; const bySeverity: Record<string, number> = { P1: 0, P2: 0, P3: 0, P4: 0 };
+    let open = 0, overdue = 0, dueSoon = 0, unowned = 0, slaBreached = 0, slaDueSoon = 0;
+    const items: Array<Record<string, unknown>> = [];
+    for (const row of rows) {
+      const pm = this.normalize_postmortem_v3180(row.gia_tri);
+      const startMs = Number.isFinite(Date.parse(pm.updated_at || "")) ? Date.parse(pm.updated_at) : now;
+      for (const action of pm.action_items || []) {
+        if (action.status === "DONE") continue;
+        open += 1;
+        const owner = (action.owner || "").trim(); if (!owner) unowned += 1; else owners[owner] = (owners[owner] || 0) + 1;
+        const severity = (["P1", "P2", "P3", "P4"].includes(String(action.severity || "P3")) ? String(action.severity || "P3") : "P3") as "P1" | "P2" | "P3" | "P4";
+        bySeverity[severity] = (bySeverity[severity] || 0) + 1;
+        const service = /^[a-z0-9._-]{2,80}$/.test(String(action.service || "")) ? String(action.service) : "api";
+        const explicitDueMs = action.due_date && Number.isFinite(Date.parse(`${action.due_date}T23:59:59.999Z`)) ? Date.parse(`${action.due_date}T23:59:59.999Z`) : Number.POSITIVE_INFINITY;
+        if (Number.isFinite(explicitDueMs)) { if (explicitDueMs < now) overdue += 1; else if (explicitDueMs <= now + 3 * 86_400_000) dueSoon += 1; }
+        const severityDeadlineMs = startMs + config.sla_hours[severity] * 3_600_000;
+        const slaDeadlineMs = Math.min(explicitDueMs, severityDeadlineMs);
+        const slaStatus = slaDeadlineMs < now ? "BREACHED" : slaDeadlineMs <= now + config.due_soon_hours * 3_600_000 ? "DUE_SOON" : "OK";
+        if (slaStatus === "BREACHED") slaBreached += 1; else if (slaStatus === "DUE_SOON") slaDueSoon += 1;
+        items.push({ incident_id: pm.incident_id, action_id: action.id, title: action.title, owner, status: action.status, severity, service, due_date: action.due_date, sla_hours: config.sla_hours[severity], sla_deadline: new Date(slaDeadlineMs).toISOString(), sla_status: slaStatus, postmortem_updated_at: pm.updated_at });
+      }
+    }
+    return { open_actions: open, overdue_actions: overdue, due_soon_actions: dueSoon, unowned_actions: unowned, owners, by_severity: bySeverity, sla_hours: config.sla_hours, sla_breached_actions: slaBreached, sla_due_soon_actions: slaDueSoon, items: items.slice(0, 500), on_call_escalation_ready: true, on_call_escalation: this.remediation_escalation_config_v3200(), reminder_deduplicated_daily: true };
+  }
+
+  async kiem_tra_remediation_escalation_v3200(force = false) {
+    const config = this.remediation_escalation_config_v3200();
+    if (!config.enabled && !force) return { sent: 0, skipped: 0, reason: "DISABLED" };
+    const backlog = await this.postmortem_remediation_v3200();
+    const breached = (backlog.items as Array<Record<string, unknown>>).filter(x => x.sla_status === "BREACHED");
+    if (!breached.length) return { sent: 0, skipped: 0, reason: "NO_SLA_BREACH" };
+    const stateRow = await this.db.cauHinhHeThong.findUnique({ where: { khoa: "REMEDIATION_ESCALATION_V3200" } });
+    const stateObj = stateRow?.gia_tri && typeof stateRow.gia_tri === "object" && !Array.isArray(stateRow.gia_tri) ? stateRow.gia_tri as Record<string, unknown> : {};
+    const lastByService = stateObj.last_sent_by_service && typeof stateObj.last_sent_by_service === "object" && !Array.isArray(stateObj.last_sent_by_service) ? { ...(stateObj.last_sent_by_service as Record<string, unknown>) } : {};
+    const today = new Date().toISOString().slice(0, 10);
+    const services = [...new Set(breached.map(x => String(x.service || "api")))];
+    let sent = 0, skipped = 0; const failures: string[] = [];
+    for (const service of services) {
+      const rows = breached.filter(x => String(x.service || "api") === service);
+      if (!force && lastByService[service] === today) { skipped += rows.length; continue; }
+      const roster = await this.on_call_hien_tai_v3160(service);
+      const recipients = [...new Set(roster.current.map(x => x.nguoi_dung?.thu_dien_tu).filter((x): x is string => typeof x === "string" && x.includes("@")))];
+      if (!recipients.length) { failures.push(`${service}:NO_ON_CALL`); await this.ghi_lich_su_van_hanh("REMEDIATION_ESCALATION", "NO_ON_CALL", `Không có on-call để nhận remediation SLA escalation cho ${service}`, { service, breached_actions: rows.length }); continue; }
+      try {
+        await this.thu_dien_tu.guiCanhBaoHeThong({ thu_dien_tu: recipients, trang_thai: "REMEDIATION_SLA_BREACH", van_de: rows.slice(0, 20).map(x => `[${x.severity}] ${x.title} · deadline ${x.sla_deadline}`), thoi_gian: new Date().toISOString(), cap_leo_thang: 1, ton_tai_phut: 0 });
+        sent += rows.length; lastByService[service] = today;
+        await this.ghi_lich_su_van_hanh("REMEDIATION_ESCALATION", "SENT", `Đã route remediation SLA escalation tới on-call ${service}`, { service, breached_actions: rows.length, recipients: recipients.length, action_ids: rows.map(x => x.action_id), daily_dedup: true });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error); failures.push(`${service}:${message}`);
+        await this.ghi_lich_su_van_hanh("REMEDIATION_ESCALATION", "FAILED", `Remediation SLA escalation thất bại cho ${service}`, { service, breached_actions: rows.length, error: message.slice(0, 500) });
+      }
+    }
+    await this.db.cauHinhHeThong.upsert({ where: { khoa: "REMEDIATION_ESCALATION_V3200" }, create: { khoa: "REMEDIATION_ESCALATION_V3200", gia_tri: this.chuan_hoa_json_object({ last_sent_by_service: lastByService, updated_at: new Date().toISOString() }) }, update: { gia_tri: this.chuan_hoa_json_object({ last_sent_by_service: lastByService, updated_at: new Date().toISOString() }) } });
+    return { sent, skipped, services: services.length, failures, daily_dedup: true };
+  }
+
+  async xuat_remediation_backlog_excel_v3200() {
+    const backlog = await this.postmortem_remediation_v3200();
+    const rows: unknown[][] = [["Incident", "Action ID", "Tiêu đề", "Owner", "Severity", "Service", "Trạng thái", "Due date", "SLA (giờ)", "SLA deadline", "SLA status"]];
+    for (const item of backlog.items as Array<Record<string, unknown>>) rows.push([item.incident_id, item.action_id, item.title, item.owner, item.severity, item.service, item.status, item.due_date || "", item.sla_hours, item.sla_deadline, item.sla_status]);
+    const buffer = this.tao_xlsx(rows, "Remediation v3.20.0");
+    return { ten_file: `remediation-backlog-${new Date().toISOString().slice(0, 10)}.xlsx`, mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", base64: buffer.toString("base64"), tong: backlog.open_actions, sla_breached: backlog.sla_breached_actions };
+  }
+
+  async trang_thai_ops_v3200() {
+    const [base, rolloutApproval, recovery, remediation] = await Promise.all([this.trang_thai_ops_v3190(), this.lay_probe_rollout_proposal_v3200(), this.recovery_readiness_v3200(), this.postmortem_remediation_v3200()]);
+    const fleet = base.probe_fleet as Record<string, unknown> | undefined;
+    return { ...base, phien_ban: "3.20.0", probe_fleet: fleet ? { ...fleet, phien_ban: "3.20.0" } : base.probe_fleet, multi_region_quorum: { ...base.multi_region_quorum, phien_ban: "3.20.0" }, rollout_approval: rolloutApproval, database_recovery: recovery, remediation_backlog: remediation };
   }
 
   async trang_thai_ops_v3160() {

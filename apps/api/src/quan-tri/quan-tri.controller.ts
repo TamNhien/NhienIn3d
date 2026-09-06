@@ -42,6 +42,7 @@ import { TaoProbeEnrollmentTokenDto } from "./dto/probe-enrollment-v3150.dto.js"
 import { CapNhatProbeDesiredStateDto, LuuIncidentPostmortemDto } from "./dto/ops-v3170.dto.js";
 import { DuyetIncidentPostmortemDto } from "./dto/ops-v3180.dto.js";
 import { ApproveProbeRollbackV3190Dto } from "./dto/ops-v3190.dto.js";
+import { ApproveProbeRolloutV3200Dto } from "./dto/ops-v3200.dto.js";
 import { QuanTriService } from "./quan-tri.service.js";
 
 @ApiTags("Quản trị")
@@ -74,9 +75,11 @@ export class QuanTriController {
   @Get("he-thong/su-co") su_co_he_thong(@Query("gioi_han") gioi_han?: string, @Query("trang_thai_xu_ly") trang_thai_xu_ly?: string, @Query("tu_ngay") tu_ngay?: string, @Query("den_ngay") den_ngay?: string) { return this.service.danh_sach_su_co_van_hanh(gioi_han, trang_thai_xu_ly, tu_ngay, den_ngay); }
   @Get("he-thong/su-co/excel") su_co_he_thong_excel(@Query("trang_thai_xu_ly") trang_thai_xu_ly?: string, @Query("tu_ngay") tu_ngay?: string, @Query("den_ngay") den_ngay?: string) { return this.service.xuat_excel_danh_sach_su_co_van_hanh(trang_thai_xu_ly, tu_ngay, den_ngay); }
   @Get("he-thong/ops/excel") ops_excel(@Query("trang_thai_xu_ly") trang_thai_xu_ly?: string, @Query("tu_ngay") tu_ngay?: string, @Query("den_ngay") den_ngay?: string) { return this.service.xuat_excel_ops_tong_hop(trang_thai_xu_ly, tu_ngay, den_ngay); }
-  @Get("he-thong/ops/runtime") ops_runtime() { return this.service.trang_thai_ops_v3190(); }
+  @Get("he-thong/ops/runtime") ops_runtime() { return this.service.trang_thai_ops_v3200(); }
   @Get("he-thong/ops/probe-desired-state") probe_desired_state() { return this.service.lay_probe_desired_state_v3170(); }
-  @Post("he-thong/ops/probe-desired-state") cap_nhat_probe_desired_state(@Req() req: YeuCauCoNguoiDung, @Body() dto: CapNhatProbeDesiredStateDto) { return this.service.cap_nhat_probe_desired_state_v3170(req.nguoi_dung_xac_thuc!, dto); }
+  @Post("he-thong/ops/probe-desired-state") cap_nhat_probe_desired_state(@Req() req: YeuCauCoNguoiDung, @Body() dto: CapNhatProbeDesiredStateDto) { return this.service.cap_nhat_probe_desired_state_v3200(req.nguoi_dung_xac_thuc!, dto); }
+  @Get("he-thong/ops/probe-desired-state/proposal") probe_rollout_proposal_v3200() { return this.service.lay_probe_rollout_proposal_v3200(); }
+  @Post("he-thong/ops/probe-desired-state/proposal/approve") approve_probe_rollout_v3200(@Req() req: YeuCauCoNguoiDung, @Body() dto: ApproveProbeRolloutV3200Dto) { return this.service.approve_probe_rollout_v3200(req.nguoi_dung_xac_thuc!, dto.proposal_id, dto.note); }
   @Post("he-thong/ops/probe-desired-state/rollback") rollback_probe_desired_state(@Req() req: YeuCauCoNguoiDung) { return this.service.rollback_probe_desired_state_v3170(req.nguoi_dung_xac_thuc!); }
   @Post("he-thong/ops/probe-enrollment-token") tao_probe_enrollment_token(@Req() req: YeuCauCoNguoiDung, @Body() dto: TaoProbeEnrollmentTokenDto) { return this.service.tao_probe_enrollment_token_v3150(req.nguoi_dung_xac_thuc!, dto); }
   @Get("he-thong/ops/phan-cong") ops_phan_cong() { return this.service.danh_sach_ops_phan_cong(); }
@@ -110,6 +113,9 @@ export class QuanTriController {
   @Post("he-thong/webhook/dead-letter/:id/ack") webhook_dead_letter_ack(@Req() req: YeuCauCoNguoiDung, @Param("id") id: string, @Body() dto: AckWebhookDeadLetterDto) { return this.service.acknowledge_webhook_dead_letter(req.nguoi_dung_xac_thuc!, id, dto.ghi_chu); }
   @Post("he-thong/webhook/dead-letter/:id/replay") webhook_dead_letter_replay(@Req() req: YeuCauCoNguoiDung, @Param("id") id: string) { return this.service.replay_webhook_dead_letter(req.nguoi_dung_xac_thuc!, id); }
   @Post("he-thong/ops/probe-health-gate/approve-rollback") approve_probe_rollback_v3190(@Req() req: YeuCauCoNguoiDung, @Body() dto: ApproveProbeRollbackV3190Dto) { return this.service.approve_probe_rollback_v3190(req.nguoi_dung_xac_thuc!, dto.note); }
+  @Get("he-thong/ops/recovery/evidence-bundle") recovery_evidence_bundle_v3200() { return this.service.xuat_recovery_evidence_bundle_v3200(); }
+  @Get("he-thong/ops/remediation/excel") remediation_excel_v3200() { return this.service.xuat_remediation_backlog_excel_v3200(); }
+  @Post("he-thong/ops/remediation/escalate") remediation_escalate_v3200() { return this.service.kiem_tra_remediation_escalation_v3200(true); }
   @Get("he-thong/su-co/:chu_ky/postmortem") incident_postmortem(@Param("chu_ky") chu_ky: string) { return this.service.lay_incident_postmortem_v3180(chu_ky); }
   @Post("he-thong/su-co/:chu_ky/postmortem") luu_incident_postmortem(@Req() req: YeuCauCoNguoiDung, @Param("chu_ky") chu_ky: string, @Body() dto: LuuIncidentPostmortemDto) { return this.service.luu_incident_postmortem_v3180(req.nguoi_dung_xac_thuc!, chu_ky, dto); }
   @Post("he-thong/su-co/:chu_ky/postmortem/approval") duyet_incident_postmortem(@Req() req: YeuCauCoNguoiDung, @Param("chu_ky") chu_ky: string, @Body() dto: DuyetIncidentPostmortemDto) { return this.service.duyet_incident_postmortem_v3180(req.nguoi_dung_xac_thuc!, chu_ky, dto); }
