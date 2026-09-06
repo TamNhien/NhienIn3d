@@ -1082,3 +1082,73 @@ footer{border-top:1px solid var(--line);max-width:1240px;margin:auto;padding:30p
 .cine-schedule-row.is-conflict-v324{border-color:#9f1239;box-shadow:inset 0 0 0 1px rgba(244,63,94,.12)}
 @media(max-width:980px){.cine-replenishment-stats-v324{grid-template-columns:repeat(2,minmax(0,1fr))}.cine-replenishment-row-v324{grid-template-columns:1fr 1fr}.cine-replenishment-row-v324>strong{justify-self:start}.cine-replenishment-head-v324{flex-direction:column}}
 @media(max-width:620px){.cine-replenishment-stats-v324,.cine-replenishment-row-v324{grid-template-columns:1fr}.cine-replenishment-head-v324 .cine-btn{width:100%}}
+
+
+/* v3.24.1 hotfix - Admin luôn nằm trọn viewport và không cắt tab bên phải. */
+.cine-admin-shell.page-shell{
+  width:min(1240px,calc(100vw - 32px));
+  max-width:calc(100vw - 32px);
+  margin-inline:auto;
+  min-width:0;
+}
+.cine-admin-heading,.cine-admin-stats,.cine-admin-tabs{
+  min-width:0;
+  max-width:100%;
+}
+.cine-admin-tabs{
+  display:flex;
+  flex-wrap:wrap;
+  overflow-x:visible;
+  overflow-y:visible;
+}
+.cine-admin-tabs .cine-btn{
+  flex:1 1 132px;
+  min-width:0;
+  max-width:100%;
+  white-space:normal;
+  overflow-wrap:anywhere;
+  word-break:normal;
+}
+@media(max-width:760px){
+  .cine-admin-shell.page-shell{width:calc(100vw - 24px);max-width:calc(100vw - 24px)}
+  .cine-admin-tabs .cine-btn{flex-basis:calc(50% - 4px)}
+}
+@media(max-width:460px){
+  .cine-admin-tabs .cine-btn{flex-basis:100%}
+}
+
+/* v3.24.1 hotfix - bang kho khong bi cat cot ben phai tren desktop nho.
+   Bang giu day du 13 cot trong mot viewport cuon rieng, co thanh cuon ngang luon de tiep can
+   va header sticky de doi chieu cot khi cuon doc. */
+.cine-inventory-table-card-v214{
+  width:100%;
+  max-width:100%;
+  min-width:0;
+  overflow:hidden;
+}
+.cine-inventory-scroll-v214{
+  width:100%;
+  max-width:100%;
+  min-width:0;
+  max-height:min(68vh,760px);
+  overflow:auto;
+  overscroll-behavior:contain;
+  scrollbar-gutter:stable both-edges;
+  -webkit-overflow-scrolling:touch;
+}
+.cine-inventory-scroll-v214>.cine-inventory-head-v214{
+  position:sticky;
+  top:0;
+  z-index:4;
+}
+.cine-inventory-scroll-v214::-webkit-scrollbar{width:12px;height:12px}
+.cine-inventory-scroll-v214::-webkit-scrollbar-track{background:#08111f}
+.cine-inventory-scroll-v214::-webkit-scrollbar-thumb{background:#475569;border:2px solid #08111f;border-radius:999px}
+.cine-inventory-scroll-v214::-webkit-scrollbar-thumb:hover{background:#64748b}
+.cine-inventory-scroll-v214{scrollbar-color:#475569 #08111f;scrollbar-width:auto}
+@media(max-width:1280px){
+  .cine-variant-head-v215,.cine-variant-row-v215{
+    grid-template-columns:minmax(180px,1.35fr) minmax(145px,1fr) minmax(130px,.9fr) minmax(125px,.85fr) 100px 82px 82px 82px 94px 104px 96px minmax(190px,1.1fr) 140px;
+    min-width:1880px;
+  }
+}

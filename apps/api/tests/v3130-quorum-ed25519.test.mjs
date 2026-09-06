@@ -19,6 +19,6 @@ test("v3.13.0 API runtime co quorum anomaly va asymmetric signing", () => {
 test("v3.13.0 API health va OpenAPI dong bo version", () => {
   const health = read("../src/suc-khoe/suc-khoe.controller.ts");
   const main = read("../src/main.ts");
-  assert.match(health, /phien_ban: "v3\.24\.0"/);
-  assert.match(main, /setVersion\("3\.24\.0"\)/);
+  assert.match(health, /phien_ban: "v3\.24\.1"/);
+  assert.match(main, /setVersion\("3\.24\.1"\)/);
 });

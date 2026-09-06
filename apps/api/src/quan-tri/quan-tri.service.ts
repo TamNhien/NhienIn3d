@@ -236,7 +236,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     setTimeout(cleanupOps, 120_000).unref();
     this.bo_hen_ops_retention = setInterval(cleanupOps, 6 * 60 * 60_000);
     this.bo_hen_ops_retention.unref();
-    this.logger.log(`Ops v3.24.0 schedulers: DLQ ${dlqPolicy.chu_ky_phut}m, metrics ${opsPolicy.refresh_phut}m, retention ${opsPolicy.retention_days}d.`);
+    this.logger.log(`Ops v3.24.1 schedulers: DLQ ${dlqPolicy.chu_ky_phut}m, metrics ${opsPolicy.refresh_phut}m, retention ${opsPolicy.retention_days}d.`);
 
     const healthGate = this.probe_health_gate_config_v3180();
     if (healthGate.enabled) {
@@ -1159,7 +1159,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const trang_thai = !database.ket_noi ? "LOI" : (van_de.length ? "CANH_BAO" : "TOT");
     const ket_qua = {
       trang_thai,
-      phien_ban: "3.24.0",
+      phien_ban: "3.24.1",
       thoi_gian: new Date().toISOString(),
       api: { uptime_giay: Math.floor(process.uptime()), node: process.version, pid: process.pid, rss_bytes: bo_nho.rss, heap_used_bytes: bo_nho.heapUsed, heap_total_bytes: bo_nho.heapTotal },
       database,
@@ -3050,7 +3050,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const canary = (process.env.SYSTEM_SLO_PROBE_DESIRED_CANARY_AGENTS || "").split(",").map(x => x.trim()).filter(x => /^[A-Za-z0-9._-]{2,80}$/.test(x)).slice(0, 50);
     return {
       revision: 0,
-      target_version: (process.env.SYSTEM_SLO_PROBE_DESIRED_TARGET_VERSION || "3.24.0").trim(),
+      target_version: (process.env.SYSTEM_SLO_PROBE_DESIRED_TARGET_VERSION || "3.24.1").trim(),
       interval_seconds: Math.max(30, Math.min(3600, intervalRaw)),
       rollout_percent: Math.max(0, Math.min(100, rolloutRaw)),
       canary_agents: [...new Set(canary)],
@@ -4103,7 +4103,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
 
   async lay_probe_rollout_proposal_v3240() {
     const base = await this.lay_probe_rollout_proposal_v3230();
-    return { ...base, phien_ban: "3.24.0" };
+    return { ...base, phien_ban: "3.24.1" };
   }
 
   async cap_nhat_probe_desired_state_v3240(actor: NguoiDungXacThuc, dto: { target_version: string; interval_seconds: number; rollout_percent: number; canary_agents: string[]; paused: boolean; note?: string }) {
@@ -4477,26 +4477,26 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     catch { source = "recovery-evidence-bundle-v3230.json"; try { bundle = JSON.parse(await readFile(join(backupDir, source), "utf8")) as Record<string, unknown>; } catch {} }
     const verification = bundle ? this.verify_recovery_evidence_bundle_v3230(bundle) : null;
     const manifest = bundle?.manifest && typeof bundle.manifest === "object" && !Array.isArray(bundle.manifest) ? bundle.manifest as Record<string, unknown> : {};
-    return { ...base, evidence_bundle_file: `backups/${source}`, evidence_bundle_version: typeof manifest.version === "string" ? manifest.version : base.evidence_bundle_version, evidence_current_version: manifest.version === "3.24.0", evidence_verification: verification || base.evidence_verification, evidence_key_revoked: verification?.key_revoked ?? base.evidence_key_revoked, evidence_revocation_configured: verification?.revocation_configured ?? base.evidence_revocation_configured, evidence_key_trusted: verification?.key_trusted ?? base.evidence_key_trusted, evidence_trust_source: verification?.trust_source ?? base.evidence_trust_source, audit_bundle_ready: !!bundle && verification?.overall_verified === true, audit_bundle_revocation_fail_closed: true as const, private_key_exposed: false as const, secret_values_exposed: false as const };
+    return { ...base, evidence_bundle_file: `backups/${source}`, evidence_bundle_version: typeof manifest.version === "string" ? manifest.version : base.evidence_bundle_version, evidence_current_version: manifest.version === "3.24.1", evidence_verification: verification || base.evidence_verification, evidence_key_revoked: verification?.key_revoked ?? base.evidence_key_revoked, evidence_revocation_configured: verification?.revocation_configured ?? base.evidence_revocation_configured, evidence_key_trusted: verification?.key_trusted ?? base.evidence_key_trusted, evidence_trust_source: verification?.trust_source ?? base.evidence_trust_source, audit_bundle_ready: !!bundle && verification?.overall_verified === true, audit_bundle_revocation_fail_closed: true as const, private_key_exposed: false as const, secret_values_exposed: false as const };
   }
 
   async verify_recovery_evidence_v3240() {
     const backupDir = process.env.SYSTEM_BACKUP_DIR?.trim() || join(process.cwd(), "..", "..", "backups");
     const path = join(backupDir, "recovery-evidence-bundle-v3240.json");
     let parsed: Record<string, unknown>;
-    try { parsed = JSON.parse(await readFile(path, "utf8")) as Record<string, unknown>; } catch { throw new NotFoundException("Chưa có recovery evidence bundle v3.24.0; chạy npm run recovery:evidence trước"); }
+    try { parsed = JSON.parse(await readFile(path, "utf8")) as Record<string, unknown>; } catch { throw new NotFoundException("Chưa có recovery evidence bundle v3.24.1; chạy npm run recovery:evidence trước"); }
     const verification = this.verify_recovery_evidence_bundle_v3230(parsed);
-    return { phien_ban: "3.24.0", file: "backups/recovery-evidence-bundle-v3240.json", ...verification, secret_values_exposed: false as const };
+    return { phien_ban: "3.24.1", file: "backups/recovery-evidence-bundle-v3240.json", ...verification, secret_values_exposed: false as const };
   }
 
   async xuat_recovery_evidence_bundle_v3240() {
     const backupDir = process.env.SYSTEM_BACKUP_DIR?.trim() || join(process.cwd(), "..", "..", "backups");
     const path = join(backupDir, "recovery-evidence-bundle-v3240.json");
     let raw: string; let parsed: Record<string, unknown>;
-    try { raw = await readFile(path, "utf8"); parsed = JSON.parse(raw) as Record<string, unknown>; } catch { throw new NotFoundException("Chưa có recovery evidence bundle v3.24.0; chạy npm run recovery:evidence trước"); }
+    try { raw = await readFile(path, "utf8"); parsed = JSON.parse(raw) as Record<string, unknown>; } catch { throw new NotFoundException("Chưa có recovery evidence bundle v3.24.1; chạy npm run recovery:evidence trước"); }
     const verification = this.verify_recovery_evidence_bundle_v3230(parsed);
     if (!verification.overall_verified) throw new ConflictException(`Recovery evidence bundle không qua trusted + revocation verification (${verification.reason}); không cho phép export audit bundle`);
-    return { ten_file: `recovery-evidence-audit-bundle-v3.24.0-${new Date().toISOString().slice(0, 10)}.json`, mime_type: "application/json", base64: Buffer.from(raw, "utf8").toString("base64"), manifest: parsed.manifest || {}, integrity: parsed.integrity || {}, signature: parsed.signature || {}, verification, secret_values_exposed: false as const };
+    return { ten_file: `recovery-evidence-audit-bundle-v3.24.1-${new Date().toISOString().slice(0, 10)}.json`, mime_type: "application/json", base64: Buffer.from(raw, "utf8").toString("base64"), manifest: parsed.manifest || {}, integrity: parsed.integrity || {}, signature: parsed.signature || {}, verification, secret_values_exposed: false as const };
   }
 
   private remediation_sla_config_v3200() {
@@ -4757,7 +4757,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
 
   async acknowledge_remediation_v3240(actor: NguoiDungXacThuc, serviceRaw: string, note?: string, snoozeHoursRaw?: number) { return this.acknowledge_remediation_v3230(actor, serviceRaw, note, snoozeHoursRaw); }
   async kiem_tra_remediation_escalation_v3240(force = false) { return this.kiem_tra_remediation_escalation_v3230(force); }
-  async xuat_remediation_backlog_excel_v3240() { const result = await this.xuat_remediation_backlog_excel_v3230(); return { ...result, ten_file: result.ten_file.replace("v3.23.0", "v3.24.0") }; }
+  async xuat_remediation_backlog_excel_v3240() { const result = await this.xuat_remediation_backlog_excel_v3230(); return { ...result, ten_file: result.ten_file.replace("v3.23.0", "v3.24.1") }; }
 
   async trang_thai_ops_v3200() {
     const [base, rolloutApproval, recovery, remediation] = await Promise.all([this.trang_thai_ops_v3190(), this.lay_probe_rollout_proposal_v3200(), this.recovery_readiness_v3200(), this.postmortem_remediation_v3200()]);
@@ -4787,7 +4787,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
   async trang_thai_ops_v3240() {
     const [base, rolloutApproval, recovery, remediation] = await Promise.all([this.trang_thai_ops_v3230(), this.lay_probe_rollout_proposal_v3240(), this.recovery_readiness_v3240(), this.postmortem_remediation_v3210()]);
     const fleet = base.probe_fleet as Record<string, unknown> | undefined;
-    return { ...base, phien_ban: "3.24.0", probe_fleet: fleet ? { ...fleet, phien_ban: "3.24.0" } : base.probe_fleet, multi_region_quorum: { ...base.multi_region_quorum, phien_ban: "3.24.0" }, rollout_approval: rolloutApproval, database_recovery: recovery, remediation_backlog: remediation, admin_business_safety: { shift_overlap_guard: true, shift_conflict_scan: true, inventory_replenishment_plan: true, procurement_supplier_inference: "LATEST_RECEIPT", auto_purchase_order: false, no_database_migration: true } };
+    return { ...base, phien_ban: "3.24.1", probe_fleet: fleet ? { ...fleet, phien_ban: "3.24.1" } : base.probe_fleet, multi_region_quorum: { ...base.multi_region_quorum, phien_ban: "3.24.1" }, rollout_approval: rolloutApproval, database_recovery: recovery, remediation_backlog: remediation, admin_business_safety: { shift_overlap_guard: true, shift_conflict_scan: true, inventory_replenishment_plan: true, procurement_supplier_inference: "LATEST_RECEIPT", auto_purchase_order: false, no_database_migration: true } };
   }
 
   async trang_thai_ops_v3160() {
@@ -5560,7 +5560,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     }
     const theo_nha_cung_cap = [...nhom.values()].sort((a, b) => b.so_luong_de_xuat - a.so_luong_de_xuat);
     return {
-      phien_ban: "3.24.0",
+      phien_ban: "3.24.1",
       tao_luc: new Date().toISOString(),
       tong_bien_the_can_nhap: items.length,
       tong_so_luong_de_xuat: items.reduce((sum, x) => sum + x.so_luong_de_xuat, 0),
@@ -5580,7 +5580,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     for (const item of plan.items) rows.push([item.ma_san_pham, item.ten_san_pham, item.ma_bien_the, item.vat_lieu, item.mau_sac, item.ton_hien_tai, item.ton_toi_thieu, item.ton_toi_da, item.muc_tieu_sau_nhap, item.so_luong_de_xuat, item.muc_do, item.nha_cung_cap?.ma_nha_cung_cap || "", item.nha_cung_cap?.ten_nha_cung_cap || "", item.nha_cung_cap?.dang_hoat_dong === true ? "Có" : item.nha_cung_cap?.dang_hoat_dong === false ? "Không" : "", item.nguon_nha_cung_cap, item.phieu_nhap_gan_nhat?.ma_phieu || ""]);
     const buffer = this.tao_xlsx(rows, "Kế hoạch nhập v3.24");
     const ngay = new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    return { ten_file: `ke-hoach-nhap-kho-v3.24.0_${ngay}.xlsx`, mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", base64: buffer.toString("base64"), tong_bien_the_can_nhap: plan.tong_bien_the_can_nhap, tong_so_luong_de_xuat: plan.tong_so_luong_de_xuat };
+    return { ten_file: `ke-hoach-nhap-kho-v3.24.1_${ngay}.xlsx`, mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", base64: buffer.toString("base64"), tong_bien_the_can_nhap: plan.tong_bien_the_can_nhap, tong_so_luong_de_xuat: plan.tong_so_luong_de_xuat };
   }
 
   private async danh_sach_canh_bao_kho() {
@@ -6213,7 +6213,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       }
     }
     return {
-      phien_ban: "3.24.0",
+      phien_ban: "3.24.1",
       tu_ngay: tu_ngay.toISOString().slice(0, 10),
       den_ngay: den_ngay.toISOString().slice(0, 10),
       tong_phan_ca: ds.length,

@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 
 const read = (p) => readFileSync(p, "utf8");
 
-test("v3.22.0 contract trusted evidence + rollout receipt duoc giu khi current v3.24.0", () => {
+test("v3.22.0 contract trusted evidence + rollout receipt duoc giu khi current v3.24.1", () => {
   const service = read("src/quan-tri/quan-tri.service.ts");
   const controller = read("src/quan-tri/quan-tri.controller.ts");
   assert.match(controller, /trang_thai_ops_v3240/);
@@ -18,5 +18,5 @@ test("v3.22.0 contract trusted evidence + rollout receipt duoc giu khi current v
   assert.match(service, /probe_rollout_decision_receipt_sha256_v3220/);
   assert.match(service, /Rollout proposal envelope SHA-256 không hợp lệ/);
   assert.match(service, /DECISION_RECEIPT/);
-  assert.match(service, /phien_ban: "3\.24\.0"/);
+  assert.match(service, /phien_ban: "3\.24\.1"/);
 });

@@ -12,11 +12,11 @@ test("v3.22.0 trusted recovery key rollout envelope decision receipt va current 
   const verifier = read("scripts/recovery-evidence-verify-v3220.mjs");
   const env = read(".env.example");
   const compose = read("docker-compose.yml");
-  assert.equal(read("VERSION").trim(), "3.24.0");
-  assert.equal(pkg.version, "3.24.0");
-  assert.equal(pkg.scripts.verify, "npm run verify:v324");
-  assert.equal(pkg.scripts["verify:full"], "npm run verify:full:v324");
-  assert.equal(pkg.scripts["recovery:evidence:verify"], "node scripts/recovery-evidence-verify-v3240.mjs");
+  assert.equal(read("VERSION").trim(), "3.24.1");
+  assert.equal(pkg.version, "3.24.1");
+  assert.equal(pkg.scripts.verify, "npm run verify:v3241");
+  assert.equal(pkg.scripts["verify:full"], "npm run verify:full:v3241");
+  assert.equal(pkg.scripts["recovery:evidence:verify"], "node scripts/recovery-evidence-verify-v3241.mjs");
   assert.match(controller, /trang_thai_ops_v3240/);
   assert.match(service, /SYSTEM_RECOVERY_EVIDENCE_TRUSTED_KEYS_JSON/);
   assert.match(service, /SYSTEM_RECOVERY_EVIDENCE_REQUIRE_TRUSTED_KEY/);

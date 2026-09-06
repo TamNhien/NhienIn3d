@@ -5,21 +5,21 @@ const read = (p) => readFileSync(p, "utf8");
 
 test("v3.17.0 contract duoc giu khi nang v3.20.0 va current scripts dong bo", () => {
   const pkg = JSON.parse(read("package.json"));
-  assert.equal(read("VERSION").trim(), "3.24.0");
-  assert.equal(pkg.version, "3.24.0");
-  assert.equal(JSON.parse(read("apps/api/package.json")).version, "3.24.0");
-  assert.equal(JSON.parse(read("apps/web/package.json")).version, "3.24.0");
-  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3240.mjs");
-  assert.equal(pkg.scripts["probe:agent"], "node scripts/probe-agent-v3240.mjs");
-  assert.match(pkg.scripts["recovery:drill"], /recovery-drill-v3240\.ps1/);
-  assert.match(pkg.scripts["recovery:pitr"], /recovery-pitr-drill-v3240\.ps1/);
-  assert.equal(pkg.scripts.verify, "npm run verify:v324");
-  assert.equal(pkg.scripts["verify:full"], "npm run verify:full:v324");
+  assert.equal(read("VERSION").trim(), "3.24.1");
+  assert.equal(pkg.version, "3.24.1");
+  assert.equal(JSON.parse(read("apps/api/package.json")).version, "3.24.1");
+  assert.equal(JSON.parse(read("apps/web/package.json")).version, "3.24.1");
+  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3241.mjs");
+  assert.equal(pkg.scripts["probe:agent"], "node scripts/probe-agent-v3241.mjs");
+  assert.match(pkg.scripts["recovery:drill"], /recovery-drill-v3241\.ps1/);
+  assert.match(pkg.scripts["recovery:pitr"], /recovery-pitr-drill-v3241\.ps1/);
+  assert.equal(pkg.scripts.verify, "npm run verify:v3241");
+  assert.equal(pkg.scripts["verify:full"], "npm run verify:full:v3241");
   assert.equal(existsSync("scripts/e2e-runtime-v3170.ps1"), true);
   assert.equal(existsSync("scripts/e2e-browser-v3170.mjs"), true);
-  assert.match(read(".github/workflows/ci.yml"), /e2e-runtime-v3240\.ps1/);
-  assert.match(read("apps/api/src/suc-khoe/suc-khoe.controller.ts"), /phien_ban: "v3\.24\.0"/);
-  assert.match(read("apps/api/src/main.ts"), /setVersion\("3\.24\.0"\)/);
+  assert.match(read(".github/workflows/ci.yml"), /e2e-runtime-v3241\.ps1/);
+  assert.match(read("apps/api/src/suc-khoe/suc-khoe.controller.ts"), /phien_ban: "v3\.24\.1"/);
+  assert.match(read("apps/api/src/main.ts"), /setVersion\("3\.24\.1"\)/);
 });
 
 test("v3.19.0 Admin system health dong bo phien_ban runtime", () => {
@@ -27,7 +27,7 @@ test("v3.19.0 Admin system health dong bo phien_ban runtime", () => {
   const start = service.indexOf("async suc_khoe_he_thong");
   const end = service.indexOf("async ", start + 10);
   const healthMethod = service.slice(start, end > start ? end : undefined);
-  assert.match(healthMethod, /phien_ban:\s*"3\.24\.0"/);
+  assert.match(healthMethod, /phien_ban:\s*"3\.24\.1"/);
   assert.doesNotMatch(healthMethod, /phien_ban:\s*"3\.16\.0"/);
 });
 

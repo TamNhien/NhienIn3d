@@ -1,6 +1,6 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v3.24.0** — 06/09/2026
+> Phiên bản hiện tại: **v3.24.1** — 06/09/2026
 - **v3.18.0 · recovery governance**: thêm target-time PITR rehearsal opt-in trên restore cluster cô lập, health-gated probe canary có grace window + auto rollback, postmortem approval/action reminder và HTTPS service-runbook mapping.
 - **Ops UI compact**: badge `COMPLETE · DRAFT` được thu nhỏ, canh giữa cả ngang/dọc; approval status dùng cùng visual compact để không chiếm chiều cao panel.
 - **Security hotfix mysql2**: nâng root pin/override từ `mysql2@3.22.0` lên `mysql2@3.23.4`; security scanner yêu cầu `>=3.23.1` để vá GHSA-rgwj-5xj2-c3m3 (decompression-bomb DoS), giữ Prisma `7.10.0` và tuyệt đối không dùng `npm audit fix --force`.
@@ -1639,5 +1639,14 @@ Các phiên bản dưới đây được sắp xếp **đúng thứ tự tăng d
 - Kế hoạch nhập kho là **read-only**: không tự tạo đơn mua/phiếu nhập. Có panel riêng trong tab Kho và xuất Excel để đối soát/gửi nhà cung cấp; các biến thể chưa có lịch sử NCC hoặc NCC đã ngừng hoạt động được đánh dấu rõ.
 - Ops runtime công bố `admin_business_safety` cho overlap guard, conflict scan và replenishment planning; giữ nguyên tamper-evident rollout receipt chain, trusted/revoked recovery key policy và toàn bộ dark native dropdown/picker fix từ v3.22-v3.23.
 - Current scripts/CI/Health/OpenAPI chuyển sang v3.24.0; giữ script v3.23 làm historical regression. **Không thêm migration**, tổng số migration vẫn **23**; không cần thêm biến `.env` cho hai nâng cấp nghiệp vụ này.
+- Hotfix giao diện Kho v3.24.0: bảng biến thể dùng viewport cuộn riêng theo cả hai chiều, header sticky và scrollbar ngang rõ ràng để toàn bộ 13 cột (Tồn min/max, Gợi ý nhập, Tình trạng, Hiển thị, Lý do, Thao tác) không còn bị cắt bên phải trên màn hình hẹp; giữ nguyên dark theme.
+- Hotfix Browser E2E v3.24.0: helper `openSynthetic()` luôn tự chuyển về tab **Hệ thống**, chờ panel **Incident vận hành** hiển thị và chờ card synthetic visible trước khi kiểm tra số lượng; tránh lỗi CI `Synthetic incident ... nhận 0` sau khi kịch bản vừa kiểm tra tab Kho/Xếp ca.
 
 # Lộ trình tiếp theo
+
+## v3.24.1
+- Patch release sau v3.24.0: giữ toàn bộ replenishment planning, shift-overlap guard, recovery governance và Ops security.
+- Fix Browser E2E synthetic incident khi kịch bản đã chuyển tab: helper tự quay về Hệ thống/Incident trước khi định vị synthetic card.
+- Fix bảng Kho trên desktop hẹp: viewport cuộn ngang/dọc riêng, sticky header và không cắt các cột bên phải.
+- Giữ dark theme cho select/date/time/datetime-local/month/week picker.
+- Không thêm migration; tổng migration vẫn là 23.

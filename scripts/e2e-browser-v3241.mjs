@@ -20,7 +20,7 @@ const port = env("WEB_PORT", "3000");
 const base = env("E2E_WEB_URL", `https://localhost:${port}`);
 const email = env("ADMIN_EMAIL", "admin@nhienin3d.local");
 const password = env("ADMIN_PASSWORD");
-if (!password) throw new Error("Thiếu ADMIN_PASSWORD trong biến môi trường hoặc file .env để chạy browser E2E v3.24.0");
+if (!password) throw new Error("Thiếu ADMIN_PASSWORD trong biến môi trường hoặc file .env để chạy browser E2E v3.24.1");
 const mutateIncident = process.env.CI === "true" || boolEnv("E2E_MUTATE_INCIDENT");
 const syntheticSignature = "fdde222e3bc7582312ed975e75f8e8fde98f263fd36a42183ad5f77be11e6f21";
 
@@ -32,7 +32,7 @@ try {
   const healthResponse = await context.request.get(`${base}/api/v1/suc-khoe`);
   if (!healthResponse.ok()) throw new Error(`Health API qua HTTPS trả ${healthResponse.status()}.`);
   const health = await healthResponse.json();
-  if (health.phien_ban !== "v3.24.0") throw new Error(`API đang chạy ${health.phien_ban || "không rõ version"}, không phải v3.24.0. Docker có thể vẫn dùng container/image cũ.`);
+  if (health.phien_ban !== "v3.24.1") throw new Error(`API đang chạy ${health.phien_ban || "không rõ version"}, không phải v3.24.1. Docker có thể vẫn dùng container/image cũ.`);
 
   await page.goto(`${base}/dang-nhap?chuyen_den=/quan-tri`, { waitUntil: "domcontentloaded" });
   await page.getByLabel("Email", { exact: true }).fill(email);
@@ -76,9 +76,9 @@ try {
     const incidentsRes = await context.request.get(`${base}/api/v1/quan-tri/he-thong/su-co?gioi_han=100`);
     const incidents = await incidentsRes.json();
     const synthetic = incidents.du_lieu?.find((x) => x.chu_ky === syntheticSignature);
-    if (!synthetic) throw new Error("Không tìm thấy synthetic incident v3.24.0 do runtime E2E seed cho browser CI.");
+    if (!synthetic) throw new Error("Không tìm thấy synthetic incident v3.24.1 do runtime E2E seed cho browser CI.");
     const openSynthetic = async () => {
-      // v3.24.0 CI hotfix: các bước kiểm tra Kho/Xếp ca đổi tab trước khi mutation incident.
+      // v3.24.1 CI hotfix: các bước kiểm tra Kho/Xếp ca đổi tab trước khi mutation incident.
       // Luôn tự quay về Hệ thống và chờ panel Incident render thay vì đếm locator khi tab đang ẩn.
       const incidentHeading = page.getByRole("heading", { name: "Incident vận hành", exact: true });
       if (!(await incidentHeading.isVisible().catch(() => false))) {
@@ -102,7 +102,7 @@ try {
       if (actual !== expected) throw new Error(`Synthetic incident status mong ${expected}, nhận ${actual || "trống"}.`);
     };
     await openSynthetic();
-    await page.getByLabel("Ghi chú xử lý / khắc phục", { exact: true }).fill("Browser E2E v3.24.0 acknowledge persistence");
+    await page.getByLabel("Ghi chú xử lý / khắc phục", { exact: true }).fill("Browser E2E v3.24.1 acknowledge persistence");
     await page.getByRole("button", { name: "Tiếp nhận incident", exact: true }).click();
     await page.getByText("Đã tiếp nhận incident", { exact: false }).waitFor({ timeout: 30_000 });
     await page.reload({ waitUntil: "domcontentloaded" });
@@ -156,14 +156,14 @@ try {
   const postmortemStatusBadge = postmortemPanel.getByText(/COMPLETE.*DRAFT/).first();
   await postmortemStatusBadge.waitFor();
   const pmBadgeStyle = await postmortemStatusBadge.evaluate((el) => ({ height: el.getBoundingClientRect().height, justify: getComputedStyle(el).justifyContent, align: getComputedStyle(el).alignItems, text: getComputedStyle(el).textAlign }));
-  if (pmBadgeStyle.height > 24 || pmBadgeStyle.justify !== "center" || pmBadgeStyle.align !== "center" || pmBadgeStyle.text !== "center") throw new Error("Badge COMPLETE/DRAFT chưa được thu nhỏ và canh giữa v3.24.0.");
+  if (pmBadgeStyle.height > 24 || pmBadgeStyle.justify !== "center" || pmBadgeStyle.align !== "center" || pmBadgeStyle.text !== "center") throw new Error("Badge COMPLETE/DRAFT chưa được thu nhỏ và canh giữa v3.24.1.");
   await page.getByRole("heading", { name: "Managed probe fleet", exact: true }).waitFor();
   await page.getByRole("heading", { name: "Multi-region quorum · anomaly detection", exact: true }).waitFor();
   await page.getByText(/Ed25519 lifecycle: active/).waitFor();
   const addWindowButton = page.getByRole("button", { name: "Thêm window", exact: true });
   await addWindowButton.waitFor();
   const addWindowBackground = await addWindowButton.evaluate((el) => getComputedStyle(el).backgroundColor);
-  if (addWindowBackground === "rgb(232, 238, 252)") throw new Error("Nút Thêm window vẫn dùng nền sáng legacy thay vì dark action v3.24.0.");
+  if (addWindowBackground === "rgb(232, 238, 252)") throw new Error("Nút Thêm window vẫn dùng nền sáng legacy thay vì dark action v3.24.1.");
   await page.getByRole("heading", { name: "Distributed probe agents", exact: true }).waitFor();
   await page.getByRole("heading", { name: "On-call schedule / rotation", exact: true }).waitFor();
   await page.getByRole("button", { name: "Xuất ICS", exact: true }).waitFor();
@@ -185,7 +185,7 @@ try {
 
   console.log("Inventory replenishment UI     : PASS");
   console.log("Shift overlap safety UI        : PASS");
-  console.log("Browser E2E v3.24.0 PASS ✅");
+  console.log("Browser E2E v3.24.1 PASS ✅");
   console.log(`HTTPS Admin: ${base}/quan-tri`);
   console.log("SLO update + reload persistence : PASS");
   console.log(`Incident acknowledge/resolve    : ${mutateIncident ? "PASS" : "SKIP an toàn trên local"}`);
@@ -209,7 +209,7 @@ try {
   console.log("Incident postmortem / runbook   : PASS");
   console.log("Postmortem badge / approval     : PASS");
   console.log("GIN timeline / incident owner   : PASS");
-  console.log("Ops Dashboard v3.24.0           : PASS");
+  console.log("Ops Dashboard v3.24.1           : PASS");
 } finally {
   if (originalSlo) {
     try {

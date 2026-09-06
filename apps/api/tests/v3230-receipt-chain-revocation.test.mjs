@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 
 const read = (p) => readFileSync(p, "utf8");
 
-test("v3.24.0 API receipt chain va recovery revoked-key fail-closed", () => {
+test("v3.24.1 API receipt chain va recovery revoked-key fail-closed", () => {
   const service = read("src/quan-tri/quan-tri.service.ts");
   const controller = read("src/quan-tri/quan-tri.controller.ts");
   const health = read("src/suc-khoe/suc-khoe.controller.ts");
@@ -34,7 +34,7 @@ test("v3.24.0 API receipt chain va recovery revoked-key fail-closed", () => {
   assert.match(service, /reason: keyRevoked \? "REVOKED_SIGNING_KEY"/);
   assert.match(service, /audit_bundle_revocation_fail_closed/);
 
-  assert.match(health, /phien_ban: "v3\.24\.0"/);
-  assert.match(main, /setVersion\("3\.24\.0"\)/);
+  assert.match(health, /phien_ban: "v3\.24\.1"/);
+  assert.match(main, /setVersion\("3\.24\.1"\)/);
   assert.match(service, /async trang_thai_ops_v3230\(\)/);
 });

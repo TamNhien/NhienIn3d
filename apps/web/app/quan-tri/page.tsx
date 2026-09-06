@@ -361,7 +361,7 @@ export default function QuanTriPage() {
     }
     setTaiKhoan(tk);
     if (!tk || tk.vai_tro !== "ADMIN") return;
-    const [tq, nd, nvData, caData, pcData, donData, spData, dmData, vlData, msData, chKhoData, lsKhoData, phieuNhapData, nccData, emailKhoData, keHoachNhapData, dgData, nkPage, heThongData, vanHanhPage, thongKeVanHanh, cauHinhCanhBao, cauHinhSlo, baoTriHeThong, slaVanHanh, suCoVanHanh] = await Promise.all([layTongQuan(), layNguoiDung(), layNhanVien(), layCaLam(), layPhanCa(), layDonHangAdmin(), laySanPhamAdmin(), layDanhMucAdmin(), layVatLieuAdmin(), layMauSacAdmin(), layCauHinhKhoAdmin(), layLichSuKhoAdmin(), layPhieuNhapKhoAdmin(), layNhaCungCapAdmin(), layTrangThaiCanhBaoKhoEmailAdmin(), layGoiYNhapKhoAdmin(), layDanhGiaAdmin(), layNhatKyCursorAdmin({ kich_thuoc: 25 }), laySucKhoeHeThongAdmin(), layLichSuVanHanhCursorAdmin({ kich_thuoc: 20 }), layThongKeVanHanhAdmin(), layCauHinhCanhBaoHeThongAdmin(), layCauHinhSloVanHanhAdmin(), layBaoTriHeThongAdmin(), laySlaVanHanhAdmin(90), layDanhSachSuCoVanHanhAdmin(20)]);
+    const [tq, nd, nvData, caData, pcData, donData, spData, dmData, vlData, msData, chKhoData, lsKhoData, phieuNhapData, nccData, emailKhoData, keHoachNhapData, dgData, nkPage, heThongData, vanHanhPage, thongKeVanHanh, cauHinhCanhBao, cauHinhSlo, baoTriHeThong, slaVanHanh, suCoVanHanh] = await Promise.all([layTongQuan(), layNguoiDung(), layNhanVien(), layCaLam(), layPhanCa(), layDonHangAdmin(), laySanPhamAdmin(), layDanhMucAdmin(), layVatLieuAdmin(), layMauSacAdmin(), layCauHinhKhoAdmin(), layLichSuKhoAdmin(), layPhieuNhapKhoAdmin(), layNhaCungCapAdmin(), layTrangThaiCanhBaoKhoEmailAdmin(), layGoiYNhapKhoAdmin(), layDanhGiaAdmin(), layNhatKyCursorAdmin({ kich_thuoc: 25 }), laySucKhoeHeThongAdmin(), layLichSuVanHanhCursorAdmin({ kich_thuoc: 20 }), layThongKeVanHanhAdmin(), layCauHinhCanhBaoHeThongAdmin(), layCauHinhSloVanHanhAdmin(), layBaoTriHeThongAdmin(), laySlaVanHanhAdmin(90), layDanhSachSuCoVanHanhAdmin(100)]);
     setTongQuan(tq);
     setNguoiDung(nd);
     setNhanVien(nvData);
@@ -1196,7 +1196,7 @@ export default function QuanTriPage() {
         nguoi_nhan: cau_hinh_canh_bao_he_thong.nguoi_nhan.trim()
       });
       setCauHinhCanhBaoHeThong(kq);
-      const [health, suCo] = await Promise.all([laySucKhoeHeThongAdmin(), layDanhSachSuCoVanHanhAdmin(20)]);
+      const [health, suCo] = await Promise.all([laySucKhoeHeThongAdmin(), layDanhSachSuCoVanHanhAdmin(100)]);
       setSucKhoeHeThong(health); setSuCoVanHanh(suCo.du_lieu);
       setThongBao("Đã lưu cấu hình cảnh báo vận hành và áp dụng lại lịch chạy ngay.");
     } catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể lưu cấu hình cảnh báo vận hành"); }
@@ -1240,7 +1240,7 @@ export default function QuanTriPage() {
     try {
       const kq = hanh_dong === "tiep-nhan" ? await tiepNhanSuCoVanHanhAdmin(su_co_chon.chu_ky, su_co_ghi_chu) : await khacPhucSuCoVanHanhAdmin(su_co_chon.chu_ky, su_co_ghi_chu);
       setSuCoChon(kq); setSuCoGhiChu(kq.ghi_chu || "");
-      const ds = await layDanhSachSuCoVanHanhAdmin(20); setSuCoVanHanh(ds.du_lieu);
+      const ds = await layDanhSachSuCoVanHanhAdmin(100); setSuCoVanHanh(ds.du_lieu);
       await taiLichSuVanHanh(true);
       setThongBao(hanh_dong === "tiep-nhan" ? "Đã tiếp nhận incident và ghi người xử lý." : "Đã đánh dấu incident khắc phục và ghi audit.");
     } catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể cập nhật incident"); }
@@ -1276,7 +1276,7 @@ export default function QuanTriPage() {
   async function taiSucKhoeHeThong() {
     setDangXuLy("suc-khoe-he-thong"); setThongBao("");
     try {
-      const [kq, thongKe, cauHinh, sloConfig, baoTri, sla, suCo] = await Promise.all([laySucKhoeHeThongAdmin(), layThongKeVanHanhAdmin(), layCauHinhCanhBaoHeThongAdmin(), layCauHinhSloVanHanhAdmin(), layBaoTriHeThongAdmin(), laySlaVanHanhAdmin(sla_so_ngay), layDanhSachSuCoVanHanhAdmin(20)]);
+      const [kq, thongKe, cauHinh, sloConfig, baoTri, sla, suCo] = await Promise.all([laySucKhoeHeThongAdmin(), layThongKeVanHanhAdmin(), layCauHinhCanhBaoHeThongAdmin(), layCauHinhSloVanHanhAdmin(), layBaoTriHeThongAdmin(), laySlaVanHanhAdmin(sla_so_ngay), layDanhSachSuCoVanHanhAdmin(100)]);
       setSucKhoeHeThong(kq);
       setThongKeVanHanh(thongKe);
       setCauHinhCanhBaoHeThong(cauHinh);

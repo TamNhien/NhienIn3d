@@ -22,6 +22,6 @@ test("v3.14.0 API quorum alert ke thua alert pipeline va version", () => {
   assert.match(service, /quorum_alerting/);
   assert.match(service, /canh_bao_quorum/);
   assert.match(service, /SYSTEM_SLO_QUORUM_ALERT_ENABLED/);
-  assert.match(health, /phien_ban: "v3\.24\.0"/);
-  assert.match(main, /setVersion\("3\.24\.0"\)/);
+  assert.match(health, /phien_ban: "v3\.24\.1"/);
+  assert.match(main, /setVersion\("3\.24\.1"\)/);
 });
