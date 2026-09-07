@@ -7,8 +7,8 @@ test("v3.26.0 API co refund SLA Excel, supplier grouping va atomic cycle count",
   const controller = read("src/quan-tri/quan-tri.controller.ts");
   const service = read("src/quan-tri/quan-tri.service.ts");
   const dto = read("src/quan-tri/dto/kiem-ke-kho-v3260.dto.ts");
-  assert.match(controller, /danh_sach_hoan_tien_can_xu_ly_v3260/);
-  assert.match(controller, /xuat_hoan_tien_can_xu_ly_excel_v3260/);
+  assert.match(controller, /danh_sach_hoan_tien_can_xu_ly_v3270/);
+  assert.match(controller, /xuat_hoan_tien_can_xu_ly_excel_v3270/);
   assert.match(controller, /kiem_tra_kiem_ke_kho_v3260/);
   assert.match(controller, /ap_dung_kiem_ke_kho_v3260/);
   assert.match(service, /refund_sla_hours_v3260/);

@@ -20,3 +20,12 @@ test("v3.26.0 Web hien refund SLA, supplier groups va preview/apply cycle count"
   assert.match(css, /cine-supplier-plan-v326/);
   assert.match(css, /cine-cycle-count-v326/);
 });
+
+test("v3.26.0 canh thang field nhap kho va cycle count co padding noi bo", () => {
+  const css = read("app/globals.css");
+  assert.match(css, /\.cine-batch-meta-v218\{[\s\S]*?align-items:start;/);
+  assert.match(css, /\.cine-batch-meta-v218 input,[\s\S]*?\.cine-batch-meta-v218 select\{[\s\S]*?height:54px;/);
+  assert.match(css, /\.cine-cycle-count-v326\{[\s\S]*?padding:20px 22px 22px;/);
+  assert.match(css, /\.cine-cycle-count-form-v326 input,[\s\S]*?\.cine-cycle-count-form-v326 select\{[\s\S]*?height:48px;/);
+  assert.match(css, /\.cine-cycle-count-form-v326 \.cine-btn\{[\s\S]*?height:48px;/);
+});

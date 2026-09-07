@@ -1677,6 +1677,7 @@ Không khai báo biến trên thì hệ thống dùng mặc định 14 ngày. `d
 - Mỗi điều chỉnh kiểm kê ghi `ADMIN_KIEM_KE_TON_KHO`, toàn phiên ghi `ADMIN_AP_DUNG_KIEM_KE_KHO`; không cần schema mới vì tái sử dụng audit JSON hiện có.
 - Ops runtime bổ sung `admin_business_safety` cho refund SLA, cycle-count optimistic lock và supplier-grouped replenishment; giữ toàn bộ Browser E2E synthetic incident fix, dark dropdown/picker, rollout receipt chain và recovery trusted/revoked-key fail-closed.
 - Current scripts/CI/Health/OpenAPI chuyển sang v3.26.0; giữ v3.25 scripts làm historical regression. **Không thêm migration**, tổng số migration vẫn **23**.
+- **Hotfix layout Kho v3.26.0:** canh thẳng hàng Mã lô / Nhà cung cấp / Ghi chú trong khối Nhập kho nhanh theo lô; chuẩn hóa chiều cao control và thêm padding nội bộ cho panel Kiểm kê tồn thực tế để tiêu đề, field và nút không còn sát viền card.
 
 Cấu hình tùy chọn mới:
 
@@ -1685,3 +1686,14 @@ SYSTEM_REFUND_RECONCILIATION_SLA_HOURS=24
 ```
 
 Không khai báo thì hệ thống dùng mặc định 24 giờ. Docker Compose đã truyền biến này vào API với fallback `24`.
+
+## v3.27.0 — 07/09/2026
+
+- **Kiểm kê kho hàng loạt bằng CSV/Excel:** Admin có thể tải file tối đa 200 dòng với `ma_bien_the`, `ton_thuc_te`, `ly_do`; backend đọc trực tiếp CSV/XLSX, chuẩn hóa mã biến thể, chặn dòng trùng, mã không tồn tại và tồn thực tế ngoài 0–1.000.000.
+- **Preview fail-closed trước khi ghi:** file chỉ được phép áp dụng khi 100% dòng hợp lệ. Mỗi dòng được chụp `ton_he_thong` hiện tại làm optimistic-lock snapshot, tính chênh lệch và tổng độ lệch trước khi Admin xác nhận.
+- **Atomic apply giữ nguyên v3.26:** khi áp dụng batch, nếu bất kỳ tồn kho nào thay đổi sau bước preview thì transaction rollback toàn bộ; không có tình trạng cập nhật nửa file.
+- **Excel đối soát kiểm kê:** xuất snapshot hệ thống, tồn hiện tại, tồn thực tế, chênh lệch, trạng thái `KHỚP / CHÊNH LỆCH / STALE-INVALID` và lý do để lưu hồ sơ kiểm kê.
+- UI Kho thêm `Tải CSV mẫu`, `Chọn CSV / Excel`, bảng preview có sticky header, thống kê số dòng hợp lệ/lỗi/chênh lệch và nút áp dụng batch; vẫn giữ layout v3.26 đã canh thẳng hàng, dark picker và bảng kho cuộn ngang.
+- Ops runtime công bố `inventory_cycle_count_file_import`, giới hạn 200 dòng, variance Excel và atomic apply. Không thêm migration; tổng migration vẫn **23**.
+- **Browser E2E hotfix:** scope các assertion `Tải CSV mẫu` / `Chọn CSV / Excel` vào card `.cine-cycle-count-v326` vì tab Kho có hai luồng CSV riêng (kiểm kê và nhập kho theo lô); tránh Playwright strict-mode match 2 control cùng tên trong CI.
+- Current scripts/CI/Health/OpenAPI chuyển sang v3.27.0; giữ toàn bộ script v3.26 làm historical regression.

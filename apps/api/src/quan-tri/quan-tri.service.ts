@@ -236,7 +236,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     setTimeout(cleanupOps, 120_000).unref();
     this.bo_hen_ops_retention = setInterval(cleanupOps, 6 * 60 * 60_000);
     this.bo_hen_ops_retention.unref();
-    this.logger.log(`Ops v3.26.0 schedulers: DLQ ${dlqPolicy.chu_ky_phut}m, metrics ${opsPolicy.refresh_phut}m, retention ${opsPolicy.retention_days}d.`);
+    this.logger.log(`Ops v3.27.0 schedulers: DLQ ${dlqPolicy.chu_ky_phut}m, metrics ${opsPolicy.refresh_phut}m, retention ${opsPolicy.retention_days}d.`);
 
     const healthGate = this.probe_health_gate_config_v3180();
     if (healthGate.enabled) {
@@ -1159,7 +1159,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const trang_thai = !database.ket_noi ? "LOI" : (van_de.length ? "CANH_BAO" : "TOT");
     const ket_qua = {
       trang_thai,
-      phien_ban: "3.26.0",
+      phien_ban: "3.27.0",
       thoi_gian: new Date().toISOString(),
       api: { uptime_giay: Math.floor(process.uptime()), node: process.version, pid: process.pid, rss_bytes: bo_nho.rss, heap_used_bytes: bo_nho.heapUsed, heap_total_bytes: bo_nho.heapTotal },
       database,
@@ -3050,7 +3050,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const canary = (process.env.SYSTEM_SLO_PROBE_DESIRED_CANARY_AGENTS || "").split(",").map(x => x.trim()).filter(x => /^[A-Za-z0-9._-]{2,80}$/.test(x)).slice(0, 50);
     return {
       revision: 0,
-      target_version: (process.env.SYSTEM_SLO_PROBE_DESIRED_TARGET_VERSION || "3.26.0").trim(),
+      target_version: (process.env.SYSTEM_SLO_PROBE_DESIRED_TARGET_VERSION || "3.27.0").trim(),
       interval_seconds: Math.max(30, Math.min(3600, intervalRaw)),
       rollout_percent: Math.max(0, Math.min(100, rolloutRaw)),
       canary_agents: [...new Set(canary)],
@@ -4135,6 +4135,12 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
   async reject_probe_rollout_v3260(actor: NguoiDungXacThuc, proposalIdRaw: string, note?: string) { await this.reject_probe_rollout_v3250(actor, proposalIdRaw, note); return this.lay_probe_rollout_proposal_v3260(); }
   async cancel_probe_rollout_v3260(actor: NguoiDungXacThuc, proposalIdRaw: string, note?: string) { await this.cancel_probe_rollout_v3250(actor, proposalIdRaw, note); return this.lay_probe_rollout_proposal_v3260(); }
 
+  async lay_probe_rollout_proposal_v3270() { const base = await this.lay_probe_rollout_proposal_v3260(); return { ...base, phien_ban: "3.27.0" }; }
+  async cap_nhat_probe_desired_state_v3270(actor: NguoiDungXacThuc, dto: { target_version: string; interval_seconds: number; rollout_percent: number; canary_agents: string[]; paused: boolean; note?: string }) { const result = await this.cap_nhat_probe_desired_state_v3260(actor, dto); return { ...result, rollout_approval: await this.lay_probe_rollout_proposal_v3270() }; }
+  async approve_probe_rollout_v3270(actor: NguoiDungXacThuc, proposalIdRaw: string, note?: string) { await this.approve_probe_rollout_v3260(actor, proposalIdRaw, note); return this.lay_probe_rollout_proposal_v3270(); }
+  async reject_probe_rollout_v3270(actor: NguoiDungXacThuc, proposalIdRaw: string, note?: string) { await this.reject_probe_rollout_v3260(actor, proposalIdRaw, note); return this.lay_probe_rollout_proposal_v3270(); }
+  async cancel_probe_rollout_v3270(actor: NguoiDungXacThuc, proposalIdRaw: string, note?: string) { await this.cancel_probe_rollout_v3260(actor, proposalIdRaw, note); return this.lay_probe_rollout_proposal_v3270(); }
+
   private async recovery_readiness_v3200() {
     const base = await this.recovery_readiness_v3190();
     const backupDir = process.env.SYSTEM_BACKUP_DIR?.trim() || join(process.cwd(), "..", "..", "backups");
@@ -4581,6 +4587,37 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     return { ten_file: `recovery-evidence-audit-bundle-v3.26.0-${new Date().toISOString().slice(0, 10)}.json`, mime_type: "application/json", base64: Buffer.from(raw, "utf8").toString("base64"), manifest: parsed.manifest || {}, integrity: parsed.integrity || {}, signature: parsed.signature || {}, verification, secret_values_exposed: false as const };
   }
 
+  private async recovery_readiness_v3270() {
+    const base = await this.recovery_readiness_v3260();
+    const backupDir = process.env.SYSTEM_BACKUP_DIR?.trim() || join(process.cwd(), "..", "..", "backups");
+    let bundle: Record<string, unknown> | null = null;
+    let source = "recovery-evidence-bundle-v3270.json";
+    try { bundle = JSON.parse(await readFile(join(backupDir, source), "utf8")) as Record<string, unknown>; }
+    catch { source = "recovery-evidence-bundle-v3260.json"; try { bundle = JSON.parse(await readFile(join(backupDir, source), "utf8")) as Record<string, unknown>; } catch {} }
+    const verification = bundle ? this.verify_recovery_evidence_bundle_v3230(bundle) : null;
+    const manifest = bundle?.manifest && typeof bundle.manifest === "object" && !Array.isArray(bundle.manifest) ? bundle.manifest as Record<string, unknown> : {};
+    return { ...base, evidence_bundle_file: `backups/${source}`, evidence_bundle_version: typeof manifest.version === "string" ? manifest.version : base.evidence_bundle_version, evidence_current_version: manifest.version === "3.27.0", evidence_verification: verification || base.evidence_verification, audit_bundle_ready: !!bundle && verification?.overall_verified === true, audit_bundle_revocation_fail_closed: true as const, private_key_exposed: false as const, secret_values_exposed: false as const };
+  }
+
+  async verify_recovery_evidence_v3270() {
+    const backupDir = process.env.SYSTEM_BACKUP_DIR?.trim() || join(process.cwd(), "..", "..", "backups");
+    const path = join(backupDir, "recovery-evidence-bundle-v3270.json");
+    let parsed: Record<string, unknown>;
+    try { parsed = JSON.parse(await readFile(path, "utf8")) as Record<string, unknown>; } catch { throw new NotFoundException("Chưa có recovery evidence bundle v3.27.0; chạy npm run recovery:evidence trước"); }
+    const verification = this.verify_recovery_evidence_bundle_v3230(parsed);
+    return { phien_ban: "3.27.0", file: "backups/recovery-evidence-bundle-v3270.json", ...verification, secret_values_exposed: false as const };
+  }
+
+  async xuat_recovery_evidence_bundle_v3270() {
+    const backupDir = process.env.SYSTEM_BACKUP_DIR?.trim() || join(process.cwd(), "..", "..", "backups");
+    const path = join(backupDir, "recovery-evidence-bundle-v3270.json");
+    let raw: string; let parsed: Record<string, unknown>;
+    try { raw = await readFile(path, "utf8"); parsed = JSON.parse(raw) as Record<string, unknown>; } catch { throw new NotFoundException("Chưa có recovery evidence bundle v3.27.0; chạy npm run recovery:evidence trước"); }
+    const verification = this.verify_recovery_evidence_bundle_v3230(parsed);
+    if (!verification.overall_verified) throw new ConflictException(`Recovery evidence bundle không qua trusted + revocation verification (${verification.reason}); không cho phép export audit bundle`);
+    return { ten_file: `recovery-evidence-audit-bundle-v3.27.0-${new Date().toISOString().slice(0, 10)}.json`, mime_type: "application/json", base64: Buffer.from(raw, "utf8").toString("base64"), manifest: parsed.manifest || {}, integrity: parsed.integrity || {}, signature: parsed.signature || {}, verification, secret_values_exposed: false as const };
+  }
+
   private remediation_sla_config_v3200() {
     const defaults: Record<"P1" | "P2" | "P3" | "P4", number> = { P1: 4, P2: 24, P3: 72, P4: 168 };
     let parsed: Record<string, unknown> = {};
@@ -4917,6 +4954,28 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
         refund_reconciliation_sla: true,
         refund_reconciliation_sla_hours: refund_sla_hours,
         refund_queue_excel: true,
+        no_database_migration: true,
+      },
+    };
+  }
+
+  async trang_thai_ops_v3270() {
+    const base = await this.trang_thai_ops_v3260();
+    const fleet = base.probe_fleet as Record<string, unknown> | undefined;
+    return {
+      ...base,
+      phien_ban: "3.27.0",
+      probe_fleet: fleet ? { ...fleet, phien_ban: "3.27.0" } : base.probe_fleet,
+      multi_region_quorum: { ...base.multi_region_quorum, phien_ban: "3.27.0" },
+      rollout_approval: await this.lay_probe_rollout_proposal_v3270(),
+      database_recovery: await this.recovery_readiness_v3270(),
+      admin_business_safety: {
+        ...base.admin_business_safety,
+        inventory_cycle_count_file_import: true,
+        inventory_cycle_count_file_types: ["csv", "xlsx"],
+        inventory_cycle_count_max_rows: 200,
+        inventory_cycle_count_variance_excel: true,
+        inventory_cycle_count_atomic_apply: true,
         no_database_migration: true,
       },
     };
@@ -5849,6 +5908,9 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     return { ten_file: `ke-hoach-nhap-kho-v3.26.0_${ngay}.xlsx`, mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", base64: buffer.toString("base64"), tong_bien_the_can_nhap: plan.tong_bien_the_can_nhap, tong_so_luong_de_xuat: plan.tong_so_luong_de_xuat, forecast_days: plan.forecast_days, tong_nhom_nha_cung_cap: plan.tong_nhom_nha_cung_cap, nhom_san_sang: plan.nhom_san_sang };
   }
 
+  async goi_y_nhap_kho_v3270() { const base = await this.goi_y_nhap_kho_v3260(); return { ...base, phien_ban: "3.27.0" }; }
+  async xuat_goi_y_nhap_kho_excel_v3270() { const base = await this.xuat_goi_y_nhap_kho_excel_v3260(); return { ...base, ten_file: base.ten_file.replace("v3.26.0", "v3.27.0") }; }
+
   async kiem_tra_kiem_ke_kho_v3260(dto: { dong: Array<{ bien_the_id: string; ton_he_thong: number; ton_thuc_te: number; ly_do?: string }> }) {
     const seen = new Set<string>();
     for (const item of dto.dong) {
@@ -5918,6 +5980,103 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       return { changed, tong_abs, items };
     });
     return { phien_ban: "3.26.0", da_ap_dung: true, tong_dong: dto.dong.length, da_dieu_chinh: ket_qua.changed, tong_chenh_lech_tuyet_doi: ket_qua.tong_abs, optimistic_lock: true as const, atomic_transaction: true as const, items: ket_qua.items };
+  }
+
+
+  private dong_kiem_ke_tu_bang_v3270(rows: string[][]) {
+    if (rows.length < 2) throw new BadRequestException("File kiểm kê phải có hàng tiêu đề và ít nhất 1 dòng dữ liệu");
+    const header = rows[0].map(x => this.chuan_hoa_tieu_de(x));
+    const tim = (...names: string[]) => header.findIndex(x => names.includes(x));
+    const iMa = tim("ma_bien_the", "bien_the", "sku", "ma_sku");
+    const iTon = tim("ton_thuc_te", "so_luong_thuc_te", "actual_stock", "actual_qty", "so_dem", "so_luong_dem");
+    const iLyDo = tim("ly_do", "ghi_chu", "note", "reason");
+    if (iMa < 0 || iTon < 0) throw new BadRequestException("File kiểm kê phải có cột ma_bien_the và ton_thuc_te");
+    const dataRows = rows.slice(1).filter(r => r.some(x => (x || "").trim()));
+    if (dataRows.length > 200) throw new BadRequestException("Mỗi file kiểm kê chỉ được tối đa 200 dòng dữ liệu để giữ transaction an toàn");
+    return dataRows.map((r, index) => ({
+      so_dong_file: index + 2,
+      ma_bien_the: (r[iMa] || "").trim().toUpperCase(),
+      ton_thuc_te: Number((r[iTon] || "").replace(/\s/g, "")),
+      ly_do: iLyDo >= 0 ? (r[iLyDo] || "").trim().slice(0, 300) : "",
+    }));
+  }
+
+  async kiem_tra_tep_kiem_ke_kho_v3270(dto: KiemTraTepNhapKhoDto) {
+    const ten = dto.ten_file.trim();
+    const ext = ten.toLowerCase().split(".").pop();
+    if (!ext || !["csv", "xlsx"].includes(ext)) throw new BadRequestException("Chỉ hỗ trợ file kiểm kê .csv hoặc .xlsx");
+    let buffer: Buffer;
+    try { buffer = Buffer.from(dto.du_lieu_base64.replace(/^data:[^,]+,/, ""), "base64"); }
+    catch { throw new BadRequestException("Dữ liệu file kiểm kê không hợp lệ"); }
+    if (!buffer.length || buffer.length > 2 * 1024 * 1024) throw new BadRequestException("File kiểm kê phải nhỏ hơn hoặc bằng 2 MB");
+    const rows = ext === "csv" ? this.tach_csv(buffer.toString("utf8").replace(/^\uFEFF/, "")) : this.tach_xlsx(buffer);
+    const input = this.dong_kiem_ke_tu_bang_v3270(rows);
+    const codes = [...new Set(input.map(x => x.ma_bien_the).filter(Boolean))];
+    const variants = await this.db.bienTheSanPham.findMany({
+      where: { ma_bien_the: { in: codes } },
+      include: { san_pham: { select: { ma_san_pham: true, ten_san_pham: true } }, vat_lieu: { select: { ten_vat_lieu: true } }, mau_sac: { select: { ten_mau: true } } },
+    });
+    const map = new Map(variants.map(x => [x.ma_bien_the.toUpperCase(), x]));
+    const seen = new Set<string>();
+    const result = input.map(item => {
+      const loi: string[] = [];
+      if (!item.ma_bien_the) loi.push("Thiếu mã biến thể");
+      if (!Number.isInteger(item.ton_thuc_te) || item.ton_thuc_te < 0 || item.ton_thuc_te > 1_000_000) loi.push("Tồn thực tế phải là số nguyên 0–1.000.000");
+      if (item.ma_bien_the && seen.has(item.ma_bien_the)) loi.push("Mã biến thể bị lặp trong file");
+      if (item.ma_bien_the) seen.add(item.ma_bien_the);
+      const v = map.get(item.ma_bien_the);
+      if (item.ma_bien_the && !v) loi.push("Không tìm thấy biến thể trong hệ thống");
+      const ton = v?.so_luong_ton ?? null;
+      return {
+        ...item,
+        hop_le: loi.length === 0,
+        loi,
+        bien_the_id: v?.id || null,
+        ton_he_thong: ton,
+        ton_he_thong_hien_tai: ton,
+        chenh_lech: ton === null || !Number.isInteger(item.ton_thuc_te) ? null : item.ton_thuc_te - ton,
+        stale_snapshot: false,
+        ma_san_pham: v?.san_pham.ma_san_pham || "",
+        ten_san_pham: v?.san_pham.ten_san_pham || "",
+        vat_lieu: v?.vat_lieu?.ten_vat_lieu || "Mặc định",
+        mau_sac: v?.mau_sac?.ten_mau || "Mặc định",
+      };
+    });
+    const valid = result.filter(x => x.hop_le && x.bien_the_id && typeof x.ton_he_thong === "number");
+    return {
+      phien_ban: "3.27.0",
+      ten_file: ten,
+      tong_dong: result.length,
+      hop_le: valid.length,
+      khong_hop_le: result.length - valid.length,
+      co_chenh_lech: valid.filter(x => x.chenh_lech !== 0).length,
+      tong_chenh_lech_tuyet_doi: valid.reduce((sum, x) => sum + Math.abs(Number(x.chenh_lech || 0)), 0),
+      co_the_ap_dung: result.length > 0 && valid.length === result.length,
+      optimistic_lock: true as const,
+      atomic_apply: true as const,
+      write_operation: false as const,
+      max_rows: 200,
+      dong: result,
+    };
+  }
+
+  async kiem_tra_kiem_ke_kho_v3270(dto: { dong: Array<{ bien_the_id: string; ton_he_thong: number; ton_thuc_te: number; ly_do?: string }> }) {
+    const base = await this.kiem_tra_kiem_ke_kho_v3260(dto);
+    return { ...base, phien_ban: "3.27.0", batch_file_import_supported: true as const };
+  }
+
+  async ap_dung_kiem_ke_kho_v3270(actor: NguoiDungXacThuc, dto: { dong: Array<{ bien_the_id: string; ton_he_thong: number; ton_thuc_te: number; ly_do?: string }> }) {
+    const base = await this.ap_dung_kiem_ke_kho_v3260(actor, dto);
+    return { ...base, phien_ban: "3.27.0", batch_file_import_supported: true as const };
+  }
+
+  async xuat_kiem_ke_kho_excel_v3270(dto: { dong: Array<{ bien_the_id: string; ton_he_thong: number; ton_thuc_te: number; ly_do?: string }> }) {
+    const preview = await this.kiem_tra_kiem_ke_kho_v3270(dto);
+    const rows: unknown[][] = [["Mã SP", "Sản phẩm", "Mã biến thể", "Vật liệu", "Màu", "Tồn snapshot", "Tồn hiện tại", "Tồn thực tế", "Chênh lệch", "Trạng thái", "Lý do"]];
+    for (const item of preview.dong) rows.push([item.ma_san_pham, item.ten_san_pham, item.ma_bien_the, item.vat_lieu, item.mau_sac, item.ton_he_thong, item.ton_he_thong_hien_tai ?? "", item.ton_thuc_te, item.chenh_lech ?? "", item.hop_le ? (item.chenh_lech === 0 ? "KHỚP" : "CHÊNH LỆCH") : "STALE/INVALID", item.ly_do || item.loi.join(" · ")]);
+    const buffer = this.tao_xlsx(rows, "Kiểm kê v3.27");
+    const ngay = new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    return { ten_file: `doi-soat-kiem-ke-kho-v3.27.0_${ngay}.xlsx`, mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", base64: buffer.toString("base64"), tong_dong: preview.tong_dong, co_chenh_lech: preview.co_chenh_lech, tong_chenh_lech_tuyet_doi: preview.tong_chenh_lech_tuyet_doi, co_the_ap_dung: preview.co_the_ap_dung };
   }
 
   private async danh_sach_canh_bao_kho() {
@@ -6571,6 +6730,11 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     return { ...base, phien_ban: "3.26.0" };
   }
 
+  async danh_sach_xung_dot_phan_ca_v3270(tu_ngay_raw?: string, den_ngay_raw?: string) {
+    const base = await this.danh_sach_xung_dot_phan_ca_v3260(tu_ngay_raw, den_ngay_raw);
+    return { ...base, phien_ban: "3.27.0" };
+  }
+
   async tao_ca(actor: NguoiDungXacThuc, dto: TaoCaLamDto) {
     const ma_ca = dto.ma_ca.trim().toUpperCase();
     this.kiem_tra_khung_gio(dto.gio_bat_dau, dto.gio_ket_thuc);
@@ -6972,6 +7136,10 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const ngay = new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString().slice(0, 10);
     return { ten_file: `hoan-tien-can-xu-ly-v3.26.0_${ngay}.xlsx`, mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", base64: buffer.toString("base64"), tong_don_can_hoan: queue.tong_don_can_hoan, tong_qua_han: queue.tong_qua_han, tong_tien_can_hoan: queue.tong_tien_can_hoan, refund_sla_hours: queue.refund_sla_hours };
   }
+
+  async danh_sach_hoan_tien_can_xu_ly_v3270() { const base = await this.danh_sach_hoan_tien_can_xu_ly_v3260(); return { ...base, phien_ban: "3.27.0" }; }
+  async xuat_hoan_tien_can_xu_ly_excel_v3270() { const base = await this.xuat_hoan_tien_can_xu_ly_excel_v3260(); return { ...base, ten_file: base.ten_file.replace("v3.26.0", "v3.27.0") }; }
+  async xac_nhan_hoan_tien_don_hang_v3270(actor: NguoiDungXacThuc, id: string, ghi_chu?: string) { return this.xac_nhan_hoan_tien_don_hang_v3260(actor, id, ghi_chu); }
 
   async cap_nhat_trang_thai_don_hang(actor: NguoiDungXacThuc, id: string, dto: CapNhatTrangThaiDonHangDto) {
     const hien_tai = await this.db.donHang.findUnique({

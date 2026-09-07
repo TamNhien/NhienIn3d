@@ -8,11 +8,11 @@ test("v3.26.0 dong bo current source, refund SLA va cycle count", () => {
   const controller = read("apps/api/src/quan-tri/quan-tri.controller.ts");
   const service = read("apps/api/src/quan-tri/quan-tri.service.ts");
   const compose = read("docker-compose.yml");
-  assert.equal(read("VERSION").trim(), "3.26.0");
-  assert.equal(pkg.version, "3.26.0");
-  assert.equal(pkg.scripts.verify, "npm run verify:v326");
-  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3260.mjs");
-  assert.match(controller, /trang_thai_ops_v3260/);
+  assert.equal(read("VERSION").trim(), "3.27.0");
+  assert.equal(pkg.version, "3.27.0");
+  assert.equal(pkg.scripts.verify, "npm run verify:v327");
+  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3270.mjs");
+  assert.match(controller, /trang_thai_ops_v3270/);
   assert.match(controller, /hoan-tien-can-xu-ly\/excel/);
   assert.match(controller, /kho\/kiem-ke\/kiem-tra/);
   assert.match(controller, /kho\/kiem-ke\/ap-dung/);

@@ -22,6 +22,7 @@ import {
   TrangThaiCanhBaoKhoEmailAdmin,
   KeHoachNhapKhoAdmin,
   KiemKeKhoPreviewAdmin,
+  KiemKeTepKhoAdmin,
   AdminSucKhoeHeThong,
   LichSuVanHanhAdmin,
   ThongKeVanHanhAdmin,
@@ -76,6 +77,8 @@ import {
   xuatGoiYNhapKhoExcelAdmin,
   kiemTraKiemKeKhoAdmin,
   apDungKiemKeKhoAdmin,
+  kiemTraTepKiemKeKhoAdmin,
+  xuatKiemKeKhoExcelAdmin,
   layNhaCungCapAdmin,
   taoNhaCungCapAdmin,
   capNhatNhaCungCapAdmin,
@@ -295,6 +298,7 @@ export default function QuanTriPage() {
   const [kiem_ke_bien_the_id, setKiemKeBienTheId] = useState("");
   const [kiem_ke_ton_thuc_te, setKiemKeTonThucTe] = useState(0);
   const [kiem_ke_preview, setKiemKePreview] = useState<KiemKeKhoPreviewAdmin | null>(null);
+  const [kiem_ke_tep, setKiemKeTep] = useState<KiemKeTepKhoAdmin | null>(null);
   const [nhap_lo_meta, setNhapLoMeta] = useState({ ma_lo: "", nha_cung_cap_id: "", ghi_chu: "" });
   const [kho_ly_do, setKhoLyDo] = useState<Record<string, string>>({});
   const [lich_su_kho_loc_loai, setLichSuKhoLocLoai] = useState("");
@@ -904,7 +908,7 @@ export default function QuanTriPage() {
     if (!selected) { setThongBao("Hãy chọn biến thể cần kiểm kê."); return; }
     setDangXuLy("kiem-ke-preview"); setThongBao("");
     try {
-      const preview = await kiemTraKiemKeKhoAdmin([{ bien_the_id: selected.bt.id, ton_he_thong: Number(selected.bt.so_luong_ton), ton_thuc_te: Math.max(0, Math.round(Number(kiem_ke_ton_thuc_te) || 0)), ly_do: "Kiểm kê tồn kho thực tế v3.26" }]);
+      const preview = await kiemTraKiemKeKhoAdmin([{ bien_the_id: selected.bt.id, ton_he_thong: Number(selected.bt.so_luong_ton), ton_thuc_te: Math.max(0, Math.round(Number(kiem_ke_ton_thuc_te) || 0)), ly_do: "Kiểm kê tồn kho thực tế v3.27" }]);
       setKiemKePreview(preview);
       const row = preview.dong[0];
       setThongBao(row?.hop_le ? `Kiểm tra ${row.ma_bien_the}: hệ thống ${row.ton_he_thong_hien_tai} → thực tế ${row.ton_thuc_te}, chênh ${Number(row.chenh_lech || 0) >= 0 ? "+" : ""}${row.chenh_lech}.` : row?.loi?.join(" · ") || "Dữ liệu kiểm kê chưa hợp lệ.");
@@ -918,12 +922,60 @@ export default function QuanTriPage() {
     if (!window.confirm(`Áp dụng kiểm kê ${row.ma_bien_the}: ${row.ton_he_thong} → ${row.ton_thuc_te}? Thao tác được ghi audit.`)) return;
     setDangXuLy("kiem-ke-apply"); setThongBao("");
     try {
-      const kq = await apDungKiemKeKhoAdmin([{ bien_the_id: row.bien_the_id, ton_he_thong: row.ton_he_thong, ton_thuc_te: row.ton_thuc_te, ly_do: row.ly_do || "Kiểm kê tồn kho thực tế v3.26" }]);
+      const kq = await apDungKiemKeKhoAdmin([{ bien_the_id: row.bien_the_id, ton_he_thong: row.ton_he_thong, ton_thuc_te: row.ton_thuc_te, ly_do: row.ly_do || "Kiểm kê tồn kho thực tế v3.27" }]);
       const [sp, ls, nk, plan] = await Promise.all([laySanPhamAdmin(), layLichSuKhoAdmin(), layNhatKyAdmin(), layGoiYNhapKhoAdmin()]);
       setSanPhamQt(sp); setLichSuKho(ls); setNhatKy(nk); setKeHoachNhap(plan); setKiemKePreview(null);
       const fresh = sp.flatMap(x => x.bien_the).find(x => x.id === row.bien_the_id); if (fresh) setKiemKeTonThucTe(fresh.so_luong_ton);
       setThongBao(`Đã áp dụng kiểm kê nguyên tử: ${kq.da_dieu_chinh}/${kq.tong_dong} biến thể thay đổi, tổng chênh lệch tuyệt đối ${kq.tong_chenh_lech_tuyet_doi}.`);
     } catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể áp dụng kiểm kê"); }
+    finally { setDangXuLy(null); }
+  }
+
+
+  function taiMauKiemKeKho() {
+    const csv = ["ma_bien_the,ton_thuc_te,ly_do", "N3D-MAU-001,12,Kiểm kê định kỳ"].join("\r\n");
+    const blob = new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = "mau-kiem-ke-ton-kho-nhienin3d-v327.csv"; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  }
+
+  async function docTepKiemKeKho(file?: File) {
+    if (!file) return;
+    setDangXuLy("kiem-ke-file-preview"); setThongBao(""); setKiemKeTep(null);
+    try {
+      if (!/\.(csv|xlsx)$/i.test(file.name)) throw new Error("Chỉ chọn file kiểm kê CSV hoặc Excel .xlsx");
+      if (file.size > 2 * 1024 * 1024) throw new Error("File kiểm kê phải nhỏ hơn hoặc bằng 2 MB");
+      const bytes = new Uint8Array(await file.arrayBuffer()); let binary = "";
+      for (let i = 0; i < bytes.length; i += 32768) binary += String.fromCharCode(...bytes.subarray(i, Math.min(i + 32768, bytes.length)));
+      const kq = await kiemTraTepKiemKeKhoAdmin(file.name, btoa(binary));
+      setKiemKeTep(kq); setKiemKePreview(null);
+      setThongBao(kq.khong_hop_le ? `File kiểm kê ${kq.ten_file}: ${kq.hop_le}/${kq.tong_dong} dòng hợp lệ, ${kq.khong_hop_le} dòng cần sửa.` : `File kiểm kê ${kq.ten_file}: ${kq.tong_dong}/${kq.tong_dong} dòng hợp lệ · ${kq.co_chenh_lech} dòng có chênh lệch.`);
+    } catch (e) { setKiemKeTep(null); setThongBao(e instanceof Error ? e.message : "Không thể kiểm tra file kiểm kê"); }
+    finally { setDangXuLy(null); }
+  }
+
+  const dongKiemKeTuTep = () => (kiem_ke_tep?.dong || []).filter(row => row.hop_le && row.bien_the_id && typeof row.ton_he_thong === "number").map(row => ({ bien_the_id: String(row.bien_the_id), ton_he_thong: Number(row.ton_he_thong), ton_thuc_te: Number(row.ton_thuc_te), ly_do: row.ly_do || "Kiểm kê tồn kho theo file v3.27" }));
+
+  async function apDungKiemKeTheoTep() {
+    if (!kiem_ke_tep?.co_the_ap_dung) { setThongBao("File kiểm kê còn lỗi. Hãy sửa file rồi kiểm tra lại trước khi áp dụng."); return; }
+    const dong = dongKiemKeTuTep();
+    if (!dong.length) { setThongBao("File kiểm kê không có dòng hợp lệ để áp dụng."); return; }
+    if (!window.confirm(`Áp dụng kiểm kê nguyên tử cho ${dong.length} biến thể? Nếu một snapshot đã thay đổi, toàn bộ batch sẽ rollback.`)) return;
+    setDangXuLy("kiem-ke-file-apply"); setThongBao("");
+    try {
+      const kq = await apDungKiemKeKhoAdmin(dong);
+      const [sp, ls, nk, plan] = await Promise.all([laySanPhamAdmin(), layLichSuKhoAdmin(), layNhatKyAdmin(), layGoiYNhapKhoAdmin()]);
+      setSanPhamQt(sp); setLichSuKho(ls); setNhatKy(nk); setKeHoachNhap(plan); setKiemKeTep(null); setKiemKePreview(null);
+      setThongBao(`Đã áp dụng kiểm kê theo file: ${kq.da_dieu_chinh}/${kq.tong_dong} biến thể thay đổi · tổng chênh lệch tuyệt đối ${kq.tong_chenh_lech_tuyet_doi}.`);
+    } catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể áp dụng kiểm kê theo file"); }
+    finally { setDangXuLy(null); }
+  }
+
+  async function taiExcelDoiSoatKiemKe() {
+    const source = kiem_ke_tep ? dongKiemKeTuTep() : (kiem_ke_preview?.dong || []).filter(row => row.bien_the_id && typeof row.ton_he_thong === "number").map(row => ({ bien_the_id: row.bien_the_id, ton_he_thong: Number(row.ton_he_thong), ton_thuc_te: Number(row.ton_thuc_te), ly_do: row.ly_do || "Kiểm kê tồn kho thực tế v3.27" }));
+    if (!source.length) { setThongBao("Hãy xem trước kiểm kê hoặc kiểm tra file trước khi xuất Excel đối soát."); return; }
+    setDangXuLy("kiem-ke-excel"); setThongBao("");
+    try { const kq = await xuatKiemKeKhoExcelAdmin(source); taiTepBase64(kq); setThongBao(`Đã xuất ${kq.ten_file}: ${kq.co_chenh_lech}/${kq.tong_dong} dòng có chênh lệch.`); }
+    catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể xuất Excel kiểm kê"); }
     finally { setDangXuLy(null); }
   }
 
@@ -1675,9 +1727,11 @@ export default function QuanTriPage() {
       </div>
 
       <div className="cine-card cine-cycle-count-v326">
-        <div className="cine-cycle-count-head-v326"><div><h3>Kiểm kê tồn thực tế</h3><p>Chọn biến thể, nhập số đếm thực tế rồi xem trước trước khi áp dụng. v3.26 dùng optimistic lock + transaction nguyên tử để không ghi đè tồn vừa thay đổi ở phiên khác.</p></div><span>Không migration · audit đầy đủ</span></div>
+        <div className="cine-cycle-count-head-v326"><div><h3>Kiểm kê tồn thực tế</h3><p>v3.27 giữ kiểm kê từng biến thể và thêm kiểm kê hàng loạt bằng CSV/Excel. File chỉ được áp dụng khi 100% dòng hợp lệ; optimistic lock + transaction nguyên tử vẫn fail-closed nếu tồn thay đổi giữa lúc xem trước và áp dụng.</p></div><div className="cine-cycle-count-actions-v327"><span>≤ 200 dòng · audit đầy đủ</span><button type="button" className="cine-btn cine-btn-secondary" onClick={taiMauKiemKeKho}>Tải CSV mẫu</button><label className="cine-btn cine-btn-primary cine-file-btn-v218">{dang_xu_ly==="kiem-ke-file-preview"?"Đang kiểm tra…":"Chọn CSV / Excel"}<input type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={e=>{const file=e.target.files?.[0];e.currentTarget.value="";void docTepKiemKeKho(file);}}/></label></div></div>
         <div className="cine-cycle-count-form-v326"><label className="wide"><span>Biến thể</span><select value={kiem_ke_bien_the_id} onChange={e=>{const id=e.target.value;setKiemKeBienTheId(id);const found=san_pham_qt.flatMap(sp=>sp.bien_the).find(bt=>bt.id===id);setKiemKeTonThucTe(found?.so_luong_ton||0);setKiemKePreview(null);}}><option value="">Chọn biến thể cần kiểm kê</option>{san_pham_qt.flatMap(sp=>sp.bien_the.map(bt=><option key={bt.id} value={bt.id}>{bt.ma_bien_the} · {sp.ma_san_pham} · tồn {bt.so_luong_ton}</option>))}</select></label><label><span>Tồn hệ thống</span><input value={bienTheKiemKe?.bien_the.so_luong_ton ?? "—"} readOnly/></label><label><span>Tồn thực tế</span><input type="number" min="0" max="1000000" value={kiem_ke_ton_thuc_te} onChange={e=>{setKiemKeTonThucTe(Math.max(0,Number(e.target.value)||0));setKiemKePreview(null);}}/></label><button type="button" className="cine-btn cine-btn-secondary" onClick={xemTruocKiemKeKho} disabled={!kiem_ke_bien_the_id || dang_xu_ly==="kiem-ke-preview"}>{dang_xu_ly==="kiem-ke-preview"?"Đang kiểm tra…":"Xem trước"}</button><button type="button" className="cine-btn cine-btn-primary" onClick={apDungKiemKeKho} disabled={!kiem_ke_preview?.co_the_ap_dung || dang_xu_ly==="kiem-ke-apply"}>{dang_xu_ly==="kiem-ke-apply"?"Đang áp dụng…":"Áp dụng kiểm kê"}</button></div>
         {kiem_ke_preview?.dong[0] && <div className={`cine-cycle-count-preview-v326 ${kiem_ke_preview.co_the_ap_dung?"ok":"bad"}`}><span><b>{kiem_ke_preview.dong[0].ma_bien_the || "Biến thể"}</b><small>{kiem_ke_preview.dong[0].ten_san_pham || ""}</small></span><strong>{kiem_ke_preview.dong[0].ton_he_thong_hien_tai ?? "—"} → {kiem_ke_preview.dong[0].ton_thuc_te}</strong><span><b>Chênh {Number(kiem_ke_preview.dong[0].chenh_lech||0)>=0?"+":""}{kiem_ke_preview.dong[0].chenh_lech ?? "—"}</b><small>{kiem_ke_preview.co_the_ap_dung?"Snapshot hợp lệ · có thể áp dụng":"Snapshot đã stale · tải lại trước khi áp dụng"}</small></span></div>}
+        {(kiem_ke_preview || kiem_ke_tep) && <div className="cine-cycle-count-export-v327"><button type="button" className="cine-btn cine-btn-secondary" onClick={taiExcelDoiSoatKiemKe} disabled={dang_xu_ly==="kiem-ke-excel" || Boolean(kiem_ke_tep && !kiem_ke_tep.co_the_ap_dung)}>{dang_xu_ly==="kiem-ke-excel"?"Đang xuất…":"Xuất Excel đối soát"}</button></div>}
+        {kiem_ke_tep && <div className="cine-cycle-count-file-v327"><div className="cine-cycle-count-file-summary-v327"><span><b>{kiem_ke_tep.tong_dong}</b><small>dòng file</small></span><span className="ok"><b>{kiem_ke_tep.hop_le}</b><small>hợp lệ</small></span><span className={kiem_ke_tep.khong_hop_le?"bad":"ok"}><b>{kiem_ke_tep.khong_hop_le}</b><small>lỗi</small></span><span><b>{kiem_ke_tep.co_chenh_lech}</b><small>chênh lệch</small></span><span><b>{kiem_ke_tep.tong_chenh_lech_tuyet_doi}</b><small>tổng |chênh|</small></span><button type="button" className="cine-btn cine-btn-primary" onClick={apDungKiemKeTheoTep} disabled={!kiem_ke_tep.co_the_ap_dung || dang_xu_ly==="kiem-ke-file-apply"}>{dang_xu_ly==="kiem-ke-file-apply"?"Đang áp dụng…":`Áp dụng ${kiem_ke_tep.tong_dong} dòng`}</button></div><div className="cine-cycle-count-file-table-v327"><div className="head"><span>Dòng</span><span>Biến thể</span><span>Sản phẩm</span><span>Hệ thống → thực tế</span><span>Chênh</span><span>Kết quả</span></div>{kiem_ke_tep.dong.slice(0,200).map(row=><div className={row.hop_le?"row ok":"row bad"} key={`${row.so_dong_file}-${row.ma_bien_the}`}><span>{row.so_dong_file}</span><span><b>{row.ma_bien_the||"—"}</b></span><span>{row.ten_san_pham||row.ma_san_pham||"—"}</span><span>{row.ton_he_thong===null?"—":`${row.ton_he_thong} → ${row.ton_thuc_te}`}</span><strong>{row.chenh_lech===null||row.chenh_lech===undefined?"—":`${Number(row.chenh_lech)>=0?"+":""}${row.chenh_lech}`}</strong><span>{row.hop_le?"Hợp lệ":row.loi.join(" · ")}</span></div>)}</div></div>}
       </div>
 
       <div className="cine-card cine-batch-import-v218">

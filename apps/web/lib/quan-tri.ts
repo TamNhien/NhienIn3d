@@ -133,6 +133,7 @@ export type KeHoachNhapKhoAdmin = {
 export type KiemKeKhoDongAdmin = { bien_the_id: string; ton_he_thong: number; ton_thuc_te: number; ly_do?: string; hop_le?: boolean; loi?: string[]; ton_he_thong_hien_tai?: number | null; chenh_lech?: number | null; stale_snapshot?: boolean; ma_bien_the?: string; ma_san_pham?: string; ten_san_pham?: string; vat_lieu?: string; mau_sac?: string };
 export type KiemKeKhoPreviewAdmin = { phien_ban: string; tong_dong: number; hop_le: number; khong_hop_le: number; co_chenh_lech: number; tong_chenh_lech_tuyet_doi: number; co_the_ap_dung: boolean; optimistic_lock: boolean; write_operation: boolean; dong: KiemKeKhoDongAdmin[] };
 export type KiemKeKhoApplyAdmin = { phien_ban: string; da_ap_dung: boolean; tong_dong: number; da_dieu_chinh: number; tong_chenh_lech_tuyet_doi: number; optimistic_lock: boolean; atomic_transaction: boolean; items: Array<{ bien_the_id: string; ma_bien_the: string; ton_cu: number; ton_moi: number; chenh_lech: number }> };
+export type KiemKeTepKhoAdmin = { phien_ban: string; ten_file: string; tong_dong: number; hop_le: number; khong_hop_le: number; co_chenh_lech: number; tong_chenh_lech_tuyet_doi: number; co_the_ap_dung: boolean; optimistic_lock: boolean; atomic_apply: boolean; write_operation: boolean; max_rows: number; dong: Array<Omit<KiemKeKhoDongAdmin, "bien_the_id" | "ton_he_thong"> & { so_dong_file: number; hop_le: boolean; loi: string[]; bien_the_id: string | null; ton_he_thong: number | null }> };
 
 export type AdminSucKhoeHeThong = {
   trang_thai: "TOT" | "CANH_BAO" | "LOI";
@@ -308,6 +309,8 @@ export const layGoiYNhapKhoAdmin = () => goi<KeHoachNhapKhoAdmin>("/quan-tri/kho
 export const xuatGoiYNhapKhoExcelAdmin = () => goi<{ ten_file: string; mime_type: string; base64: string }>("/quan-tri/kho/goi-y-nhap/excel");
 export const kiemTraKiemKeKhoAdmin = (dong: KiemKeKhoDongAdmin[]) => goi<KiemKeKhoPreviewAdmin>("/quan-tri/kho/kiem-ke/kiem-tra", { method: "POST", body: JSON.stringify({ dong }) });
 export const apDungKiemKeKhoAdmin = (dong: KiemKeKhoDongAdmin[]) => goi<KiemKeKhoApplyAdmin>("/quan-tri/kho/kiem-ke/ap-dung", { method: "POST", body: JSON.stringify({ dong }) });
+export const kiemTraTepKiemKeKhoAdmin = (ten_file: string, du_lieu_base64: string) => goi<KiemKeTepKhoAdmin>("/quan-tri/kho/kiem-ke/import/kiem-tra", { method: "POST", body: JSON.stringify({ ten_file, du_lieu_base64 }) });
+export const xuatKiemKeKhoExcelAdmin = (dong: KiemKeKhoDongAdmin[]) => goi<{ ten_file: string; mime_type: string; base64: string; tong_dong: number; co_chenh_lech: number; tong_chenh_lech_tuyet_doi: number; co_the_ap_dung: boolean }>("/quan-tri/kho/kiem-ke/excel", { method: "POST", body: JSON.stringify({ dong }) });
 export const layTrangThaiCanhBaoKhoEmailAdmin = () => goi<TrangThaiCanhBaoKhoEmailAdmin>("/quan-tri/kho/canh-bao-email");
 export const guiCanhBaoKhoEmailAdmin = () => goi<{ da_gui: boolean; ly_do?: string; tong_canh_bao: number; so_nguoi_nhan?: number; lan_gui?: string }>("/quan-tri/kho/canh-bao-email/gui", { method: "POST" });
 export const taoBienTheAdmin = (san_pham_id: string, payload: { ma_bien_the: string; vat_lieu_id?: string; mau_sac_id?: string; gia_chenh_lech?: number; so_luong_ton: number; dang_hien_thi?: boolean }) => goi<AdminBienThe>(`/quan-tri/san-pham/${san_pham_id}/bien-the`, { method: "POST", body: JSON.stringify(payload) });

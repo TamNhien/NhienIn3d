@@ -1188,3 +1188,93 @@ footer{border-top:1px solid var(--line);max-width:1240px;margin:auto;padding:30p
 .cine-cycle-count-preview-v326{display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:center;padding:12px 14px;border:1px solid #166534;border-radius:13px;background:rgba(20,83,45,.14)}.cine-cycle-count-preview-v326.bad{border-color:#be123c;background:rgba(136,19,55,.15)}.cine-cycle-count-preview-v326>span{display:grid;gap:3px}.cine-cycle-count-preview-v326>span:last-child{text-align:right}.cine-cycle-count-preview-v326 strong{font-size:1.05rem;color:#86efac;white-space:nowrap}.cine-cycle-count-preview-v326.bad strong{color:#fda4af}.cine-cycle-count-preview-v326 small{color:#94a3b8}
 @media(max-width:1050px){.cine-cycle-count-form-v326{grid-template-columns:1fr 1fr}.cine-cycle-count-form-v326 .wide{grid-column:1/-1}.cine-cycle-count-form-v326 .cine-btn{width:100%}}
 @media(max-width:760px){.cine-refund-sla-head-v326,.cine-cycle-count-head-v326{flex-direction:column}.cine-refund-sla-head-v326>div:last-child{width:100%}.cine-refund-sla-head-v326>div:last-child>span{flex:1}.cine-cycle-count-form-v326{grid-template-columns:1fr}.cine-cycle-count-form-v326 .wide{grid-column:auto}.cine-cycle-count-preview-v326{grid-template-columns:1fr}.cine-cycle-count-preview-v326>span:last-child{text-align:left}.cine-supplier-plan-v326>div{grid-template-columns:1fr}}
+
+/* v3.26.0 hotfix - canh thang field Nhap kho theo lo + them khoang dem cho Kiem ke ton thuc te. */
+.cine-batch-meta-v218{
+  align-items:start;
+}
+.cine-batch-meta-v218 label{
+  align-self:start;
+  align-content:start;
+}
+.cine-batch-meta-v218 input,
+.cine-batch-meta-v218 select{
+  height:54px;
+  min-height:54px;
+}
+.cine-batch-meta-v218 .cine-inline-link-v219{
+  justify-self:start;
+  line-height:1.25;
+}
+
+.cine-cycle-count-v326{
+  padding:20px 22px 22px;
+  gap:16px;
+}
+.cine-cycle-count-form-v326{
+  grid-template-columns:minmax(300px,1.45fr) minmax(140px,.6fr) minmax(140px,.6fr) minmax(118px,auto) minmax(150px,auto);
+  gap:12px;
+  align-items:end;
+}
+.cine-cycle-count-form-v326 label{
+  min-width:0;
+  align-content:start;
+}
+.cine-cycle-count-form-v326 input,
+.cine-cycle-count-form-v326 select{
+  box-sizing:border-box;
+  width:100%;
+  min-width:0;
+  height:48px;
+  min-height:48px;
+  border:1px solid #334155;
+  border-radius:12px;
+  background:#0b1322;
+  color:#f8fafc;
+  padding:10px 12px;
+  font-size:15px;
+  outline:none;
+}
+.cine-cycle-count-form-v326 input:focus,
+.cine-cycle-count-form-v326 select:focus{
+  border-color:#8b5cf6;
+  box-shadow:0 0 0 3px rgba(139,92,246,.11);
+}
+.cine-cycle-count-form-v326 input[readonly]{
+  background:#0d1728;
+  color:#cbd5e1;
+  opacity:1;
+}
+.cine-cycle-count-form-v326 .cine-btn{
+  min-height:48px;
+  height:48px;
+  white-space:nowrap;
+}
+@media(max-width:1050px){
+  .cine-cycle-count-v326{padding:18px;}
+  .cine-cycle-count-form-v326{grid-template-columns:1fr 1fr;}
+}
+@media(max-width:760px){
+  .cine-cycle-count-v326{padding:16px;}
+  .cine-batch-meta-v218 input,
+  .cine-batch-meta-v218 select{height:50px;min-height:50px;}
+  .cine-cycle-count-form-v326{grid-template-columns:1fr;}
+}
+
+/* v3.27.0 - bulk cycle count CSV/XLSX */
+.cine-cycle-count-actions-v327{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.cine-cycle-count-actions-v327>span{padding:5px 9px;border:1px solid #334155;border-radius:999px;color:#cbd5e1;font-size:.68rem;font-weight:800;white-space:nowrap}
+.cine-cycle-count-export-v327{display:flex;justify-content:flex-end}
+.cine-cycle-count-file-v327{display:grid;gap:10px;padding-top:4px}
+.cine-cycle-count-file-summary-v327{display:grid;grid-template-columns:repeat(5,minmax(88px,1fr)) auto;gap:8px;align-items:stretch}
+.cine-cycle-count-file-summary-v327>span{display:grid;gap:2px;place-items:center;padding:9px 10px;border:1px solid #334155;border-radius:11px;background:#0b1220;text-align:center}
+.cine-cycle-count-file-summary-v327>span b{font-size:1rem;color:#e2e8f0}.cine-cycle-count-file-summary-v327>span small{font-size:.64rem;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em}
+.cine-cycle-count-file-summary-v327>span.ok{border-color:#166534}.cine-cycle-count-file-summary-v327>span.ok b{color:#86efac}.cine-cycle-count-file-summary-v327>span.bad{border-color:#9f1239}.cine-cycle-count-file-summary-v327>span.bad b{color:#fda4af}
+.cine-cycle-count-file-summary-v327 .cine-btn{min-height:48px;align-self:stretch}
+.cine-cycle-count-file-table-v327{overflow:auto;max-height:440px;border:1px solid #334155;border-radius:12px;background:#08111f}
+.cine-cycle-count-file-table-v327 .head,.cine-cycle-count-file-table-v327 .row{display:grid;grid-template-columns:64px minmax(170px,.9fr) minmax(190px,1.2fr) minmax(150px,.8fr) 90px minmax(190px,1fr);gap:10px;align-items:center;min-width:980px;padding:10px 12px}
+.cine-cycle-count-file-table-v327 .head{position:sticky;top:0;z-index:2;background:#172236;color:#94a3b8;font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
+.cine-cycle-count-file-table-v327 .row{border-top:1px solid #223049;color:#cbd5e1;font-size:.78rem}.cine-cycle-count-file-table-v327 .row b{color:#f8fafc}.cine-cycle-count-file-table-v327 .row strong{font-variant-numeric:tabular-nums;color:#e2e8f0}
+.cine-cycle-count-file-table-v327 .row.bad{background:rgba(136,19,55,.1)}.cine-cycle-count-file-table-v327 .row.bad strong,.cine-cycle-count-file-table-v327 .row.bad>span:last-child{color:#fda4af}.cine-cycle-count-file-table-v327 .row.ok>span:last-child{color:#86efac}
+@media(max-width:1050px){.cine-cycle-count-file-summary-v327{grid-template-columns:repeat(3,1fr)}.cine-cycle-count-file-summary-v327 .cine-btn{grid-column:span 3}.cine-cycle-count-actions-v327{justify-content:flex-start}}
+@media(max-width:760px){.cine-cycle-count-file-summary-v327{grid-template-columns:1fr 1fr}.cine-cycle-count-file-summary-v327 .cine-btn{grid-column:1/-1}.cine-cycle-count-actions-v327{width:100%;justify-content:stretch}.cine-cycle-count-actions-v327 .cine-btn,.cine-cycle-count-actions-v327 label{flex:1 1 180px}.cine-cycle-count-export-v327 .cine-btn{width:100%}}
