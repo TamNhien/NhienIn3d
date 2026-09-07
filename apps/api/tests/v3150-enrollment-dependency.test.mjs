@@ -25,7 +25,7 @@ test("v3.15.0 API service dependency blast radius runtime va version", () => {
   assert.match(service, /trang_thai_ops_v3200/);
   assert.match(service, /service_dependency/);
   assert.match(service, /probe_enrollment/);
-  assert.match(controller, /trang_thai_ops_v3250/);
-  assert.match(health, /phien_ban: "v3\.25\.0"/);
-  assert.match(main, /setVersion\("3\.25\.0"\)/);
+  assert.match(controller, /trang_thai_ops_v3260/);
+  assert.match(health, /phien_ban: "v3\.26\.0"/);
+  assert.match(main, /setVersion\("3\.26\.0"\)/);
 });

@@ -49,8 +49,8 @@ export type AdminDonHangChiTiet = Omit<AdminDonHang, "thanh_toan"> & {
   xac_nhan_hoan_tien?: { da_cap_nhat_moi: boolean; da_hoan_tien_tu_truoc: boolean; so_giao_dich: number; so_tien: number };
 };
 export type HoanTienCanXuLyAdmin = {
-  phien_ban: string; tong_don_can_hoan: number; tong_tien_can_hoan: number; gateway_auto_refund: boolean; manual_confirmation_required: boolean;
-  items: Array<{ id: string; ma_don_hang: string; ho_ten_nguoi_nhan: string; thu_dien_tu?: string | null; ngay_huy_cap_nhat: string; so_giao_dich: number; so_tien_can_hoan: number; giao_dich: Array<{ id: string; ma_giao_dich: string; so_tien: number; phuong_thuc: string; ngay_thanh_toan?: string | null }> }>;
+  phien_ban: string; tong_don_can_hoan: number; tong_tien_can_hoan: number; tong_qua_han?: number; tong_sap_den_han?: number; refund_sla_hours?: number; refund_due_soon_hours?: number; gateway_auto_refund: boolean; manual_confirmation_required: boolean; sla_is_operational_target_only?: boolean;
+  items: Array<{ id: string; ma_don_hang: string; ho_ten_nguoi_nhan: string; thu_dien_tu?: string | null; ngay_huy_cap_nhat: string; refund_due_at?: string; refund_age_hours?: number; refund_remaining_hours?: number; refund_sla_status?: "TRONG_HAN" | "SAP_DEN_HAN" | "QUA_HAN" | string; so_giao_dich: number; so_tien_can_hoan: number; giao_dich: Array<{ id: string; ma_giao_dich: string; so_tien: number; phuong_thuc: string; ngay_thanh_toan?: string | null }> }>;
 };
 export type AdminBienThe = { id: string; ma_bien_the: string; so_luong_ton: number; ton_toi_thieu: number; ton_toi_da: number; dang_hien_thi: boolean; gia_chenh_lech: number | string; vat_lieu?: { id: string; ten_vat_lieu: string } | null; mau_sac?: { id: string; ten_mau: string; ma_hex: string } | null };
 export type AdminDanhMuc = { id: string; ma_danh_muc: string; ten_danh_muc: string; duong_dan: string; mo_ta?: string | null; thu_tu: number; dang_hien_thi: boolean; so_san_pham: number };
@@ -120,7 +120,8 @@ export type PhieuNhapKhoAdmin = { id: string; ma_phieu: string; ma_lo?: string |
 export type TrangThaiCanhBaoKhoEmailAdmin = { bat: boolean; chu_ky_phut: number; so_nguoi_nhan: number; lan_gui_cuoi?: string | null; tong_canh_bao_lan_cuoi: number; trang_thai_lan_cuoi: string };
 export type KeHoachNhapKhoAdmin = {
   phien_ban: string; tao_luc: string; history_days?: number; forecast_days?: number; forecast_basis?: string; tong_bien_the_can_nhap: number; tong_so_luong_de_xuat: number; het_hang: number; rui_ro_du_bao?: number; ap_luc_gio_hang?: number; tong_nhu_cau_gio_hang_mo?: number; legacy_unmapped_sales_lines?: number; khong_co_nha_cung_cap: number; nha_cung_cap_ngung_hoat_dong: number; supplier_inference: string; write_operation: boolean; auto_purchase_order?: boolean; cart_demand_is_reservation?: boolean;
-  theo_nha_cung_cap: Array<{ nha_cung_cap: { id: string | null; ma_nha_cung_cap: string | null; ten_nha_cung_cap: string; dang_hoat_dong: boolean | null } | null; so_bien_the: number; so_luong_de_xuat: number }>;
+  tong_nhom_nha_cung_cap?: number; nhom_san_sang?: number; nhom_can_xu_ly_thu_cong?: number; grouped_supplier_procurement_plan?: boolean;
+  theo_nha_cung_cap: Array<{ nha_cung_cap: { id: string | null; ma_nha_cung_cap: string | null; ten_nha_cung_cap: string; dang_hoat_dong: boolean | null } | null; so_bien_the: number; so_luong_de_xuat: number; trang_thai_nhom?: "SAN_SANG" | "CHUA_GAN_NCC" | "NCC_NGUNG_HOAT_DONG" | string; ready_to_send?: boolean; manual_supplier_resolution_required?: boolean }>;
   items: Array<{
     bien_the_id: string; ma_bien_the: string; ma_san_pham: string; ten_san_pham: string; vat_lieu: string; mau_sac: string;
     ton_hien_tai: number; ton_toi_thieu: number; ton_toi_da: number; muc_tieu_sau_nhap: number; so_luong_de_xuat: number; de_xuat_theo_dinh_muc?: number; de_xuat_theo_du_bao?: number; muc_do: string;
@@ -129,6 +130,10 @@ export type KeHoachNhapKhoAdmin = {
     nguon_nha_cung_cap: string; phieu_nhap_gan_nhat: { ma_phieu: string; ngay_tao: string } | null;
   }>;
 };
+export type KiemKeKhoDongAdmin = { bien_the_id: string; ton_he_thong: number; ton_thuc_te: number; ly_do?: string; hop_le?: boolean; loi?: string[]; ton_he_thong_hien_tai?: number | null; chenh_lech?: number | null; stale_snapshot?: boolean; ma_bien_the?: string; ma_san_pham?: string; ten_san_pham?: string; vat_lieu?: string; mau_sac?: string };
+export type KiemKeKhoPreviewAdmin = { phien_ban: string; tong_dong: number; hop_le: number; khong_hop_le: number; co_chenh_lech: number; tong_chenh_lech_tuyet_doi: number; co_the_ap_dung: boolean; optimistic_lock: boolean; write_operation: boolean; dong: KiemKeKhoDongAdmin[] };
+export type KiemKeKhoApplyAdmin = { phien_ban: string; da_ap_dung: boolean; tong_dong: number; da_dieu_chinh: number; tong_chenh_lech_tuyet_doi: number; optimistic_lock: boolean; atomic_transaction: boolean; items: Array<{ bien_the_id: string; ma_bien_the: string; ton_cu: number; ton_moi: number; chenh_lech: number }> };
+
 export type AdminSucKhoeHeThong = {
   trang_thai: "TOT" | "CANH_BAO" | "LOI";
   phien_ban: string;
@@ -267,6 +272,7 @@ export const layDonHangAdmin = (trang_thai = "", tim_kiem = "") => {
 export const layChiTietDonHangAdmin = (id: string) => goi<AdminDonHangChiTiet>(`/quan-tri/don-hang/${id}`);
 export const capNhatTrangThaiDonHangAdmin = (id: string, payload: { trang_thai: string; ghi_chu?: string }) => goi<AdminDonHangChiTiet>(`/quan-tri/don-hang/${id}/trang-thai`, { method: "POST", body: JSON.stringify(payload) });
 export const layHoanTienCanXuLyAdmin = () => goi<HoanTienCanXuLyAdmin>("/quan-tri/don-hang/hoan-tien-can-xu-ly");
+export const xuatHoanTienCanXuLyExcelAdmin = () => goi<{ ten_file: string; mime_type: string; base64: string; tong_don_can_hoan: number; tong_qua_han: number; tong_tien_can_hoan: number; refund_sla_hours: number }>("/quan-tri/don-hang/hoan-tien-can-xu-ly/excel");
 export const xacNhanHoanTienDonHangAdmin = (id: string, ghi_chu?: string) => goi<AdminDonHangChiTiet>(`/quan-tri/don-hang/${id}/xac-nhan-hoan-tien`, { method: "POST", body: JSON.stringify({ ghi_chu }) });
 export const doiSoatDoanhThuDonDaGiaoAdmin = () => goi<KetQuaDoiSoatDoanhThuDonDaGiao>("/quan-tri/don-hang/doi-soat-doanh-thu", { method: "POST" });
 export const layDanhMucAdmin = () => goi<AdminDanhMuc[]>("/quan-tri/danh-muc");
@@ -300,6 +306,8 @@ export const layChiTietPhieuNhapKhoAdmin = (id: string) => goi<PhieuNhapKhoAdmin
 export const xuatExcelPhieuNhapKhoAdmin = (tim_kiem = "", nha_cung_cap_id = "", tu_ngay = "", den_ngay = "") => { const q = new URLSearchParams(); if (tim_kiem.trim()) q.set("tim_kiem", tim_kiem.trim()); if (nha_cung_cap_id) q.set("nha_cung_cap_id", nha_cung_cap_id); if (tu_ngay) q.set("tu_ngay", tu_ngay); if (den_ngay) q.set("den_ngay", den_ngay); return goi<{ ten_file: string; mime_type: string; base64: string }>(`/quan-tri/kho/phieu-nhap/excel${q.size ? `?${q}` : ""}`); };
 export const layGoiYNhapKhoAdmin = () => goi<KeHoachNhapKhoAdmin>("/quan-tri/kho/goi-y-nhap");
 export const xuatGoiYNhapKhoExcelAdmin = () => goi<{ ten_file: string; mime_type: string; base64: string }>("/quan-tri/kho/goi-y-nhap/excel");
+export const kiemTraKiemKeKhoAdmin = (dong: KiemKeKhoDongAdmin[]) => goi<KiemKeKhoPreviewAdmin>("/quan-tri/kho/kiem-ke/kiem-tra", { method: "POST", body: JSON.stringify({ dong }) });
+export const apDungKiemKeKhoAdmin = (dong: KiemKeKhoDongAdmin[]) => goi<KiemKeKhoApplyAdmin>("/quan-tri/kho/kiem-ke/ap-dung", { method: "POST", body: JSON.stringify({ dong }) });
 export const layTrangThaiCanhBaoKhoEmailAdmin = () => goi<TrangThaiCanhBaoKhoEmailAdmin>("/quan-tri/kho/canh-bao-email");
 export const guiCanhBaoKhoEmailAdmin = () => goi<{ da_gui: boolean; ly_do?: string; tong_canh_bao: number; so_nguoi_nhan?: number; lan_gui?: string }>("/quan-tri/kho/canh-bao-email/gui", { method: "POST" });
 export const taoBienTheAdmin = (san_pham_id: string, payload: { ma_bien_the: string; vat_lieu_id?: string; mau_sac_id?: string; gia_chenh_lech?: number; so_luong_ton: number; dang_hien_thi?: boolean }) => goi<AdminBienThe>(`/quan-tri/san-pham/${san_pham_id}/bien-the`, { method: "POST", body: JSON.stringify(payload) });

@@ -1,6 +1,6 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v3.25.0** — 06/09/2026
+> Phiên bản hiện tại: **v3.26.0** — 07/09/2026
 - **v3.18.0 · recovery governance**: thêm target-time PITR rehearsal opt-in trên restore cluster cô lập, health-gated probe canary có grace window + auto rollback, postmortem approval/action reminder và HTTPS service-runbook mapping.
 - **Ops UI compact**: badge `COMPLETE · DRAFT` được thu nhỏ, canh giữa cả ngang/dọc; approval status dùng cùng visual compact để không chiếm chiều cao panel.
 - **Security hotfix mysql2**: nâng root pin/override từ `mysql2@3.22.0` lên `mysql2@3.23.4`; security scanner yêu cầu `>=3.23.1` để vá GHSA-rgwj-5xj2-c3m3 (decompression-bomb DoS), giữ Prisma `7.10.0` và tuyệt đối không dùng `npm audit fix --force`.
@@ -1668,3 +1668,20 @@ SYSTEM_INVENTORY_FORECAST_DAYS=14
 
 Không khai báo biến trên thì hệ thống dùng mặc định 14 ngày. `docker-compose.yml` đã truyền biến này vào API với fallback `14`, nên cấu hình local và Docker đồng nhất.
 
+
+## v3.26.0 — 07/09/2026
+
+- **Refund reconciliation SLA:** hàng đợi hoàn tiền thủ công tính deadline từ lúc đơn chuyển sang `ĐÃ HỦY`, mặc định 24 giờ qua `SYSTEM_REFUND_RECONCILIATION_SLA_HOURS` (1–168). Mỗi đơn được phân loại `TRONG_HAN / SAP_DEN_HAN / QUA_HAN`; dashboard tổng hợp số quá hạn/sắp đến hạn và có **Excel hoàn tiền cần xử lý**. SLA chỉ là mục tiêu vận hành, hệ thống vẫn **không tự gọi payment gateway**.
+- **Supplier-grouped replenishment:** kế hoạch nhập kho v3.25 được gom theo nhà cung cấp gần nhất và công bố readiness `SAN_SANG / CHUA_GAN_NCC / NCC_NGUNG_HOAT_DONG`; nhóm chưa sẵn sàng buộc Admin xử lý NCC thủ công. Chức năng tiếp tục read-only, không tự tạo đơn mua.
+- **Kiểm kê tồn kho preview → apply:** Admin chọn biến thể, nhập tồn thực tế, xem trước chênh lệch rồi mới áp dụng. Backend dùng **optimistic lock** theo snapshot tồn hệ thống + **transaction nguyên tử**; nếu một biến thể đã đổi tồn trong lúc kiểm kê thì toàn bộ batch bị hủy, tránh ghi đè cập nhật đồng thời.
+- Mỗi điều chỉnh kiểm kê ghi `ADMIN_KIEM_KE_TON_KHO`, toàn phiên ghi `ADMIN_AP_DUNG_KIEM_KE_KHO`; không cần schema mới vì tái sử dụng audit JSON hiện có.
+- Ops runtime bổ sung `admin_business_safety` cho refund SLA, cycle-count optimistic lock và supplier-grouped replenishment; giữ toàn bộ Browser E2E synthetic incident fix, dark dropdown/picker, rollout receipt chain và recovery trusted/revoked-key fail-closed.
+- Current scripts/CI/Health/OpenAPI chuyển sang v3.26.0; giữ v3.25 scripts làm historical regression. **Không thêm migration**, tổng số migration vẫn **23**.
+
+Cấu hình tùy chọn mới:
+
+```env
+SYSTEM_REFUND_RECONCILIATION_SLA_HOURS=24
+```
+
+Không khai báo thì hệ thống dùng mặc định 24 giờ. Docker Compose đã truyền biến này vào API với fallback `24`.

@@ -4,7 +4,7 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 
 const read = (p) => readFileSync(p, "utf8");
 
-test("v3.25.0 nang cap ke hoach nhap kho va chan phan ca chong gio", () => {
+test("v3.26.0 nang cap ke hoach nhap kho va chan phan ca chong gio", () => {
   const pkg = JSON.parse(read("package.json"));
   const apiPkg = JSON.parse(read("apps/api/package.json"));
   const webPkg = JSON.parse(read("apps/web/package.json"));
@@ -14,18 +14,18 @@ test("v3.25.0 nang cap ke hoach nhap kho va chan phan ca chong gio", () => {
   const css = read("apps/web/app/globals.css");
   const readme = read("README.md");
 
-  assert.equal(read("VERSION").trim(), "3.25.0");
-  assert.equal(pkg.version, "3.25.0");
-  assert.equal(apiPkg.version, "3.25.0");
-  assert.equal(webPkg.version, "3.25.0");
-  assert.equal(pkg.scripts.verify, "npm run verify:v325");
-  assert.equal(pkg.scripts["verify:full"], "npm run verify:full:v325");
-  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3250.mjs");
+  assert.equal(read("VERSION").trim(), "3.26.0");
+  assert.equal(pkg.version, "3.26.0");
+  assert.equal(apiPkg.version, "3.26.0");
+  assert.equal(webPkg.version, "3.26.0");
+  assert.equal(pkg.scripts.verify, "npm run verify:v326");
+  assert.equal(pkg.scripts["verify:full"], "npm run verify:full:v326");
+  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3260.mjs");
 
   assert.match(controller, /phan-ca\/xung-dot/);
   assert.match(controller, /kho\/goi-y-nhap/);
   assert.match(controller, /kho\/goi-y-nhap\/excel/);
-  assert.match(controller, /trang_thai_ops_v3250/);
+  assert.match(controller, /trang_thai_ops_v3260/);
 
   assert.match(service, /ca_chong_gio_v3240/);
   assert.match(service, /tim_xung_dot_phan_ca_v3240/);
@@ -42,22 +42,22 @@ test("v3.25.0 nang cap ke hoach nhap kho va chan phan ca chong gio", () => {
   assert.match(page, /Chồng giờ/);
   assert.match(css, /cine-replenishment-v324/);
   assert.match(css, /is-conflict-v324/);
-  assert.match(css, /v3\.25\.0 hotfix - Admin luôn nằm trọn viewport/);
+  assert.match(css, /v3\.26\.0 hotfix - Admin luôn nằm trọn viewport/);
   assert.match(css, /width:min\(1240px,calc\(100vw - 32px\)\)/);
   assert.match(css, /\.cine-admin-tabs \.cine-btn\{[\s\S]*?min-width:0;[\s\S]*?white-space:normal;/);
-  assert.doesNotMatch(css, /v3\.25\.0 hotfix[\s\S]*?overflow-x:auto/);
+  assert.doesNotMatch(css, /v3\.26\.0 hotfix[\s\S]*?overflow-x:auto/);
 
-  const browserE2e = read("scripts/e2e-browser-v3250.mjs");
+  const browserE2e = read("scripts/e2e-browser-v3260.mjs");
   assert.match(page, /layDanhSachSuCoVanHanhAdmin\(100\)/);
   assert.match(browserE2e, /Synthetic incident/);
   assert.match(browserE2e, /incidentHeading = page\.getByRole\("heading", \{ name: "Incident vận hành", exact: true \}\)/);
   assert.match(browserE2e, /getByRole\("button", \{ name: "Hệ thống", exact: true \}\)\.click\(\)/);
   assert.match(browserE2e, /incidentButton\.first\(\)\.waitFor\(\{ state: "visible", timeout: 30_000 \}\)/);
 
-  assert.match(readme, /## v3\.25\.0/);
+  assert.match(readme, /## v3\.26\.0/);
   assert.match(readme, /kế hoạch nhập kho đề xuất/i);
   assert.match(readme, /chồng giờ/i);
   assert.equal(readdirSync("apps/api/prisma/migrations", { withFileTypes: true }).filter((x) => x.isDirectory()).length, 23);
   assert.equal(existsSync("scripts/verify-v3230.ps1"), true);
-  assert.equal(existsSync("scripts/verify-v3250.ps1"), true);
+  assert.equal(existsSync("scripts/verify-v3260.ps1"), true);
 });

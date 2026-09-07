@@ -21,6 +21,7 @@ import {
   NhaCungCapAdmin,
   TrangThaiCanhBaoKhoEmailAdmin,
   KeHoachNhapKhoAdmin,
+  KiemKeKhoPreviewAdmin,
   AdminSucKhoeHeThong,
   LichSuVanHanhAdmin,
   ThongKeVanHanhAdmin,
@@ -40,6 +41,7 @@ import {
   capNhatPhanCa,
   capNhatTrangThaiDonHangAdmin,
   layHoanTienCanXuLyAdmin,
+  xuatHoanTienCanXuLyExcelAdmin,
   xacNhanHoanTienDonHangAdmin,
   doiSoatDoanhThuDonDaGiaoAdmin,
   capNhatSanPhamAdmin,
@@ -72,6 +74,8 @@ import {
   xuatExcelPhieuNhapKhoAdmin,
   layGoiYNhapKhoAdmin,
   xuatGoiYNhapKhoExcelAdmin,
+  kiemTraKiemKeKhoAdmin,
+  apDungKiemKeKhoAdmin,
   layNhaCungCapAdmin,
   taoNhaCungCapAdmin,
   capNhatNhaCungCapAdmin,
@@ -288,6 +292,9 @@ export default function QuanTriPage() {
   const [nha_cung_cap_qt, setNhaCungCapQt] = useState<NhaCungCapAdmin[]>([]);
   const [canh_bao_kho_email, setCanhBaoKhoEmail] = useState<TrangThaiCanhBaoKhoEmailAdmin | null>(null);
   const [ke_hoach_nhap, setKeHoachNhap] = useState<KeHoachNhapKhoAdmin | null>(null);
+  const [kiem_ke_bien_the_id, setKiemKeBienTheId] = useState("");
+  const [kiem_ke_ton_thuc_te, setKiemKeTonThucTe] = useState(0);
+  const [kiem_ke_preview, setKiemKePreview] = useState<KiemKeKhoPreviewAdmin | null>(null);
   const [nhap_lo_meta, setNhapLoMeta] = useState({ ma_lo: "", nha_cung_cap_id: "", ghi_chu: "" });
   const [kho_ly_do, setKhoLyDo] = useState<Record<string, string>>({});
   const [lich_su_kho_loc_loai, setLichSuKhoLocLoai] = useState("");
@@ -688,6 +695,13 @@ export default function QuanTriPage() {
     }
   }
 
+  async function taiExcelHoanTienCanXuLy() {
+    setDangXuLy("excel-hoan-tien"); setThongBao("");
+    try { const kq = await xuatHoanTienCanXuLyExcelAdmin(); taiTepBase64(kq); setThongBao(`Đã xuất ${kq.tong_don_can_hoan} đơn cần hoàn tiền; ${kq.tong_qua_han} đơn quá SLA ${kq.refund_sla_hours} giờ.`); }
+    catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể xuất hàng đợi hoàn tiền"); }
+    finally { setDangXuLy(null); }
+  }
+
   async function xacNhanHoanTienDon() {
     if (!don_chon?.hoan_tien?.can_xu_ly) return;
     const so_tien = don_chon.hoan_tien.so_tien_can_hoan;
@@ -882,6 +896,34 @@ export default function QuanTriPage() {
       const goiY = bt.ton_toi_da > bt.ton_toi_thieu && bt.so_luong_ton <= bt.ton_toi_thieu ? Math.max(0, bt.ton_toi_da - bt.so_luong_ton) : 0;
       setThongBao(`Đã lưu biến thể ${bt.ma_bien_the}: tồn ${bt.so_luong_ton}, định mức ${bt.ton_toi_thieu}–${bt.ton_toi_da || "∞"}${goiY ? ` · gợi ý nhập ${goiY}` : ""}.`);
     } catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể cập nhật biến thể/tồn kho"); }
+    finally { setDangXuLy(null); }
+  }
+
+  async function xemTruocKiemKeKho() {
+    const selected = san_pham_qt.flatMap(sp => sp.bien_the.map(bt => ({ sp, bt }))).find(x => x.bt.id === kiem_ke_bien_the_id);
+    if (!selected) { setThongBao("Hãy chọn biến thể cần kiểm kê."); return; }
+    setDangXuLy("kiem-ke-preview"); setThongBao("");
+    try {
+      const preview = await kiemTraKiemKeKhoAdmin([{ bien_the_id: selected.bt.id, ton_he_thong: Number(selected.bt.so_luong_ton), ton_thuc_te: Math.max(0, Math.round(Number(kiem_ke_ton_thuc_te) || 0)), ly_do: "Kiểm kê tồn kho thực tế v3.26" }]);
+      setKiemKePreview(preview);
+      const row = preview.dong[0];
+      setThongBao(row?.hop_le ? `Kiểm tra ${row.ma_bien_the}: hệ thống ${row.ton_he_thong_hien_tai} → thực tế ${row.ton_thuc_te}, chênh ${Number(row.chenh_lech || 0) >= 0 ? "+" : ""}${row.chenh_lech}.` : row?.loi?.join(" · ") || "Dữ liệu kiểm kê chưa hợp lệ.");
+    } catch (e) { setKiemKePreview(null); setThongBao(e instanceof Error ? e.message : "Không thể kiểm tra tồn thực tế"); }
+    finally { setDangXuLy(null); }
+  }
+
+  async function apDungKiemKeKho() {
+    const row = kiem_ke_preview?.dong[0];
+    if (!row || !kiem_ke_preview?.co_the_ap_dung) { setThongBao("Hãy xem trước kiểm kê và xử lý mọi cảnh báo trước khi áp dụng."); return; }
+    if (!window.confirm(`Áp dụng kiểm kê ${row.ma_bien_the}: ${row.ton_he_thong} → ${row.ton_thuc_te}? Thao tác được ghi audit.`)) return;
+    setDangXuLy("kiem-ke-apply"); setThongBao("");
+    try {
+      const kq = await apDungKiemKeKhoAdmin([{ bien_the_id: row.bien_the_id, ton_he_thong: row.ton_he_thong, ton_thuc_te: row.ton_thuc_te, ly_do: row.ly_do || "Kiểm kê tồn kho thực tế v3.26" }]);
+      const [sp, ls, nk, plan] = await Promise.all([laySanPhamAdmin(), layLichSuKhoAdmin(), layNhatKyAdmin(), layGoiYNhapKhoAdmin()]);
+      setSanPhamQt(sp); setLichSuKho(ls); setNhatKy(nk); setKeHoachNhap(plan); setKiemKePreview(null);
+      const fresh = sp.flatMap(x => x.bien_the).find(x => x.id === row.bien_the_id); if (fresh) setKiemKeTonThucTe(fresh.so_luong_ton);
+      setThongBao(`Đã áp dụng kiểm kê nguyên tử: ${kq.da_dieu_chinh}/${kq.tong_dong} biến thể thay đổi, tổng chênh lệch tuyệt đối ${kq.tong_chenh_lech_tuyet_doi}.`);
+    } catch (e) { setThongBao(e instanceof Error ? e.message : "Không thể áp dụng kiểm kê"); }
     finally { setDangXuLy(null); }
   }
 
@@ -1352,6 +1394,7 @@ export default function QuanTriPage() {
       return true;
     }).sort((a, b) => `${a.san_pham.ma_san_pham}-${a.bien_the.ma_bien_the}`.localeCompare(`${b.san_pham.ma_san_pham}-${b.bien_the.ma_bien_the}`, "vi"));
   }, [san_pham_qt, kho_tim_kiem, kho_loc_ton, kho_loc_vat_lieu, kho_loc_mau, kho_loc_hien_thi, nguongKho]);
+  const bienTheKiemKe = useMemo(() => san_pham_qt.flatMap(sp => sp.bien_the.map(bt => ({ san_pham: sp, bien_the: bt }))).find(x => x.bien_the.id === kiem_ke_bien_the_id) || null, [san_pham_qt, kiem_ke_bien_the_id]);
   const thongKeKho = useMemo(() => {
     const ds = san_pham_qt.flatMap(sp => sp.bien_the);
     return {
@@ -1501,13 +1544,13 @@ export default function QuanTriPage() {
     </section>}
 
     {tab === "don-hang" && <section className="cine-admin-operations cine-commerce-admin-v212">
-      <div className="cine-operations-heading"><div><h2>Quản trị đơn hàng</h2><p>Tìm kiếm, xem chi tiết, cập nhật trạng thái, theo dõi hoàn tiền và lịch sử xử lý.</p></div><div className="cine-order-heading-actions-v332"><span className="cine-admin-count">{don_hang.length} đơn</span>{hoan_tien_cho && <span className={`cine-refund-queue-v325 ${hoan_tien_cho.tong_don_can_hoan ? "has-pending" : ""}`}>{hoan_tien_cho.tong_don_can_hoan} cần hoàn · {dinhDangTien(hoan_tien_cho.tong_tien_can_hoan)}</span>}<button type="button" className="cine-btn cine-btn-secondary" onClick={doiSoatDoanhThuDaGiao} disabled={dang_xu_ly === "doi-soat-doanh-thu"}>{dang_xu_ly === "doi-soat-doanh-thu" ? "Đang đối soát…" : "Đối soát doanh thu"}</button></div></div>
+      <div className="cine-operations-heading"><div><h2>Quản trị đơn hàng</h2><p>Tìm kiếm, xem chi tiết, cập nhật trạng thái, theo dõi hoàn tiền và lịch sử xử lý.</p></div><div className="cine-order-heading-actions-v332"><span className="cine-admin-count">{don_hang.length} đơn</span>{hoan_tien_cho && <span className={`cine-refund-queue-v325 ${hoan_tien_cho.tong_don_can_hoan ? "has-pending" : ""}`}>{hoan_tien_cho.tong_don_can_hoan} cần hoàn · {dinhDangTien(hoan_tien_cho.tong_tien_can_hoan)}{Number(hoan_tien_cho.tong_qua_han||0)>0?` · ${hoan_tien_cho.tong_qua_han} quá hạn`:""}</span>}{hoan_tien_cho && <button type="button" className="cine-btn cine-btn-secondary" onClick={taiExcelHoanTienCanXuLy} disabled={dang_xu_ly === "excel-hoan-tien"}>{dang_xu_ly === "excel-hoan-tien" ? "Đang xuất…" : "Excel hoàn tiền"}</button>}<button type="button" className="cine-btn cine-btn-secondary" onClick={doiSoatDoanhThuDaGiao} disabled={dang_xu_ly === "doi-soat-doanh-thu"}>{dang_xu_ly === "doi-soat-doanh-thu" ? "Đang đối soát…" : "Đối soát doanh thu"}</button></div></div>
       <div className="cine-card cine-admin-filterbar-v212">
         <label><span>Tìm đơn hàng</span><input value={don_tim_kiem} onChange={e => setDonTimKiem(e.target.value)} placeholder="Mã đơn, người nhận, SĐT, email..."/></label>
         <label><span>Trạng thái</span><select value={don_loc_trang_thai} onChange={e => setDonLocTrangThai(e.target.value)}><option value="">Tất cả trạng thái</option>{TRANG_THAI_DON.map(x => <option key={x} value={x}>{nhanTrangThaiDon(x)}</option>)}</select></label>
         <button type="button" className="cine-btn cine-btn-primary" onClick={taiDonTheoBoLoc} disabled={dang_xu_ly === "loc-don"}>{dang_xu_ly === "loc-don" ? "Đang lọc…" : "Lọc đơn"}</button>
       </div>
-      {hoan_tien_cho && hoan_tien_cho.tong_don_can_hoan > 0 && <div className="cine-card cine-refund-queue-panel-v325"><div><h3>Hoàn tiền cần xử lý</h3><p>Chỉ ghi nhận sau khi Admin đã hoàn tiền thực tế bên ngoài hệ thống. NhienIn3d không tự gọi cổng thanh toán.</p></div><div className="cine-refund-queue-items-v325">{hoan_tien_cho.items.slice(0,6).map(item=><button type="button" key={item.id} onClick={()=>moChiTietDon(item.id)}><span><b>{item.ma_don_hang}</b><small>{item.ho_ten_nguoi_nhan}{item.thu_dien_tu?` · ${item.thu_dien_tu}`:""}</small></span><strong>{dinhDangTien(item.so_tien_can_hoan)}</strong></button>)}</div>{hoan_tien_cho.items.length>6&&<small>Còn {hoan_tien_cho.items.length-6} đơn khác trong hàng đợi.</small>}</div>}
+      {hoan_tien_cho && hoan_tien_cho.tong_don_can_hoan > 0 && <div className="cine-card cine-refund-queue-panel-v325 cine-refund-sla-v326"><div className="cine-refund-sla-head-v326"><div><h3>Hoàn tiền cần xử lý</h3><p>v3.26 theo dõi SLA vận hành {hoan_tien_cho.refund_sla_hours || 24} giờ từ thời điểm đơn bị hủy. Đây là mục tiêu đối soát nội bộ; NhienIn3d vẫn không tự gọi cổng thanh toán.</p></div><div><span><b>{hoan_tien_cho.tong_qua_han || 0}</b><small>quá hạn</small></span><span><b>{hoan_tien_cho.tong_sap_den_han || 0}</b><small>sắp đến hạn</small></span></div></div><div className="cine-refund-queue-items-v325">{hoan_tien_cho.items.slice(0,8).map(item=><button type="button" key={item.id} data-sla={item.refund_sla_status || "TRONG_HAN"} onClick={()=>moChiTietDon(item.id)}><span><b>{item.ma_don_hang}</b><small>{item.ho_ten_nguoi_nhan}{item.thu_dien_tu?` · ${item.thu_dien_tu}`:""}</small><small className="cine-refund-sla-badge-v326">{item.refund_sla_status === "QUA_HAN" ? `Quá hạn ${Math.abs(Math.round(item.refund_remaining_hours || 0))} giờ` : item.refund_sla_status === "SAP_DEN_HAN" ? `Còn ${Math.max(0, Math.round(item.refund_remaining_hours || 0))} giờ` : `Trong SLA · ${Math.max(0, Math.round(item.refund_remaining_hours || 0))} giờ còn lại`}</small></span><strong>{dinhDangTien(item.so_tien_can_hoan)}</strong></button>)}</div>{hoan_tien_cho.items.length>8&&<small>Còn {hoan_tien_cho.items.length-8} đơn khác trong hàng đợi.</small>}</div>}
       <div className="cine-order-admin-grid-v212">
         <div className="cine-card cine-order-admin-list-v212">
           <div className="cine-section-heading"><div><h3>Danh sách đơn</h3><p>Đơn mới nhất hiển thị trước.</p></div></div>
@@ -1522,7 +1565,7 @@ export default function QuanTriPage() {
             <div className="cine-order-detail-head-v212"><div><span>Mã đơn</span><h3>{don_chon.ma_don_hang}</h3><small>{new Date(don_chon.ngay_tao).toLocaleString("vi-VN")}</small></div><strong>{dinhDangTien(don_chon.tong_tien)}</strong></div>
             <div className="cine-order-recipient-v212"><div><span>Người nhận</span><b>{don_chon.ho_ten_nguoi_nhan}</b><small>{don_chon.so_dien_thoai}</small></div><div><span>Địa chỉ giao hàng</span><b>{don_chon.dia_chi_giao_hang}</b>{don_chon.khach_hang?.thu_dien_tu && <small>{don_chon.khach_hang.thu_dien_tu}</small>}</div></div>
             <div className="cine-order-lines-v212"><h4>Sản phẩm</h4>{don_chon.chi_tiet.map(ct => <div className="cine-order-line-v212" key={ct.id}><span><b>{ct.ten_san_pham}</b><small>{ct.ma_san_pham} · {String(ct.tuy_chon?.ma_bien_the || "Cấu hình mặc định")}</small></span><span>{ct.so_luong} × {dinhDangTien(ct.don_gia)}</span><strong>{dinhDangTien(ct.thanh_tien)}</strong></div>)}</div>
-            <div className="cine-order-payment-v2151"><div><h4>Thanh toán & doanh thu</h4><p>Doanh thu chỉ tính một lần. Online/chuyển khoản đã trả tiền được ghi nhận trước khi giao; COD ghi nhận lúc Admin xác nhận đã giao.</p></div>{giaoDichDonChon ? <div className="cine-payment-grid-v2151"><span><small>Phương thức</small><b>{giaoDichDonChon.phuong_thuc.ten_phuong_thuc}</b></span><span><small>Trạng thái</small><b>{nhanTrangThaiThanhToan(giaoDichDonChon.trang_thai)}</b></span><span><small>Số tiền</small><b>{dinhDangTien(giaoDichDonChon.so_tien)}</b></span><span><small>Ghi nhận doanh thu</small><b className={daGhiNhanDoanhThu(don_chon) ? "revenue-ok-v2151" : "revenue-wait-v2151"}>{daGhiNhanDoanhThu(don_chon) ? "Đã ghi nhận" : "Chưa ghi nhận"}</b></span>{giaoDichDonChon.ngay_thanh_toan && <span><small>Thanh toán lúc</small><b>{new Date(giaoDichDonChon.ngay_thanh_toan).toLocaleString("vi-VN")}</b></span>}</div> : <small>Đơn chưa có giao dịch thanh toán. Khi xác nhận giao, hệ thống dùng giá trị đơn làm doanh thu tương thích dữ liệu cũ.</small>}{donChonDaThuTienTruoc && <small className="cine-terminal-note-v212 revenue-ok-v2151">Đơn này đã thu tiền trước. Chuyển sang Đã giao chỉ cập nhật giao hàng, không cộng doanh thu lần hai.</small>}{don_chon.hoan_tien?.can_xu_ly && <div className="cine-refund-action-v325"><div><b>Cần xác nhận hoàn tiền</b><small>Đơn đã hủy nhưng còn {don_chon.hoan_tien.so_giao_dich_can_hoan} giao dịch đã thanh toán · {dinhDangTien(don_chon.hoan_tien.so_tien_can_hoan)}. v3.25 không tự gọi cổng thanh toán; Admin chỉ bấm sau khi đã hoàn tiền thực tế.</small></div><button type="button" className="cine-btn cine-btn-danger-outline" onClick={xacNhanHoanTienDon} disabled={dang_xu_ly === `hoan-tien-${don_chon.id}`}>{dang_xu_ly === `hoan-tien-${don_chon.id}` ? "Đang ghi nhận…" : "Xác nhận đã hoàn tiền"}</button></div>}{don_chon.hoan_tien?.da_hoan_tien && <small className="cine-terminal-note-v212 cine-refund-done-v325">Đã hoàn tiền {dinhDangTien(don_chon.hoan_tien.so_tien_da_hoan)} · trạng thái thanh toán đã chuyển sang Đã hoàn tiền.</small>}</div>
+            <div className="cine-order-payment-v2151"><div><h4>Thanh toán & doanh thu</h4><p>Doanh thu chỉ tính một lần. Online/chuyển khoản đã trả tiền được ghi nhận trước khi giao; COD ghi nhận lúc Admin xác nhận đã giao.</p></div>{giaoDichDonChon ? <div className="cine-payment-grid-v2151"><span><small>Phương thức</small><b>{giaoDichDonChon.phuong_thuc.ten_phuong_thuc}</b></span><span><small>Trạng thái</small><b>{nhanTrangThaiThanhToan(giaoDichDonChon.trang_thai)}</b></span><span><small>Số tiền</small><b>{dinhDangTien(giaoDichDonChon.so_tien)}</b></span><span><small>Ghi nhận doanh thu</small><b className={daGhiNhanDoanhThu(don_chon) ? "revenue-ok-v2151" : "revenue-wait-v2151"}>{daGhiNhanDoanhThu(don_chon) ? "Đã ghi nhận" : "Chưa ghi nhận"}</b></span>{giaoDichDonChon.ngay_thanh_toan && <span><small>Thanh toán lúc</small><b>{new Date(giaoDichDonChon.ngay_thanh_toan).toLocaleString("vi-VN")}</b></span>}</div> : <small>Đơn chưa có giao dịch thanh toán. Khi xác nhận giao, hệ thống dùng giá trị đơn làm doanh thu tương thích dữ liệu cũ.</small>}{donChonDaThuTienTruoc && <small className="cine-terminal-note-v212 revenue-ok-v2151">Đơn này đã thu tiền trước. Chuyển sang Đã giao chỉ cập nhật giao hàng, không cộng doanh thu lần hai.</small>}{don_chon.hoan_tien?.can_xu_ly && <div className="cine-refund-action-v325"><div><b>Cần xác nhận hoàn tiền</b><small>Đơn đã hủy nhưng còn {don_chon.hoan_tien.so_giao_dich_can_hoan} giao dịch đã thanh toán · {dinhDangTien(don_chon.hoan_tien.so_tien_can_hoan)}. v3.26 không tự gọi cổng thanh toán; Admin chỉ bấm sau khi đã hoàn tiền thực tế.</small></div><button type="button" className="cine-btn cine-btn-danger-outline" onClick={xacNhanHoanTienDon} disabled={dang_xu_ly === `hoan-tien-${don_chon.id}`}>{dang_xu_ly === `hoan-tien-${don_chon.id}` ? "Đang ghi nhận…" : "Xác nhận đã hoàn tiền"}</button></div>}{don_chon.hoan_tien?.da_hoan_tien && <small className="cine-terminal-note-v212 cine-refund-done-v325">Đã hoàn tiền {dinhDangTien(don_chon.hoan_tien.so_tien_da_hoan)} · trạng thái thanh toán đã chuyển sang Đã hoàn tiền.</small>}</div>
             <div className="cine-order-update-v212"><h4>Cập nhật trạng thái</h4><p className="cine-order-admin-override-v321">Admin có thể xác nhận <b>Đã giao / hoàn tất</b> trực tiếp từ mọi trạng thái đơn hàng. Hệ thống chỉ cộng doanh thu nếu đơn chưa được ghi nhận trước đó.</p><div className="cine-order-update-fields-v212"><label><span>Trạng thái mới</span><select value={don_trang_thai_moi} onChange={e => setDonTrangThaiMoi(e.target.value)}><option value={don_chon.trang_thai}>{nhanTrangThaiDon(don_chon.trang_thai)} (hiện tại)</option>{(TRANG_THAI_TIEP_THEO[don_chon.trang_thai] || []).map(x => <option key={x} value={x}>{nhanTrangThaiDon(x)}{x === "HOAN_TAT" && donChonSeGhiNhanKhiGiao ? " · sẽ ghi doanh thu" : x === "HOAN_TAT" && donChonDaThuTienTruoc ? " · doanh thu đã có" : ""}</option>)}</select></label><label><span>Ghi chú xử lý</span><input value={don_ghi_chu} onChange={e => setDonGhiChu(e.target.value)} placeholder="VD: Đã giao hàng cho khách"/></label></div><button type="button" className="cine-btn cine-btn-primary" onClick={luuTrangThaiDon} disabled={dang_xu_ly === `don-${don_chon.id}` || (don_trang_thai_moi === don_chon.trang_thai && !canGhiNhanDoanhThuDonDaGiao(don_chon))}>{dang_xu_ly === `don-${don_chon.id}` ? "Đang lưu…" : canGhiNhanDoanhThuDonDaGiao(don_chon) && don_trang_thai_moi === don_chon.trang_thai ? "Ghi nhận thanh toán & doanh thu" : don_trang_thai_moi === "HOAN_TAT" && donChonSeGhiNhanKhiGiao ? "Xác nhận đã giao & ghi doanh thu" : don_trang_thai_moi === "HOAN_TAT" ? "Xác nhận đã giao" : "Lưu trạng thái"}</button>{canGhiNhanDoanhThuDonDaGiao(don_chon) ? <small className="cine-terminal-note-v212 revenue-wait-v2151">Đơn đã giao nhưng vẫn còn giao dịch chờ thanh toán hợp lệ. Bấm để chốt doanh thu.</small> : TRANG_THAI_TIEP_THEO[don_chon.trang_thai]?.length === 0 && <small className="cine-terminal-note-v212">Đơn đã ở trạng thái kết thúc, không chuyển tiếp.</small>}</div>
             <div className="cine-order-history-v212"><h4>Lịch sử xử lý</h4>{don_chon.lich_su.map(ls => <div key={ls.id} className="cine-order-history-item-v212"><i/><span><b>{nhanTrangThaiDon(ls.trang_thai_moi)}</b><small>{new Date(ls.ngay_tao).toLocaleString("vi-VN")} · {ls.nguoi_thuc_hien?.ho_ten || "Hệ thống/khách hàng"}</small>{ls.ghi_chu && <em>{ls.ghi_chu}</em>}</span></div>)}</div>
           </>}
@@ -1625,9 +1668,16 @@ export default function QuanTriPage() {
       </div>
 
       <div className="cine-card cine-replenishment-v324">
-        <div className="cine-replenishment-head-v324"><div><h3>Kế hoạch nhập đề xuất</h3><p>v3.25 kết hợp định mức với tốc độ bán 30 ngày để dự báo nhu cầu {ke_hoach_nhap?.forecast_days || 14} ngày; nhu cầu từ giỏ đang mở chỉ là tín hiệu áp lực, không giữ chỗ tồn kho. Vẫn chỉ đọc, không tự tạo đơn mua.</p></div><button type="button" className="cine-btn cine-btn-secondary" onClick={taiKeHoachNhapKhoExcel} disabled={dang_xu_ly==="excel-goi-y-nhap"}>{dang_xu_ly==="excel-goi-y-nhap"?"Đang xuất…":"Xuất kế hoạch Excel"}</button></div>
-        <div className="cine-replenishment-stats-v324"><span><b>{ke_hoach_nhap?.tong_bien_the_can_nhap ?? 0}</b><small>biến thể cần nhập</small></span><span><b>+{ke_hoach_nhap?.tong_so_luong_de_xuat ?? 0}</b><small>số lượng đề xuất</small></span><span><b>{ke_hoach_nhap?.rui_ro_du_bao ?? 0}</b><small>rủi ro dự báo</small></span><span><b>{ke_hoach_nhap?.ap_luc_gio_hang ?? 0}</b><small>áp lực giỏ mở</small></span></div>
+        <div className="cine-replenishment-head-v324"><div><h3>Kế hoạch nhập đề xuất</h3><p>v3.26 giữ tốc độ bán 30 ngày, dự báo nhu cầu và gom đề xuất theo nhà cung cấp để Admin dễ chuẩn bị đơn mua; nhu cầu dự báo {ke_hoach_nhap?.forecast_days || 14} ngày; nhu cầu từ giỏ đang mở chỉ là tín hiệu áp lực, không giữ chỗ tồn kho. Vẫn chỉ đọc, không tự tạo đơn mua.</p></div><button type="button" className="cine-btn cine-btn-secondary" onClick={taiKeHoachNhapKhoExcel} disabled={dang_xu_ly==="excel-goi-y-nhap"}>{dang_xu_ly==="excel-goi-y-nhap"?"Đang xuất…":"Xuất kế hoạch Excel"}</button></div>
+        <div className="cine-replenishment-stats-v324"><span><b>{ke_hoach_nhap?.tong_bien_the_can_nhap ?? 0}</b><small>biến thể cần nhập</small></span><span><b>+{ke_hoach_nhap?.tong_so_luong_de_xuat ?? 0}</b><small>số lượng đề xuất</small></span><span><b>{ke_hoach_nhap?.nhom_san_sang ?? 0}/{ke_hoach_nhap?.tong_nhom_nha_cung_cap ?? 0}</b><small>nhóm NCC sẵn sàng</small></span><span><b>{ke_hoach_nhap?.nhom_can_xu_ly_thu_cong ?? 0}</b><small>nhóm cần xử lý NCC</small></span></div>
         <div className="cine-replenishment-list-v324">{ke_hoach_nhap?.items.slice(0,12).map(item=><div className="cine-replenishment-row-v324 cine-replenishment-row-v325" key={item.bien_the_id}><span><b>{item.ma_bien_the}</b><small>{item.ma_san_pham} · {item.ten_san_pham}</small><small className="cine-demand-risk-v325" data-risk={item.muc_do}>{item.muc_do.replaceAll("_"," ")}</small></span><span><b>{item.ton_hien_tai} → {item.muc_tieu_sau_nhap}</b><small>Min {item.ton_toi_thieu} · Max {item.ton_toi_da || "—"}</small><small>Bán 30 ngày: {item.ban_30_ngay ?? 0} · Dự báo: {item.forecast_demand ?? 0} · Phủ tồn: {item.days_of_cover == null ? "—" : `${item.days_of_cover} ngày`}</small></span><strong>+{item.so_luong_de_xuat}</strong><span><b>{item.nha_cung_cap?.ten_nha_cung_cap || "Chưa xác định NCC"}</b><small>{item.nha_cung_cap?.dang_hoat_dong === false ? "NCC đã ngừng hoạt động" : item.nguon_nha_cung_cap === "PHIEU_NHAP_GAN_NHAT" ? "Theo phiếu nhập gần nhất" : "Cần gán thủ công"}</small><small>Giỏ đang mở: {item.active_cart_demand ?? 0} · không giữ chỗ</small></span></div>)}{ke_hoach_nhap && ke_hoach_nhap.items.length===0&&<div className="cine-dashboard-empty">Không có biến thể nào cần nhập hoặc có áp lực giỏ hàng đáng chú ý.</div>}</div>
+        {ke_hoach_nhap && ke_hoach_nhap.theo_nha_cung_cap.length>0 && <div className="cine-supplier-plan-v326"><h4>Gom đề xuất theo nhà cung cấp</h4><div>{ke_hoach_nhap.theo_nha_cung_cap.slice(0,8).map((group,index)=><article key={group.nha_cung_cap?.id || group.nha_cung_cap?.ten_nha_cung_cap || `missing-${index}`} data-status={group.trang_thai_nhom || "CHUA_GAN_NCC"}><span><b>{group.nha_cung_cap?.ten_nha_cung_cap || "Chưa gán nhà cung cấp"}</b><small>{group.nha_cung_cap?.ma_nha_cung_cap || "Cần xử lý thủ công"}</small></span><strong>+{group.so_luong_de_xuat}</strong><small>{group.so_bien_the} biến thể · {group.ready_to_send ? "sẵn sàng lập đơn mua" : "chưa sẵn sàng"}</small></article>)}</div></div>}
+      </div>
+
+      <div className="cine-card cine-cycle-count-v326">
+        <div className="cine-cycle-count-head-v326"><div><h3>Kiểm kê tồn thực tế</h3><p>Chọn biến thể, nhập số đếm thực tế rồi xem trước trước khi áp dụng. v3.26 dùng optimistic lock + transaction nguyên tử để không ghi đè tồn vừa thay đổi ở phiên khác.</p></div><span>Không migration · audit đầy đủ</span></div>
+        <div className="cine-cycle-count-form-v326"><label className="wide"><span>Biến thể</span><select value={kiem_ke_bien_the_id} onChange={e=>{const id=e.target.value;setKiemKeBienTheId(id);const found=san_pham_qt.flatMap(sp=>sp.bien_the).find(bt=>bt.id===id);setKiemKeTonThucTe(found?.so_luong_ton||0);setKiemKePreview(null);}}><option value="">Chọn biến thể cần kiểm kê</option>{san_pham_qt.flatMap(sp=>sp.bien_the.map(bt=><option key={bt.id} value={bt.id}>{bt.ma_bien_the} · {sp.ma_san_pham} · tồn {bt.so_luong_ton}</option>))}</select></label><label><span>Tồn hệ thống</span><input value={bienTheKiemKe?.bien_the.so_luong_ton ?? "—"} readOnly/></label><label><span>Tồn thực tế</span><input type="number" min="0" max="1000000" value={kiem_ke_ton_thuc_te} onChange={e=>{setKiemKeTonThucTe(Math.max(0,Number(e.target.value)||0));setKiemKePreview(null);}}/></label><button type="button" className="cine-btn cine-btn-secondary" onClick={xemTruocKiemKeKho} disabled={!kiem_ke_bien_the_id || dang_xu_ly==="kiem-ke-preview"}>{dang_xu_ly==="kiem-ke-preview"?"Đang kiểm tra…":"Xem trước"}</button><button type="button" className="cine-btn cine-btn-primary" onClick={apDungKiemKeKho} disabled={!kiem_ke_preview?.co_the_ap_dung || dang_xu_ly==="kiem-ke-apply"}>{dang_xu_ly==="kiem-ke-apply"?"Đang áp dụng…":"Áp dụng kiểm kê"}</button></div>
+        {kiem_ke_preview?.dong[0] && <div className={`cine-cycle-count-preview-v326 ${kiem_ke_preview.co_the_ap_dung?"ok":"bad"}`}><span><b>{kiem_ke_preview.dong[0].ma_bien_the || "Biến thể"}</b><small>{kiem_ke_preview.dong[0].ten_san_pham || ""}</small></span><strong>{kiem_ke_preview.dong[0].ton_he_thong_hien_tai ?? "—"} → {kiem_ke_preview.dong[0].ton_thuc_te}</strong><span><b>Chênh {Number(kiem_ke_preview.dong[0].chenh_lech||0)>=0?"+":""}{kiem_ke_preview.dong[0].chenh_lech ?? "—"}</b><small>{kiem_ke_preview.co_the_ap_dung?"Snapshot hợp lệ · có thể áp dụng":"Snapshot đã stale · tải lại trước khi áp dụng"}</small></span></div>}
       </div>
 
       <div className="cine-card cine-batch-import-v218">

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 const read = (p) => readFileSync(p, "utf8");
 
-test("v3.25.0 them doi soat hoan tien va du bao nhap kho theo nhu cau", () => {
+test("v3.26.0 them doi soat hoan tien va du bao nhap kho theo nhu cau", () => {
   const pkg = JSON.parse(read("package.json"));
   const controller = read("apps/api/src/quan-tri/quan-tri.controller.ts");
   const service = read("apps/api/src/quan-tri/quan-tri.service.ts");
@@ -12,17 +12,17 @@ test("v3.25.0 them doi soat hoan tien va du bao nhap kho theo nhu cau", () => {
   const css = read("apps/web/app/globals.css");
   const compose = read("docker-compose.yml");
   const envExample = read(".env.example");
-  assert.equal(read("VERSION").trim(), "3.25.0");
-  assert.equal(pkg.version, "3.25.0");
-  assert.equal(pkg.scripts.verify, "npm run verify:v325");
-  assert.equal(pkg.scripts["verify:full"], "npm run verify:full:v325");
-  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3250.mjs");
-  assert.equal(existsSync("scripts/verify-v3250.ps1"), true);
+  assert.equal(read("VERSION").trim(), "3.26.0");
+  assert.equal(pkg.version, "3.26.0");
+  assert.equal(pkg.scripts.verify, "npm run verify:v326");
+  assert.equal(pkg.scripts["verify:full"], "npm run verify:full:v326");
+  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3260.mjs");
+  assert.equal(existsSync("scripts/verify-v3260.ps1"), true);
   assert.equal(readdirSync("apps/api/prisma/migrations", { withFileTypes: true }).filter(x => x.isDirectory()).length, 23);
 
   assert.match(controller, /don-hang\/hoan-tien-can-xu-ly/);
   assert.match(controller, /don-hang\/:id\/xac-nhan-hoan-tien/);
-  assert.match(controller, /trang_thai_ops_v3250/);
+  assert.match(controller, /trang_thai_ops_v3260/);
   assert.match(service, /TrangThaiThanhToan\.DA_HOAN_TIEN/);
   assert.match(service, /gateway_auto_refund: false/);
   assert.match(service, /manual_confirmation_required: true/);

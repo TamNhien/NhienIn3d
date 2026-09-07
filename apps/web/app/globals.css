@@ -1084,7 +1084,7 @@ footer{border-top:1px solid var(--line);max-width:1240px;margin:auto;padding:30p
 @media(max-width:620px){.cine-replenishment-stats-v324,.cine-replenishment-row-v324{grid-template-columns:1fr}.cine-replenishment-head-v324 .cine-btn{width:100%}}
 
 
-/* v3.25.0 hotfix - Admin luôn nằm trọn viewport và không cắt tab bên phải. */
+/* v3.26.0 hotfix - Admin luôn nằm trọn viewport và không cắt tab bên phải. */
 .cine-admin-shell.page-shell{
   width:min(1240px,calc(100vw - 32px));
   max-width:calc(100vw - 32px);
@@ -1117,7 +1117,7 @@ footer{border-top:1px solid var(--line);max-width:1240px;margin:auto;padding:30p
   .cine-admin-tabs .cine-btn{flex-basis:100%}
 }
 
-/* v3.25.0 hotfix - bang kho khong bi cat cot ben phai tren desktop nho.
+/* v3.26.0 hotfix - bang kho khong bi cat cot ben phai tren desktop nho.
    Bang giu day du 13 cot trong mot viewport cuon rieng, co thanh cuon ngang luon de tiep can
    va header sticky de doi chieu cot khi cuon doc. */
 .cine-inventory-table-card-v214{
@@ -1171,3 +1171,20 @@ footer{border-top:1px solid var(--line);max-width:1240px;margin:auto;padding:30p
 .cine-replenishment-row-v325>span:nth-child(2){min-width:250px}.cine-demand-risk-v325{display:inline-flex;width:max-content;margin-top:4px;padding:3px 7px;border-radius:999px;border:1px solid #334155;color:#cbd5e1;font-size:.67rem;font-weight:800;letter-spacing:.04em}
 .cine-demand-risk-v325[data-risk="HET_HANG"],.cine-demand-risk-v325[data-risk="DUOI_DINH_MUC"]{border-color:#fb7185;color:#fecdd3}.cine-demand-risk-v325[data-risk="RUI_RO_DU_BAO"]{border-color:#f59e0b;color:#fde68a}.cine-demand-risk-v325[data-risk="AP_LUC_GIO_HANG"]{border-color:#38bdf8;color:#bae6fd}
 @media(max-width:760px){.cine-refund-queue-items-v325{grid-template-columns:1fr}.cine-replenishment-row-v325>span:nth-child(2){min-width:0}}
+
+/* v3.26.0 - refund SLA, supplier-grouped replenishment, atomic cycle count */
+.cine-refund-sla-v326{gap:14px}
+.cine-refund-sla-head-v326{display:flex;align-items:flex-start;justify-content:space-between;gap:18px}
+.cine-refund-sla-head-v326>div:first-child{min-width:0}
+.cine-refund-sla-head-v326>div:last-child{display:flex;gap:8px;flex:0 0 auto}
+.cine-refund-sla-head-v326>div:last-child>span{display:grid;min-width:82px;padding:8px 10px;border:1px solid #4c1d2f;border-radius:12px;background:#0b1220;text-align:center}
+.cine-refund-sla-head-v326>div:last-child b{color:#fecdd3;font-size:1rem}.cine-refund-sla-head-v326>div:last-child small{color:#94a3b8;font-size:.66rem;text-transform:uppercase;letter-spacing:.06em}
+.cine-refund-queue-items-v325 button[data-sla="QUA_HAN"]{border-color:#e11d48;background:rgba(136,19,55,.25)}
+.cine-refund-queue-items-v325 button[data-sla="SAP_DEN_HAN"]{border-color:#d97706;background:rgba(120,53,15,.2)}
+.cine-refund-sla-badge-v326{font-weight:800}.cine-refund-queue-items-v325 button[data-sla="QUA_HAN"] .cine-refund-sla-badge-v326{color:#fda4af}.cine-refund-queue-items-v325 button[data-sla="SAP_DEN_HAN"] .cine-refund-sla-badge-v326{color:#fde68a}
+.cine-supplier-plan-v326{display:grid;gap:10px;margin-top:14px;padding-top:14px;border-top:1px solid #25324a}.cine-supplier-plan-v326 h4{margin:0;color:#e2e8f0}.cine-supplier-plan-v326>div{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px}.cine-supplier-plan-v326 article{display:grid;grid-template-columns:1fr auto;gap:3px 10px;align-items:center;padding:11px 12px;border:1px solid #334155;border-radius:12px;background:#0b1220}.cine-supplier-plan-v326 article>span{display:grid;gap:2px;min-width:0}.cine-supplier-plan-v326 article b{color:#e2e8f0}.cine-supplier-plan-v326 article small{color:#94a3b8}.cine-supplier-plan-v326 article>strong{color:#86efac}.cine-supplier-plan-v326 article>small{grid-column:1/-1}.cine-supplier-plan-v326 article[data-status="CHUA_GAN_NCC"],.cine-supplier-plan-v326 article[data-status="NCC_NGUNG_HOAT_DONG"]{border-color:#d97706}.cine-supplier-plan-v326 article[data-status="CHUA_GAN_NCC"]>strong,.cine-supplier-plan-v326 article[data-status="NCC_NGUNG_HOAT_DONG"]>strong{color:#fde68a}
+.cine-cycle-count-v326{display:grid;gap:14px;border-color:#334155!important;background:linear-gradient(145deg,rgba(15,23,42,.96),rgba(8,17,31,.94))!important}.cine-cycle-count-head-v326{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}.cine-cycle-count-head-v326 h3{margin:0 0 5px;color:#e2e8f0}.cine-cycle-count-head-v326 p{margin:0;color:#94a3b8;line-height:1.55}.cine-cycle-count-head-v326>span{flex:0 0 auto;padding:5px 9px;border:1px solid #334155;border-radius:999px;color:#cbd5e1;font-size:.68rem;font-weight:800}
+.cine-cycle-count-form-v326{display:grid;grid-template-columns:minmax(270px,1.4fr) minmax(120px,.6fr) minmax(120px,.6fr) auto auto;gap:10px;align-items:end}.cine-cycle-count-form-v326 label{display:grid;gap:6px}.cine-cycle-count-form-v326 label>span{color:#94a3b8;font-size:.72rem;font-weight:800}.cine-cycle-count-form-v326 input,.cine-cycle-count-form-v326 select{width:100%;min-width:0}.cine-cycle-count-form-v326 input[readonly]{opacity:.78;cursor:default}
+.cine-cycle-count-preview-v326{display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:center;padding:12px 14px;border:1px solid #166534;border-radius:13px;background:rgba(20,83,45,.14)}.cine-cycle-count-preview-v326.bad{border-color:#be123c;background:rgba(136,19,55,.15)}.cine-cycle-count-preview-v326>span{display:grid;gap:3px}.cine-cycle-count-preview-v326>span:last-child{text-align:right}.cine-cycle-count-preview-v326 strong{font-size:1.05rem;color:#86efac;white-space:nowrap}.cine-cycle-count-preview-v326.bad strong{color:#fda4af}.cine-cycle-count-preview-v326 small{color:#94a3b8}
+@media(max-width:1050px){.cine-cycle-count-form-v326{grid-template-columns:1fr 1fr}.cine-cycle-count-form-v326 .wide{grid-column:1/-1}.cine-cycle-count-form-v326 .cine-btn{width:100%}}
+@media(max-width:760px){.cine-refund-sla-head-v326,.cine-cycle-count-head-v326{flex-direction:column}.cine-refund-sla-head-v326>div:last-child{width:100%}.cine-refund-sla-head-v326>div:last-child>span{flex:1}.cine-cycle-count-form-v326{grid-template-columns:1fr}.cine-cycle-count-form-v326 .wide{grid-column:auto}.cine-cycle-count-preview-v326{grid-template-columns:1fr}.cine-cycle-count-preview-v326>span:last-child{text-align:left}.cine-supplier-plan-v326>div{grid-template-columns:1fr}}

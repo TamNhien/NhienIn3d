@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 const read = (p) => readFileSync(p, "utf8");
 
-test("v3.25.0 Web hien queue hoan tien va demand-aware replenishment", () => {
+test("v3.26.0 Web hien queue hoan tien va demand-aware replenishment", () => {
   const page = read("app/quan-tri/page.tsx");
   const lib = read("lib/quan-tri.ts");
   const css = read("app/globals.css");
@@ -20,5 +20,5 @@ test("v3.25.0 Web hien queue hoan tien va demand-aware replenishment", () => {
   assert.match(page, /không giữ chỗ/);
   assert.match(css, /cine-refund-queue-panel-v325/);
   assert.match(css, /cine-demand-risk-v325/);
-  assert.match(ops, /OPS v3\.25\.0/);
+  assert.match(ops, /OPS v3\.26\.0/);
 });
