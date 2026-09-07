@@ -1,0 +1,37 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+const read = p => readFileSync(p, "utf8");
+
+test("v3.28.0 dong bo Purchase Order, reorder point va phien kiem ke", () => {
+  const pkg = JSON.parse(read("package.json"));
+  const schema = read("apps/api/prisma/schema.prisma");
+  const service = read("apps/api/src/quan-tri/quan-tri.service.ts");
+  const controller = read("apps/api/src/quan-tri/quan-tri.controller.ts");
+  const runtime = read("scripts/e2e-runtime-v3280.ps1");
+  assert.equal(read("VERSION").trim(), "3.28.0");
+  assert.equal(pkg.version, "3.28.0");
+  assert.equal(pkg.scripts.verify, "npm run verify:v328");
+  assert.equal(pkg.scripts["verify:full"], "npm run verify:full:v328");
+  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3280.mjs");
+  assert.equal(existsSync("scripts/verify-v3280.ps1"), true);
+  assert.equal(existsSync("scripts/e2e-runtime-v3280.ps1"), true);
+  assert.equal(existsSync("apps/api/prisma/migrations/202609070001_v328_purchase_order_inventory_count/migration.sql"), true);
+  assert.equal(readdirSync("apps/api/prisma/migrations", { withFileTypes: true }).filter(x => x.isDirectory()).length, 24);
+  assert.match(runtime, /migration_gan_nhat\.ten -eq "202609070001_v328_purchase_order_inventory_count"/);
+  assert.doesNotMatch(runtime, /migration_gan_nhat\.ten -eq "202609020001_v3110_distributed_probe_dlq_keyring_oncall_archive"/);
+  assert.match(schema, /model DonMuaHang\b/);
+  assert.match(schema, /model ChiTietDonMuaHang\b/);
+  assert.match(schema, /model PhienKiemKeKho\b/);
+  assert.match(schema, /model ChiTietPhienKiemKeKho\b/);
+  assert.match(schema, /thoi_gian_giao_hang_ngay\s+Int\s+@default\(7\)/);
+  assert.match(schema, /don_mua_hang_id\s+String\?/);
+  assert.match(controller, /@Get\("kho\/don-mua"\)/);
+  assert.match(controller, /@Post\("kho\/don-mua"\)/);
+  assert.match(controller, /@Post\("kho\/kiem-ke\/phien"\)/);
+  assert.match(service, /supplier_lead_time_reorder_point: true/);
+  assert.match(service, /purchase_order_workflow: true/);
+  assert.match(service, /inventory_count_sessions: true/);
+  assert.match(service, /purchase_order_receipt_matching: true/);
+  assert.match(service, /database_migration_count: 24/);
+});

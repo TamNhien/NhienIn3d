@@ -1687,6 +1687,16 @@ SYSTEM_REFUND_RECONCILIATION_SLA_HOURS=24
 
 Không khai báo thì hệ thống dùng mặc định 24 giờ. Docker Compose đã truyền biến này vào API với fallback `24`.
 
+## v3.28.0 — Purchase Order, reorder point và phiên kiểm kê có duyệt
+
+- Thêm Purchase Order (PO) theo nhà cung cấp với luồng `NHAP -> DA_DUYET -> DA_DAT -> NHAP_MOT_PHAN -> HOAN_TAT`, hỗ trợ hủy khi còn mở.
+- Kế hoạch nhập kho dùng lead time nhà cung cấp, safety stock và reorder point trên nền forecast 30 ngày; hệ thống chỉ đề xuất và tạo PO nháp khi Admin yêu cầu.
+- Phiếu nhập có thể liên kết PO, đối chiếu số đã đặt/đã nhận và chặn nhập vượt PO nếu chưa bật override có audit.
+- Kiểm kê kho có phiên `NHAP -> CHO_DUYET -> DA_AP_DUNG`, vẫn giữ preview, optimistic lock, transaction nguyên tử và CSV/XLSX của v3.27.
+- Thêm migration số 24 `202609070001_v328_purchase_order_inventory_count`; giữ toàn bộ migration lịch sử.
+- Runtime/Browser E2E v3.28 khóa các contract PO, reorder point, phiên kiểm kê, recovery/rollout và không lộ secret.
+
+
 ## v3.27.0 — 07/09/2026
 
 - **Kiểm kê kho hàng loạt bằng CSV/Excel:** Admin có thể tải file tối đa 200 dòng với `ma_bien_the`, `ton_thuc_te`, `ly_do`; backend đọc trực tiếp CSV/XLSX, chuẩn hóa mã biến thể, chặn dòng trùng, mã không tồn tại và tồn thực tế ngoài 0–1.000.000.

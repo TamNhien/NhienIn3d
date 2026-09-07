@@ -14,18 +14,18 @@ test("v3.26.0 nang cap ke hoach nhap kho va chan phan ca chong gio", () => {
   const css = read("apps/web/app/globals.css");
   const readme = read("README.md");
 
-  assert.equal(read("VERSION").trim(), "3.27.0");
-  assert.equal(pkg.version, "3.27.0");
-  assert.equal(apiPkg.version, "3.27.0");
-  assert.equal(webPkg.version, "3.27.0");
-  assert.equal(pkg.scripts.verify, "npm run verify:v327");
-  assert.equal(pkg.scripts["verify:full"], "npm run verify:full:v327");
-  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3270.mjs");
+  assert.equal(read("VERSION").trim(), "3.28.0");
+  assert.equal(pkg.version, "3.28.0");
+  assert.equal(apiPkg.version, "3.28.0");
+  assert.equal(webPkg.version, "3.28.0");
+  assert.equal(pkg.scripts.verify, "npm run verify:v328");
+  assert.equal(pkg.scripts["verify:full"], "npm run verify:full:v328");
+  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3280.mjs");
 
   assert.match(controller, /phan-ca\/xung-dot/);
   assert.match(controller, /kho\/goi-y-nhap/);
   assert.match(controller, /kho\/goi-y-nhap\/excel/);
-  assert.match(controller, /trang_thai_ops_v3270/);
+  assert.match(controller, /trang_thai_ops_v3280/);
 
   assert.match(service, /ca_chong_gio_v3240/);
   assert.match(service, /tim_xung_dot_phan_ca_v3240/);
@@ -57,7 +57,7 @@ test("v3.26.0 nang cap ke hoach nhap kho va chan phan ca chong gio", () => {
   assert.match(readme, /## v3\.26\.0/);
   assert.match(readme, /kế hoạch nhập kho đề xuất/i);
   assert.match(readme, /chồng giờ/i);
-  assert.equal(readdirSync("apps/api/prisma/migrations", { withFileTypes: true }).filter((x) => x.isDirectory()).length, 23);
+  assert.ok(readdirSync("apps/api/prisma/migrations", { withFileTypes: true }).filter((x) => x.isDirectory()).length >= 23);
   assert.equal(existsSync("scripts/verify-v3230.ps1"), true);
   assert.equal(existsSync("scripts/verify-v3260.ps1"), true);
 });

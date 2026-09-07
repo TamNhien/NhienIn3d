@@ -1,4 +1,4 @@
-import { IsBoolean, IsEmail, IsOptional, IsString, Length, MaxLength, ValidateIf } from "class-validator";
+import { IsBoolean, IsEmail, IsInt, IsOptional, IsString, Length, Max, MaxLength, Min, ValidateIf } from "class-validator";
 
 export class CapNhatNhaCungCapDto {
   @IsOptional() @IsString() @Length(2, 180)
@@ -21,4 +21,7 @@ export class CapNhatNhaCungCapDto {
 
   @IsOptional() @IsBoolean()
   dang_hoat_dong?: boolean;
+
+  @IsOptional() @IsInt() @Min(1) @Max(180)
+  thoi_gian_giao_hang_ngay?: number;
 }

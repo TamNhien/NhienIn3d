@@ -1,0 +1,33 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+const read = p => readFileSync(p, "utf8");
+
+test("v3.28.0 API co PO, lead-time reorder point, receipt matching va governed count session", () => {
+  const controller = read("src/quan-tri/quan-tri.controller.ts");
+  const service = read("src/quan-tri/quan-tri.service.ts");
+  const poDto = read("src/quan-tri/dto/don-mua-hang-v3280.dto.ts");
+  const receiptDto = read("src/quan-tri/dto/nhap-kho-lo.dto.ts");
+  assert.match(controller, /@Get\("kho\/don-mua"\)/);
+  assert.match(controller, /@Post\("kho\/don-mua"\)/);
+  assert.match(controller, /@Post\("kho\/don-mua\/:id\/trang-thai"\)/);
+  assert.match(controller, /@Get\("kho\/don-mua-excel"\)/);
+  assert.match(controller, /@Get\("kho\/kiem-ke\/phien"\)/);
+  assert.match(controller, /@Post\("kho\/kiem-ke\/phien\/:id\/gui-duyet"\)/);
+  assert.match(controller, /@Post\("kho\/kiem-ke\/phien\/:id\/duyet-ap-dung"\)/);
+  assert.match(service, /reorder_point_enabled: true/);
+  assert.match(service, /supplier_lead_time_enabled: true/);
+  assert.match(service, /de_xuat_theo_reorder_point/);
+  assert.match(service, /async tao_don_mua_v3280/);
+  assert.match(service, /NHAP_MOT_PHAN/);
+  assert.match(service, /HOAN_TAT/);
+  assert.match(service, /Cho phép nhập vượt PO|cho_phep_vuot_don_mua/);
+  assert.match(service, /async tao_phien_kiem_ke_v3280/);
+  assert.match(service, /CHO_DUYET/);
+  assert.match(service, /DA_AP_DUNG/);
+  assert.match(service, /ap_dung_kiem_ke_kho_v3280/);
+  assert.match(poDto, /ArrayMaxSize\(200\)/);
+  assert.match(poDto, /@Min\(1\).*so_luong_dat/s);
+  assert.match(receiptDto, /don_mua_hang_id/);
+  assert.match(receiptDto, /cho_phep_vuot_don_mua/);
+});

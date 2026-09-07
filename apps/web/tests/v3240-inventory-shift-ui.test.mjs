@@ -22,7 +22,7 @@ test("v3.26.0 Web hien ke hoach nhap va canh bao overlap, giu dark picker", () =
   assert.match(css, /cine-replenishment-v324/);
   assert.match(css, /cine-schedule-conflict-v324/);
   assert.match(css, /:root\{\s*color-scheme:dark;/);
-  assert.match(ops, /OPS v3\.27\.0/);
+  assert.match(ops, /OPS v3\.28\.0/);
 });
 
 test("v3.26.0 bang kho co viewport cuon rieng de khong cat cac cot ben phai", () => {

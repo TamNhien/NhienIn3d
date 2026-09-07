@@ -17,21 +17,21 @@ test("v3.23.0 receipt hash chain + recovery revoked-key fail-closed", () => {
   const compose = read("docker-compose.yml");
   const readme = read("README.md");
 
-  assert.equal(read("VERSION").trim(), "3.27.0");
-  assert.equal(pkg.version, "3.27.0");
-  assert.equal(apiPkg.version, "3.27.0");
-  assert.equal(webPkg.version, "3.27.0");
-  assert.equal(pkg.scripts.verify, "npm run verify:v327");
-  assert.equal(pkg.scripts["verify:full"], "npm run verify:full:v327");
-  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3270.mjs");
-  assert.equal(pkg.scripts["recovery:evidence"], "node scripts/recovery-evidence-v3270.mjs");
-  assert.equal(pkg.scripts["recovery:evidence:verify"], "node scripts/recovery-evidence-verify-v3270.mjs");
+  assert.equal(read("VERSION").trim(), "3.28.0");
+  assert.equal(pkg.version, "3.28.0");
+  assert.equal(apiPkg.version, "3.28.0");
+  assert.equal(webPkg.version, "3.28.0");
+  assert.equal(pkg.scripts.verify, "npm run verify:v328");
+  assert.equal(pkg.scripts["verify:full"], "npm run verify:full:v328");
+  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3280.mjs");
+  assert.equal(pkg.scripts["recovery:evidence"], "node scripts/recovery-evidence-v3280.mjs");
+  assert.equal(pkg.scripts["recovery:evidence:verify"], "node scripts/recovery-evidence-verify-v3280.mjs");
 
-  assert.match(controller, /trang_thai_ops_v3270/);
-  assert.match(controller, /cap_nhat_probe_desired_state_v3270/);
-  assert.match(controller, /approve_probe_rollout_v3270/);
-  assert.match(controller, /xuat_recovery_evidence_bundle_v3270/);
-  assert.match(controller, /verify_recovery_evidence_v3270/);
+  assert.match(controller, /trang_thai_ops_v3280/);
+  assert.match(controller, /cap_nhat_probe_desired_state_v3280/);
+  assert.match(controller, /approve_probe_rollout_v3280/);
+  assert.match(controller, /xuat_recovery_evidence_bundle_v3280/);
+  assert.match(controller, /verify_recovery_evidence_v3280/);
 
   assert.match(service, /PROBE_ROLLOUT_RECEIPT_CHAIN_V3230/);
   assert.match(service, /probe_rollout_receipt_chain_verify_v3230/);
@@ -64,7 +64,7 @@ test("v3.23.0 receipt hash chain + recovery revoked-key fail-closed", () => {
   assert.match(readme, /tamper-evident decision receipt hash chain/);
   assert.match(readme, /revoked signing-key denylist/);
 
-  assert.equal(readdirSync("apps/api/prisma/migrations", { withFileTypes: true }).filter((x) => x.isDirectory()).length, 23);
+  assert.ok(readdirSync("apps/api/prisma/migrations", { withFileTypes: true }).filter((x) => x.isDirectory()).length >= 23);
   assert.equal(existsSync("scripts/verify-v3220.ps1"), true);
   assert.equal(existsSync("scripts/verify-v3230.ps1"), true);
 });

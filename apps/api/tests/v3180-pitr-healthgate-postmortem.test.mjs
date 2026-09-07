@@ -11,9 +11,9 @@ test("v3.19.0 contract health gate PITR governance duoc giu khi current v3.26.0"
   assert.match(service, /probe_health_gate/);
   assert.match(service, /pitr_target_time_supported/);
   assert.match(service, /service_runbooks/);
-  assert.match(controller, /trang_thai_ops_v3270/);
+  assert.match(controller, /trang_thai_ops_v3280/);
   assert.match(controller, /postmortem\/approval/);
-  assert.match(health, /v3\.27\.0/);
+  assert.match(health, /v3\.28\.0/);
 });
 
 test("v3.19.0 API health gate khong co remote code execution", () => {

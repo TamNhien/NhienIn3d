@@ -1,4 +1,4 @@
-import { IsBoolean, IsEmail, IsOptional, IsString, Length, Matches, MaxLength, ValidateIf } from "class-validator";
+import { IsBoolean, IsEmail, IsInt, IsOptional, IsString, Length, Matches, Max, MaxLength, Min, ValidateIf } from "class-validator";
 
 export class TaoNhaCungCapDto {
   @IsString() @Length(2, 50) @Matches(/^[A-Za-z0-9][A-Za-z0-9._-]*$/)
@@ -24,4 +24,7 @@ export class TaoNhaCungCapDto {
 
   @IsOptional() @IsBoolean()
   dang_hoat_dong?: boolean;
+
+  @IsOptional() @IsInt() @Min(1) @Max(180)
+  thoi_gian_giao_hang_ngay?: number;
 }

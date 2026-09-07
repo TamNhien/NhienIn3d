@@ -20,5 +20,5 @@ test("v3.26.0 Web hien queue hoan tien va demand-aware replenishment", () => {
   assert.match(page, /không giữ chỗ/);
   assert.match(css, /cine-refund-queue-panel-v325/);
   assert.match(css, /cine-demand-risk-v325/);
-  assert.match(ops, /OPS v3\.27\.0/);
+  assert.match(ops, /OPS v3\.28\.0/);
 });

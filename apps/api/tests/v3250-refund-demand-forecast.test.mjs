@@ -8,7 +8,7 @@ test("v3.26.0 API hoan tien manual va forecast kho fail-safe", () => {
   const service = read("src/quan-tri/quan-tri.service.ts");
   const health = read("src/suc-khoe/suc-khoe.controller.ts");
   const main = read("src/main.ts");
-  assert.match(controller, /ops_runtime\(\) \{ return this\.service\.trang_thai_ops_v3270\(\); \}/);
+  assert.match(controller, /ops_runtime\(\) \{ return this\.service\.trang_thai_ops_v3280\(\); \}/);
   assert.match(controller, /@Get\("don-hang\/hoan-tien-can-xu-ly"\)/);
   assert.match(controller, /@Post\("don-hang\/:id\/xac-nhan-hoan-tien"\)/);
   assert.match(service, /async danh_sach_hoan_tien_can_xu_ly_v3260/);
@@ -20,6 +20,6 @@ test("v3.26.0 API hoan tien manual va forecast kho fail-safe", () => {
   assert.match(service, /forecast_days = Math\.max\(1, Math\.min\(90/);
   assert.match(service, /cart_demand_is_reservation: false/);
   assert.match(service, /write_operation: false/);
-  assert.match(health, /phien_ban: "v3\.27\.0"/);
-  assert.match(main, /setVersion\("3\.27\.0"\)/);
+  assert.match(health, /phien_ban: "v3\.28\.0"/);
+  assert.match(main, /setVersion\("3\.28\.0"\)/);
 });
