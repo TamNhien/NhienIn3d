@@ -66,7 +66,7 @@ jobs:
           sha256sum release/*.zip > release/SHA256SUMS.txt
 
       - name: Đăng nhập GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
