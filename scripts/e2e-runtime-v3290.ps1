@@ -1,0 +1,431 @@
+﻿param(
+  [switch]$KhongKiemTraBackupRestore
+)
+
+$ErrorActionPreference = "Stop"
+Set-StrictMode -Version Latest
+
+$Root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+Push-Location $Root
+
+function Get-ProjectEnv([string]$Name) {
+  $fromProcess = [Environment]::GetEnvironmentVariable($Name)
+  if (-not [string]::IsNullOrWhiteSpace($fromProcess)) { return $fromProcess.Trim() }
+  $envFile = Join-Path $Root ".env"
+  if (-not (Test-Path $envFile)) { return $null }
+  foreach ($line in Get-Content -LiteralPath $envFile -Encoding UTF8) {
+    $trim = $line.Trim()
+    if (-not $trim -or $trim.StartsWith("#") -or -not $trim.Contains("=")) { continue }
+    $parts = $trim.Split("=", 2)
+    if ($parts[0].Trim() -eq $Name) { return $parts[1].Trim().Trim('"').Trim("'") }
+  }
+  return $null
+}
+
+function Assert-True([bool]$Condition, [string]$Message) {
+  if (-not $Condition) { throw $Message }
+}
+
+try {
+  if (-not $KhongKiemTraBackupRestore) {
+    Write-Host "[E2E v3.29.0] Backup/SHA/restore runtime nền..." -ForegroundColor Cyan
+    & (Join-Path $PSScriptRoot "e2e-runtime-v320.ps1")
+    if ($LASTEXITCODE -ne 0) { throw "E2E backup/restore v3.2.0 thất bại." }
+  }
+
+  $apiPort = Get-ProjectEnv "API_PORT"
+  if (-not $apiPort) { $apiPort = "3001" }
+  $base = "http://localhost:$apiPort/api/v1"
+  $adminEmail = Get-ProjectEnv "ADMIN_EMAIL"
+  if (-not $adminEmail) { $adminEmail = "admin@nhienin3d.local" }
+  $adminPassword = Get-ProjectEnv "ADMIN_PASSWORD"
+  if (-not $adminPassword) { throw "Thiếu ADMIN_PASSWORD trong biến môi trường hoặc file .env." }
+
+  Write-Host "[E2E v3.29.0] Preflight API version để tránh kiểm tra nhầm container cũ..." -ForegroundColor Cyan
+  $publicHealth = Invoke-RestMethod -Uri "$base/suc-khoe" -Method Get -TimeoutSec 20
+  Assert-True ($publicHealth.phien_ban -eq "v3.29.0") "API đang chạy $($publicHealth.phien_ban), không phải v3.29.0. Docker build trước đó có thể đã thất bại và container cũ vẫn đang chạy. Hãy chạy lại: docker compose up -d --build --remove-orphans"
+
+  Write-Host "[E2E v3.29.0] Đăng nhập Admin qua cookie session..." -ForegroundColor Cyan
+  $session = New-Object Microsoft.PowerShell.Commands.WebRequestSession
+  $loginBody = @{ thu_dien_tu = $adminEmail; mat_khau = $adminPassword; trinh_duyet_hien_thi = "NhienIn3d E2E v3.29.0" } | ConvertTo-Json
+
+  # Docker mặc định WEB_PUBLIC_URL=https://localhost:3000 nên API phát cookie access có cờ Secure.
+  # Runtime smoke CI lại gọi trực tiếp http://localhost:API_PORT và không khởi động Caddy; WebRequestSession
+  # vì vậy giữ cookie nhưng đúng chuẩn sẽ không gửi Secure cookie qua HTTP. Lấy access cookie từ Set-Cookie
+  # rồi gắn tường minh vào request loopback để vẫn kiểm tra đúng JWT/session/role ở API.
+  $loginResponse = Invoke-WebRequest -Uri "$base/xac-thuc/dang-nhap" -Method Post -ContentType "application/json; charset=utf-8" -Body $loginBody -WebSession $session -TimeoutSec 20 -UseBasicParsing
+  $login = $loginResponse.Content | ConvertFrom-Json
+  Assert-True ($null -ne $login.nguoi_dung) "Đăng nhập không trả về người dùng."
+  Assert-True ($login.nguoi_dung.vai_tro -eq "ADMIN") "Tài khoản E2E không có vai trò ADMIN."
+
+  $setCookie = @($loginResponse.Headers["Set-Cookie"]) -join ","
+  $accessMatch = [regex]::Match($setCookie, "(?:^|[,\s])nhienin3d_phien=([^;,\s]+)")
+  Assert-True $accessMatch.Success "Đăng nhập không phát cookie nhienin3d_phien."
+
+  # Windows PowerShell 5.1 có thể bỏ qua header Cookie gắn bằng -Headers trên Invoke-RestMethod.
+  # Cookie access từ login lại có cờ Secure nên WebRequestSession gốc không gửi nó qua HTTP loopback.
+  # Tạo một CookieContainer riêng cho loopback và nạp cùng access token dưới dạng non-Secure;
+  # request vẫn đi qua JwtGuard + PostgreSQL session validation, chỉ bỏ ràng buộc transport Secure cho E2E localhost.
+  $adminSession = New-Object Microsoft.PowerShell.Commands.WebRequestSession
+  $loopbackUri = [Uri]("$base/")
+  $adminSession.Cookies.SetCookies($loopbackUri, "nhienin3d_phien=$($accessMatch.Groups[1].Value); Path=/")
+  $loopbackCookie = $adminSession.Cookies.GetCookies($loopbackUri)["nhienin3d_phien"]
+  Assert-True ($null -ne $loopbackCookie -and -not [string]::IsNullOrWhiteSpace($loopbackCookie.Value)) "Không tạo được loopback session cookie cho Runtime E2E."
+
+  Write-Host "[E2E v3.29.0] Kiểm tra đơn hàng + sản phẩm..."
+  $orders = @(Invoke-RestMethod -Uri "$base/quan-tri/don-hang" -Method Get -WebSession $adminSession -TimeoutSec 20)
+  $products = @(Invoke-RestMethod -Uri "$base/quan-tri/san-pham" -Method Get -WebSession $adminSession -TimeoutSec 20)
+  Assert-True ($null -ne $orders) "API danh sách đơn hàng không phản hồi."
+  Assert-True ($products.Count -gt 0) "Không có sản phẩm để kiểm tra runtime Admin."
+
+  Write-Host "[E2E v3.29.0] Preview nhập kho CSV, không thay đổi tồn kho..."
+  $variant = $null
+  foreach ($product in $products) {
+    if ($product.bien_the -and @($product.bien_the).Count -gt 0) { $variant = @($product.bien_the)[0]; break }
+  }
+  Assert-True ($null -ne $variant) "Không có biến thể để kiểm tra preview nhập kho."
+  $csv = "ma_bien_the,so_luong_nhap,ly_do`r`n$($variant.ma_bien_the),1,E2E preview v3.29.0`r`n"
+  $base64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($csv))
+  $previewBody = @{ ten_file = "e2e-v3100.csv"; du_lieu_base64 = $base64 } | ConvertTo-Json
+  $preview = Invoke-RestMethod -Uri "$base/quan-tri/kho/import/kiem-tra" -Method Post -ContentType "application/json; charset=utf-8" -Body $previewBody -WebSession $adminSession -TimeoutSec 20
+  Assert-True ($preview.tong_dong -eq 1) "Preview nhập kho không đọc đúng 1 dòng."
+  Assert-True ($preview.hop_le -eq 1) "Preview nhập kho không hợp lệ với biến thể đang tồn tại."
+
+  Write-Host "[E2E v3.29.0] Kiểm tra báo cáo Excel + phiếu nhập..."
+  $receipts = @(Invoke-RestMethod -Uri "$base/quan-tri/kho/phieu-nhap" -Method Get -WebSession $adminSession -TimeoutSec 20)
+  $report = Invoke-RestMethod -Uri "$base/quan-tri/bao-cao/ton-kho/excel" -Method Get -WebSession $adminSession -TimeoutSec 30
+  Assert-True ($report.ten_file -like "*.xlsx") "Báo cáo tồn kho không trả về file XLSX."
+  Assert-True (-not [string]::IsNullOrWhiteSpace([string]$report.base64)) "Báo cáo tồn kho Excel không có dữ liệu base64."
+
+  Write-Host "[E2E v3.29.0] Kiểm tra kế hoạch nhập đề xuất + guard chồng giờ..."
+  $replenishment = Invoke-RestMethod -Uri "$base/quan-tri/kho/goi-y-nhap" -Method Get -WebSession $adminSession -TimeoutSec 20
+  Assert-True ($replenishment.phien_ban -eq "3.29.0") "Kế hoạch nhập kho chưa lên v3.29.0."
+  Assert-True ($replenishment.history_days -eq 30) "Forecast kho phải dùng lịch sử bán 30 ngày."
+  Assert-True ($replenishment.forecast_days -ge 1 -and $replenishment.forecast_days -le 90) "Forecast horizon phải nằm trong 1-90 ngày."
+  Assert-True ($replenishment.forecast_basis -eq "NON_CANCELLED_ORDER_LINES_30D") "Forecast kho chưa dùng order lines không hủy 30 ngày."
+  Assert-True ($null -ne $replenishment.tong_bien_the_can_nhap) "Kế hoạch nhập kho thiếu tổng biến thể cần nhập."
+  Assert-True ($replenishment.write_operation -eq $false) "Kế hoạch nhập kho phải là read-only, không tự tạo phiếu mua."
+  Assert-True ($replenishment.auto_purchase_order -eq $false) "Forecast kho không được tự tạo đơn mua."
+  Assert-True ($replenishment.reorder_point_enabled -eq $true) "Kế hoạch nhập v3.29.0 chưa bật reorder point."
+  Assert-True ($replenishment.supplier_lead_time_enabled -eq $true) "Kế hoạch nhập v3.29.0 chưa bật supplier lead time."
+  Assert-True ($replenishment.cart_demand_is_reservation -eq $false) "Nhu cầu giỏ mở chỉ là tín hiệu, không được coi là reservation."
+  Assert-True ($replenishment.grouped_supplier_procurement_plan -eq $true) "Kế hoạch nhập chưa gom theo nhà cung cấp v3.29.0."
+  Assert-True ($null -ne $replenishment.tong_nhom_nha_cung_cap) "Kế hoạch nhập thiếu tổng nhóm nhà cung cấp."
+  Assert-True ($null -ne $replenishment.nhom_can_xu_ly_thu_cong) "Kế hoạch nhập thiếu số nhóm cần xử lý NCC thủ công."
+  if (@($replenishment.items).Count -gt 0) {
+    Assert-True ($null -ne $replenishment.items[0].forecast_demand) "Item kế hoạch thiếu forecast_demand."
+    Assert-True ($null -ne $replenishment.items[0].active_cart_demand) "Item kế hoạch thiếu active_cart_demand."
+    Assert-True ($null -ne $replenishment.items[0].lead_time_days) "Item kế hoạch thiếu supplier lead time."
+    Assert-True ($null -ne $replenishment.items[0].safety_stock) "Item kế hoạch thiếu safety stock."
+    Assert-True ($null -ne $replenishment.items[0].reorder_point) "Item kế hoạch thiếu reorder point."
+  }
+  $purchaseOrders = @(Invoke-RestMethod -Uri "$base/quan-tri/kho/don-mua" -Method Get -WebSession $adminSession -TimeoutSec 20)
+  $countSessions = @(Invoke-RestMethod -Uri "$base/quan-tri/kho/kiem-ke/phien" -Method Get -WebSession $adminSession -TimeoutSec 20)
+  Assert-True ($null -ne $purchaseOrders) "API danh sách Purchase Order v3.29.0 chưa phản hồi."
+  Assert-True ($null -ne $countSessions) "API danh sách phiên kiểm kê v3.29.0 chưa phản hồi."
+  $refundQueue = Invoke-RestMethod -Uri "$base/quan-tri/don-hang/hoan-tien-can-xu-ly" -Method Get -WebSession $adminSession -TimeoutSec 20
+  Assert-True ($refundQueue.phien_ban -eq "3.29.0") "Queue hoàn tiền chưa lên v3.29.0."
+  Assert-True ($refundQueue.gateway_auto_refund -eq $false) "Queue hoàn tiền không được tự gọi gateway."
+  Assert-True ($refundQueue.manual_confirmation_required -eq $true) "Queue hoàn tiền phải yêu cầu Admin xác nhận thủ công."
+  Assert-True ($null -ne $refundQueue.tong_don_can_hoan) "Queue hoàn tiền thiếu tổng đơn cần xử lý."
+  Assert-True ($refundQueue.refund_sla_hours -ge 1 -and $refundQueue.refund_sla_hours -le 168) "Refund SLA phải nằm trong 1-168 giờ."
+  Assert-True ($null -ne $refundQueue.tong_qua_han) "Queue hoàn tiền thiếu thống kê quá hạn."
+  Assert-True ($null -ne $refundQueue.tong_sap_den_han) "Queue hoàn tiền thiếu thống kê sắp đến hạn."
+  $refundExcel = Invoke-RestMethod -Uri "$base/quan-tri/don-hang/hoan-tien-can-xu-ly/excel" -Method Get -WebSession $adminSession -TimeoutSec 30
+  Assert-True ($refundExcel.ten_file -like "*.xlsx") "Excel hoàn tiền v3.29.0 không trả file XLSX."
+
+  Write-Host "[E2E v3.29.0] Kiểm tra RMA + partial refund ledger + gross margin..."
+  $rma = Invoke-RestMethod -Uri "$base/quan-tri/doi-tra" -Method Get -WebSession $adminSession -TimeoutSec 20
+  Assert-True ($rma.phien_ban -eq "3.29.0") "Danh sách đổi/trả RMA chưa lên v3.29.0."
+  Assert-True ($rma.partial_refund_ledger -eq $true) "RMA chưa công bố partial refund ledger."
+  Assert-True ($rma.auto_gateway_refund -eq $false) "RMA tuyệt đối không được tự gọi payment gateway."
+  $dashboard = Invoke-RestMethod -Uri "$base/quan-tri/tong-quan" -Method Get -WebSession $adminSession -TimeoutSec 20
+  Assert-True ($dashboard.loi_nhuan.phien_ban -eq "3.29.0") "Dashboard lợi nhuận chưa lên v3.29.0."
+  Assert-True ($dashboard.loi_nhuan.co_so_gia_von -eq "SALE_TIME_COST_SNAPSHOT_WITH_MIGRATION_BACKFILL") "Dashboard chưa dùng sale-time cost snapshot."
+  Assert-True ($null -ne $dashboard.loi_nhuan.ba_muoi_ngay.loi_nhuan_gop) "Dashboard thiếu lợi nhuận gộp 30 ngày."
+  Assert-True ($null -ne $dashboard.loi_nhuan.ba_muoi_ngay.gia_von) "Dashboard thiếu COGS 30 ngày."
+
+  $cycleBody = @{ dong = @(@{ bien_the_id = $variant.id; ton_he_thong = [int]$variant.so_luong_ton; ton_thuc_te = [int]$variant.so_luong_ton; ly_do = "E2E preview cycle count v3.29.0" }) } | ConvertTo-Json -Depth 5
+  $cyclePreview = Invoke-RestMethod -Uri "$base/quan-tri/kho/kiem-ke/kiem-tra" -Method Post -ContentType "application/json; charset=utf-8" -Body $cycleBody -WebSession $adminSession -TimeoutSec 20
+  Assert-True ($cyclePreview.phien_ban -eq "3.29.0") "Cycle-count preview chưa lên v3.29.0."
+  Assert-True ($cyclePreview.optimistic_lock -eq $true) "Cycle-count preview chưa bật optimistic lock."
+  Assert-True ($cyclePreview.write_operation -eq $false) "Cycle-count preview không được ghi tồn kho."
+  Assert-True ($cyclePreview.co_the_ap_dung -eq $true) "Cycle-count snapshot hiện tại phải hợp lệ để áp dụng."
+
+  $cycleCsv = "ma_bien_the,ton_thuc_te,ly_do`r`n$($variant.ma_bien_the),$([int]$variant.so_luong_ton),E2E bulk cycle count v3.29.0`r`n"
+  $cycleCsvB64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($cycleCsv))
+  $cycleFileBody = @{ ten_file = "kiem-ke-e2e.csv"; du_lieu_base64 = $cycleCsvB64 } | ConvertTo-Json
+  $cycleFilePreview = Invoke-RestMethod -Uri "$base/quan-tri/kho/kiem-ke/import/kiem-tra" -Method Post -ContentType "application/json; charset=utf-8" -Body $cycleFileBody -WebSession $adminSession -TimeoutSec 20
+  Assert-True ($cycleFilePreview.phien_ban -eq "3.29.0") "Bulk cycle-count file preview chưa lên v3.29.0."
+  Assert-True ($cycleFilePreview.tong_dong -eq 1 -and $cycleFilePreview.hop_le -eq 1) "Bulk cycle-count CSV hợp lệ phải preview đúng 1 dòng."
+  Assert-True ($cycleFilePreview.co_the_ap_dung -eq $true) "Bulk cycle-count file hợp lệ phải cho phép apply."
+  Assert-True ($cycleFilePreview.atomic_apply -eq $true -and $cycleFilePreview.write_operation -eq $false) "Bulk cycle-count preview phải read-only và atomic apply."
+  $cycleExcel = Invoke-RestMethod -Uri "$base/quan-tri/kho/kiem-ke/excel" -Method Post -ContentType "application/json; charset=utf-8" -Body $cycleBody -WebSession $adminSession -TimeoutSec 30
+  Assert-True ($cycleExcel.ten_file -like "*.xlsx") "Excel đối soát kiểm kê v3.29.0 không trả file XLSX."
+
+  $shiftConflicts = Invoke-RestMethod -Uri "$base/quan-tri/phan-ca/xung-dot" -Method Get -WebSession $adminSession -TimeoutSec 20
+  Assert-True ($shiftConflicts.phien_ban -eq "3.29.0") "API quét chồng giờ phân ca chưa lên v3.29.0."
+  Assert-True ($shiftConflicts.overlap_guard_enabled -eq $true) "Overlap guard phân ca v3.29.0 chưa bật."
+
+  Write-Host "[E2E v3.29.0] Kiểm tra Ops: persistent SLI/Apdex, encrypted DLQ scheduler, metrics cache, RBAC on-call..."
+  $health = Invoke-RestMethod -Uri "$base/quan-tri/he-thong/suc-khoe" -Method Get -WebSession $adminSession -TimeoutSec 20
+  $alertConfig = Invoke-RestMethod -Uri "$base/quan-tri/he-thong/cau-hinh-canh-bao" -Method Get -WebSession $adminSession -TimeoutSec 20
+  $sloConfig = Invoke-RestMethod -Uri "$base/quan-tri/he-thong/cau-hinh-slo" -Method Get -WebSession $adminSession -TimeoutSec 20
+  $maintenance = Invoke-RestMethod -Uri "$base/quan-tri/he-thong/bao-tri" -Method Get -WebSession $adminSession -TimeoutSec 20
+  $maintenanceList = Invoke-RestMethod -Uri "$base/quan-tri/he-thong/bao-tri/danh-sach" -Method Get -WebSession $adminSession -TimeoutSec 20
+  $sloAdvanced = Invoke-RestMethod -Uri "$base/quan-tri/he-thong/cau-hinh-slo-nang-cao" -Method Get -WebSession $adminSession -TimeoutSec 20
+  $sla = Invoke-RestMethod -Uri "$base/quan-tri/he-thong/sla?so_ngay=30" -Method Get -WebSession $adminSession -TimeoutSec 20
+  $webhookDelivery = Invoke-RestMethod -Uri "$base/quan-tri/he-thong/webhook/delivery?gioi_han=5" -Method Get -WebSession $adminSession -TimeoutSec 20
+  $webhookDeadLetter = Invoke-RestMethod -Uri "$base/quan-tri/he-thong/webhook/dead-letter?gioi_han=5" -Method Get -WebSession $adminSession -TimeoutSec 20
+  $opsRuntime = Invoke-RestMethod -Uri "$base/quan-tri/he-thong/ops/runtime" -Method Get -WebSession $adminSession -TimeoutSec 20
+  $opsAssignments = Invoke-RestMethod -Uri "$base/quan-tri/he-thong/ops/phan-cong" -Method Get -WebSession $adminSession -TimeoutSec 20
+  $opsOnCall = Invoke-RestMethod -Uri "$base/quan-tri/he-thong/ops/on-call" -Method Get -WebSession $adminSession -TimeoutSec 20
+  $opsOnCallCalendar = Invoke-RestMethod -Uri "$base/quan-tri/he-thong/ops/on-call/calendar" -Method Get -WebSession $adminSession -TimeoutSec 20
+  $opsOnCallHandoff = Invoke-RestMethod -Uri "$base/quan-tri/he-thong/ops/on-call/handoff" -Method Get -WebSession $adminSession -TimeoutSec 20
+  $archiveBatches = Invoke-RestMethod -Uri "$base/quan-tri/he-thong/ops/archive/batches" -Method Get -WebSession $adminSession -TimeoutSec 20
+  $dlqKeyring = Invoke-RestMethod -Uri "$base/quan-tri/he-thong/webhook/dead-letter/keyring" -Method Get -WebSession $adminSession -TimeoutSec 20
+  $replayJobs = Invoke-RestMethod -Uri "$base/quan-tri/he-thong/webhook/dead-letter/replay-jobs" -Method Get -WebSession $adminSession -TimeoutSec 20
+  $archiveMonth = (Get-Date).AddMonths(-6).ToString("yyyy-MM")
+  # Windows PowerShell 5.1: tránh literal ampersand trong URI nội suy để parser không hiểu nhầm toán tử &.
+  $archivePreviewUri = "$base/quan-tri/he-thong/ops/archive/preview?bang_nguon=slo_endpoint_mau" + [char]38 + "thang=$archiveMonth"
+  $archivePreview = Invoke-RestMethod -Uri $archivePreviewUri -Method Get -WebSession $adminSession -TimeoutSec 20
+  $opsExcel = Invoke-RestMethod -Uri "$base/quan-tri/he-thong/ops/excel" -Method Get -WebSession $adminSession -TimeoutSec 30
+  $incidents = Invoke-RestMethod -Uri "$base/quan-tri/he-thong/su-co?gioi_han=5" -Method Get -WebSession $adminSession -TimeoutSec 20
+  $incidentExcel = Invoke-RestMethod -Uri "$base/quan-tri/he-thong/su-co/excel" -Method Get -WebSession $adminSession -TimeoutSec 30
+  $opsCursor = Invoke-RestMethod -Uri "$base/quan-tri/he-thong/lich-su/cursor?kich_thuoc=10" -Method Get -WebSession $adminSession -TimeoutSec 20
+  $auditCursor = Invoke-RestMethod -Uri "$base/quan-tri/nhat-ky/cursor?kich_thuoc=10" -Method Get -WebSession $adminSession -TimeoutSec 20
+  Assert-True ($health.phien_ban -eq "3.29.0") "Health endpoint chưa lên v3.29.0."
+  Assert-True ($alertConfig.chu_ky_phut -ge 15) "Cấu hình cảnh báo runtime không hợp lệ."
+  Assert-True ($null -ne $maintenance.dang_bao_tri) "Maintenance window chưa trả trạng thái runtime."
+  Assert-True ($null -ne $maintenanceList.du_lieu) "Danh sách maintenance v3.29.0 chưa phản hồi."
+  Assert-True (@($sloAdvanced.burn_windows).Count -ge 1) "SLO nâng cao chưa có burn-rate windows."
+  Assert-True ($sloAdvanced.service_targets.postgresql -ge 90) "SLO theo dịch vụ chưa hợp lệ."
+  Assert-True (@($sloAdvanced.endpoint_checks).Count -ge 1) "SLO nâng cao chưa có endpoint probe thật."
+  Assert-True ($null -ne $sloAdvanced.maintenance_policy) "SLO nang cao chua tra maintenance policy v3.29.0."
+  $endpoint0 = @($sloAdvanced.endpoint_checks)[0]
+  Assert-True ($endpoint0.method -in @("GET","HEAD")) "Endpoint probe method khong hop le."
+  Assert-True ($endpoint0.latency_target_ms -ge 50) "Endpoint probe chua co latency target v3.29.0."
+  Assert-True ($null -ne $health.webhook.san_sang) "Health chưa trả trạng thái webhook v3.29.0."
+  Assert-True ($health.webhook.adapter -in @("GENERIC","SLACK","TEAMS","DISCORD")) "Webhook adapter preset không hợp lệ."
+  Assert-True ($health.webhook.dlq_retention_days -ge 1) "Health chua tra DLQ retention v3.29.0."
+  Assert-True ($null -ne $health.webhook.dlq_encryption_ready) "Health chưa trả trạng thái mã hóa DLQ v3.29.0."
+  Assert-True ($opsRuntime.phien_ban -eq "3.29.0") "Ops runtime chưa lên v3.29.0."
+  Assert-True ($opsRuntime.admin_business_safety.inventory_demand_forecast -eq $true) "Ops runtime chưa bật inventory demand forecast v3.29.0."
+  Assert-True ($opsRuntime.admin_business_safety.cart_demand_is_reservation -eq $false) "Ops runtime phải công bố giỏ hàng không phải reservation."
+  Assert-True ($opsRuntime.admin_business_safety.prepaid_cancel_refund_queue -eq $true) "Ops runtime chưa công bố refund queue v3.29.0."
+  Assert-True ($opsRuntime.admin_business_safety.refund_reconciliation_sla -eq $true) "Ops runtime chưa công bố refund SLA v3.29.0."
+  Assert-True ($opsRuntime.admin_business_safety.inventory_cycle_count_optimistic_lock -eq $true) "Ops runtime chưa công bố cycle-count optimistic lock v3.29.0."
+  Assert-True ($opsRuntime.admin_business_safety.inventory_cycle_count_file_import -eq $true) "Ops runtime chưa công bố bulk cycle-count file import v3.29.0."
+  Assert-True ($opsRuntime.admin_business_safety.inventory_cycle_count_max_rows -eq 200) "Ops runtime bulk cycle-count phải giới hạn 200 dòng."
+  Assert-True ($opsRuntime.admin_business_safety.inventory_cycle_count_variance_excel -eq $true) "Ops runtime chưa công bố Excel đối soát kiểm kê v3.29.0."
+  Assert-True ($opsRuntime.admin_business_safety.inventory_cycle_count_atomic_apply -eq $true) "Ops runtime chưa công bố atomic apply cho bulk cycle-count."
+  Assert-True ($opsRuntime.admin_business_safety.supplier_grouped_replenishment -eq $true) "Ops runtime chưa công bố supplier-grouped replenishment v3.29.0."
+  Assert-True ($opsRuntime.admin_business_safety.purchase_order_workflow -eq $true) "Ops runtime chưa công bố Purchase Order workflow v3.29.0."
+  Assert-True ($opsRuntime.admin_business_safety.supplier_lead_time_reorder_point -eq $true) "Ops runtime chưa công bố lead-time reorder point v3.29.0."
+  Assert-True ($opsRuntime.admin_business_safety.inventory_count_sessions -eq $true) "Ops runtime chưa công bố governed inventory count sessions v3.29.0."
+  Assert-True ($opsRuntime.admin_business_safety.purchase_order_receipt_matching -eq $true) "Ops runtime chưa công bố PO receipt matching v3.29.0."
+  Assert-True ($opsRuntime.admin_business_safety.return_rma_workflow -eq $true) "Ops runtime chưa công bố RMA workflow v3.29.0."
+  Assert-True ($opsRuntime.admin_business_safety.partial_refund_ledger -eq $true) "Ops runtime chưa công bố partial refund ledger v3.29.0."
+  Assert-True ($opsRuntime.admin_business_safety.return_stock_atomic_reconciliation -eq $true) "Ops runtime chưa công bố atomic return-stock reconciliation."
+  Assert-True ($opsRuntime.admin_business_safety.gross_margin_dashboard -eq $true) "Ops runtime chưa công bố gross margin dashboard v3.29.0."
+  Assert-True ($opsRuntime.admin_business_safety.sale_time_cost_snapshot -eq $true) "Ops runtime chưa công bố sale-time cost snapshot."
+  Assert-True ($opsRuntime.admin_business_safety.database_migration_count -eq 25) "Ops runtime phải công bố 25 migrations ở v3.29.0."
+  Assert-True ($opsRuntime.admin_business_safety.refund_gateway_automation -eq $false) "Ops runtime không được công bố gateway auto-refund."
+  Assert-True (-not [string]::IsNullOrWhiteSpace([string]$opsRuntime.probe_agent.agent_id)) "Ops runtime chưa trả probe agent id."
+  Assert-True ($opsRuntime.endpoint_samples -ge 0) "Ops runtime chưa trả số persistent endpoint samples."
+  Assert-True ($opsRuntime.dlq.chu_ky_phut -ge 1) "Ops runtime chưa trả DLQ scheduled retry policy."
+  Assert-True ($null -ne $opsRuntime.dlq.payload_encryption_ready) "Ops runtime chưa trả trạng thái encrypted DLQ."
+  Assert-True ($opsRuntime.ops_metrics.refresh_phut -ge 1) "Ops runtime chưa trả scheduler metrics cache."
+  Assert-True (@($opsRuntime.rbac.roles).Count -ge 3) "Ops runtime chưa trả RBAC roles."
+  Assert-True ($null -ne $opsAssignments.du_lieu) "Danh sách phân quyền Ops/on-call chưa phản hồi."
+  Assert-True ($null -ne $opsRuntime.distributed_probe.agents) "Ops runtime chưa trả distributed probe agent health."
+  Assert-True ($null -ne $opsRuntime.probe_fleet.agents) "Ops runtime chưa trả managed probe fleet v3.29.0."
+  Assert-True ($opsRuntime.probe_fleet.secret_values_exposed -eq $false) "Managed probe fleet không được lộ secret."
+  Assert-True ($opsRuntime.probe_fleet.stale_after_seconds -ge 60) "Managed probe fleet stale threshold không hợp lệ."
+  Assert-True ($opsRuntime.probe_fleet.offline_after_seconds -gt $opsRuntime.probe_fleet.stale_after_seconds) "Managed probe fleet offline threshold phải lớn hơn stale threshold."
+  Assert-True ($null -ne $opsRuntime.multi_region_quorum.summary) "Ops runtime chưa trả multi-region quorum v3.29.0."
+  Assert-True ($opsRuntime.multi_region_quorum.summary.endpoints -ge 0) "Multi-region quorum summary không hợp lệ."
+  Assert-True ($opsRuntime.asymmetric_probe_signing.algorithm -eq "Ed25519") "Ops runtime chưa công bố Ed25519 signing."
+  Assert-True ($opsRuntime.asymmetric_probe_signing.hmac_backward_compatible -eq $true) "v3.29.0 phải giữ HMAC tương thích ngược."
+  Assert-True ($opsRuntime.asymmetric_probe_signing.secret_values_exposed -eq $false) "Asymmetric signing không được lộ secret."
+  Assert-True ($null -ne $opsRuntime.asymmetric_probe_signing.key_lifecycle.active_keys) "Ops runtime chưa trả Ed25519 key lifecycle v3.29.0."
+  Assert-True ($opsRuntime.asymmetric_probe_signing.key_lifecycle.secret_values_exposed -eq $false) "Ed25519 key lifecycle không được lộ raw key."
+  Assert-True ($null -ne $opsRuntime.probe_fleet.asymmetric_key_lifecycle.active_keys) "Managed fleet chưa trả key lifecycle summary v3.29.0."
+  Assert-True ($opsRuntime.probe_fleet.asymmetric_key_lifecycle.secret_values_exposed -eq $false) "Managed fleet key lifecycle không được lộ raw key."
+  Assert-True ($null -ne $opsRuntime.quorum_alerting.enabled) "Ops runtime chưa trả quorum alert policy v3.29.0."
+  Assert-True ($null -ne $opsRuntime.service_dependency.blast_radius) "Ops runtime chưa trả service dependency/blast radius v3.29.0."
+  Assert-True ($null -ne $opsRuntime.service_dependency.dependencies) "Ops runtime chưa trả dependency graph v3.29.0."
+  Assert-True ($null -ne $opsRuntime.probe_enrollment.configured) "Ops runtime chưa trả probe enrollment state v3.29.0."
+  Assert-True ($opsRuntime.probe_enrollment.private_key_exposed -eq $false) "Probe enrollment tuyệt đối không được lộ private key."
+  Assert-True ($null -ne $opsRuntime.probe_enrollment.require_device_id) "Probe enrollment chưa trả device identity policy v3.29.0."
+  Assert-True ($opsRuntime.probe_enrollment.rotation_days -ge 1) "Probe enrollment rotation policy không hợp lệ."
+  Assert-True ($opsRuntime.archive_portability.format -eq "JSONL+GZIP") "Archive portability v3.29.0 chưa sẵn sàng."
+  Assert-True ($opsRuntime.archive_portability.restore_replay_supported -eq $true) "Archive restore/replay v3.29.0 chưa sẵn sàng."
+  Assert-True ($null -ne $opsRuntime.probe_desired_state.current.revision) "Ops runtime chưa trả probe desired-state v3.29.0."
+  Assert-True ($opsRuntime.probe_desired_state.remote_code_execution -eq $false) "Probe desired-state không được phép remote code execution."
+  Assert-True ($null -ne $opsRuntime.probe_health_gate.status) "Ops runtime chưa trả health-gated canary v3.29.0."
+  Assert-True ($opsRuntime.probe_health_gate.remote_code_execution -eq $false) "Health gate không được phép bật remote code execution."
+  Assert-True ($null -ne $opsRuntime.probe_health_gate.max_burn_rate) "Health gate v3.22 chưa trả burn-rate threshold."
+  Assert-True ($null -ne $opsRuntime.probe_health_gate.cooldown_remaining_minutes) "Health gate v3.22 chưa trả rollback cooldown."
+  Assert-True ($null -ne $opsRuntime.database_recovery.evidence_history_count) "Recovery v3.22 chưa trả evidence history."
+  Assert-True ($null -ne $opsRuntime.remediation_backlog.unowned_actions) "Postmortem v3.22 chưa trả remediation backlog."
+  Assert-True ($null -ne $opsRuntime.rollout_approval.ttl_minutes) "Production rollout approval v3.22 chưa trả TTL."
+  Assert-True ($opsRuntime.rollout_approval.two_person_rule -eq $true) "Production rollout approval v3.22 chưa bật two-person rule."
+  Assert-True ($opsRuntime.rollout_approval.audit_diff -eq $true) "Production rollout approval v3.22 chưa bật audit diff."
+  Assert-True ($opsRuntime.rollout_approval.proposal_sha256 -eq $true) "Production rollout v3.22 chưa bật proposal SHA-256."
+  Assert-True ($opsRuntime.rollout_approval.proposal_envelope_sha256 -eq $true) "Production rollout v3.22 chưa bật immutable envelope SHA-256."
+  Assert-True ($opsRuntime.rollout_approval.decision_receipt_sha256 -eq $true) "Production rollout v3.22 chưa bật decision receipt SHA-256."
+  Assert-True ($opsRuntime.rollout_approval.decision_receipt_fail_closed -eq $true) "Production rollout v3.22 chưa bật fail-closed decision receipt."
+  Assert-True ($opsRuntime.rollout_approval.reject_supported -eq $true) "Production rollout v3.22 chưa hỗ trợ reject."
+  Assert-True ($opsRuntime.rollout_approval.cancel_supported -eq $true) "Production rollout v3.22 chưa hỗ trợ cancel."
+  Assert-True ($null -ne $opsRuntime.rollout_approval.require_healthy_preflight) "Production rollout v3.22 chưa trả health preflight policy."
+  Assert-True ($opsRuntime.rollout_approval.decision_receipt_hash_chain -eq $true) "Production rollout v3.23 chưa bật decision receipt hash chain."
+  Assert-True ($opsRuntime.rollout_approval.decision_receipt_chain_fail_closed -eq $true) "Production rollout v3.23 chưa bật receipt-chain fail-closed."
+  Assert-True ($opsRuntime.rollout_approval.receipt_chain_valid -eq $true) "Production rollout v3.23 receipt chain đang INVALID."
+  Assert-True ($opsRuntime.rollout_approval.receipt_chain_history_limit -ge 20) "Production rollout v3.23 receipt-chain retention không hợp lệ."
+  Assert-True ($opsRuntime.rollout_approval.secret_values_exposed -eq $false) "Rollout approval runtime không được lộ secret."
+  Assert-True ($opsRuntime.database_recovery.evidence_sha256_supported -eq $true) "Recovery evidence v3.22 chưa bật SHA-256."
+  Assert-True ($opsRuntime.database_recovery.evidence_ed25519_supported -eq $true) "Recovery evidence v3.22 chưa advertise Ed25519."
+  Assert-True ($opsRuntime.database_recovery.private_key_exposed -eq $false) "Recovery evidence không được lộ Ed25519 private key."
+  Assert-True ($opsRuntime.database_recovery.audit_bundle_integrity_required -eq $true) "Recovery v3.22 phải fail-closed trước khi export audit bundle."
+  Assert-True ($null -ne $opsRuntime.database_recovery.evidence_verification) "Recovery v3.22 chưa trả independent verification state."
+  Assert-True ($opsRuntime.database_recovery.audit_bundle_trust_anchor_required_for_signed_bundle -eq $true) "Recovery v3.22 chưa bắt buộc external trust anchor cho signed audit bundle."
+  Assert-True ($null -ne $opsRuntime.database_recovery.evidence_trusted_key_required) "Recovery v3.22 chưa trả trusted-key policy."
+  Assert-True ($null -ne $opsRuntime.database_recovery.evidence_trust_source) "Recovery v3.22 chưa trả trust source."
+  Assert-True ($opsRuntime.database_recovery.audit_bundle_revocation_fail_closed -eq $true) "Recovery v3.23 chưa bật revoked-key fail-closed."
+  Assert-True ($null -ne $opsRuntime.database_recovery.evidence_key_revoked) "Recovery v3.23 chưa trả revoked-key state."
+  Assert-True ($null -ne $opsRuntime.database_recovery.evidence_revocation_configured) "Recovery v3.23 chưa trả revocation policy state."
+  Assert-True ($null -ne $opsRuntime.remediation_backlog.sla_hours.P1) "Remediation SLA v3.22 chưa có P1."
+  Assert-True ($null -ne $opsRuntime.remediation_backlog.sla_hours.P4) "Remediation SLA v3.22 chưa có P4."
+  Assert-True ($null -ne $opsRuntime.remediation_backlog.sla_breached_actions) "Remediation SLA v3.22 chưa trả breach counter."
+  Assert-True ($opsRuntime.remediation_backlog.on_call_escalation_ready -eq $true) "Remediation v3.22 chưa sẵn sàng on-call escalation."
+  Assert-True ($opsRuntime.remediation_backlog.acknowledgement_fingerprint_scoped -eq $true) "Remediation v3.22 chưa bật fingerprint-scoped acknowledgement."
+  Assert-True ($opsRuntime.remediation_backlog.on_call_escalation.retry_base_minutes -ge 5) "Remediation v3.22 chưa trả retry backoff config."
+  Assert-True ($null -ne $opsRuntime.remediation_backlog.on_call_escalation.escalation_levels.level_3_hours) "Remediation v3.22 chưa trả L1/L2/L3 escalation policy."
+  Assert-True ($opsRuntime.database_recovery.pitr_target_time_supported -eq $true) "Recovery runtime chưa công bố target-time PITR rehearsal v3.29.0."
+  Assert-True ($opsRuntime.incident_postmortem.approval_required -eq $true) "Postmortem approval workflow chưa sẵn sàng."
+  Assert-True ($opsRuntime.service_runbooks.https_only -eq $true) "Service runbook mapping phải giới hạn HTTPS."
+  Assert-True ($opsRuntime.probe_desired_state.signing.private_key_exposed -eq $false) "Ops runtime không được lộ desired-state private key."
+  Assert-True ($opsRuntime.probe_desired_state.signing.algorithm -eq "ED25519") "Desired-state signing phải advertise Ed25519."
+  Assert-True ($null -ne $opsRuntime.database_recovery.rpo_target_minutes) "Recovery readiness chưa trả RPO target v3.29.0."
+  Assert-True ($null -ne $opsRuntime.database_recovery.rto_target_minutes) "Recovery readiness chưa trả RTO target v3.29.0."
+  Assert-True ($opsRuntime.database_recovery.pitr_restore_exercised -eq $false) "Safe runtime không được overclaim target-time PITR restore."
+  Assert-True ($opsRuntime.incident_postmortem.timeline_snapshot -eq $true) "Postmortem runtime chưa công bố timeline snapshot v3.29.0."
+  $desiredState = Invoke-RestMethod -Uri "$base/quan-tri/he-thong/ops/probe-desired-state" -Method Get -WebSession $adminSession -TimeoutSec 20
+  Assert-True ($desiredState.remote_code_execution -eq $false) "Desired-state endpoint không được phép remote code execution."
+  Assert-True ($opsRuntime.on_call_v3160.calendar_import_export -eq $true) "On-call ICS import/export kế thừa contract v3.16 chưa sẵn sàng trong runtime v3.29.0."
+  Assert-True ($opsRuntime.on_call_v3160.handoff_report -eq $true) "On-call handoff kế thừa contract v3.16 chưa sẵn sàng trong runtime v3.29.0."
+  Assert-True ($null -ne $opsRuntime.dlq_keyring.key_ids) "Ops runtime chưa trả DLQ keyring."
+  Assert-True ($null -ne $opsRuntime.replay_jobs.cho_xu_ly) "Ops runtime chưa trả replay job counters."
+  Assert-True ($null -ne $opsRuntime.on_call.current) "Ops runtime chưa trả current on-call roster."
+  Assert-True ($opsRuntime.archive.verify_before_prune -eq $true) "Ops archive phải verify-before-prune."
+  Assert-True ($null -ne $opsOnCall.schedules) "Ops on-call schedule endpoint chưa phản hồi."
+  Assert-True ($null -ne $opsOnCall.policies) "Ops escalation policy endpoint chưa phản hồi."
+  Assert-True ($opsOnCall.calendar_format -eq "ICS") "Ops on-call chưa công bố ICS calendar v3.29.0."
+  Assert-True ($opsOnCallCalendar.ten_file -like "*.ics") "On-call calendar export không trả file ICS."
+  Assert-True (-not [string]::IsNullOrWhiteSpace([string]$opsOnCallCalendar.base64)) "On-call calendar export không có nội dung."
+  Assert-True ($null -ne $opsOnCallHandoff.current) "On-call handoff report chưa phản hồi."
+  Assert-True ($archiveBatches.portable_bundle -eq "JSONL+GZIP") "Archive batch endpoint chưa công bố portable bundle."
+  Assert-True ($dlqKeyring.secret_values_exposed -eq $false) "DLQ keyring không được lộ secret raw."
+  Assert-True ($null -ne $replayJobs.du_lieu) "Webhook async replay jobs chưa phản hồi."
+  Assert-True ($archivePreview.bang_nguon -eq "slo_endpoint_mau") "Archive preview sai source."
+  Assert-True ($null -ne $archivePreview.sha256) "Archive preview chưa trả verify hash."
+  Assert-True ($sla.so_ngay -eq 30) "SLA 30 ngày không phản hồi đúng cửa sổ."
+  Assert-True ($null -ne $sla.ngan_sach_loi.sla) "SLA chưa trả error budget."
+  Assert-True ($null -ne $sla.burn_rate.sla.mot_gio) "SLA chưa trả burn-rate 1h."
+  Assert-True ($null -ne $sla.burn_rate.sla.sau_gio) "SLA chưa trả burn-rate 6h."
+  Assert-True ($null -ne $sla.burn_rate.sla.hai_muoi_bon_gio) "SLA chưa trả burn-rate 24h."
+  Assert-True (@($sla.burn_rate_policy).Count -ge 1) "SLA chưa trả multi-window burn-rate policy."
+  Assert-True ($null -ne $sla.ngan_sach_dich_vu.postgresql) "SLA chưa trả error budget theo dịch vụ."
+  Assert-True ($null -ne $sla.incident_metrics.tong_incident) "SLA chưa trả MTTA/MTTR incident metrics."
+  Assert-True ($null -ne $sla.endpoint_slo.time_weighted) "SLA chưa trả endpoint SLO time-weighted."
+  Assert-True ($sla.endpoint_slo.maintenance_aware -eq $true) "Endpoint SLO chua bat maintenance-aware v3.29.0."
+  Assert-True ($null -ne $sla.maintenance_policy_applied) "SLA chua tra maintenance policy applied."
+  Assert-True (@($sla.endpoint_slo.endpoints).Count -ge 1) "SLA chưa trả availability endpoint."
+  $endpointSla0 = @($sla.endpoint_slo.endpoints)[0]
+  Assert-True ($null -ne $endpointSla0.latency) "Endpoint SLO chua tra latency SLI."
+  Assert-True ($null -ne $endpointSla0.latency.histogram) "Endpoint SLO chua tra latency histogram."
+  Assert-True ($null -ne $endpointSla0.latency.apdex) "Endpoint SLO chưa trả Apdex v3.29.0."
+  Assert-True ($null -ne $endpointSla0.persistent_samples) "Endpoint SLO chưa trả persistent sample count v3.29.0."
+  Assert-True ($null -ne $endpointSla0.probe_agents) "Endpoint SLO chưa trả probe agents v3.29.0."
+  Assert-True ($null -ne $endpointSla0.by_region) "Endpoint SLO chưa trả breakdown theo region v3.29.0."
+  Assert-True ($null -ne $endpointSla0.by_node) "Endpoint SLO chưa trả breakdown theo node v3.29.0."
+  Assert-True (@($sla.burn_rate_series).Count -ge 1) "SLA chưa trả burn-rate timeline."
+  Assert-True ($null -ne $sla.comparison.chin_muoi_ngay) "SLA chưa trả comparison 90 ngày."
+  Assert-True ($null -ne $sla.maintenance_annotations) "SLA chưa trả maintenance annotation."
+  Assert-True ($null -ne $webhookDelivery.du_lieu) "Webhook delivery log chưa phản hồi."
+  Assert-True ($null -ne $webhookDeadLetter.du_lieu) "Webhook dead-letter chưa phản hồi."
+  Assert-True ($opsExcel.ten_file -like "*.xlsx") "Ops aggregate Excel không trả XLSX."
+  Assert-True ($sloConfig.sla_muc_tieu_percent -ge 90) "Cấu hình SLO không hợp lệ."
+  Assert-True ($null -ne $incidents.du_lieu) "Endpoint incident không trả danh sách."
+  Assert-True ($incidents.nguon -eq "BANG_TONG_HOP") "Incident chưa đọc từ bảng tổng hợp v3.29.0."
+  Assert-True ($incidentExcel.ten_file -like "*.xlsx") "Incident Excel không trả tên file XLSX."
+  Assert-True (-not [string]::IsNullOrWhiteSpace([string]$incidentExcel.base64)) "Incident Excel không có base64."
+  if (@($incidents.du_lieu).Count -gt 0) {
+    $incident0 = @($incidents.du_lieu)[0]
+    $timelineExcel = Invoke-RestMethod -Uri "$base/quan-tri/he-thong/su-co/$($incident0.chu_ky)/excel" -Method Get -WebSession $adminSession -TimeoutSec 30
+    Assert-True ($timelineExcel.ten_file -like "*.xlsx") "Timeline incident không trả XLSX."
+    $timelineCursor = Invoke-RestMethod -Uri "$base/quan-tri/he-thong/su-co/$($incident0.chu_ky)/timeline?q=E2E&kich_thuoc=10" -Method Get -WebSession $adminSession -TimeoutSec 20
+    Assert-True ($null -ne $timelineCursor.cursor) "Incident timeline cursor/full-text chưa phản hồi."
+  }
+  Assert-True ($health.database.migration_gan_nhat.ten -eq "202609080001_v329_returns_partial_refund_margin") "Migration mới nhất phải là 202609080001_v329_returns_partial_refund_margin."
+  Assert-True ($null -ne $opsCursor.cursor) "Cursor lịch sử vận hành không hợp lệ."
+  Assert-True ($null -ne $auditCursor.cursor) "Cursor audit không hợp lệ."
+
+  # CI seed một incident tổng hợp riêng cho browser E2E. Chỉ chạy trong CI hoặc khi chủ động bật E2E_SEED_INCIDENT=true,
+  # không chạm incident thật của máy local. Docker CI sẽ down -v sau browser E2E nên dữ liệu này tự biến mất.
+  $seedIncident = ([Environment]::GetEnvironmentVariable("CI") -eq "true") -or ([Environment]::GetEnvironmentVariable("E2E_SEED_INCIDENT") -eq "true")
+  if ($seedIncident) {
+    $sig = "fdde222e3bc7582312ed975e75f8e8fde98f263fd36a42183ad5f77be11e6f21"
+    $dbName = Get-ProjectEnv "POSTGRES_DB"; if (-not $dbName) { $dbName = "nhienin3d" }
+    $dbUser = Get-ProjectEnv "POSTGRES_USER"; if (-not $dbUser) { $dbUser = "nhienin3d_app" }
+    # Không dùng here-string ở đây: Windows PowerShell 5.1 + UTF-8 source từng gây parser cascade
+    # khiến SQL bị đọc như biểu thức PowerShell. Ghép từng dòng ASCII-safe rồi pipe thẳng vào psql.
+    $sql = @(
+      "INSERT INTO su_co_van_hanh (chu_ky,trang_thai_xu_ly,van_de,bat_dau,gan_nhat,so_su_kien,so_health,so_alert,trang_thai_gan_nhat,ngay_tao,ngay_cap_nhat)",
+      "VALUES ('$sig','MOI','[`"E2E browser v3.29.0 synthetic incident`"]'::jsonb,now(),now(),1,1,0,'CANH_BAO',now(),now())",
+      "ON CONFLICT (chu_ky) DO UPDATE SET trang_thai_xu_ly='MOI', van_de=EXCLUDED.van_de, gan_nhat=now(), trang_thai_gan_nhat='CANH_BAO', ghi_chu=NULL, nguoi_tiep_nhan_id=NULL, nguoi_tiep_nhan_ten=NULL, tiep_nhan_luc=NULL, nguoi_khac_phuc_id=NULL, nguoi_khac_phuc_ten=NULL, khac_phuc_luc=NULL, ngay_cap_nhat=now();",
+      "INSERT INTO lich_su_van_hanh (loai,trang_thai,mo_ta,chi_tiet,chu_ky_canh_bao,ngay_ket_thuc,ngay_tao)",
+      "VALUES ('HEALTH','CANH_BAO','E2E browser v3.29.0 synthetic incident','{`"van_de`":[`"E2E browser v3.29.0 synthetic incident`"]}'::jsonb,'$sig',now(),now());"
+    ) -join "`n"
+    $sql | docker compose exec -T postgres psql -v ON_ERROR_STOP=1 -U $dbUser -d $dbName | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "Không seed được incident E2E v3.29.0 cho browser CI." }
+    Write-Host "Synthetic incident : PASS ($sig)"
+  }
+
+  Write-Host "Service dependency / blast radius : PASS"
+  Write-Host "Probe enrollment metadata safe     : PASS"
+  Write-Host "Health-gated canary : PASS"
+  Write-Host "PITR target-time support: PASS"
+  Write-Host "Postmortem approval : PASS"
+  Write-Host "Demand-aware replenishment       : PASS" -ForegroundColor Green
+  Write-Host "Refund reconciliation queue      : PASS" -ForegroundColor Green
+  Write-Host "RMA / partial refund ledger      : PASS" -ForegroundColor Green
+  Write-Host "Gross margin / sale-time COGS    : PASS" -ForegroundColor Green
+  Write-Host "Shift overlap guard/scan         : PASS" -ForegroundColor Green
+  Write-Host "Runtime E2E v3.29.0 PASS ✅" -ForegroundColor Green
+  Write-Host "Admin login       : PASS"
+  Write-Host "Orders / products : PASS ($($orders.Count) đơn / $($products.Count) sản phẩm)"
+  Write-Host "Stock import      : PASS (preview, không ghi tồn)"
+  Write-Host "Inventory report  : PASS ($($report.ten_file))"
+  Write-Host "Receipts          : PASS ($($receipts.Count) phiếu)"
+  Write-Host "Ops config / SLO  : PASS"
+  Write-Host "Maintenance xN    : PASS"
+  Write-Host "Burn policy/MTTR  : PASS"
+  Write-Host "Service budgets   : PASS"
+  Write-Host "Endpoint SLO      : PASS (distributed region/node + Apdex)"
+  Write-Host "Managed probe fleet: PASS (key coverage + ONLINE/STALE/OFFLINE)"
+  Write-Host "Burn timeline     : PASS (7/30/90 + maintenance)"
+  Write-Host "Webhook delivery  : PASS"
+  Write-Host "Webhook DLQ       : PASS (keyring + retry budget + replay jobs)"
+  Write-Host "Ops metrics cache : PASS"
+  Write-Host "Ops RBAC/on-call  : PASS (schedule + escalation routing)"
+  Write-Host "Telemetry archive : PASS (preview + verify-before-prune contract)"
+  Write-Host "Incident timeline : PASS (cursor + GIN full-text)"
+  Write-Host "Ops aggregate XLSX: PASS"
+  Write-Host "Incident Excel    : PASS"
+  Write-Host "Incident rollup   : PASS"
+  Write-Host "Cursor pagination : PASS"
+} finally {
+  Pop-Location
+}

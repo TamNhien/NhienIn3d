@@ -39,13 +39,23 @@ export type AdminDonHang = {
   khach_hang?: { id: string; thu_dien_tu: string; ho_ten: string } | null; so_mat_hang: number; tong_so_luong: number; thanh_toan?: AdminThanhToanTomTat | null;
 };
 export type KetQuaDoiSoatDoanhThuDonDaGiao = { so_don_quet: number; so_don_cap_nhat: number; tong_doanh_thu_bo_sung: number; don_hang: Array<{ ma_don_hang: string; so_tien: number; phuong_thuc: string }> };
+export type YeuCauDoiTraAdmin = {
+  id: string; ma_yeu_cau: string; don_hang_id: string; trang_thai: "CHO_DUYET" | "DA_DUYET" | "DA_NHAN_HANG" | "HOAN_TAT" | "HUY" | string; ly_do: string; ghi_chu?: string | null; tong_tien_hoan_duyet: number; tong_tien_da_hoan: number; tong_tien_con_lai: number; ngay_tao: string; ngay_cap_nhat: string; ngay_duyet?: string | null; ngay_nhan_hang?: string | null; ngay_hoan_tat?: string | null;
+  don_hang?: { id: string; ma_don_hang: string; ho_ten_nguoi_nhan: string; tong_tien: number | string; trang_thai: string };
+  chi_tiet: Array<{ id: string; chi_tiet_don_hang_id: string; bien_the_id?: string | null; ma_bien_the?: string | null; so_luong_y_cau: number; so_luong_nhan: number; xu_ly: "HOAN_TIEN" | "DOI_HANG" | string; nhap_lai_ton: boolean; so_tien_hoan_duyet: number; ly_do?: string | null; chi_tiet_don_hang: { id?: string; ten_san_pham: string; ma_san_pham: string; so_luong?: number; don_gia: number; thanh_tien: number; gia_von_snapshot?: number | null; tuy_chon?: Record<string, unknown> } }>;
+  hoan_tien: Array<{ id: string; so_tien: number; ghi_chu?: string | null; ngay_tao: string }>;
+};
+export type DanhSachDoiTraAdmin = { phien_ban: string; items: YeuCauDoiTraAdmin[]; partial_refund_ledger: boolean; auto_gateway_refund: boolean };
+
 export type AdminDonHangChiTiet = Omit<AdminDonHang, "thanh_toan"> & {
   dia_chi_giao_hang: string; ghi_chu?: string | null;
-  chi_tiet: Array<{ id: string; ten_san_pham: string; ma_san_pham: string; so_luong: number; don_gia: number; thanh_tien: number; tuy_chon: Record<string, unknown> }>;
+  chi_tiet: Array<{ id: string; ten_san_pham: string; ma_san_pham: string; so_luong: number; don_gia: number; thanh_tien: number; gia_von_snapshot?: number | null; tuy_chon: Record<string, unknown> }>;
   thanh_toan: AdminThanhToanChiTiet[];
   lich_su: Array<{ id: string; trang_thai_cu?: string | null; trang_thai_moi: string; ghi_chu?: string | null; ngay_tao: string; nguoi_thuc_hien?: { ho_ten: string; thu_dien_tu: string; vai_tro: string } | null }>;
   cap_nhat_doanh_thu?: { da_ghi_nhan_moi: boolean; da_co_tu_truoc: boolean; so_tien: number; ngay_ghi_nhan?: string | null; nguon?: "CHOT_KHI_GIAO" | "DA_THANH_TOAN_TRUOC" | "LEGACY_KHONG_GIAO_DICH" | "KHONG_PHAT_SINH" | string };
-  hoan_tien?: { can_xu_ly: boolean; da_hoan_tien: boolean; so_giao_dich_can_hoan: number; so_giao_dich_da_hoan: number; so_tien_can_hoan: number; so_tien_da_hoan: number; gateway_auto_refund: boolean; manual_confirmation_required: boolean };
+  hoan_tien?: { can_xu_ly: boolean; da_hoan_tien: boolean; so_giao_dich_can_hoan: number; so_giao_dich_da_hoan: number; so_tien_can_hoan: number; so_tien_da_hoan: number; so_tien_hoan_mot_phan?: number; gateway_auto_refund: boolean; manual_confirmation_required: boolean };
+  doi_tra?: YeuCauDoiTraAdmin[];
+  hoan_tien_chi_tiet?: Array<{ id: string; so_tien: number; ghi_chu?: string | null; ngay_tao: string }>;
   xac_nhan_hoan_tien?: { da_cap_nhat_moi: boolean; da_hoan_tien_tu_truoc: boolean; so_giao_dich: number; so_tien: number };
 };
 export type HoanTienCanXuLyAdmin = {
@@ -156,6 +166,8 @@ export type AdminSucKhoeHeThong = {
   canh_bao_he_thong: { bat: boolean; chu_ky_phut: number; backup_qua_han_gio: number; im_lang_phut: number; leo_thang_phut: number; nguon_cau_hinh?: string };
 };
 
+export type LoiNhuanKyAdmin = { doanh_thu_gop: number; hoan_tien: number; doanh_thu_thuan: number; gia_von: number; loi_nhuan_gop: number; bien_loi_nhuan_percent: number | null; dong_thieu_gia_von: number };
+
 export type AdminTongQuan = {
   nguoi_dung: number;
   khach_hang: number;
@@ -166,6 +178,7 @@ export type AdminTongQuan = {
   san_pham: number;
   ky_bao_cao: { hom_nay: string; tu_7_ngay: string; tu_30_ngay: string };
   doanh_thu: { hom_nay: number; bay_ngay: number; ba_muoi_ngay: number; gia_tri_don_trung_binh_30_ngay: number };
+  loi_nhuan?: { phien_ban: string; co_so_gia_von: string; hom_nay: LoiNhuanKyAdmin; bay_ngay: LoiNhuanKyAdmin; ba_muoi_ngay: LoiNhuanKyAdmin };
   don_hang_theo_ky: { hom_nay: number; bay_ngay: number; ba_muoi_ngay: number };
   don_ghi_nhan_doanh_thu_theo_ky: { hom_nay: number; bay_ngay: number; ba_muoi_ngay: number };
   don_da_giao_theo_ky: { hom_nay: number; bay_ngay: number; ba_muoi_ngay: number };
@@ -280,6 +293,13 @@ export const capNhatTrangThaiDonHangAdmin = (id: string, payload: { trang_thai: 
 export const layHoanTienCanXuLyAdmin = () => goi<HoanTienCanXuLyAdmin>("/quan-tri/don-hang/hoan-tien-can-xu-ly");
 export const xuatHoanTienCanXuLyExcelAdmin = () => goi<{ ten_file: string; mime_type: string; base64: string; tong_don_can_hoan: number; tong_qua_han: number; tong_tien_can_hoan: number; refund_sla_hours: number }>("/quan-tri/don-hang/hoan-tien-can-xu-ly/excel");
 export const xacNhanHoanTienDonHangAdmin = (id: string, ghi_chu?: string) => goi<AdminDonHangChiTiet>(`/quan-tri/don-hang/${id}/xac-nhan-hoan-tien`, { method: "POST", body: JSON.stringify({ ghi_chu }) });
+export const layDoiTraAdmin = (don_hang_id = "") => goi<DanhSachDoiTraAdmin>(`/quan-tri/doi-tra${don_hang_id ? `?don_hang_id=${encodeURIComponent(don_hang_id)}` : ""}`);
+export const taoDoiTraAdmin = (don_hang_id: string, payload: { ly_do: string; ghi_chu?: string; dong: Array<{ chi_tiet_don_hang_id: string; so_luong: number; xu_ly: "HOAN_TIEN" | "DOI_HANG"; nhap_lai_ton?: boolean; so_tien_hoan_duyet?: number; ly_do?: string }> }) => goi<YeuCauDoiTraAdmin>(`/quan-tri/don-hang/${don_hang_id}/doi-tra`, { method: "POST", body: JSON.stringify(payload) });
+export const capNhatTrangThaiDoiTraAdmin = (id: string, trang_thai: "DA_DUYET" | "HUY" | "HOAN_TAT", ghi_chu?: string) => goi<YeuCauDoiTraAdmin>(`/quan-tri/doi-tra/${id}/trang-thai`, { method: "POST", body: JSON.stringify({ trang_thai, ghi_chu }) });
+export const nhanHangDoiTraAdmin = (id: string, dong: Array<{ chi_tiet_doi_tra_id: string; so_luong_nhan: number }>, ghi_chu?: string) => goi<YeuCauDoiTraAdmin>(`/quan-tri/doi-tra/${id}/nhan-hang`, { method: "POST", body: JSON.stringify({ dong, ghi_chu }) });
+export const xacNhanHoanTienMotPhanAdmin = (id: string, so_tien: number, ghi_chu?: string) => goi<YeuCauDoiTraAdmin>(`/quan-tri/doi-tra/${id}/hoan-tien`, { method: "POST", body: JSON.stringify({ so_tien, ghi_chu }) });
+export const xuatDoiTraExcelAdmin = () => goi<{ ten_file: string; mime_type: string; base64: string; tong_yeu_cau: number }>("/quan-tri/doi-tra/excel");
+export const xuatLoiNhuanExcelAdmin = () => goi<{ ten_file: string; mime_type: string; base64: string }>("/quan-tri/bao-cao/loi-nhuan/excel");
 export const doiSoatDoanhThuDonDaGiaoAdmin = () => goi<KetQuaDoiSoatDoanhThuDonDaGiao>("/quan-tri/don-hang/doi-soat-doanh-thu", { method: "POST" });
 export const layDanhMucAdmin = () => goi<AdminDanhMuc[]>("/quan-tri/danh-muc");
 export const laySanPhamAdmin = () => goi<AdminSanPham[]>("/quan-tri/san-pham");

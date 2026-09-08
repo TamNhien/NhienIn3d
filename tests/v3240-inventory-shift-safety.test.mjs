@@ -14,18 +14,18 @@ test("v3.26.0 nang cap ke hoach nhap kho va chan phan ca chong gio", () => {
   const css = read("apps/web/app/globals.css");
   const readme = read("README.md");
 
-  assert.equal(read("VERSION").trim(), "3.28.0");
-  assert.equal(pkg.version, "3.28.0");
-  assert.equal(apiPkg.version, "3.28.0");
-  assert.equal(webPkg.version, "3.28.0");
-  assert.equal(pkg.scripts.verify, "npm run verify:v328");
-  assert.equal(pkg.scripts["verify:full"], "npm run verify:full:v328");
-  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3280.mjs");
+  assert.equal(read("VERSION").trim(), "3.29.0");
+  assert.equal(pkg.version, "3.29.0");
+  assert.equal(apiPkg.version, "3.29.0");
+  assert.equal(webPkg.version, "3.29.0");
+  assert.equal(pkg.scripts.verify, "npm run verify:v329");
+  assert.equal(pkg.scripts["verify:full"], "npm run verify:full:v329");
+  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3290.mjs");
 
   assert.match(controller, /phan-ca\/xung-dot/);
   assert.match(controller, /kho\/goi-y-nhap/);
   assert.match(controller, /kho\/goi-y-nhap\/excel/);
-  assert.match(controller, /trang_thai_ops_v3280/);
+  assert.match(controller, /trang_thai_ops_v3290/);
 
   assert.match(service, /ca_chong_gio_v3240/);
   assert.match(service, /tim_xung_dot_phan_ca_v3240/);

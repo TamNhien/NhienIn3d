@@ -1,6 +1,6 @@
 # NhienIn3d
 
-> Phiên bản hiện tại: **v3.26.0** — 07/09/2026
+> Phiên bản hiện tại: **v3.29.0** — 08/09/2026
 - **v3.18.0 · recovery governance**: thêm target-time PITR rehearsal opt-in trên restore cluster cô lập, health-gated probe canary có grace window + auto rollback, postmortem approval/action reminder và HTTPS service-runbook mapping.
 - **Ops UI compact**: badge `COMPLETE · DRAFT` được thu nhỏ, canh giữa cả ngang/dọc; approval status dùng cùng visual compact để không chiếm chiều cao panel.
 - **Security hotfix mysql2**: nâng root pin/override từ `mysql2@3.22.0` lên `mysql2@3.23.4`; security scanner yêu cầu `>=3.23.1` để vá GHSA-rgwj-5xj2-c3m3 (decompression-bomb DoS), giữ Prisma `7.10.0` và tuyệt đối không dùng `npm audit fix --force`.
@@ -1687,16 +1687,6 @@ SYSTEM_REFUND_RECONCILIATION_SLA_HOURS=24
 
 Không khai báo thì hệ thống dùng mặc định 24 giờ. Docker Compose đã truyền biến này vào API với fallback `24`.
 
-## v3.28.0 — Purchase Order, reorder point và phiên kiểm kê có duyệt
-
-- Thêm Purchase Order (PO) theo nhà cung cấp với luồng `NHAP -> DA_DUYET -> DA_DAT -> NHAP_MOT_PHAN -> HOAN_TAT`, hỗ trợ hủy khi còn mở.
-- Kế hoạch nhập kho dùng lead time nhà cung cấp, safety stock và reorder point trên nền forecast 30 ngày; hệ thống chỉ đề xuất và tạo PO nháp khi Admin yêu cầu.
-- Phiếu nhập có thể liên kết PO, đối chiếu số đã đặt/đã nhận và chặn nhập vượt PO nếu chưa bật override có audit.
-- Kiểm kê kho có phiên `NHAP -> CHO_DUYET -> DA_AP_DUNG`, vẫn giữ preview, optimistic lock, transaction nguyên tử và CSV/XLSX của v3.27.
-- Thêm migration số 24 `202609070001_v328_purchase_order_inventory_count`; giữ toàn bộ migration lịch sử.
-- Runtime/Browser E2E v3.28 khóa các contract PO, reorder point, phiên kiểm kê, recovery/rollout và không lộ secret.
-
-
 ## v3.27.0 — 07/09/2026
 
 - **Kiểm kê kho hàng loạt bằng CSV/Excel:** Admin có thể tải file tối đa 200 dòng với `ma_bien_the`, `ton_thuc_te`, `ly_do`; backend đọc trực tiếp CSV/XLSX, chuẩn hóa mã biến thể, chặn dòng trùng, mã không tồn tại và tồn thực tế ngoài 0–1.000.000.
@@ -1707,3 +1697,26 @@ Không khai báo thì hệ thống dùng mặc định 24 giờ. Docker Compose 
 - Ops runtime công bố `inventory_cycle_count_file_import`, giới hạn 200 dòng, variance Excel và atomic apply. Không thêm migration; tổng migration vẫn **23**.
 - **Browser E2E hotfix:** scope các assertion `Tải CSV mẫu` / `Chọn CSV / Excel` vào card `.cine-cycle-count-v326` vì tab Kho có hai luồng CSV riêng (kiểm kê và nhập kho theo lô); tránh Playwright strict-mode match 2 control cùng tên trong CI.
 - Current scripts/CI/Health/OpenAPI chuyển sang v3.27.0; giữ toàn bộ script v3.26 làm historical regression.
+
+
+## v3.28.0 — Purchase Order, reorder point và phiên kiểm kê có duyệt
+
+- Thêm Purchase Order (PO) theo nhà cung cấp với luồng `NHAP -> DA_DUYET -> DA_DAT -> NHAP_MOT_PHAN -> HOAN_TAT`, hỗ trợ hủy khi còn mở.
+- Kế hoạch nhập kho dùng lead time nhà cung cấp, safety stock và reorder point trên nền forecast 30 ngày; hệ thống chỉ đề xuất và tạo PO nháp khi Admin yêu cầu.
+- Phiếu nhập có thể liên kết PO, đối chiếu số đã đặt/đã nhận và chặn nhập vượt PO nếu chưa bật override có audit.
+- Kiểm kê kho có phiên `NHAP -> CHO_DUYET -> DA_AP_DUNG`, vẫn giữ preview, optimistic lock, transaction nguyên tử và CSV/XLSX của v3.27.
+- Thêm migration số 24 `202609070001_v328_purchase_order_inventory_count`; giữ toàn bộ migration lịch sử.
+- Runtime/Browser E2E v3.28 khóa các contract PO, reorder point, phiên kiểm kê, recovery/rollout và không lộ secret.
+- **Hotfix layout Nhập kho theo lô:** tách hẳn thành hai hàng độc lập để `Mã lô / PO liên kết / Nhà cung cấp` luôn thẳng hàng; hàng dưới dùng `Ghi chú phiếu` 2/3 chiều ngang và `Tùy chọn PO` 1/3, không còn checkbox chồng lên select nhà cung cấp.
+- **Hotfix Xem trước kiểm kê:** nút `Xem trước` hiển thị trạng thái đang kiểm tra, kết quả hoặc lỗi ngay bên trong card kiểm kê bằng vùng `aria-live`; Browser E2E thực sự chọn một biến thể và gọi preview để khóa regression.
+
+
+## v3.29.0 — 08/09/2026
+
+- **Đổi / trả hàng (RMA):** Admin có luồng `CHO_DUYET -> DA_DUYET -> DA_NHAN_HANG -> HOAN_TAT/HUY` cho đơn đã hoàn tất; mỗi dòng chọn `HOAN_TIEN` hoặc `DOI_HANG`, kiểm soát số lượng không vượt phần còn có thể trả và lưu audit đầy đủ.
+- **Hoàn tiền một phần:** bổ sung sổ cái `HoanTienDonHang` để ghi nhận từng lần hoàn tiền thực tế. Hệ thống không tự gọi payment gateway; Admin chỉ ghi nhận sau khi hoàn tiền bên ngoài thành công. Tổng tiền hoàn không được vượt số tiền đã thanh toán.
+- **Nhập lại tồn khi nhận hàng trả:** dòng RMA có thể đánh dấu nhập lại kho; thao tác nhận hàng chạy trong transaction và ghi audit tồn trước/sau. Hàng không đủ điều kiện bán lại có thể để `nhap_lai_ton=false`.
+- **Giá vốn tại thời điểm bán:** `ChiTietDonHang.gia_von_snapshot` được chụp khi checkout để báo cáo lợi nhuận không phụ thuộc việc giá vốn sản phẩm thay đổi về sau. Migration backfill dữ liệu cũ từ giá vốn hiện tại chỉ là ước tính vận hành, không được coi là lịch sử tuyệt đối.
+- **Dashboard lợi nhuận gộp:** thêm doanh thu gộp, hoàn tiền, doanh thu thuần, COGS, lợi nhuận gộp và biên lợi nhuận cho hôm nay / 7 ngày / 30 ngày; có Excel lợi nhuận và Excel RMA. Hàng trả đã nhập lại tồn được trừ khỏi COGS tương ứng.
+- **Database:** thêm migration số **25** `202609080001_v329_returns_partial_refund_margin`; giữ nguyên toàn bộ migration lịch sử.
+- Current scripts/CI/Health/OpenAPI chuyển sang v3.29.0; giữ v3.28 scripts làm historical regression. Không có biến `.env` mới bắt buộc.

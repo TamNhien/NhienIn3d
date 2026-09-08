@@ -173,6 +173,7 @@ model BienTheSanPham {
   chi_tiet_nhap_kho ChiTietPhieuNhapKho[]
   chi_tiet_don_mua ChiTietDonMuaHang[]
   chi_tiet_kiem_ke ChiTietPhienKiemKeKho[]
+  chi_tiet_doi_tra ChiTietDoiTra[]
 
   @@index([san_pham_id])
   @@map("bien_the_san_pham")
@@ -336,6 +337,8 @@ model DonHang {
   chi_tiet         ChiTietDonHang[]
   thanh_toan       ThanhToan[]
   lich_su           LichSuDonHang[]
+  doi_tra           YeuCauDoiTra[]
+  hoan_tien_chi_tiet HoanTienDonHang[]
   ngay_tao         DateTime          @default(now()) @db.Timestamptz(6)
   ngay_cap_nhat    DateTime          @updatedAt @db.Timestamptz(6)
 
@@ -371,11 +374,91 @@ model ChiTietDonHang {
   so_luong        Int
   don_gia         Decimal  @db.Decimal(14, 2)
   thanh_tien      Decimal  @db.Decimal(14, 2)
+  gia_von_snapshot Decimal? @db.Decimal(14, 2)
   tuy_chon        Json     @default("{}") @db.JsonB
   don_hang        DonHang @relation(fields: [don_hang_id], references: [id], onDelete: Cascade)
+  doi_tra         ChiTietDoiTra[]
 
   @@index([don_hang_id])
   @@map("chi_tiet_don_hang")
+}
+
+enum TrangThaiYeuCauDoiTra {
+  CHO_DUYET
+  DA_DUYET
+  DA_NHAN_HANG
+  HOAN_TAT
+  HUY
+}
+
+enum XuLyDoiTra {
+  HOAN_TIEN
+  DOI_HANG
+}
+
+model YeuCauDoiTra {
+  id                  String                @id @default(uuid()) @db.Uuid
+  ma_yeu_cau          String                @unique @db.VarChar(50)
+  don_hang_id         String                @db.Uuid
+  trang_thai          TrangThaiYeuCauDoiTra @default(CHO_DUYET)
+  ly_do               String                @db.VarChar(500)
+  ghi_chu             String?               @db.Text
+  nguoi_tao_id        String?               @db.Uuid
+  nguoi_duyet_id      String?               @db.Uuid
+  ngay_duyet          DateTime?             @db.Timestamptz(6)
+  ngay_nhan_hang      DateTime?             @db.Timestamptz(6)
+  ngay_hoan_tat       DateTime?             @db.Timestamptz(6)
+  tong_tien_hoan_duyet Decimal               @default(0) @db.Decimal(14, 2)
+  ngay_tao            DateTime               @default(now()) @db.Timestamptz(6)
+  ngay_cap_nhat       DateTime               @updatedAt @db.Timestamptz(6)
+  don_hang            DonHang                @relation(fields: [don_hang_id], references: [id], onDelete: Cascade)
+  chi_tiet            ChiTietDoiTra[]
+  hoan_tien           HoanTienDonHang[]
+
+  @@index([don_hang_id, trang_thai])
+  @@index([trang_thai, ngay_tao])
+  @@map("yeu_cau_doi_tra")
+}
+
+model ChiTietDoiTra {
+  id                    String       @id @default(uuid()) @db.Uuid
+  yeu_cau_id            String       @db.Uuid
+  chi_tiet_don_hang_id  String       @db.Uuid
+  bien_the_id           String?      @db.Uuid
+  ma_bien_the           String?      @db.VarChar(80)
+  so_luong_y_cau        Int
+  so_luong_nhan         Int          @default(0)
+  xu_ly                 XuLyDoiTra   @default(HOAN_TIEN)
+  nhap_lai_ton          Boolean      @default(false)
+  so_tien_hoan_duyet    Decimal      @default(0) @db.Decimal(14, 2)
+  ly_do                 String?      @db.VarChar(500)
+  yeu_cau               YeuCauDoiTra @relation(fields: [yeu_cau_id], references: [id], onDelete: Cascade)
+  chi_tiet_don_hang     ChiTietDonHang @relation(fields: [chi_tiet_don_hang_id], references: [id], onDelete: Restrict)
+  bien_the              BienTheSanPham? @relation(fields: [bien_the_id], references: [id], onDelete: SetNull)
+
+  @@unique([yeu_cau_id, chi_tiet_don_hang_id])
+  @@index([chi_tiet_don_hang_id])
+  @@index([bien_the_id])
+  @@map("chi_tiet_doi_tra")
+}
+
+model HoanTienDonHang {
+  id                  String          @id @default(uuid()) @db.Uuid
+  don_hang_id         String          @db.Uuid
+  yeu_cau_doi_tra_id  String?         @db.Uuid
+  thanh_toan_id       String?         @db.Uuid
+  so_tien             Decimal         @db.Decimal(14, 2)
+  ghi_chu             String?         @db.VarChar(500)
+  nguoi_xac_nhan_id   String?         @db.Uuid
+  ngay_tao            DateTime        @default(now()) @db.Timestamptz(6)
+  don_hang            DonHang         @relation(fields: [don_hang_id], references: [id], onDelete: Cascade)
+  yeu_cau_doi_tra     YeuCauDoiTra?   @relation(fields: [yeu_cau_doi_tra_id], references: [id], onDelete: SetNull)
+  thanh_toan          ThanhToan?      @relation(fields: [thanh_toan_id], references: [id], onDelete: SetNull)
+
+  @@index([don_hang_id, ngay_tao])
+  @@index([yeu_cau_doi_tra_id])
+  @@index([thanh_toan_id])
+  @@map("hoan_tien_don_hang")
 }
 
 model PhienDangNhap {
@@ -806,6 +889,7 @@ model ThanhToan {
   ngay_cap_nhat       DateTime              @updatedAt @db.Timestamptz(6)
   don_hang            DonHang               @relation(fields: [don_hang_id], references: [id], onDelete: Cascade)
   phuong_thuc         PhuongThucThanhToan   @relation(fields: [phuong_thuc_id], references: [id], onDelete: Restrict)
+  hoan_tien_chi_tiet  HoanTienDonHang[]
 
   @@index([don_hang_id])
   @@index([phuong_thuc_id])

@@ -8,7 +8,7 @@ test("v3.23.0 Ops UI receipt chain + revoked-key va dark picker", () => {
   const page = read("app/quan-tri/ops/page.tsx");
   const lib = read("lib/quan-tri.ts");
   const css = read("app/globals.css");
-  assert.match(page, /OPS v3\.28\.0/);
+  assert.match(page, /OPS v3\.29\.0/);
   assert.match(page, /receipt hash chain/);
   assert.match(page, /tamper-evident receipt chain/);
   assert.match(page, /receipt_chain_valid/);

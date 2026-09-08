@@ -6,7 +6,7 @@ import { readFile, readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { CoSoDuLieuService } from "../co-so-du-lieu/co-so-du-lieu.service.js";
 import { ThuDienTuService } from "../thu-dien-tu/thu-dien-tu.service.js";
-import { TrangThaiDonHang, TrangThaiGioHang, TrangThaiNhanVien, TrangThaiNguon, TrangThaiPhanCa, TrangThaiSanPham, TrangThaiThanhToan, VaiTro, type Prisma } from "../generated/prisma/client.js";
+import { TrangThaiDonHang, TrangThaiGioHang, TrangThaiNhanVien, TrangThaiNguon, TrangThaiPhanCa, TrangThaiSanPham, TrangThaiThanhToan, TrangThaiYeuCauDoiTra, XuLyDoiTra, VaiTro, type Prisma } from "../generated/prisma/client.js";
 import type { NguoiDungXacThuc } from "../xac-thuc/jwt.guard.js";
 import { CapNhatNguoiDungDto } from "./dto/cap-nhat-nguoi-dung.dto.js";
 import { CapNhatNhanVienDto } from "./dto/cap-nhat-nhan-vien.dto.js";
@@ -236,7 +236,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     setTimeout(cleanupOps, 120_000).unref();
     this.bo_hen_ops_retention = setInterval(cleanupOps, 6 * 60 * 60_000);
     this.bo_hen_ops_retention.unref();
-    this.logger.log(`Ops v3.28.0 schedulers: DLQ ${dlqPolicy.chu_ky_phut}m, metrics ${opsPolicy.refresh_phut}m, retention ${opsPolicy.retention_days}d.`);
+    this.logger.log(`Ops v3.29.0 schedulers: DLQ ${dlqPolicy.chu_ky_phut}m, metrics ${opsPolicy.refresh_phut}m, retention ${opsPolicy.retention_days}d.`);
 
     const healthGate = this.probe_health_gate_config_v3180();
     if (healthGate.enabled) {
@@ -1159,7 +1159,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const trang_thai = !database.ket_noi ? "LOI" : (van_de.length ? "CANH_BAO" : "TOT");
     const ket_qua = {
       trang_thai,
-      phien_ban: "3.28.0",
+      phien_ban: "3.29.0",
       thoi_gian: new Date().toISOString(),
       api: { uptime_giay: Math.floor(process.uptime()), node: process.version, pid: process.pid, rss_bytes: bo_nho.rss, heap_used_bytes: bo_nho.heapUsed, heap_total_bytes: bo_nho.heapTotal },
       database,
@@ -3050,7 +3050,7 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     const canary = (process.env.SYSTEM_SLO_PROBE_DESIRED_CANARY_AGENTS || "").split(",").map(x => x.trim()).filter(x => /^[A-Za-z0-9._-]{2,80}$/.test(x)).slice(0, 50);
     return {
       revision: 0,
-      target_version: (process.env.SYSTEM_SLO_PROBE_DESIRED_TARGET_VERSION || "3.28.0").trim(),
+      target_version: (process.env.SYSTEM_SLO_PROBE_DESIRED_TARGET_VERSION || "3.29.0").trim(),
       interval_seconds: Math.max(30, Math.min(3600, intervalRaw)),
       rollout_percent: Math.max(0, Math.min(100, rolloutRaw)),
       canary_agents: [...new Set(canary)],
@@ -4649,6 +4649,37 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     return { ten_file: `recovery-evidence-audit-bundle-v3.28.0-${new Date().toISOString().slice(0, 10)}.json`, mime_type: "application/json", base64: Buffer.from(raw, "utf8").toString("base64"), manifest: parsed.manifest || {}, integrity: parsed.integrity || {}, signature: parsed.signature || {}, verification, secret_values_exposed: false as const };
   }
 
+  private async recovery_readiness_v3290() {
+    const base = await this.recovery_readiness_v3280();
+    const backupDir = process.env.SYSTEM_BACKUP_DIR?.trim() || join(process.cwd(), "..", "..", "backups");
+    let bundle: Record<string, unknown> | null = null;
+    let source = "recovery-evidence-bundle-v3290.json";
+    try { bundle = JSON.parse(await readFile(join(backupDir, source), "utf8")) as Record<string, unknown>; }
+    catch { source = "recovery-evidence-bundle-v3280.json"; try { bundle = JSON.parse(await readFile(join(backupDir, source), "utf8")) as Record<string, unknown>; } catch {} }
+    const verification = bundle ? this.verify_recovery_evidence_bundle_v3230(bundle) : null;
+    const manifest = bundle?.manifest && typeof bundle.manifest === "object" && !Array.isArray(bundle.manifest) ? bundle.manifest as Record<string, unknown> : {};
+    return { ...base, evidence_bundle_file: `backups/${source}`, evidence_bundle_version: typeof manifest.version === "string" ? manifest.version : base.evidence_bundle_version, evidence_current_version: manifest.version === "3.29.0", evidence_verification: verification || base.evidence_verification, audit_bundle_ready: !!bundle && verification?.overall_verified === true, private_key_exposed: false as const, secret_values_exposed: false as const };
+  }
+
+  async verify_recovery_evidence_v3290() {
+    const backupDir = process.env.SYSTEM_BACKUP_DIR?.trim() || join(process.cwd(), "..", "..", "backups");
+    const path = join(backupDir, "recovery-evidence-bundle-v3290.json");
+    let parsed: Record<string, unknown>;
+    try { parsed = JSON.parse(await readFile(path, "utf8")) as Record<string, unknown>; } catch { throw new NotFoundException("Chưa có recovery evidence bundle v3.29.0; chạy npm run recovery:evidence trước"); }
+    const verification = this.verify_recovery_evidence_bundle_v3230(parsed);
+    return { phien_ban: "3.29.0", file: "backups/recovery-evidence-bundle-v3290.json", ...verification, secret_values_exposed: false as const };
+  }
+
+  async xuat_recovery_evidence_bundle_v3290() {
+    const backupDir = process.env.SYSTEM_BACKUP_DIR?.trim() || join(process.cwd(), "..", "..", "backups");
+    const path = join(backupDir, "recovery-evidence-bundle-v3290.json");
+    let raw: string; let parsed: Record<string, unknown>;
+    try { raw = await readFile(path, "utf8"); parsed = JSON.parse(raw) as Record<string, unknown>; } catch { throw new NotFoundException("Chưa có recovery evidence bundle v3.29.0; chạy npm run recovery:evidence trước"); }
+    const verification = this.verify_recovery_evidence_bundle_v3230(parsed);
+    if (!verification.overall_verified) throw new ConflictException(`Recovery evidence bundle không qua trusted + revocation verification (${verification.reason}); không cho phép export audit bundle`);
+    return { ten_file: `recovery-evidence-audit-bundle-v3.29.0-${new Date().toISOString().slice(0, 10)}.json`, mime_type: "application/json", base64: Buffer.from(raw, "utf8").toString("base64"), manifest: parsed.manifest || {}, integrity: parsed.integrity || {}, signature: parsed.signature || {}, verification, secret_values_exposed: false as const };
+  }
+
   private remediation_sla_config_v3200() {
     const defaults: Record<"P1" | "P2" | "P3" | "P4", number> = { P1: 4, P2: 24, P3: 72, P4: 168 };
     let parsed: Record<string, unknown> = {};
@@ -5015,6 +5046,11 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
   async trang_thai_ops_v3280() {
     const base = await this.trang_thai_ops_v3270();
     return { ...base, phien_ban: "3.28.0", probe_fleet: base.probe_fleet ? { ...(base.probe_fleet as Record<string, unknown>), phien_ban: "3.28.0" } : base.probe_fleet, multi_region_quorum: { ...base.multi_region_quorum, phien_ban: "3.28.0" }, rollout_approval: await this.lay_probe_rollout_proposal_v3280(), database_recovery: await this.recovery_readiness_v3280(), admin_business_safety: { ...base.admin_business_safety, purchase_order_workflow: true, supplier_lead_time_reorder_point: true, inventory_count_sessions: true, purchase_order_receipt_matching: true, database_migration_count: 24 } };
+  }
+
+  async trang_thai_ops_v3290() {
+    const base = await this.trang_thai_ops_v3280();
+    return { ...base, phien_ban: "3.29.0", probe_fleet: base.probe_fleet ? { ...(base.probe_fleet as Record<string, unknown>), phien_ban: "3.29.0" } : base.probe_fleet, multi_region_quorum: { ...base.multi_region_quorum, phien_ban: "3.29.0" }, rollout_approval: await this.lay_probe_rollout_proposal_v3290(), database_recovery: await this.recovery_readiness_v3290(), admin_business_safety: { ...base.admin_business_safety, return_rma_workflow: true, partial_refund_ledger: true, return_stock_atomic_reconciliation: true, gross_margin_dashboard: true, sale_time_cost_snapshot: true, refund_gateway_automation: false, database_migration_count: 25 } };
   }
 
   async trang_thai_ops_v3160() {
@@ -6259,7 +6295,10 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
           thanh_toan: {
             orderBy: [{ ngay_thanh_toan: "desc" }, { ngay_tao: "desc" }],
             select: { so_tien: true, ngay_thanh_toan: true, trang_thai: true, phuong_thuc: { select: { ma_phuong_thuc: true } } }
-          }
+          },
+          chi_tiet: { select: { so_luong: true, gia_von_snapshot: true } },
+          hoan_tien_chi_tiet: { select: { so_tien: true, ngay_tao: true } },
+          doi_tra: { where: { trang_thai: { in: [TrangThaiYeuCauDoiTra.DA_NHAN_HANG, TrangThaiYeuCauDoiTra.HOAN_TAT] } }, select: { chi_tiet: { select: { so_luong_nhan: true, nhap_lai_ton: true, chi_tiet_don_hang: { select: { gia_von_snapshot: true } } } } } }
         }
       }),
       this.db.donHang.groupBy({ by: ["trang_thai"], _count: { _all: true } }),
@@ -6301,21 +6340,41 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
     // - COD: khi Admin chuyển đơn sang HOAN_TAT (đã giao), giao dịch được xác nhận đã thanh toán.
     // - Đơn HOAN_TAT cũ chưa có bản ghi thanh toán hợp lệ vẫn được giữ tương thích theo ngay_cap_nhat.
     const doanhThuDaGhiNhan = don_doanh_thu_30_ngay.map(d => {
-      // Khong lay giao dich moi nhat mot cach mu quang: mot don co the co giao dich
-      // THAT_BAI/CHO_THANH_TOAN moi hon giao dich DA_THANH_TOAN hop le.
-      const tt = d.thanh_toan.find(x => x.trang_thai === TrangThaiThanhToan.DA_THANH_TOAN);
-      const da_thanh_toan = Boolean(tt);
+      // v3.29.0: gross -> partial/full refunds -> net revenue, and COGS from sale-time snapshot.
+      const tt = d.thanh_toan.find(x => x.trang_thai === TrangThaiThanhToan.DA_THANH_TOAN || x.trang_thai === TrangThaiThanhToan.DA_HOAN_TIEN);
       const fallback_legacy = d.thanh_toan.length === 0 && d.trang_thai === TrangThaiDonHang.HOAN_TAT;
       const ngay_ghi_nhan = tt ? (tt.ngay_thanh_toan || d.ngay_cap_nhat) : (fallback_legacy ? d.ngay_cap_nhat : null);
       if (!ngay_ghi_nhan) return null;
-      return { id: d.id, ngay_ghi_nhan, so_tien: tt ? Number(tt.so_tien) : Number(d.tong_tien) };
-    }).filter((x): x is { id: string; ngay_ghi_nhan: Date; so_tien: number } => Boolean(x))
+      const doanh_thu_gop = tt ? Number(tt.so_tien) : Number(d.tong_tien);
+      const hoan_tien_ledger = d.hoan_tien_chi_tiet.reduce((sum, x) => sum + Number(x.so_tien), 0);
+      // Refunds created before v3.29 only changed payment status, so treat that as a full legacy refund
+      // only when there is no granular refund ledger to avoid double subtraction.
+      const hoan_tien_legacy = tt?.trang_thai === TrangThaiThanhToan.DA_HOAN_TIEN && hoan_tien_ledger === 0 ? doanh_thu_gop : 0;
+      const hoan_tien = Math.min(doanh_thu_gop, hoan_tien_ledger + hoan_tien_legacy);
+      const so_tien = Math.max(0, doanh_thu_gop - hoan_tien);
+      const gia_von_gop = d.chi_tiet.reduce((sum, line) => sum + (line.gia_von_snapshot == null ? 0 : Number(line.gia_von_snapshot) * line.so_luong), 0);
+      const gia_von_thieu = d.chi_tiet.filter(line => line.gia_von_snapshot == null).length;
+      const gia_von_nhap_lai = d.doi_tra.reduce((sum, rma) => sum + rma.chi_tiet.reduce((sub, line) => sub + (line.nhap_lai_ton && line.chi_tiet_don_hang.gia_von_snapshot != null ? Number(line.chi_tiet_don_hang.gia_von_snapshot) * line.so_luong_nhan : 0), 0), 0);
+      const gia_von = Math.max(0, gia_von_gop - gia_von_nhap_lai);
+      return { id: d.id, ngay_ghi_nhan, so_tien, doanh_thu_gop, hoan_tien, gia_von, loi_nhuan: so_tien - gia_von, gia_von_thieu };
+    }).filter((x): x is { id: string; ngay_ghi_nhan: Date; so_tien: number; doanh_thu_gop: number; hoan_tien: number; gia_von: number; loi_nhuan: number; gia_von_thieu: number } => Boolean(x))
       .filter(x => x.ngay_ghi_nhan >= bat_dau_30_ngay);
     const trongKhoang = (date: Date, batDau: Date) => date >= batDau;
     const tongTienDoanhThu = (ds: typeof doanhThuDaGhiNhan) => ds.reduce((sum, item) => sum + item.so_tien, 0);
     const doanh_thu_hom_nay = tongTienDoanhThu(doanhThuDaGhiNhan.filter(d => trongKhoang(d.ngay_ghi_nhan, bat_dau_hom_nay)));
     const doanh_thu_7_ngay = tongTienDoanhThu(doanhThuDaGhiNhan.filter(d => trongKhoang(d.ngay_ghi_nhan, bat_dau_7_ngay)));
     const doanh_thu_30_ngay = tongTienDoanhThu(doanhThuDaGhiNhan);
+    const tongTheo = (ds: typeof doanhThuDaGhiNhan, key: "doanh_thu_gop" | "hoan_tien" | "gia_von" | "loi_nhuan") => ds.reduce((sum, item) => sum + item[key], 0);
+    const loiNhuanKy = (batDau: Date) => {
+      const ds = doanhThuDaGhiNhan.filter(d => trongKhoang(d.ngay_ghi_nhan, batDau));
+      const doanh_thu_thuan = tongTienDoanhThu(ds);
+      const gia_von = tongTheo(ds, "gia_von");
+      const loi_nhuan_gop = tongTheo(ds, "loi_nhuan");
+      return { doanh_thu_gop: tongTheo(ds, "doanh_thu_gop"), hoan_tien: tongTheo(ds, "hoan_tien"), doanh_thu_thuan, gia_von, loi_nhuan_gop, bien_loi_nhuan_percent: doanh_thu_thuan > 0 ? Number(((loi_nhuan_gop / doanh_thu_thuan) * 100).toFixed(2)) : null, dong_thieu_gia_von: ds.reduce((sum, x) => sum + x.gia_von_thieu, 0) };
+    };
+    const loi_nhuan_hom_nay = loiNhuanKy(bat_dau_hom_nay);
+    const loi_nhuan_7_ngay = loiNhuanKy(bat_dau_7_ngay);
+    const loi_nhuan_30_ngay = loiNhuanKy(bat_dau_30_ngay);
     // V2.15.3: số đơn đi cùng doanh thu phải đếm theo ngày GHI NHẬN doanh thu,
     // không đếm theo ngày tạo đơn. Một đơn tạo hôm trước nhưng thu tiền hôm nay vẫn là
     // 1 đơn ghi nhận doanh thu hôm nay; nhờ vậy không còn hiển thị "0 đơn" cạnh doanh thu > 0.
@@ -6375,6 +6434,13 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
         bay_ngay: doanh_thu_7_ngay,
         ba_muoi_ngay: doanh_thu_30_ngay,
         gia_tri_don_trung_binh_30_ngay
+      },
+      loi_nhuan: {
+        phien_ban: "3.29.0",
+        co_so_gia_von: "SALE_TIME_COST_SNAPSHOT_WITH_MIGRATION_BACKFILL",
+        hom_nay: loi_nhuan_hom_nay,
+        bay_ngay: loi_nhuan_7_ngay,
+        ba_muoi_ngay: loi_nhuan_30_ngay
       },
       don_hang_theo_ky: { hom_nay: don_hom_nay, bay_ngay: don_7_ngay, ba_muoi_ngay: don_30_ngay_count },
       don_ghi_nhan_doanh_thu_theo_ky: {
@@ -7025,6 +7091,8 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
         nguoi_dung: { select: { id: true, thu_dien_tu: true, ho_ten: true, so_dien_thoai: true } },
         chi_tiet: { orderBy: { id: "asc" } },
         thanh_toan: { include: { phuong_thuc: true }, orderBy: { ngay_tao: "desc" } },
+        doi_tra: { include: { chi_tiet: { include: { chi_tiet_don_hang: { select: { ten_san_pham: true, ma_san_pham: true, don_gia: true, gia_von_snapshot: true } } } }, hoan_tien: true }, orderBy: { ngay_tao: "desc" } },
+        hoan_tien_chi_tiet: { orderBy: { ngay_tao: "desc" } },
         lich_su: { include: { nguoi_thuc_hien: { select: { id: true, ho_ten: true, thu_dien_tu: true, vai_tro: true } } }, orderBy: { ngay_tao: "desc" } }
       }
     });
@@ -7035,15 +7103,24 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
       id: item.id, ma_don_hang: item.ma_don_hang, ho_ten_nguoi_nhan: item.ho_ten_nguoi_nhan, so_dien_thoai: item.so_dien_thoai,
       dia_chi_giao_hang: item.dia_chi_giao_hang, ghi_chu: item.ghi_chu, tong_tien: Number(item.tong_tien), trang_thai: item.trang_thai,
       ngay_tao: item.ngay_tao, ngay_cap_nhat: item.ngay_cap_nhat, khach_hang: item.nguoi_dung, so_mat_hang: item.chi_tiet.length, tong_so_luong: item.chi_tiet.reduce((sum, x) => sum + x.so_luong, 0),
-      chi_tiet: item.chi_tiet.map(ct => ({ ...ct, don_gia: Number(ct.don_gia), thanh_tien: Number(ct.thanh_tien) })),
+      chi_tiet: item.chi_tiet.map(ct => ({ ...ct, don_gia: Number(ct.don_gia), thanh_tien: Number(ct.thanh_tien), gia_von_snapshot: ct.gia_von_snapshot == null ? null : Number(ct.gia_von_snapshot) })),
       thanh_toan: item.thanh_toan.map(tt => ({ ...tt, so_tien: Number(tt.so_tien) })),
+      doi_tra: item.doi_tra.map(rma => ({
+        ...rma,
+        tong_tien_hoan_duyet: Number(rma.tong_tien_hoan_duyet),
+        tong_tien_da_hoan: rma.hoan_tien.reduce((sum, x) => sum + Number(x.so_tien), 0),
+        chi_tiet: rma.chi_tiet.map(line => ({ ...line, so_tien_hoan_duyet: Number(line.so_tien_hoan_duyet), chi_tiet_don_hang: { ...line.chi_tiet_don_hang, don_gia: Number(line.chi_tiet_don_hang.don_gia), gia_von_snapshot: line.chi_tiet_don_hang.gia_von_snapshot == null ? null : Number(line.chi_tiet_don_hang.gia_von_snapshot) } })),
+        hoan_tien: rma.hoan_tien.map(x => ({ ...x, so_tien: Number(x.so_tien) })),
+      })),
+      hoan_tien_chi_tiet: item.hoan_tien_chi_tiet.map(x => ({ ...x, so_tien: Number(x.so_tien) })),
       hoan_tien: {
         can_xu_ly: item.trang_thai === TrangThaiDonHang.DA_HUY && giao_dich_can_hoan.length > 0,
         da_hoan_tien: giao_dich_da_hoan.length > 0 && giao_dich_can_hoan.length === 0,
         so_giao_dich_can_hoan: giao_dich_can_hoan.length,
         so_giao_dich_da_hoan: giao_dich_da_hoan.length,
         so_tien_can_hoan: giao_dich_can_hoan.reduce((sum, tt) => sum + Number(tt.so_tien), 0),
-        so_tien_da_hoan: giao_dich_da_hoan.reduce((sum, tt) => sum + Number(tt.so_tien), 0),
+        so_tien_da_hoan: giao_dich_da_hoan.reduce((sum, tt) => sum + Number(tt.so_tien), 0) + item.hoan_tien_chi_tiet.reduce((sum, x) => sum + Number(x.so_tien), 0),
+        so_tien_hoan_mot_phan: item.hoan_tien_chi_tiet.reduce((sum, x) => sum + Number(x.so_tien), 0),
         gateway_auto_refund: false as const,
         manual_confirmation_required: true as const,
       },
@@ -8083,5 +8160,183 @@ export class QuanTriService implements OnModuleInit, OnModuleDestroy {
   async gui_duyet_phien_kiem_ke_v3280(_actor:NguoiDungXacThuc,id:string){ const cur=await this.db.phienKiemKeKho.findUnique({where:{id}}); if(!cur) throw new NotFoundException("Không tìm thấy phiên kiểm kê"); if(cur.trang_thai!=="NHAP") throw new ConflictException("Chỉ phiên NHAP mới được gửi duyệt"); return this.db.phienKiemKeKho.update({where:{id},data:{trang_thai:"CHO_DUYET",ngay_gui_duyet:new Date()}}); }
   async duyet_ap_dung_phien_kiem_ke_v3280(actor:NguoiDungXacThuc,id:string){ const cur=await this.db.phienKiemKeKho.findUnique({where:{id},include:{chi_tiet:true}}); if(!cur) throw new NotFoundException("Không tìm thấy phiên kiểm kê"); if(cur.trang_thai!=="CHO_DUYET") throw new ConflictException("Phiên kiểm kê chưa ở trạng thái CHO_DUYET"); const dto={dong:cur.chi_tiet.map(x=>({bien_the_id:x.bien_the_id,ton_he_thong:x.ton_snapshot,ton_thuc_te:x.ton_thuc_te,ly_do:x.ly_do||`Phiên kiểm kê ${cur.ma_phien}`}))}; const apply=await this.ap_dung_kiem_ke_kho_v3280(actor,dto); const item=await this.db.phienKiemKeKho.update({where:{id},data:{trang_thai:"DA_AP_DUNG",nguoi_duyet_id:actor.id,ngay_duyet:new Date()}}); await this.db.nhatKyBaoMat.create({data:{loai_su_kien:"ADMIN_DUYET_PHIEN_KIEM_KE",nguoi_dung_id:actor.id,chi_tiet:{phien_kiem_ke_id:id,ma_phien:cur.ma_phien,da_dieu_chinh:apply.da_dieu_chinh}}}); return {...item,ket_qua_ap_dung:apply}; }
   async huy_phien_kiem_ke_v3280(_actor:NguoiDungXacThuc,id:string){ const cur=await this.db.phienKiemKeKho.findUnique({where:{id}}); if(!cur) throw new NotFoundException("Không tìm thấy phiên kiểm kê"); if(cur.trang_thai==="DA_AP_DUNG") throw new ConflictException("Không thể hủy phiên đã áp dụng"); return this.db.phienKiemKeKho.update({where:{id},data:{trang_thai:"HUY"}}); }
+
+
+  async lay_probe_rollout_proposal_v3290() { const base = await this.lay_probe_rollout_proposal_v3280(); return { ...base, phien_ban: "3.29.0" }; }
+  async cap_nhat_probe_desired_state_v3290(actor: NguoiDungXacThuc, dto: { target_version: string; interval_seconds: number; rollout_percent: number; canary_agents: string[]; paused: boolean; note?: string }) { const result = await this.cap_nhat_probe_desired_state_v3280(actor, dto); return { ...result, rollout_approval: await this.lay_probe_rollout_proposal_v3290() }; }
+  async approve_probe_rollout_v3290(actor: NguoiDungXacThuc, proposalIdRaw: string, note?: string) { await this.approve_probe_rollout_v3280(actor, proposalIdRaw, note); return this.lay_probe_rollout_proposal_v3290(); }
+  async reject_probe_rollout_v3290(actor: NguoiDungXacThuc, proposalIdRaw: string, note?: string) { await this.reject_probe_rollout_v3280(actor, proposalIdRaw, note); return this.lay_probe_rollout_proposal_v3290(); }
+  async cancel_probe_rollout_v3290(actor: NguoiDungXacThuc, proposalIdRaw: string, note?: string) { await this.cancel_probe_rollout_v3280(actor, proposalIdRaw, note); return this.lay_probe_rollout_proposal_v3290(); }
+  async danh_sach_xung_dot_phan_ca_v3290(tu_ngay_raw?: string, den_ngay_raw?: string) { const base = await this.danh_sach_xung_dot_phan_ca_v3280(tu_ngay_raw, den_ngay_raw); return { ...base, phien_ban: "3.29.0" }; }
+  async danh_sach_hoan_tien_can_xu_ly_v3290() { const base = await this.danh_sach_hoan_tien_can_xu_ly_v3280(); return { ...base, phien_ban: "3.29.0" }; }
+  async xuat_hoan_tien_can_xu_ly_excel_v3290() { const base = await this.xuat_hoan_tien_can_xu_ly_excel_v3280(); return { ...base, ten_file: base.ten_file.replace("v3.28.0", "v3.29.0") }; }
+  async xac_nhan_hoan_tien_don_hang_v3290(actor: NguoiDungXacThuc, id: string, ghi_chu?: string) { return this.xac_nhan_hoan_tien_don_hang_v3280(actor, id, ghi_chu); }
+  async kiem_tra_tep_kiem_ke_kho_v3290(dto: KiemTraTepNhapKhoDto) { const base = await this.kiem_tra_tep_kiem_ke_kho_v3280(dto); return { ...base, phien_ban: "3.29.0" }; }
+  async kiem_tra_kiem_ke_kho_v3290(dto: { dong: Array<{ bien_the_id: string; ton_he_thong: number; ton_thuc_te: number; ly_do?: string }> }) { const base = await this.kiem_tra_kiem_ke_kho_v3280(dto); return { ...base, phien_ban: "3.29.0" }; }
+  async ap_dung_kiem_ke_kho_v3290(actor: NguoiDungXacThuc, dto: { dong: Array<{ bien_the_id: string; ton_he_thong: number; ton_thuc_te: number; ly_do?: string }> }) { const base = await this.ap_dung_kiem_ke_kho_v3280(actor, dto); return { ...base, phien_ban: "3.29.0" }; }
+  async xuat_kiem_ke_kho_excel_v3290(dto: { dong: Array<{ bien_the_id: string; ton_he_thong: number; ton_thuc_te: number; ly_do?: string }> }) { const base = await this.xuat_kiem_ke_kho_excel_v3280(dto); return { ...base, ten_file: base.ten_file.replace("v3.28.0", "v3.29.0") }; }
+  async goi_y_nhap_kho_v3290() { const base = await this.goi_y_nhap_kho_v3280(); return { ...base, phien_ban: "3.29.0" }; }
+  async xuat_goi_y_nhap_kho_excel_v3290() { const base = await this.xuat_goi_y_nhap_kho_excel_v3280(); return { ...base, ten_file: base.ten_file.replace("v3.28.0", "v3.29.0") }; }
+
+  private chuan_hoa_yeu_cau_doi_tra_v3290(item: any) {
+    const tongDaHoan = (item.hoan_tien || []).reduce((sum: number, x: any) => sum + Number(x.so_tien), 0);
+    return {
+      ...item,
+      tong_tien_hoan_duyet: Number(item.tong_tien_hoan_duyet),
+      tong_tien_da_hoan: tongDaHoan,
+      tong_tien_con_lai: Math.max(0, Number(item.tong_tien_hoan_duyet) - tongDaHoan),
+      chi_tiet: (item.chi_tiet || []).map((line: any) => ({
+        ...line,
+        so_tien_hoan_duyet: Number(line.so_tien_hoan_duyet),
+        chi_tiet_don_hang: line.chi_tiet_don_hang ? { ...line.chi_tiet_don_hang, don_gia: Number(line.chi_tiet_don_hang.don_gia), thanh_tien: Number(line.chi_tiet_don_hang.thanh_tien), gia_von_snapshot: line.chi_tiet_don_hang.gia_von_snapshot == null ? null : Number(line.chi_tiet_don_hang.gia_von_snapshot) } : undefined,
+      })),
+      hoan_tien: (item.hoan_tien || []).map((x: any) => ({ ...x, so_tien: Number(x.so_tien) })),
+    };
+  }
+
+  async danh_sach_doi_tra_v3290(don_hang_id?: string) {
+    const ds = await this.db.yeuCauDoiTra.findMany({
+      where: don_hang_id ? { don_hang_id } : undefined,
+      include: {
+        don_hang: { select: { id: true, ma_don_hang: true, ho_ten_nguoi_nhan: true, tong_tien: true, trang_thai: true } },
+        chi_tiet: { include: { chi_tiet_don_hang: true, bien_the: { select: { id: true, ma_bien_the: true, so_luong_ton: true } } } },
+        hoan_tien: { orderBy: { ngay_tao: "desc" } },
+      },
+      orderBy: { ngay_tao: "desc" },
+      take: 300,
+    });
+    return { phien_ban: "3.29.0", items: ds.map(x => this.chuan_hoa_yeu_cau_doi_tra_v3290(x)), partial_refund_ledger: true as const, auto_gateway_refund: false as const };
+  }
+
+  async tao_yeu_cau_doi_tra_v3290(actor: NguoiDungXacThuc, don_hang_id: string, dto: { ly_do: string; ghi_chu?: string; dong: Array<{ chi_tiet_don_hang_id: string; so_luong: number; xu_ly: "HOAN_TIEN" | "DOI_HANG"; nhap_lai_ton?: boolean; so_tien_hoan_duyet?: number; ly_do?: string }> }) {
+    const don = await this.db.donHang.findUnique({ where: { id: don_hang_id }, include: { chi_tiet: true } });
+    if (!don) throw new NotFoundException("Không tìm thấy đơn hàng");
+    if (don.trang_thai !== TrangThaiDonHang.HOAN_TAT) throw new ConflictException("Chỉ tạo yêu cầu đổi/trả cho đơn đã giao / hoàn tất");
+    const ids = dto.dong.map(x => x.chi_tiet_don_hang_id);
+    if (new Set(ids).size !== ids.length) throw new BadRequestException("Một dòng đơn hàng không được lặp trong cùng yêu cầu đổi/trả");
+    const lineMap = new Map(don.chi_tiet.map(x => [x.id, x]));
+    if (ids.some(id => !lineMap.has(id))) throw new BadRequestException("Có dòng đổi/trả không thuộc đơn hàng này");
+    const daYeuCau = await this.db.chiTietDoiTra.findMany({ where: { chi_tiet_don_hang_id: { in: ids }, yeu_cau: { is: { trang_thai: { not: TrangThaiYeuCauDoiTra.HUY } } } }, select: { chi_tiet_don_hang_id: true, so_luong_y_cau: true } });
+    const used = new Map<string, number>();
+    for (const x of daYeuCau) used.set(x.chi_tiet_don_hang_id, (used.get(x.chi_tiet_don_hang_id) || 0) + x.so_luong_y_cau);
+    const variantCodes = [...new Set(dto.dong.map(x => String((lineMap.get(x.chi_tiet_don_hang_id)?.tuy_chon as any)?.ma_bien_the || "")).filter(Boolean))];
+    const variants = variantCodes.length ? await this.db.bienTheSanPham.findMany({ where: { ma_bien_the: { in: variantCodes } }, select: { id: true, ma_bien_the: true } }) : [];
+    const variantMap = new Map(variants.map(x => [x.ma_bien_the, x]));
+    let tongHoan = 0;
+    const normalized = dto.dong.map(x => {
+      const line = lineMap.get(x.chi_tiet_don_hang_id)!;
+      const conLai = line.so_luong - (used.get(line.id) || 0);
+      if (x.so_luong > conLai) throw new ConflictException(`Dòng ${line.ma_san_pham} chỉ còn ${conLai} sản phẩm có thể đổi/trả`);
+      const maBienThe = String((line.tuy_chon as any)?.ma_bien_the || "") || null;
+      const variant = maBienThe ? variantMap.get(maBienThe) : undefined;
+      if (x.nhap_lai_ton && !variant) throw new BadRequestException(`Không tìm thấy biến thể ${maBienThe || "của dòng hàng"} để nhập lại tồn`);
+      const maxRefund = Number(line.don_gia) * x.so_luong;
+      const approved = x.xu_ly === "HOAN_TIEN" ? (x.so_tien_hoan_duyet == null ? maxRefund : x.so_tien_hoan_duyet) : 0;
+      if (approved > maxRefund) throw new BadRequestException(`Tiền hoàn của ${line.ma_san_pham} không được vượt giá trị dòng trả`);
+      tongHoan += approved;
+      return { line, x, maBienThe, variant, approved };
+    });
+    const ma = `RMA-${new Date().toISOString().replace(/\D/g, "").slice(0, 14)}-${randomUUID().slice(0, 6).toUpperCase()}`;
+    const created = await this.db.yeuCauDoiTra.create({
+      data: {
+        ma_yeu_cau: ma, don_hang_id, ly_do: dto.ly_do.trim(), ghi_chu: dto.ghi_chu?.trim() || null, nguoi_tao_id: actor.id, tong_tien_hoan_duyet: tongHoan,
+        chi_tiet: { create: normalized.map(({ line, x, maBienThe, variant, approved }) => ({ chi_tiet_don_hang_id: line.id, bien_the_id: variant?.id || null, ma_bien_the: maBienThe, so_luong_y_cau: x.so_luong, xu_ly: x.xu_ly as XuLyDoiTra, nhap_lai_ton: Boolean(x.nhap_lai_ton), so_tien_hoan_duyet: approved, ly_do: x.ly_do?.trim() || null })) },
+      },
+      include: { don_hang: { select: { id: true, ma_don_hang: true, ho_ten_nguoi_nhan: true, tong_tien: true, trang_thai: true } }, chi_tiet: { include: { chi_tiet_don_hang: true, bien_the: { select: { id: true, ma_bien_the: true, so_luong_ton: true } } } }, hoan_tien: true },
+    });
+    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_TAO_YEU_CAU_DOI_TRA", nguoi_dung_id: actor.id, chi_tiet: { yeu_cau_id: created.id, ma_yeu_cau: ma, don_hang_id, tong_dong: normalized.length, tong_tien_hoan_duyet: tongHoan, auto_gateway_refund: false } } });
+    return this.chuan_hoa_yeu_cau_doi_tra_v3290(created);
+  }
+
+  async cap_nhat_trang_thai_doi_tra_v3290(actor: NguoiDungXacThuc, id: string, trang_thai: "DA_DUYET" | "HUY" | "HOAN_TAT", ghi_chu?: string) {
+    const current = await this.db.yeuCauDoiTra.findUnique({ where: { id }, include: { hoan_tien: true } });
+    if (!current) throw new NotFoundException("Không tìm thấy yêu cầu đổi/trả");
+    if (trang_thai === "DA_DUYET" && current.trang_thai !== TrangThaiYeuCauDoiTra.CHO_DUYET) throw new ConflictException("Chỉ yêu cầu CHO_DUYET mới được duyệt");
+    if (trang_thai === "HUY" && (current.trang_thai === TrangThaiYeuCauDoiTra.DA_NHAN_HANG || current.trang_thai === TrangThaiYeuCauDoiTra.HOAN_TAT)) throw new ConflictException("Không thể hủy yêu cầu đã nhận hàng hoặc hoàn tất");
+    if (trang_thai === "HOAN_TAT") {
+      if (current.trang_thai !== TrangThaiYeuCauDoiTra.DA_NHAN_HANG) throw new ConflictException("Chỉ yêu cầu đã nhận hàng mới được hoàn tất");
+      const daHoan = current.hoan_tien.reduce((sum, x) => sum + Number(x.so_tien), 0);
+      if (daHoan + 0.0001 < Number(current.tong_tien_hoan_duyet)) throw new ConflictException("Yêu cầu vẫn còn số tiền hoàn đã duyệt chưa được xác nhận thực tế");
+    }
+    const next = trang_thai as TrangThaiYeuCauDoiTra;
+    const updated = await this.db.yeuCauDoiTra.update({ where: { id }, data: { trang_thai: next, nguoi_duyet_id: next === TrangThaiYeuCauDoiTra.DA_DUYET ? actor.id : current.nguoi_duyet_id, ngay_duyet: next === TrangThaiYeuCauDoiTra.DA_DUYET ? new Date() : current.ngay_duyet, ngay_hoan_tat: next === TrangThaiYeuCauDoiTra.HOAN_TAT ? new Date() : current.ngay_hoan_tat, ghi_chu: ghi_chu?.trim() ? `${current.ghi_chu || ""}${current.ghi_chu ? "\n" : ""}${ghi_chu.trim()}` : current.ghi_chu }, include: { don_hang: { select: { id: true, ma_don_hang: true, ho_ten_nguoi_nhan: true, tong_tien: true, trang_thai: true } }, chi_tiet: { include: { chi_tiet_don_hang: true, bien_the: { select: { id: true, ma_bien_the: true, so_luong_ton: true } } } }, hoan_tien: true } });
+    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_CAP_NHAT_DOI_TRA", nguoi_dung_id: actor.id, chi_tiet: { yeu_cau_id: id, ma_yeu_cau: current.ma_yeu_cau, truoc: current.trang_thai, sau: next } } });
+    return this.chuan_hoa_yeu_cau_doi_tra_v3290(updated);
+  }
+
+  async nhan_hang_doi_tra_v3290(actor: NguoiDungXacThuc, id: string, dto: { dong: Array<{ chi_tiet_doi_tra_id: string; so_luong_nhan: number }>; ghi_chu?: string }) {
+    const current = await this.db.yeuCauDoiTra.findUnique({ where: { id }, include: { chi_tiet: true } });
+    if (!current) throw new NotFoundException("Không tìm thấy yêu cầu đổi/trả");
+    if (current.trang_thai !== TrangThaiYeuCauDoiTra.DA_DUYET) throw new ConflictException("Chỉ yêu cầu đã duyệt mới được xác nhận nhận hàng");
+    const ids = dto.dong.map(x => x.chi_tiet_doi_tra_id);
+    if (new Set(ids).size !== ids.length || ids.length !== current.chi_tiet.length) throw new BadRequestException("Phải gửi đúng một dòng nhận hàng cho mỗi dòng đổi/trả");
+    const input = new Map(dto.dong.map(x => [x.chi_tiet_doi_tra_id, x.so_luong_nhan]));
+    for (const line of current.chi_tiet) {
+      const qty = input.get(line.id);
+      if (qty == null) throw new BadRequestException("Thiếu dòng nhận hàng đổi/trả");
+      if (qty > line.so_luong_y_cau) throw new BadRequestException(`Số lượng nhận của ${line.ma_bien_the || line.id} vượt số lượng đã duyệt`);
+      if (line.nhap_lai_ton && qty > 0 && !line.bien_the_id) throw new ConflictException(`Dòng ${line.ma_bien_the || line.id} không còn liên kết biến thể để nhập lại tồn`);
+    }
+    await this.db.$transaction(async tx => {
+      for (const line of current.chi_tiet) {
+        const qty = input.get(line.id)!;
+        await tx.chiTietDoiTra.update({ where: { id: line.id }, data: { so_luong_nhan: qty } });
+        if (line.nhap_lai_ton && qty > 0 && line.bien_the_id) {
+          const before = await tx.bienTheSanPham.findUnique({ where: { id: line.bien_the_id }, select: { so_luong_ton: true, ma_bien_the: true } });
+          if (!before) throw new ConflictException(`Biến thể ${line.ma_bien_the || line.bien_the_id} không còn tồn tại`);
+          await tx.bienTheSanPham.update({ where: { id: line.bien_the_id }, data: { so_luong_ton: { increment: qty } } });
+          await tx.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_NHAP_LAI_TON_DOI_TRA", nguoi_dung_id: actor.id, chi_tiet: { yeu_cau_id: id, ma_yeu_cau: current.ma_yeu_cau, bien_the_id: line.bien_the_id, ma_bien_the: before.ma_bien_the, ton_cu: before.so_luong_ton, ton_moi: before.so_luong_ton + qty, chenh_lech: qty, loai_bien_dong: "NHAP_KHO", ly_do: dto.ghi_chu?.trim() || `Nhập lại tồn từ ${current.ma_yeu_cau}` } } });
+        }
+      }
+      await tx.yeuCauDoiTra.update({ where: { id }, data: { trang_thai: TrangThaiYeuCauDoiTra.DA_NHAN_HANG, ngay_nhan_hang: new Date(), ghi_chu: dto.ghi_chu?.trim() ? `${current.ghi_chu || ""}${current.ghi_chu ? "\n" : ""}${dto.ghi_chu.trim()}` : current.ghi_chu } });
+    });
+    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_NHAN_HANG_DOI_TRA", nguoi_dung_id: actor.id, chi_tiet: { yeu_cau_id: id, ma_yeu_cau: current.ma_yeu_cau, tong_nhan: dto.dong.reduce((sum, x) => sum + x.so_luong_nhan, 0), atomic_transaction: true } } });
+    const list = await this.danh_sach_doi_tra_v3290();
+    return list.items.find((x: any) => x.id === id);
+  }
+
+  async xac_nhan_hoan_tien_mot_phan_v3290(actor: NguoiDungXacThuc, id: string, so_tien: number, ghi_chu?: string) {
+    const current = await this.db.yeuCauDoiTra.findUnique({ where: { id }, include: { hoan_tien: true, don_hang: { include: { thanh_toan: { orderBy: { ngay_tao: "desc" } } } } } });
+    if (!current) throw new NotFoundException("Không tìm thấy yêu cầu đổi/trả");
+    if (current.trang_thai !== TrangThaiYeuCauDoiTra.DA_NHAN_HANG) throw new ConflictException("Chỉ xác nhận hoàn tiền sau khi đã nhận hàng trả");
+    const daHoanRma = current.hoan_tien.reduce((sum, x) => sum + Number(x.so_tien), 0);
+    const conRma = Math.max(0, Number(current.tong_tien_hoan_duyet) - daHoanRma);
+    if (so_tien > conRma + 0.0001) throw new BadRequestException(`Số tiền hoàn vượt phần còn lại của yêu cầu (${conRma.toLocaleString("vi-VN")}đ)`);
+    const payment = current.don_hang.thanh_toan.find(x => x.trang_thai === TrangThaiThanhToan.DA_THANH_TOAN) || current.don_hang.thanh_toan.find(x => x.trang_thai === TrangThaiThanhToan.DA_HOAN_TIEN);
+    if (!payment) throw new ConflictException("Đơn hàng không có giao dịch đã thanh toán để đối soát hoàn tiền");
+    const orderRefunds = await this.db.hoanTienDonHang.aggregate({ where: { don_hang_id: current.don_hang_id }, _sum: { so_tien: true } });
+    const daHoanDon = Number(orderRefunds._sum.so_tien || 0);
+    const paymentAmount = Number(payment.so_tien);
+    if (daHoanDon + so_tien > paymentAmount + 0.0001) throw new ConflictException("Tổng tiền hoàn sẽ vượt số tiền đã thanh toán của đơn");
+    const note = ghi_chu?.trim() || `Admin xác nhận hoàn tiền thực tế cho ${current.ma_yeu_cau}`;
+    const result = await this.db.$transaction(async tx => {
+      const refund = await tx.hoanTienDonHang.create({ data: { don_hang_id: current.don_hang_id, yeu_cau_doi_tra_id: id, thanh_toan_id: payment.id, so_tien, ghi_chu: note, nguoi_xac_nhan_id: actor.id } });
+      const newOrderRefund = daHoanDon + so_tien;
+      if (payment.trang_thai === TrangThaiThanhToan.DA_THANH_TOAN && newOrderRefund + 0.0001 >= paymentAmount) await tx.thanhToan.update({ where: { id: payment.id }, data: { trang_thai: TrangThaiThanhToan.DA_HOAN_TIEN, noi_dung: `${payment.noi_dung || current.don_hang.ma_don_hang} · đã hoàn đủ qua đối soát v3.29` } });
+      const newRmaRefund = daHoanRma + so_tien;
+      if (newRmaRefund + 0.0001 >= Number(current.tong_tien_hoan_duyet)) await tx.yeuCauDoiTra.update({ where: { id }, data: { trang_thai: TrangThaiYeuCauDoiTra.HOAN_TAT, ngay_hoan_tat: new Date() } });
+      return refund;
+    });
+    await this.db.nhatKyBaoMat.create({ data: { loai_su_kien: "ADMIN_HOAN_TIEN_MOT_PHAN", nguoi_dung_id: actor.id, chi_tiet: { yeu_cau_id: id, ma_yeu_cau: current.ma_yeu_cau, don_hang_id: current.don_hang_id, so_tien, tong_da_hoan_rma: daHoanRma + so_tien, tong_duyet_rma: Number(current.tong_tien_hoan_duyet), gateway_auto_refund: false, refund_ledger_id: result.id } } });
+    const list = await this.danh_sach_doi_tra_v3290();
+    return list.items.find((x: any) => x.id === id);
+  }
+
+  async xuat_doi_tra_excel_v3290() {
+    const data = await this.danh_sach_doi_tra_v3290();
+    const rows: unknown[][] = [["Mã RMA", "Mã đơn", "Trạng thái", "Lý do", "Sản phẩm", "Mã biến thể", "SL yêu cầu", "SL nhận", "Xử lý", "Nhập lại tồn", "Hoàn duyệt", "Đã hoàn", "Ngày tạo"]];
+    for (const rma of data.items as any[]) for (const line of rma.chi_tiet) rows.push([rma.ma_yeu_cau, rma.don_hang.ma_don_hang, rma.trang_thai, rma.ly_do, line.chi_tiet_don_hang.ten_san_pham, line.ma_bien_the || "", line.so_luong_y_cau, line.so_luong_nhan, line.xu_ly, line.nhap_lai_ton ? "Có" : "Không", line.so_tien_hoan_duyet, rma.tong_tien_da_hoan, new Date(rma.ngay_tao).toISOString()]);
+    const buffer = this.tao_xlsx(rows, "Đổi trả v3.29");
+    return { ten_file: `doi-tra-rma-v3.29.0_${new Date().toISOString().slice(0,10)}.xlsx`, mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", base64: buffer.toString("base64"), tong_yeu_cau: data.items.length };
+  }
+
+  async xuat_loi_nhuan_excel_v3290() {
+    const tq = await this.tong_quan();
+    const rows: unknown[][] = [["Kỳ", "Doanh thu gộp", "Hoàn tiền", "Doanh thu thuần", "Giá vốn", "Lợi nhuận gộp", "Biên lợi nhuận %", "Dòng thiếu giá vốn"]];
+    const add = (name: string, x: any) => rows.push([name, x.doanh_thu_gop, x.hoan_tien, x.doanh_thu_thuan, x.gia_von, x.loi_nhuan_gop, x.bien_loi_nhuan_percent ?? "", x.dong_thieu_gia_von]);
+    add("Hôm nay", tq.loi_nhuan.hom_nay); add("7 ngày", tq.loi_nhuan.bay_ngay); add("30 ngày", tq.loi_nhuan.ba_muoi_ngay);
+    const buffer = this.tao_xlsx(rows, "Lợi nhuận v3.29");
+    return { ten_file: `loi-nhuan-gop-v3.29.0_${new Date().toISOString().slice(0,10)}.xlsx`, mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", base64: buffer.toString("base64") };
+  }
 
 }

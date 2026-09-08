@@ -10,13 +10,13 @@ test("v3.26.0 API receipt chain va recovery revoked-key fail-closed", () => {
   const health = read("src/suc-khoe/suc-khoe.controller.ts");
   const main = read("src/main.ts");
 
-  assert.match(controller, /ops_runtime\(\) \{ return this\.service\.trang_thai_ops_v3280\(\); \}/);
-  assert.match(controller, /cap_nhat_probe_desired_state_v3280/);
-  assert.match(controller, /approve_probe_rollout_v3280/);
-  assert.match(controller, /reject_probe_rollout_v3280/);
-  assert.match(controller, /cancel_probe_rollout_v3280/);
-  assert.match(controller, /verify_recovery_evidence_v3280/);
-  assert.match(controller, /xuat_recovery_evidence_bundle_v3280/);
+  assert.match(controller, /ops_runtime\(\) \{ return this\.service\.trang_thai_ops_v3290\(\); \}/);
+  assert.match(controller, /cap_nhat_probe_desired_state_v3290/);
+  assert.match(controller, /approve_probe_rollout_v3290/);
+  assert.match(controller, /reject_probe_rollout_v3290/);
+  assert.match(controller, /cancel_probe_rollout_v3290/);
+  assert.match(controller, /verify_recovery_evidence_v3290/);
+  assert.match(controller, /xuat_recovery_evidence_bundle_v3290/);
 
   assert.match(service, /type ProbeRolloutReceiptChainEntryV3230/);
   assert.match(service, /probe_rollout_receipt_entry_sha256_v3230/);
@@ -34,7 +34,7 @@ test("v3.26.0 API receipt chain va recovery revoked-key fail-closed", () => {
   assert.match(service, /reason: keyRevoked \? "REVOKED_SIGNING_KEY"/);
   assert.match(service, /audit_bundle_revocation_fail_closed/);
 
-  assert.match(health, /phien_ban: "v3\.28\.0"/);
-  assert.match(main, /setVersion\("3\.28\.0"\)/);
+  assert.match(health, /phien_ban: "v3\.29\.0"/);
+  assert.match(main, /setVersion\("3\.29\.0"\)/);
   assert.match(service, /async trang_thai_ops_v3230\(\)/);
 });

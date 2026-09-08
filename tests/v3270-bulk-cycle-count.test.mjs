@@ -7,11 +7,11 @@ test("v3.27.0 dong bo current source va bulk cycle count CSV XLSX", () => {
   const pkg = JSON.parse(read("package.json"));
   const controller = read("apps/api/src/quan-tri/quan-tri.controller.ts");
   const service = read("apps/api/src/quan-tri/quan-tri.service.ts");
-  assert.equal(read("VERSION").trim(), "3.28.0");
-  assert.equal(pkg.version, "3.28.0");
-  assert.equal(pkg.scripts.verify, "npm run verify:v328");
-  assert.equal(pkg.scripts["verify:full"], "npm run verify:full:v328");
-  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3280.mjs");
+  assert.equal(read("VERSION").trim(), "3.29.0");
+  assert.equal(pkg.version, "3.29.0");
+  assert.equal(pkg.scripts.verify, "npm run verify:v329");
+  assert.equal(pkg.scripts["verify:full"], "npm run verify:full:v329");
+  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3290.mjs");
   assert.equal(existsSync("scripts/verify-v3270.ps1"), true);
   assert.equal(existsSync("scripts/e2e-runtime-v3270.ps1"), true);
   assert.match(controller, /kho\/kiem-ke\/import\/kiem-tra/);

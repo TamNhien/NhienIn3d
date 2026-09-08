@@ -84,7 +84,15 @@ try {
   await cycleCountCard.getByRole("button", { name: "Tải CSV mẫu", exact: true }).waitFor();
   await cycleCountCard.getByText("Chọn CSV / Excel", { exact: true }).waitFor();
   await cycleCountCard.getByText("≤ 200 dòng · audit đầy đủ", { exact: true }).waitFor();
-  await cycleCountCard.getByRole("button", { name: "Xem trước", exact: true }).waitFor();
+  const cyclePreviewButton = cycleCountCard.getByRole("button", { name: "Xem trước", exact: true });
+  await cyclePreviewButton.waitFor();
+  const cycleVariantSelect = cycleCountCard.locator("select").first();
+  const cycleVariantValues = await cycleVariantSelect.locator("option").evaluateAll((options) => options.map((o) => o.value).filter(Boolean));
+  if (!cycleVariantValues.length) throw new Error("Không có biến thể để kiểm tra chức năng Xem trước kiểm kê.");
+  await cycleVariantSelect.selectOption(cycleVariantValues[0]);
+  await cyclePreviewButton.click();
+  await cycleCountCard.locator(".cine-cycle-count-status-v328").waitFor({ timeout: 30_000 });
+  await cycleCountCard.getByText(/Xem trước thành công|Không thể xem trước/).waitFor({ timeout: 30_000 });
   await cycleCountCard.getByRole("button", { name: "Áp dụng kiểm kê", exact: true }).waitFor();
   await cycleCountCard.getByRole("button", { name: "Lưu thành phiên kiểm kê", exact: true }).waitFor();
   await cycleCountCard.getByRole("heading", { name: "Phiên kiểm kê", exact: true }).waitFor();

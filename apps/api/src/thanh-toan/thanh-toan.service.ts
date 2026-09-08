@@ -78,6 +78,7 @@ export class ThanhToanService {
               so_luong: item.so_luong,
               don_gia: item.don_gia,
               thanh_tien: Number(item.don_gia) * item.so_luong,
+              gia_von_snapshot: item.bien_the.san_pham.gia_von ?? 0,
               tuy_chon: {
                 ma_bien_the: item.bien_the.ma_bien_the,
                 vat_lieu: item.bien_the.vat_lieu?.ten_vat_lieu ?? null,

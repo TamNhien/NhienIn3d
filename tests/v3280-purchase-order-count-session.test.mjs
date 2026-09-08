@@ -9,15 +9,12 @@ test("v3.28.0 dong bo Purchase Order, reorder point va phien kiem ke", () => {
   const service = read("apps/api/src/quan-tri/quan-tri.service.ts");
   const controller = read("apps/api/src/quan-tri/quan-tri.controller.ts");
   const runtime = read("scripts/e2e-runtime-v3280.ps1");
-  assert.equal(read("VERSION").trim(), "3.28.0");
-  assert.equal(pkg.version, "3.28.0");
-  assert.equal(pkg.scripts.verify, "npm run verify:v328");
-  assert.equal(pkg.scripts["verify:full"], "npm run verify:full:v328");
-  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3280.mjs");
+  assert.equal(pkg.scripts["verify:v328"], "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-v3280.ps1");
+  assert.equal(pkg.scripts["verify:full:v328"], "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-v3280.ps1 -Full");
   assert.equal(existsSync("scripts/verify-v3280.ps1"), true);
   assert.equal(existsSync("scripts/e2e-runtime-v3280.ps1"), true);
   assert.equal(existsSync("apps/api/prisma/migrations/202609070001_v328_purchase_order_inventory_count/migration.sql"), true);
-  assert.equal(readdirSync("apps/api/prisma/migrations", { withFileTypes: true }).filter(x => x.isDirectory()).length, 24);
+  assert.ok(readdirSync("apps/api/prisma/migrations", { withFileTypes: true }).filter(x => x.isDirectory()).length >= 24);
   assert.match(runtime, /migration_gan_nhat\.ten -eq "202609070001_v328_purchase_order_inventory_count"/);
   assert.doesNotMatch(runtime, /migration_gan_nhat\.ten -eq "202609020001_v3110_distributed_probe_dlq_keyring_oncall_archive"/);
   assert.match(schema, /model DonMuaHang\b/);

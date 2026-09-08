@@ -1,0 +1,31 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+const read = p => readFileSync(p, "utf8");
+
+test("v3.29.0 API co RMA partial refund atomic restock va gross margin", () => {
+  const controller = read("src/quan-tri/quan-tri.controller.ts");
+  const service = read("src/quan-tri/quan-tri.service.ts");
+  const dto = read("src/quan-tri/dto/doi-tra-v3290.dto.ts");
+  const checkout = read("src/thanh-toan/thanh-toan.service.ts");
+  const schema = read("prisma/schema.prisma");
+  assert.match(controller, /@Get\("doi-tra"\)/);
+  assert.match(controller, /@Post\("don-hang\/:id\/doi-tra"\)/);
+  assert.match(controller, /@Post\("doi-tra\/:id\/nhan-hang"\)/);
+  assert.match(controller, /@Post\("doi-tra\/:id\/hoan-tien"\)/);
+  assert.match(service, /async tao_yeu_cau_doi_tra_v3290/);
+  assert.match(service, /async nhan_hang_doi_tra_v3290/);
+  assert.match(service, /async xac_nhan_hoan_tien_mot_phan_v3290/);
+  assert.match(service, /ADMIN_HOAN_TIEN_MOT_PHAN/);
+  assert.match(service, /ADMIN_NHAP_LAI_TON_DOI_TRA/);
+  assert.match(service, /auto_gateway_refund: false/);
+  assert.match(service, /yeu_cau: \{ is: \{ trang_thai: \{ not: TrangThaiYeuCauDoiTra\.HUY \} \} \}/);
+  assert.match(service, /SALE_TIME_COST_SNAPSHOT_WITH_MIGRATION_BACKFILL/);
+  assert.match(service, /loi_nhuan_gop/);
+  assert.match(dto, /HOAN_TIEN/);
+  assert.match(dto, /DOI_HANG/);
+  assert.match(dto, /XacNhanHoanTienMotPhanV3290Dto/);
+  assert.match(checkout, /gia_von_snapshot:\s*item\.bien_the\.san_pham\.gia_von \?\? 0/);
+  assert.match(schema, /enum TrangThaiYeuCauDoiTra/);
+  assert.match(schema, /model HoanTienDonHang/);
+});

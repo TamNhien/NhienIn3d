@@ -5,21 +5,21 @@ const read = (p) => readFileSync(p, "utf8");
 
 test("v3.16.0 contract duoc giu khi nang v3.19.0 va current scripts dong bo", () => {
   const pkg = JSON.parse(read("package.json"));
-  assert.equal(read("VERSION").trim(), "3.28.0");
-  assert.equal(pkg.version, "3.28.0");
-  assert.equal(JSON.parse(read("apps/api/package.json")).version, "3.28.0");
-  assert.equal(JSON.parse(read("apps/web/package.json")).version, "3.28.0");
-  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3280.mjs");
-  assert.equal(pkg.scripts["probe:agent"], "node scripts/probe-agent-v3280.mjs");
-  assert.match(pkg.scripts["probe:fleet"], /probe-fleet-v3280\.ps1/);
+  assert.equal(read("VERSION").trim(), "3.29.0");
+  assert.equal(pkg.version, "3.29.0");
+  assert.equal(JSON.parse(read("apps/api/package.json")).version, "3.29.0");
+  assert.equal(JSON.parse(read("apps/web/package.json")).version, "3.29.0");
+  assert.equal(pkg.scripts["e2e:browser"], "node scripts/e2e-browser-v3290.mjs");
+  assert.equal(pkg.scripts["probe:agent"], "node scripts/probe-agent-v3290.mjs");
+  assert.match(pkg.scripts["probe:fleet"], /probe-fleet-v3290\.ps1/);
   assert.match(pkg.scripts["verify:v320"], /verify-v3200\.ps1/);
-  assert.equal(pkg.scripts.verify, "npm run verify:v328");
-  assert.equal(pkg.scripts["verify:full"], "npm run verify:full:v328");
+  assert.equal(pkg.scripts.verify, "npm run verify:v329");
+  assert.equal(pkg.scripts["verify:full"], "npm run verify:full:v329");
   assert.equal(existsSync("scripts/e2e-runtime-v3160.ps1"), true);
   assert.equal(existsSync("scripts/e2e-runtime-v3190.ps1"), true);
-  assert.match(read(".github/workflows/ci.yml"), /e2e-runtime-v3280\.ps1/);
-  assert.match(read("apps/api/src/suc-khoe/suc-khoe.controller.ts"), /phien_ban: "v3\.28\.0"/);
-  assert.match(read("apps/api/src/main.ts"), /setVersion\("3\.28\.0"\)/);
+  assert.match(read(".github/workflows/ci.yml"), /e2e-runtime-v3290\.ps1/);
+  assert.match(read("apps/api/src/suc-khoe/suc-khoe.controller.ts"), /phien_ban: "v3\.29\.0"/);
+  assert.match(read("apps/api/src/main.ts"), /setVersion\("3\.29\.0"\)/);
 });
 
 test("v3.16.0 archive portability co JSONL GZIP S3 allowlist va restore replay dry-run", () => {

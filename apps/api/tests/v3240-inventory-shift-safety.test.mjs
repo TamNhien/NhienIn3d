@@ -10,7 +10,7 @@ test("v3.26.0 API co shift overlap guard va replenishment plan read-only", () =>
   const health = read("src/suc-khoe/suc-khoe.controller.ts");
   const main = read("src/main.ts");
 
-  assert.match(controller, /ops_runtime\(\) \{ return this\.service\.trang_thai_ops_v3280\(\); \}/);
+  assert.match(controller, /ops_runtime\(\) \{ return this\.service\.trang_thai_ops_v3290\(\); \}/);
   assert.match(controller, /@Get\("phan-ca\/xung-dot"\)/);
   assert.match(controller, /@Get\("kho\/goi-y-nhap"\)/);
   assert.match(controller, /@Get\("kho\/goi-y-nhap\/excel"\)/);
@@ -20,6 +20,6 @@ test("v3.26.0 API co shift overlap guard va replenishment plan read-only", () =>
   assert.match(service, /nguon_nha_cung_cap/);
   assert.match(service, /auto_purchase_order: false/);
   assert.match(service, /no_database_migration: true/);
-  assert.match(health, /phien_ban: "v3\.28\.0"/);
-  assert.match(main, /setVersion\("3\.28\.0"\)/);
+  assert.match(health, /phien_ban: "v3\.29\.0"/);
+  assert.match(main, /setVersion\("3\.29\.0"\)/);
 });
